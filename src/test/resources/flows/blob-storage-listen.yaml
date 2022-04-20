@@ -1,0 +1,17 @@
+id: blob-storage-listen
+namespace: io.kestra.tests
+
+triggers:
+  - id: watch
+    type: io.kestra.plugin.azure.storage.blob.Trigger
+    interval: PT10S
+    action: DELETE
+    endpoint: "{{ globals.azure.blobs['endpoint'] }}"
+    container: "{{ globals.azure.blobs['container'] }}"
+    connectionString: "{{ globals.azure.blobs['connection-string'] }}"
+    prefix: "trigger/storage-listen"
+
+tasks:
+  - id: end
+    type: io.kestra.core.tasks.debugs.Return
+    format: "{{task.id}} > {{taskrun.startDate}}"

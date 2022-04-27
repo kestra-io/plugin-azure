@@ -1,7 +1,7 @@
 package io.kestra.plugin.azure.storage.blob;
 
 import io.kestra.core.utils.IdUtils;
-import io.kestra.plugin.azure.storage.blob.interfaces.ActionInterface;
+import io.kestra.plugin.azure.storage.blob.abstracts.ActionInterface;
 import org.junit.jupiter.api.Test;
 
 import static org.hamcrest.MatcherAssert.assertThat;

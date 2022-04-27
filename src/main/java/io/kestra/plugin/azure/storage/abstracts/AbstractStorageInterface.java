@@ -1,9 +1,9 @@
-package io.kestra.plugin.azure.storage.blob.interfaces;
+package io.kestra.plugin.azure.storage.abstracts;
 
 import io.kestra.core.models.annotations.PluginProperty;
 import io.swagger.v3.oas.annotations.media.Schema;
 
-public interface AbstractBlobStorageInterface {
+public interface AbstractStorageInterface {
     @Schema(
         title = "Connection string of the storage account."
     )

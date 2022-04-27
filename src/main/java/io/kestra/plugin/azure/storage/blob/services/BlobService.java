@@ -9,16 +9,12 @@ import com.azure.storage.blob.models.ListBlobsOptions;
 import io.kestra.core.exceptions.IllegalVariableEvaluationException;
 import io.kestra.core.models.executions.metrics.Counter;
 import io.kestra.core.runners.RunContext;
-import io.kestra.plugin.azure.AbstractConnection;
 import io.kestra.plugin.azure.AbstractConnectionInterface;
 import io.kestra.plugin.azure.storage.blob.Copy;
 import io.kestra.plugin.azure.storage.blob.Delete;
-import io.kestra.plugin.azure.storage.blob.abstracts.AbstractBlobStorage;
-import io.kestra.plugin.azure.storage.blob.abstracts.AbstractBlobStorageObject;
-import io.kestra.plugin.azure.storage.blob.interfaces.AbstractBlobStorageContainerInterface;
-import io.kestra.plugin.azure.storage.blob.interfaces.AbstractBlobStorageInterface;
-import io.kestra.plugin.azure.storage.blob.interfaces.ActionInterface;
-import io.kestra.plugin.azure.storage.blob.interfaces.ListInterface;
+import io.kestra.plugin.azure.storage.abstracts.AbstractStorageInterface;
+import io.kestra.plugin.azure.storage.blob.abstracts.ActionInterface;
+import io.kestra.plugin.azure.storage.blob.abstracts.ListInterface;
 import io.kestra.plugin.azure.storage.blob.models.Blob;
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -47,7 +43,7 @@ public class BlobService {
         Copy.CopyObject moveTo,
         RunContext runContext,
         AbstractConnectionInterface connectionInterface,
-        AbstractBlobStorageInterface blobStorageInterface
+        AbstractStorageInterface blobStorageInterface
     ) throws Exception {
         if (action == ActionInterface.Action.DELETE) {
             for (Blob object : s3Objects) {

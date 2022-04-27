@@ -13,3 +13,6 @@ kestra:
         blobs:
           endpoint: "https://unittestkt.blob.core.windows.net"
           container: tasks
+        tables:
+          endpoint: "https://unittestkt.table.core.windows.net"
+          table: tasks

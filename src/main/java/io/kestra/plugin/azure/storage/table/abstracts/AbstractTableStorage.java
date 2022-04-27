@@ -1,14 +1,13 @@
-package io.kestra.plugin.azure.storage.blob.abstracts;
+package io.kestra.plugin.azure.storage.table.abstracts;
 
 import com.azure.core.credential.AzureNamedKeyCredential;
+import com.azure.data.tables.TableClient;
+import com.azure.data.tables.TableServiceClient;
+import com.azure.data.tables.TableServiceClientBuilder;
 import com.azure.identity.DefaultAzureCredentialBuilder;
-import com.azure.storage.blob.BlobServiceClient;
-import com.azure.storage.blob.BlobServiceClientBuilder;
 import io.kestra.core.exceptions.IllegalVariableEvaluationException;
 import io.kestra.core.runners.RunContext;
-import io.kestra.plugin.azure.AbstractConnection;
 import io.kestra.plugin.azure.storage.abstracts.AbstractStorage;
-import io.kestra.plugin.azure.storage.abstracts.AbstractStorageInterface;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -20,9 +19,13 @@ import lombok.experimental.SuperBuilder;
 @EqualsAndHashCode
 @Getter
 @NoArgsConstructor
-public abstract class AbstractBlobStorage extends AbstractStorage implements AbstractStorageInterface {
-    protected BlobServiceClient client(RunContext runContext) throws IllegalVariableEvaluationException {
-        BlobServiceClientBuilder builder = new BlobServiceClientBuilder()
+public abstract class AbstractTableStorage extends AbstractStorage implements AbstractTableStorageInterface {
+    protected String table;
+
+    protected String name;
+
+    protected TableServiceClient client(RunContext runContext) throws IllegalVariableEvaluationException {
+        TableServiceClientBuilder builder = new TableServiceClientBuilder()
             .endpoint(runContext.render(endpoint));
 
         if (this.connectionString != null) {
@@ -40,5 +43,11 @@ public abstract class AbstractBlobStorage extends AbstractStorage implements Abs
 
 
         return builder.buildClient();
+    }
+
+    protected TableClient tableClient(RunContext runContext) throws IllegalVariableEvaluationException {
+        TableServiceClient client = this.client(runContext);
+
+        return client.getTableClient(runContext.render(this.table));
     }
 }

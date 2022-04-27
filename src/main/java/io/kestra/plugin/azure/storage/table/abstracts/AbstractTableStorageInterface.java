@@ -1,15 +1,15 @@
-package io.kestra.plugin.azure.storage.blob.interfaces;
+package io.kestra.plugin.azure.storage.table.abstracts;
 
 import io.kestra.core.models.annotations.PluginProperty;
 import io.swagger.v3.oas.annotations.media.Schema;
 
 import javax.validation.constraints.NotNull;
 
-public interface AbstractBlobStorageContainerInterface {
+public interface AbstractTableStorageInterface {
     @Schema(
-        title = "The blob container"
+        title = "The table name"
     )
     @PluginProperty(dynamic = true)
     @NotNull
-    String getContainer();
+    String getTable();
 }

@@ -49,6 +49,7 @@ dependencies {
     api platform("com.azure:azure-sdk-bom:1.2.1")
     api group: 'com.azure', name: 'azure-identity'
     api group: 'com.azure', name: 'azure-storage-blob'
+    api group: 'com.azure', name: 'azure-data-tables'
 }
 
 

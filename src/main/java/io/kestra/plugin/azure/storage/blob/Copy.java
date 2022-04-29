@@ -10,7 +10,6 @@ import io.kestra.core.models.annotations.Plugin;
 import io.kestra.core.models.annotations.PluginProperty;
 import io.kestra.core.models.tasks.RunnableTask;
 import io.kestra.core.runners.RunContext;
-import io.kestra.plugin.azure.storage.abstracts.AbstractStorage;
 import io.kestra.plugin.azure.storage.blob.abstracts.AbstractBlobStorage;
 import io.kestra.plugin.azure.storage.blob.models.Blob;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -66,7 +65,6 @@ public class Copy extends AbstractBlobStorage implements RunnableTask<Copy.Outpu
     @PluginProperty(dynamic = false)
     @Builder.Default
     private Boolean delete = false;
-
     @Override
     public Output run(RunContext runContext) throws Exception {
         BlobServiceClient client = this.client(runContext);
@@ -109,6 +107,7 @@ public class Copy extends AbstractBlobStorage implements RunnableTask<Copy.Outpu
 
     @SuperBuilder(toBuilder = true)
     @Getter
+    @NoArgsConstructor
     public static class CopyObject {
         @Schema(
             title = "The blob container"
@@ -124,13 +123,13 @@ public class Copy extends AbstractBlobStorage implements RunnableTask<Copy.Outpu
         @NotNull
         String name;
     }
-
     @SuperBuilder
     @Getter
+    @NoArgsConstructor
     public static class Output implements io.kestra.core.models.tasks.Output {
         @Schema(
             title = "The blob copied"
         )
-        private final Blob blob;
+        private Blob blob;
     }
 }

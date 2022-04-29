@@ -2,7 +2,6 @@ package io.kestra.plugin.azure.storage.blob.abstracts;
 
 import io.kestra.core.models.annotations.PluginProperty;
 import io.swagger.v3.oas.annotations.media.Schema;
-import lombok.Builder;
 
 import javax.validation.constraints.NotNull;
 

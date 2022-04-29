@@ -23,7 +23,6 @@ import java.io.InputStreamReader;
 import java.net.URI;
 import java.util.List;
 import java.util.Map;
-
 import javax.validation.constraints.NotNull;
 
 @SuperBuilder

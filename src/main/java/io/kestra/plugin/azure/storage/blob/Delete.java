@@ -8,16 +8,12 @@ import io.kestra.core.models.tasks.RunnableTask;
 import io.kestra.core.runners.RunContext;
 import io.kestra.plugin.azure.storage.blob.abstracts.AbstractBlobStorageObject;
 import io.kestra.plugin.azure.storage.blob.models.Blob;
-import io.kestra.plugin.azure.storage.blob.services.BlobService;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.ToString;
 import lombok.experimental.SuperBuilder;
-import org.apache.commons.lang3.tuple.Pair;
-
-import java.net.URI;
 
 @SuperBuilder
 @ToString

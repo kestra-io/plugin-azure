@@ -10,7 +10,8 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.*;
+import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.notNullValue;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class AllTest extends AbstractTest {

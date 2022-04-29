@@ -7,7 +7,6 @@ import io.kestra.core.models.annotations.Plugin;
 import io.kestra.core.models.executions.metrics.Counter;
 import io.kestra.core.models.tasks.RunnableTask;
 import io.kestra.core.runners.RunContext;
-import io.kestra.plugin.azure.storage.abstracts.AbstractStorage;
 import io.kestra.plugin.azure.storage.blob.abstracts.AbstractBlobStorage;
 import io.kestra.plugin.azure.storage.blob.abstracts.AbstractBlobStorageContainerInterface;
 import io.kestra.plugin.azure.storage.blob.abstracts.ListInterface;

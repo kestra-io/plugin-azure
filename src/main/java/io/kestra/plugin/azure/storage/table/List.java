@@ -13,14 +13,17 @@ import io.kestra.core.serializers.FileSerde;
 import io.kestra.plugin.azure.storage.table.abstracts.AbstractTableStorage;
 import io.kestra.plugin.azure.storage.table.models.Entity;
 import io.swagger.v3.oas.annotations.media.Schema;
-import lombok.*;
+import lombok.EqualsAndHashCode;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.ToString;
 import lombok.experimental.SuperBuilder;
 
-import java.io.*;
+import java.io.BufferedOutputStream;
+import java.io.File;
+import java.io.FileOutputStream;
 import java.net.URI;
 import java.util.ArrayList;
-import java.util.Map;
-import java.util.stream.Collectors;
 import javax.validation.constraints.NotNull;
 
 @SuperBuilder

@@ -38,25 +38,17 @@ import javax.validation.constraints.NotNull;
                 "endpoint: \"https://yourblob.blob.core.windows.net\"",
                 "connectionString: \"DefaultEndpointsProtocol=...==\"",
                 "table: \"mydata\"",
-                "data: \"{{ inputs.file }}\"",
-                "name: \"myblob\""
             }
         )
     }
 )
 @Schema(
-    title = "Upload a file to a Azure Blob Storage."
+    title = "Lists entities using the parameters in the provided options.",
+    description = "If the `filter` parameter in the options is set, only entities matching the filter will be returned. " +
+        "If the `select` parameter is set, only the properties included in the select parameter will be returned for each entity. " +
+        "If the `top` parameter is set, the maximum number of returned entities per page will be limited to that value."
 )
 public class List extends AbstractTableStorage implements RunnableTask<List.Output> {
-    @Schema(
-        title = "Source of message send",
-        description = "Can be an internal storage uri, a map or a list." +
-            "with the following format: partitionKey, rowKey, properties"
-    )
-    @NotNull
-    @PluginProperty(dynamic = true)
-    private Object from;
-
     @Schema(
         title = "Returns only tables or entities that satisfy the specified filter.",
         description = "using [Filter Strings](https://docs.microsoft.com/en-us/visualstudio/azure/vs-azure-tools-table-designer-construct-filter-strings?view=vs-2022) "
@@ -81,10 +73,6 @@ public class List extends AbstractTableStorage implements RunnableTask<List.Outp
         Integer count = 0;
 
         TableClient tableClient = this.tableClient(runContext);
-
-        ArrayList<String> propertiesToSelect = new ArrayList<>();
-        propertiesToSelect.add("Product");
-        propertiesToSelect.add("Price");
 
         ListEntitiesOptions options = new ListEntitiesOptions();
 

@@ -22,8 +22,6 @@ import lombok.experimental.SuperBuilder;
 public abstract class AbstractTableStorage extends AbstractStorage implements AbstractTableStorageInterface {
     protected String table;
 
-    protected String name;
-
     protected TableServiceClient client(RunContext runContext) throws IllegalVariableEvaluationException {
         TableServiceClientBuilder builder = new TableServiceClientBuilder()
             .endpoint(runContext.render(endpoint));

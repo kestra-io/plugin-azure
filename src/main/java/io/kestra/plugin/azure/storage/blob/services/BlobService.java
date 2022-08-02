@@ -38,7 +38,7 @@ public class BlobService {
     }
 
     public static void archive(
-        List<Blob> s3Objects,
+        List<Blob> blobsObjects,
         ActionInterface.Action action,
         Copy.CopyObject moveTo,
         RunContext runContext,
@@ -46,7 +46,7 @@ public class BlobService {
         AbstractStorageInterface blobStorageInterface
     ) throws Exception {
         if (action == ActionInterface.Action.DELETE) {
-            for (Blob object : s3Objects) {
+            for (Blob object : blobsObjects) {
                 Delete delete = Delete.builder()
                     .id("archive")
                     .type(Delete.class.getName())
@@ -61,7 +61,7 @@ public class BlobService {
                 delete.run(runContext);
             }
         } else if (action == ActionInterface.Action.MOVE) {
-            for (Blob object : s3Objects) {
+            for (Blob object : blobsObjects) {
                 Copy copy = Copy.builder()
                     .id("archive")
                     .type(Copy.class.getName())

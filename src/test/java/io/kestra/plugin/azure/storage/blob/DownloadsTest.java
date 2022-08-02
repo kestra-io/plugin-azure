@@ -52,7 +52,7 @@ class DownloadsTest extends AbstractTest {
             .action(ActionInterface.Action.MOVE)
             .moveTo(Copy.CopyObject.builder()
                 .container(this.container)
-                .name("/tasks/" + prefix + "/s3-move")
+                .name("/tasks/" + prefix + "/blobs-move")
                 .build()
             )
             .build();
@@ -61,11 +61,11 @@ class DownloadsTest extends AbstractTest {
 
         assertThat(run.getBlobs().size(), is(2));
 
-        List list = list().prefix("/tasks/" + prefix + "/s3-from/").build();
+        List list = list().prefix("/tasks/" + prefix + "/blobs-from/").build();
         List.Output listOutput = list.run(runContext(list));
         assertThat(listOutput.getBlobs().size(), is(0));
 
-        list = list().prefix("/tasks/" + prefix + "/s3-move").build();
+        list = list().prefix("/tasks/" + prefix + "/blobs-move").build();
         listOutput = list.run(runContext(list));
         assertThat(listOutput.getBlobs().size(), is(2));
     }

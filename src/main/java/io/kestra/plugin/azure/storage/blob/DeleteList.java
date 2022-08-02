@@ -47,7 +47,7 @@ import javax.validation.constraints.Min;
     }
 )
 @Schema(
-    title = "Delete a list of key on a S3 bucket."
+    title = "Delete a list of key on a Azure Blob Storage."
 )
 public class DeleteList extends AbstractBlobStorage implements RunnableTask<DeleteList.Output>, ListInterface, AbstractBlobStorageContainerInterface {
     private String container;

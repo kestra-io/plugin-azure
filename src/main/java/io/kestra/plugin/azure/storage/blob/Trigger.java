@@ -37,10 +37,10 @@ import static io.kestra.core.utils.Rethrow.throwFunction;
 @Schema(
     title = "Wait for files on Azure Blob Storage",
     description = "This trigger will poll every `interval` blob storage. " +
-        "You can search for all files in a bucket or directory in `from` or you can filter the files with a `regExp`." +
+        "You can search for all files in a container or directory in `from` or you can filter the files with a `regExp`." +
         "The detection is atomic, internally we do a list and interact only with files listed.\n" +
         "Once a file is detected, we download the file on internal storage and processed with declared `action` " +
-        "in order to move or delete the files from the bucket (to avoid double detection on new poll)"
+        "in order to move or delete the files from the container (to avoid double detection on new poll)"
 )
 @Plugin(
     examples = {

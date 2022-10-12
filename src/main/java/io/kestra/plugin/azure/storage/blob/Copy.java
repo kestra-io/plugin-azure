@@ -32,10 +32,10 @@ import javax.validation.constraints.NotNull;
                 "secretKeyId: \"<secret-key>\"",
                 "region: \"eu-central-1\"",
                 "from:",
-                "  bucket: \"my-bucket\"",
+                "  container: \"my-bucket\"",
                 "  key: \"path/to/file\"",
                 "to:",
-                "  bucket: \"my-bucket2\"",
+                "  container: \"my-bucket2\"",
                 "  key: \"path/to/file2\"",
             }
         )

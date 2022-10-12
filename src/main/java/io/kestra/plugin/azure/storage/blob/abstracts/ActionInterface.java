@@ -15,7 +15,7 @@ public interface ActionInterface {
     ActionInterface.Action getAction();
 
     @Schema(
-        title = "The destination bucket and key."
+        title = "The destination container and key."
     )
     @PluginProperty(dynamic = true)
     Copy.CopyObject getMoveTo();

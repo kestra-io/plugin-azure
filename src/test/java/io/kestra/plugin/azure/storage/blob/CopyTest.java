@@ -17,7 +17,7 @@ class CopyTest extends AbstractTest {
         Copy task = Copy.builder()
             .id(CopyTest.class.getSimpleName())
             .type(List.class.getName())
-            .endpoint(this.endpoint)
+            .endpoint(this.storageEndpoint)
             .connectionString(this.connectionString)
             .from(Copy.CopyObject.builder()
                 .container(this.container)

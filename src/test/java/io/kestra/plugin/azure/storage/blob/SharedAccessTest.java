@@ -22,7 +22,7 @@ class SharedAccessTest extends AbstractTest {
         SharedAccess task = SharedAccess.builder()
             .id(CopyTest.class.getSimpleName())
             .type(List.class.getName())
-            .endpoint(this.endpoint)
+            .endpoint(this.storageEndpoint)
             .connectionString(this.connectionString)
             .container(upload.getBlob().getContainer())
             .name(upload.getBlob().getName())

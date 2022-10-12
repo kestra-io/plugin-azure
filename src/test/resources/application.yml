@@ -16,3 +16,9 @@ kestra:
         tables:
           endpoint: "https://unittestkt.table.core.windows.net"
           table: tasks
+        batch:
+          endpoint: "https://batchunitest.francecentral.batch.azure.com"
+          account: batchunitest
+          pool-id: linux-unit-test
+          job-id: job-unit-test
+

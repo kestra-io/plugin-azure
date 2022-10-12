@@ -6,9 +6,11 @@ import io.kestra.core.runners.RunContextFactory;
 import io.kestra.core.storages.StorageInterface;
 import io.kestra.core.utils.IdUtils;
 import io.kestra.core.utils.TestsUtils;
+import io.micronaut.context.annotation.Value;
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest;
 import jakarta.inject.Inject;
 
+import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -25,6 +27,16 @@ public abstract class BaseTest {
     @Inject
     protected StorageInterface storageInterface;
 
+    @Value("${kestra.variables.globals.azure.blobs.endpoint}")
+    protected String storageEndpoint;
+
+
+    @Value("${kestra.variables.globals.azure.blobs.connection-string}")
+    protected String connectionString;
+
+    @Value("${kestra.variables.globals.azure.blobs.container}")
+    protected String container;
+
     @Inject
     protected static File file() throws URISyntaxException {
         return new File(Objects.requireNonNull(BaseTest.class.getClassLoader()
@@ -36,6 +48,13 @@ public abstract class BaseTest {
         return storageInterface.put(
             new URI("/" + IdUtils.create()),
             new FileInputStream(file())
+        );
+    }
+
+    protected URI upload(byte[] content) throws URISyntaxException, IOException {
+        return storageInterface.put(
+            new URI("/" + IdUtils.create()),
+            new ByteArrayInputStream(content)
         );
     }
 

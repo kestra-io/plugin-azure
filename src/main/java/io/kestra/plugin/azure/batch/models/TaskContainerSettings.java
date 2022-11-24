@@ -48,7 +48,7 @@ public class TaskContainerSettings {
         return new com.microsoft.azure.batch.protocol.models.TaskContainerSettings()
             .withContainerRunOptions(runContext.render(this.containerRunOptions))
             .withImageName(runContext.render(this.imageName))
-            .withRegistry(this.registry.to(runContext))
+            .withRegistry(this.registry != null ? this.registry.to(runContext) : null)
             .withWorkingDirectory(this.workingDirectory);
     }
 }

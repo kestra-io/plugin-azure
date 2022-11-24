@@ -70,6 +70,22 @@ import javax.validation.constraints.NotNull;
                 "  outputDirs:",
                 "  - outs/child",
             }
+        ),
+        @Example(
+            title = "Use a container to start the task, the pool must used a `microsoft-azure-batch` publisher",
+            code = {
+                "endpoint: https://***.francecentral.batch.azure.com",
+                "account: <batch-account>",
+                "accessKey: <access-key>",
+                "poolId: <pool-id>",
+                "job:",
+                "  id: <job-name>",
+                "tasks:",
+                "- id: echo",
+                "  commandLine: 'python --version'",
+                "  containerSettings:",
+                "    imageName: python",
+            }
         )
     }
 )

@@ -129,7 +129,7 @@ public class Create extends AbstractBatch implements RunnableTask<Create.Output>
             jobId = job.id();
             client.jobOperations().createJob(job);
 
-            logger.info("Job '{}' created on poll '{}'", jobId, poolInfo.poolId());
+            logger.info("Job '{}' created on pool '{}'", jobId, poolInfo.poolId());
 
             // create tasks
             List<TaskAddParameter> tasks = new ArrayList<>();

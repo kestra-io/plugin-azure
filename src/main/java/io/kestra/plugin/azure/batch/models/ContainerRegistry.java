@@ -40,6 +40,6 @@ public class ContainerRegistry {
             .withRegistryServer(runContext.render(this.registryServer))
             .withUserName(runContext.render(this.userName))
             .withPassword(runContext.render(this.password))
-            .withIdentityReference(this.identityReference.to(runContext));
+            .withIdentityReference(this.identityReference == null ? null : this.identityReference.to(runContext));
     }
 }

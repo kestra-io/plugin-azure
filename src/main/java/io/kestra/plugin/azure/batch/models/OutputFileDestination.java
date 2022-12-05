@@ -21,6 +21,6 @@ public class OutputFileDestination {
 
     public com.microsoft.azure.batch.protocol.models.OutputFileDestination to(RunContext runContext) throws IllegalVariableEvaluationException {
         return new com.microsoft.azure.batch.protocol.models.OutputFileDestination()
-            .withContainer(this.container.to(runContext));
+            .withContainer(this.container == null ? null : this.container.to(runContext));
     }
 }

@@ -20,19 +20,20 @@ import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.function.Consumer;
+import javax.annotation.Nullable;
 
 public class TaskService {
     public static List<CloudTask> waitForTasksToComplete(
         RunContext runContext,
         BatchClient client,
         String jobId,
-        Duration timeout
+        @Nullable Duration timeout
     ) throws BatchErrorException, IOException, InterruptedException, TimeoutException {
         long startTime = System.currentTimeMillis();
         long elapsedTime = 0L;
         ArrayList<String> ended = new ArrayList<>();
 
-        while (elapsedTime < timeout.toMillis()) {
+        while (timeout == null || elapsedTime < timeout.toMillis()) {
             List<CloudTask> taskCollection = client
                 .taskOperations()
                 .listTasks(

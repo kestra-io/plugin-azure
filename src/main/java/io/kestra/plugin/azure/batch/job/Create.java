@@ -16,10 +16,7 @@ import io.kestra.plugin.azure.batch.AbstractBatch;
 import io.kestra.plugin.azure.batch.models.Job;
 import io.kestra.plugin.azure.batch.models.Task;
 import io.swagger.v3.oas.annotations.media.Schema;
-import lombok.EqualsAndHashCode;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.ToString;
+import lombok.*;
 import lombok.experimental.SuperBuilder;
 import org.slf4j.Logger;
 
@@ -114,6 +111,13 @@ public class Create extends AbstractBatch implements RunnableTask<Create.Output>
     @NotNull
     private List<Task> tasks;
 
+    @Schema(
+        title = "The max total wait duration",
+        description = "If null, there is no timeout and end is delegate to Azure Batch"
+    )
+    @PluginProperty(dynamic = false)
+    private Duration maxDuration;
+
     @Override
     public Output run(RunContext runContext) throws Exception {
         Logger logger = runContext.logger();
@@ -151,7 +155,7 @@ public class Create extends AbstractBatch implements RunnableTask<Create.Output>
 
             client.taskOperations().createTasks(jobId, tasks);
 
-            TaskService.waitForTasksToComplete(runContext, client, jobId, Duration.ofMinutes(5));
+            TaskService.waitForTasksToComplete(runContext, client, jobId, maxDuration);
 
             // get tasks result
             List<CloudTask> results = client.taskOperations().listTasks(jobId);

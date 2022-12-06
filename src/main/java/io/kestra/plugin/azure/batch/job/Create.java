@@ -191,7 +191,7 @@ public class Create extends AbstractBatch implements RunnableTask<Create.Output>
 
                 TaskService.readRemoteLog(runContext, client, jobId, task, "stderr.txt", msg -> {
                     outputs.putAll(BashService.parseOut(msg, logger, runContext));
-                    logger.error(msg);
+                    logger.warn(msg);
                 });
 
                 if (task.executionInfo().failureInfo() != null) {

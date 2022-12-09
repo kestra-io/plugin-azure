@@ -245,7 +245,7 @@ public class Create extends AbstractBatch implements RunnableTask<Create.Output>
                 }
             }
 
-            throw new Exception(e.toString());
+            throw new Exception(e.toString(), e);
         } finally {
             if (jobId != null) {
                 client.jobOperations().deleteJob(jobId);

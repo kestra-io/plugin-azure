@@ -8,6 +8,7 @@ import io.kestra.core.utils.IdUtils;
 import io.kestra.plugin.azure.batch.models.Job;
 import io.kestra.plugin.azure.batch.models.ResourceFile;
 import io.kestra.plugin.azure.batch.models.Task;
+import io.kestra.plugin.azure.batch.models.TaskContainerSettings;
 import io.kestra.plugin.azure.storage.blob.SharedAccess;
 import io.kestra.plugin.azure.storage.blob.Upload;
 import jakarta.inject.Inject;
@@ -95,16 +96,22 @@ class CreateTest extends AbstractTest {
             List.of(
                 Task.builder()
                     .id("env")
-                    .commandLine("/bin/bash -c 'echo t1=$ENV_STRING'")
+                    .interpreter("/bin/bash")
+                    .commands(List.of("echo t1=$ENV_STRING | awk '{ print $1 }'"))
                     .environments(Map.of("ENV_STRING", "{{ inputs.first }}"))
+                    .containerSettings(TaskContainerSettings.builder().imageName("ubuntu").build())
                     .build(),
                 Task.builder()
                     .id("echo")
-                    .commandLine("/bin/bash -c 'echo t2={{ inputs.second }} 1>&2'")
+                    .interpreter("/bin/bash")
+                    .commands(List.of("echo t2=`echo {{ inputs.second }}` 1>&2"))
+                    .containerSettings(TaskContainerSettings.builder().imageName("ubuntu").build())
                     .build(),
                 Task.builder()
                     .id("for")
-                    .commandLine("/bin/bash -c 'for i in $(seq 10); do echo t3=$i; done'")
+                    .interpreter("/bin/bash")
+                    .commands(List.of(("for i in $(seq 10); do echo t3=$i; done")))
+                    .containerSettings(TaskContainerSettings.builder().imageName("ubuntu").build())
                     .build(),
                 Task.builder()
                     .id("vars")
@@ -114,7 +121,9 @@ class CreateTest extends AbstractTest {
                             .httpUrl(uploadToContainer(random).toString())
                             .build()
                     ))
-                    .commandLine("/bin/bash -c \"echo '::{\\\"outputs\\\": {\\\"extract\\\":\\\"'$(cat files/in/in.txt)'\\\"}}::'\"")
+                    .interpreter("/bin/bash")
+                    .commands(List.of("echo '::{\"outputs\": {\"extract\":\"'$(cat files/in/in.txt)'\"}}::'"))
+                    .containerSettings(TaskContainerSettings.builder().imageName("ubuntu").build())
                     .build(),
                 Task.builder()
                     .id("output")
@@ -124,7 +133,14 @@ class CreateTest extends AbstractTest {
                     .outputDirs(List.of(
                         "outs/child"
                     ))
-                    .commandLine("/bin/bash -c \"mkdir -p outs/child/sub && echo 1 > outs/1.txt &&  echo 2 > outs/child/2.txt  &&  echo 3 > outs/child/sub/3.txt\"")
+                    .interpreter("/bin/bash")
+                    .commands(List.of(
+                        "mkdir -p outs/child/sub",
+                        "echo 1 > outs/1.txt",
+                        "echo 2 > outs/child/2.txt",
+                        "echo 3 > outs/child/sub/3.txt"
+                    ))
+                    .containerSettings(TaskContainerSettings.builder().imageName("ubuntu").build())
                     .build()
             ),
             Map.of("first", "first", "second", "second")
@@ -134,7 +150,7 @@ class CreateTest extends AbstractTest {
 
         assertThat(run.getVars().get("extract"), is(random));
         assertThat(objects.stream().filter(logEntry -> logEntry.getMessage().equals("t1=first")).count(), is(1L));
-        assertThat(objects.stream().filter(logEntry -> logEntry.getMessage().equals("t2=second")).filter(logEntry -> logEntry.getLevel().equals(Level.ERROR)).count(), is(1L));
+        assertThat(objects.stream().filter(logEntry -> logEntry.getMessage().equals("t2=second")).filter(logEntry -> logEntry.getLevel().equals(Level.WARN)).count(), is(1L));
         assertThat(objects.stream().filter(logEntry -> logEntry.getMessage().equals("t3=5")).count(), is(1L));
 
         InputStream get = storageInterface.get(run.getOutputFiles().get("outs/1.txt"));
@@ -158,11 +174,13 @@ class CreateTest extends AbstractTest {
                 List.of(
                     Task.builder()
                         .id("echo")
-                        .commandLine("echo ok")
+                        .commands(List.of(("echo ok")))
+                        .containerSettings(TaskContainerSettings.builder().imageName("ubuntu").build())
                         .build(),
                     Task.builder()
                         .id("failed")
-                        .commandLine("cat failed")
+                        .commands(List.of(("cat failed")))
+                        .containerSettings(TaskContainerSettings.builder().imageName("ubuntu").build())
                         .build()
                 ),
                 Map.of()

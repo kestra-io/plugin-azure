@@ -5,13 +5,15 @@ import com.microsoft.azure.batch.protocol.models.TaskAddParameter;
 import io.kestra.core.exceptions.IllegalVariableEvaluationException;
 import io.kestra.core.models.annotations.PluginProperty;
 import io.kestra.core.runners.RunContext;
+import io.kestra.core.utils.IdUtils;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Builder;
 import lombok.Value;
+import lombok.extern.jackson.Jacksonized;
 
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
+import javax.validation.constraints.NotEmpty;
 import javax.validation.constraints.NotNull;
 import javax.validation.constraints.Size;
 
@@ -19,12 +21,14 @@ import static io.kestra.core.utils.Rethrow.throwFunction;
 
 @Builder
 @Value
+@Jacksonized
 public class Task {
     @Schema(
         title = "A string that uniquely identifies the Task within the Job.",
         description = "The ID can contain any combination of alphanumeric characters including hyphens and underscores, a" +
             "nd cannot contain more than 64 characters. The ID is case-preserving and case-insensitive " +
-            "(that is, you may not have two IDs within a Job that differ only by case)."
+            "(that is, you may not have two IDs within a Job that differ only by case).\n" +
+            "If not provided, a random uuid will be generated."
     )
     @PluginProperty(dynamic = true)
     @NotNull
@@ -39,6 +43,22 @@ public class Task {
     @Size(max=1024)
     String displayName;
 
+    @Builder.Default
+    @Schema(
+        title = "Interpreter to used"
+    )
+    @PluginProperty(dynamic = false)
+    @NotNull
+    @NotEmpty
+    String interpreter = "/bin/sh";
+
+    @Builder.Default
+    @Schema(
+        title = "Interpreter args used"
+    )
+    @PluginProperty(dynamic = false)
+    String[] interpreterArgs = {"-c"};
+
     @Schema(
         title = "The command line of the Task.",
         description = "For multi-instance Tasks, the command line is executed as the primary Task, after the primary " +
@@ -47,11 +67,12 @@ public class Task {
             "expansion. If you want to take advantage of such features, you should invoke the shell in the command line, " +
             "for example using \"cmd /c MyCommand\" in Windows or \"/bin/sh -c MyCommand\" in Linux. If the command " +
             "line refers to file paths, it should use a relative path (relative to the Task working directory), or " +
-            "use the Batch provided [environment variable](https://docs.microsoft.com/en-us/azure/batch/batch-compute-node-environment-variables)."
+            "use the Batch provided [environment variable](https://docs.microsoft.com/en-us/azure/batch/batch-compute-node-environment-variables).\n\n" +
+            "Command will be passed as /bin/sh -c \"command\" by default."
     )
     @PluginProperty(dynamic = true)
     @NotNull
-    String commandLine;
+    List<String> commands;
 
     @Schema(
         title = "The settings for the container under which the Task runs.",
@@ -127,9 +148,9 @@ public class Task {
 
     public TaskAddParameter to(RunContext runContext) throws IllegalVariableEvaluationException {
         return new TaskAddParameter()
-            .withId(runContext.render(this.id))
+            .withId(this.id == null ? IdUtils.create() : runContext.render(this.id))
             .withDisplayName(runContext.render(this.displayName))
-            .withCommandLine(runContext.render(this.commandLine))
+            .withCommandLine(runContext.render(this.commandLine(runContext)))
             .withContainerSettings(this.containerSettings == null ? null : this.containerSettings.to(runContext))
             .withEnvironmentSettings(this.environments == null ? null : this.environments
                 .entrySet()
@@ -152,5 +173,32 @@ public class Task {
             .withConstraints(this.constraints == null ? null : this.constraints.to(runContext))
             .withRequiredSlots(this.requiredSlots)
         ;
+    }
+
+    private String commandLine(RunContext runContext) throws IllegalVariableEvaluationException {
+        // renderer command
+        List<String> renderer = new ArrayList<>();
+
+
+        for (String command : this.commands) {
+            renderer.add(runContext
+                .render(command)
+                .replace("\\", "\\\\")
+                .replace("\"", "\\\"")
+                // already escape by az batch
+                // .replace("$", "\\$")
+                // .replace("`", "\\`")
+            );
+        }
+
+        String commandAsString = "\"" + String.join("\n", renderer) + "\"";
+
+        // interpreter
+        List<String> commandsWithInterpreter = new ArrayList<>(Collections.singletonList(interpreter));
+        commandsWithInterpreter.addAll(Arrays.asList(interpreterArgs));
+        commandsWithInterpreter.add(commandAsString);
+
+        // generate command
+        return String.join(" ", commandsWithInterpreter);
     }
 }

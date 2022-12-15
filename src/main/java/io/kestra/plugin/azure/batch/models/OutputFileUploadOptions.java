@@ -7,11 +7,13 @@ import io.kestra.core.runners.RunContext;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Builder;
 import lombok.Value;
+import lombok.extern.jackson.Jacksonized;
 
 import javax.validation.constraints.NotNull;
 
 @Builder
 @Value
+@Jacksonized
 public class OutputFileUploadOptions {
     @Schema(
         title = "The conditions under which the Task output file or set of files should be uploaded.."

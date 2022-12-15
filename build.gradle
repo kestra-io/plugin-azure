@@ -21,6 +21,8 @@ repositories {
 }
 
 sourceCompatibility = 11
+targetCompatibility = 11
+
 group "io.kestra.plugin"
 description 'Azure plugin for Kestra'
 
@@ -52,11 +54,11 @@ dependencies {
     compileOnly group: "io.kestra", name: "core", version: kestraVersion
 
     // azure
-    api platform("com.azure:azure-sdk-bom:1.2.7")
+    api platform("com.azure:azure-sdk-bom:1.2.8")
     api group: 'com.azure', name: 'azure-identity'
     api group: 'com.azure', name: 'azure-storage-blob'
     api group: 'com.azure', name: 'azure-data-tables'
-    api group: 'com.microsoft.azure', name: 'azure-batch', version: '10.0.0'
+    api group: 'com.microsoft.azure', name: 'azure-batch', version: '10.1.0'
     api group: 'com.microsoft.azure', name: 'azure-storage', version: '8.6.6'
 }
 

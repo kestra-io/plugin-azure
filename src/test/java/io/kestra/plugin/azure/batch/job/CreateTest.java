@@ -5,10 +5,7 @@ import io.kestra.core.models.executions.LogEntry;
 import io.kestra.core.queues.QueueFactoryInterface;
 import io.kestra.core.queues.QueueInterface;
 import io.kestra.core.utils.IdUtils;
-import io.kestra.plugin.azure.batch.models.Job;
-import io.kestra.plugin.azure.batch.models.ResourceFile;
-import io.kestra.plugin.azure.batch.models.Task;
-import io.kestra.plugin.azure.batch.models.TaskContainerSettings;
+import io.kestra.plugin.azure.batch.models.*;
 import io.kestra.plugin.azure.storage.blob.SharedAccess;
 import io.kestra.plugin.azure.storage.blob.Upload;
 import jakarta.inject.Inject;
@@ -36,6 +33,20 @@ class CreateTest extends AbstractTest {
     @Named(QueueFactoryInterface.WORKERTASKLOG_NAMED)
     private QueueInterface<LogEntry> logQueue;
 
+    SharedAccess.Output sas(String container, String name, SharedAccess.Permission perms) throws Exception {
+        SharedAccess task = SharedAccess.builder()
+            .id(SharedAccess.class.getSimpleName())
+            .type(io.kestra.plugin.azure.storage.blob.List.class.getName())
+            .endpoint(this.endpoint)
+            .connectionString(this.connectionString)
+            .container(container)
+            .name(name)
+            .expirationDate("{{ now() | dateAdd(1, 'DAYS')  }}")
+            .permissions(Set.of(perms))
+            .build();
+        return task.run(runContext(task));
+    }
+
     URI uploadToContainer(String content) throws Exception {
         String prefix = IdUtils.create();
 
@@ -51,19 +62,7 @@ class CreateTest extends AbstractTest {
 
         Upload.Output uploadRun = upload.run(runContext(upload));
 
-        SharedAccess task = SharedAccess.builder()
-            .id(SharedAccess.class.getSimpleName())
-            .type(io.kestra.plugin.azure.storage.blob.List.class.getName())
-            .endpoint(this.endpoint)
-            .connectionString(this.connectionString)
-            .container(uploadRun.getBlob().getContainer())
-            .name(uploadRun.getBlob().getName())
-            .expirationDate("{{ now() | dateAdd(1, 'DAYS')  }}")
-            .permissions(Set.of(SharedAccess.Permission.READ))
-            .build();
-        SharedAccess.Output run = task.run(runContext(task));
-
-        return run.getUri();
+        return sas(uploadRun.getBlob().getContainer(), uploadRun.getBlob().getName(), SharedAccess.Permission.READ).getUri();
     }
 
     private Create.Output create(List<Task> tasks, Map<String, Object> inputs) throws Exception {
@@ -91,6 +90,7 @@ class CreateTest extends AbstractTest {
         logQueue.receive(objects::add);
 
         String random = IdUtils.create();
+        SharedAccess.Output outputs = sas(this.container, null, SharedAccess.Permission.WRITE);
 
         Create.Output run = create(
             List.of(
@@ -121,8 +121,20 @@ class CreateTest extends AbstractTest {
                             .httpUrl(uploadToContainer(random).toString())
                             .build()
                     ))
+                    .uploadFiles(List.of(
+                        OutputFile.builder()
+                            .filePattern("files/in/*")
+                            .destination(OutputFileDestination.builder()
+                                .container(OutputFileBlobContainerDestination.builder()
+                                    .containerUrl(outputs.getUri().toString())
+                                    .build()
+                                )
+                                .build()
+                            )
+                            .build()
+                    ))
                     .interpreter("/bin/bash")
-                    .commands(List.of("echo '::{\"outputs\": {\"extract\":\"'$(cat files/in/in.txt)'\"}}::'"))
+                    .commands(List.of("echo '::{\"outputs\": {\"extract\":\"'$(cat files/in/in.txt)'\"}}::' | tee files/in/tee.txt"))
                     .containerSettings(TaskContainerSettings.builder().imageName("ubuntu").build())
                     .build(),
                 Task.builder()

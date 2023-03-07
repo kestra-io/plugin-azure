@@ -92,7 +92,7 @@ public class Task {
         description = "List of key that will generate temporary files.\n" +
             "On the command, just can use with special variable named `outputFiles.key`.\n" +
             "If you add a files with `[\"first\"]`, you can use the special vars `echo 1 >> {[ outputFiles.first }}`" +
-            " and you used on others tasks using `{{ outputs.task-id.files.first }}`"
+            " and you used on others tasks using `{{ outputs.taskId.outputFiles.first }}`"
     )
     @PluginProperty(dynamic = false)
     List<String> outputFiles;

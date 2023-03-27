@@ -1,6 +1,5 @@
 package io.kestra.plugin.azure.storage.blob;
 
-import com.azure.core.util.BinaryData;
 import com.azure.storage.blob.BlobClient;
 import io.kestra.core.models.annotations.Example;
 import io.kestra.core.models.annotations.Plugin;
@@ -132,7 +131,9 @@ public class Upload extends AbstractBlobStorageObject implements RunnableTask<Up
 
         runContext.logger().debug("Upload from '{}' to '{}'", from, blobClient.getBlobName());
 
-        blobClient.upload(BinaryData.fromStream(runContext.uriToInputStream(from)), true);
+        try (var is = runContext.uriToInputStream(from)) {
+            blobClient.upload(is, true);
+        }
 
         runContext.metric(Counter.of("file.size", blobClient.getProperties().getBlobSize()));
 

@@ -128,8 +128,6 @@ public class Trigger extends AbstractTrigger implements PollingTriggerInterface,
             return Optional.empty();
         }
 
-        String executionId = IdUtils.create();
-
         java.util.List<Blob> list = run
             .getBlobs()
             .stream()
@@ -167,7 +165,7 @@ public class Trigger extends AbstractTrigger implements PollingTriggerInterface,
         );
 
         Execution execution = Execution.builder()
-            .id(executionId)
+            .id(runContext.getTriggerExecutionId())
             .namespace(context.getNamespace())
             .flowId(context.getFlowId())
             .flowRevision(context.getFlowRevision())

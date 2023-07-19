@@ -30,35 +30,40 @@ public class AzCLITest {
                 .type(AzCLI.class.getName())
                 .env(Map.of("{{ inputs.envKey }}", "{{ inputs.envValue }}"))
                 .commands(List.of(
-                        "echo \"::{\\\"outputs\\\":{\\\"customEnv\\\":\\\"$" + envKey + "\\\"}}::\""
+                        "echo \"::{\\\"outputs\\\":{\\\"{{ inputs.outputName }}\\\":\\\"$" + envKey + "\\\"}}::\""
                 ))
                 .build();
 
-        RunContext runContext = TestsUtils.mockRunContext(runContextFactory, execute, Map.of("envKey", envKey, "envValue", envValue));
+        RunContext runContext = TestsUtils.mockRunContext(runContextFactory, execute, Map.of(
+                "envKey", envKey,
+                "envValue", envValue,
+                "outputName", "customEnv"
+        ));
 
         ScriptOutput runOutput = execute.run(runContext);
 
         assertThat(runOutput.getExitCode(), is(0));
         assertThat(runOutput.getVars().get("customEnv"), is(envValue));
-        assertThat(execute.getLoginCommands(), empty());
+        assertThat(execute.getLoginCommands(runContext), empty());
 
-        String username = "my-user";
-        String password = "my-password";
-        String tenant = "my-tenant";
         execute = AzCLI.builder()
                 .id(IdUtils.create())
                 .type(AzCLI.class.getName())
-                .env(Map.of("{{ inputs.envKey }}", "{{ inputs.envValue }}"))
-                .commands(List.of(
-                        "echo \"::{\\\"outputs\\\":{\\\"customEnv\\\":\\\"$" + envKey + "\\\"}}::\""
-                ))
-                .username(username)
-                .password(password)
-                .tenant(tenant)
+                .username("{{ inputs.myUser }}")
+                .password("{{ inputs.myPassword }}")
+                .tenant("{{ inputs.myTenant }}")
                 .servicePrincipal(true)
                 .build();
 
-        assertThat(execute.getLoginCommands(), allOf(
+        String username = "someUser";
+        String password = "somePassword";
+        String tenant = "someTenant";
+        runContext = TestsUtils.mockRunContext(runContextFactory, execute, Map.of(
+                "myUser", username,
+                "myPassword", password,
+                "myTenant", tenant
+        ));
+        assertThat(execute.getLoginCommands(runContext), allOf(
                 iterableWithSize(1),
                 hasItem("az login -u " + username +
                         " -p " + password +

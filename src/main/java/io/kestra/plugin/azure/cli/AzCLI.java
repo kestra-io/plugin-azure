@@ -1,5 +1,6 @@
 package io.kestra.plugin.azure.cli;
 
+import io.kestra.core.exceptions.IllegalVariableEvaluationException;
 import io.kestra.core.models.annotations.Example;
 import io.kestra.core.models.annotations.Plugin;
 import io.kestra.core.models.annotations.PluginProperty;
@@ -71,7 +72,7 @@ public class AzCLI extends Task implements RunnableTask<ScriptOutput> {
     private List<String> commands;
 
     @Schema(
-            title = "Account username."
+            title = "Account username. If set, it will use `az login` before running the commands."
     )
     @PluginProperty(dynamic = true)
     private String username;
@@ -91,7 +92,7 @@ public class AzCLI extends Task implements RunnableTask<ScriptOutput> {
     @Schema(
             title = "Is the account a service principal ?"
     )
-    @PluginProperty(dynamic = true)
+    @PluginProperty
     private boolean servicePrincipal;
 
     @Schema(
@@ -104,7 +105,7 @@ public class AzCLI extends Task implements RunnableTask<ScriptOutput> {
     protected Map<String, String> env;
 
     @Schema(
-            title = "Docker options when for the `DOCKER` runner."
+            title = "Docker options for the `DOCKER` runner."
     )
     @PluginProperty
     @Builder.Default
@@ -114,7 +115,7 @@ public class AzCLI extends Task implements RunnableTask<ScriptOutput> {
 
     @Override
     public ScriptOutput run(RunContext runContext) throws Exception {
-        List<String> loginCommands = getLoginCommands();
+        List<String> loginCommands = this.getLoginCommands(runContext);
 
         CommandsWrapper commands = new CommandsWrapper(runContext)
                 .withWarningOnStdErr(true)
@@ -132,16 +133,16 @@ public class AzCLI extends Task implements RunnableTask<ScriptOutput> {
         return commands.run();
     }
 
-    List<String> getLoginCommands() {
+    List<String> getLoginCommands(RunContext runContext) throws IllegalVariableEvaluationException {
         List<String> loginCommands = new ArrayList<>();
         if (this.username != null) {
-            StringBuilder loginCommand = new StringBuilder("az login -u ").append(this.username);
+            StringBuilder loginCommand = new StringBuilder("az login -u ").append(runContext.render(this.username));
 
             if (this.password != null) {
-                loginCommand.append(" -p ").append(this.password);
+                loginCommand.append(" -p ").append(runContext.render(this.password));
             }
             if (this.tenant != null) {
-                loginCommand.append(" --tenant ").append(this.tenant);
+                loginCommand.append(" --tenant ").append(runContext.render(this.tenant));
             }
             if (this.isServicePrincipal()) {
                 loginCommand.append(" --service-principal");

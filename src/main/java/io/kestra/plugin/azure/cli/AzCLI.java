@@ -28,16 +28,16 @@ import java.util.Map;
 @Getter
 @NoArgsConstructor
 @Schema(
-        title = "Execute az commands."
+        title = "Execute one or more `az` commands from a Command Line Interface. We recommend using a Service Principal and a Client Secret for authentication. To create a Service Principal and Client Secret, you can use the following [documentation](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/guides/service_principal_client_secret). Then, use the generated `appId` as the `username` and the generated `password` as the `password` in the Kestra task configuration. Finally, pass the returned `tenant` ID to the `tenant` field in the Kestra task configuration and set `servicePrincipal` to true.",
 )
 @Plugin(
         examples = {
                 @Example(
-                        title = "List ActiveDirectory users for a tenant using a user account",
+                        title = "List ActiveDirectory users for the currently used tenant",
                         code = {
-                                "username: \"<user>\"",
-                                "password: \"secret('az-password')\"",
-                                "tenant: \"<tenant-id>\"",
+                                "username: \"<appId>\"",
+                                "password: \"{{secret('AZURE_SERVICE_PRINCIPAL_PASSWORD')}}\"",
+                                "tenant: \"{{secret('AZURE_TENANT_ID')}}\"",
                                 "commands:",
                                 "  - az ad user list"
                         }
@@ -59,7 +59,23 @@ import java.util.Map;
                                 "commands:",
                                 "  - az --help"
                         }
-                )
+                ),
+                @Example(
+                        full = true,
+                        title = "List supported regions for the current Azure subscription",
+                        code = """
+                        id: azureRegions
+                        namespace: dev
+                        tasks:
+                          - id: svc-principal
+                            type: io.kestra.plugin.azure.cli.AzCLI
+                            tenant: {{secret('AZURE_TENANT_ID')}}
+                            username: {{secret('AZURE_SERVICE_PRINCIPAL_CLIENT_ID')}}
+                            password: {{secret('AZURE_SERVICE_PRINCIPAL_PASSWORD')}}
+                            servicePrincipal: true
+                            commands:
+                              - az account list-locations --query "[].{Region:name}" -o table"""
+                )                
         }
 )
 public class AzCLI extends Task implements RunnableTask<ScriptOutput> {

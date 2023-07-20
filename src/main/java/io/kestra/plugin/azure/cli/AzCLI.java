@@ -28,7 +28,11 @@ import java.util.Map;
 @Getter
 @NoArgsConstructor
 @Schema(
-        title = "Execute one or more `az` commands from a Command Line Interface. We recommend using a Service Principal and a Client Secret for authentication. To create a Service Principal and Client Secret, you can use the following [documentation](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/guides/service_principal_client_secret). Then, use the generated `appId` as the `username` and the generated `password` as the `password` in the Kestra task configuration. Finally, pass the returned `tenant` ID to the `tenant` field in the Kestra task configuration and set `servicePrincipal` to `true`.",
+        title = "Execute one or more `az` commands from a Command Line Interface. We recommend using a Service Principal and a Client Secret for authentication. " +
+                "To create a Service Principal and Client Secret, you can use the following " + 
+                "[documentation](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/guides/service_principal_client_secret). " + 
+                "Then, use the generated `appId` as the `username` and the generated `password` as the `password` in the Kestra task configuration. " + 
+                "Finally, pass the returned `tenantId` to the `tenant` field in the Kestra task configuration and set `servicePrincipal` to `true`."
 )
 @Plugin(
         examples = {
@@ -67,7 +71,7 @@ import java.util.Map;
                         id: azureRegions
                         namespace: dev
                         tasks:
-                          - id: svc-principal
+                          - id: list-locations
                             type: io.kestra.plugin.azure.cli.AzCLI
                             tenant: {{secret('AZURE_TENANT_ID')}}
                             username: {{secret('AZURE_SERVICE_PRINCIPAL_CLIENT_ID')}}

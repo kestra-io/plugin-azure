@@ -19,7 +19,7 @@ abstract class AbstractTest extends BaseTest {
             .connectionString(this.connectionString)
             .container(this.container)
             .from(source.toString())
-            .name(dir + "/" + out)
+            .name(dir + "/" + out + ".yml")
             .build();
 
         return upload.run(runContext(upload));

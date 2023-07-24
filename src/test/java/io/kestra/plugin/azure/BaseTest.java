@@ -46,14 +46,14 @@ public abstract class BaseTest {
 
     protected URI upload() throws URISyntaxException, IOException {
         return storageInterface.put(
-            new URI("/" + IdUtils.create()),
+            new URI("/" + IdUtils.create() + ".yml"),
             new FileInputStream(file())
         );
     }
 
     protected URI upload(byte[] content) throws URISyntaxException, IOException {
         return storageInterface.put(
-            new URI("/" + IdUtils.create()),
+            new URI("/" + IdUtils.create() + ".yml"),
             new ByteArrayInputStream(content)
         );
     }

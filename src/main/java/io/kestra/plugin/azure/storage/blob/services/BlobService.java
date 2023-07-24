@@ -29,7 +29,7 @@ import java.util.stream.Collectors;
 
 public class BlobService {
     public static Pair<BlobProperties, URI> download(RunContext runContext, BlobClient client) throws IOException {
-        File tempFile = runContext.tempFile().toFile();
+        File tempFile = runContext.tempFile(runContext.fileExtension(client.getBlobName())).toFile();
         BlobProperties blobProperties = client.downloadToFile(tempFile.getAbsolutePath(), true);
 
         runContext.metric(Counter.of("file.size", blobProperties.getBlobSize()));

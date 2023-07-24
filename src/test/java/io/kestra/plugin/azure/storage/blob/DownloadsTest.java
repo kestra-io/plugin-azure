@@ -5,6 +5,7 @@ import io.kestra.plugin.azure.storage.blob.abstracts.ActionInterface;
 import org.junit.jupiter.api.Test;
 
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.endsWith;
 import static org.hamcrest.Matchers.is;
 
 class DownloadsTest extends AbstractTest {
@@ -28,6 +29,7 @@ class DownloadsTest extends AbstractTest {
         List.Output run = task.run(runContext(task));
 
         assertThat(run.getBlobs().size(), is(2));
+        assertThat(run.getBlobs().get(0).getUri().toString(), endsWith(".yml"));
 
         List list = list().prefix("/tasks/" + prefix + "/abs/").build();
         List.Output listOutput = list.run(runContext(list));
@@ -43,7 +45,6 @@ class DownloadsTest extends AbstractTest {
 
         Downloads task = Downloads.builder()
             .id(DownloadsTest.class.getSimpleName())
-            .type(Downloads.class.getName())
             .type(Downloads.class.getName())
             .endpoint(this.storageEndpoint)
             .connectionString(this.connectionString)

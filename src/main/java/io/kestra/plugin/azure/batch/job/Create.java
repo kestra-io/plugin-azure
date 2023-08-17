@@ -11,7 +11,7 @@ import io.kestra.core.models.executions.metrics.Counter;
 import io.kestra.core.models.executions.metrics.Timer;
 import io.kestra.core.models.tasks.RunnableTask;
 import io.kestra.core.runners.RunContext;
-import io.kestra.core.tasks.scripts.BashService;
+import io.kestra.core.tasks.PluginUtilsService;
 import io.kestra.plugin.azure.batch.AbstractBatch;
 import io.kestra.plugin.azure.batch.models.Job;
 import io.kestra.plugin.azure.batch.models.Task;
@@ -198,12 +198,12 @@ public class Create extends AbstractBatch implements RunnableTask<Create.Output>
 
                 // log
                 TaskService.readRemoteLog(runContext, client, jobId, task, "stdout.txt", msg -> {
-                    outputs.putAll(BashService.parseOut(msg, logger, runContext));
+                    outputs.putAll(PluginUtilsService.parseOut(msg, logger, runContext));
                     logger.info(msg);
                 });
 
                 TaskService.readRemoteLog(runContext, client, jobId, task, "stderr.txt", msg -> {
-                    outputs.putAll(BashService.parseOut(msg, logger, runContext));
+                    outputs.putAll(PluginUtilsService.parseOut(msg, logger, runContext));
                     logger.warn(msg);
                 });
 

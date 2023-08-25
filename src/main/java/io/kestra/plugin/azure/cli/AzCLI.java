@@ -83,8 +83,10 @@ import java.util.Map;
         }
 )
 public class AzCLI extends Task implements RunnableTask<ScriptOutput> {
+    private static final String DEFAULT_IMAGE = "mcr.microsoft.com/azure-cli";
+
     @Schema(
-            title = "The commands to run."
+        title = "The commands to run."
     )
     @PluginProperty(dynamic = true)
     @NotNull
@@ -92,31 +94,31 @@ public class AzCLI extends Task implements RunnableTask<ScriptOutput> {
     private List<String> commands;
 
     @Schema(
-            title = "Account username. If set, it will use `az login` before running the commands."
+        title = "Account username. If set, it will use `az login` before running the commands."
     )
     @PluginProperty(dynamic = true)
     private String username;
 
     @Schema(
-            title = "Account password."
+        title = "Account password."
     )
     @PluginProperty(dynamic = true)
     private String password;
 
     @Schema(
-            title = "Tenant id to use."
+        title = "Tenant id to use."
     )
     @PluginProperty(dynamic = true)
     private String tenant;
 
     @Schema(
-            title = "Is the account a service principal ?"
+        title = "Is the account a service principal ?"
     )
     @PluginProperty
     private boolean servicePrincipal;
 
     @Schema(
-            title = "Additional environment variables for the current process."
+        title = "Additional environment variables for the current process."
     )
     @PluginProperty(
             additionalProperties = String.class,
@@ -125,13 +127,12 @@ public class AzCLI extends Task implements RunnableTask<ScriptOutput> {
     protected Map<String, String> env;
 
     @Schema(
-            title = "Docker options for the `DOCKER` runner."
+        title = "Docker options for the `DOCKER` runner.",
+        defaultValue = "{image=" + DEFAULT_IMAGE + ", pullPolicy=ALWAYS}"
     )
     @PluginProperty
     @Builder.Default
-    protected DockerOptions docker = DockerOptions.builder()
-            .image("mcr.microsoft.com/azure-cli")
-            .build();
+    protected DockerOptions docker = DockerOptions.builder().build();
 
     @Override
     public ScriptOutput run(RunContext runContext) throws Exception {
@@ -140,7 +141,7 @@ public class AzCLI extends Task implements RunnableTask<ScriptOutput> {
         CommandsWrapper commands = new CommandsWrapper(runContext)
                 .withWarningOnStdErr(true)
                 .withRunnerType(RunnerType.DOCKER)
-                .withDockerOptions(this.docker)
+                .withDockerOptions(injectDefaults(getDocker()))
                 .withCommands(
                         ScriptService.scriptCommands(
                                 List.of("/bin/sh", "-c"),
@@ -151,6 +152,15 @@ public class AzCLI extends Task implements RunnableTask<ScriptOutput> {
         commands = commands.withEnv(this.env);
 
         return commands.run();
+    }
+
+    private DockerOptions injectDefaults(DockerOptions original) {
+        var builder = original.toBuilder();
+        if (original.getImage() == null) {
+            builder.image(DEFAULT_IMAGE);
+        }
+
+        return builder.build();
     }
 
     List<String> getLoginCommands(RunContext runContext) throws IllegalVariableEvaluationException {

@@ -58,10 +58,10 @@ class TriggerTest extends AbstractTest {
 
             // wait for execution
             executionQueue.receive(TriggerTest.class, execution -> {
-                last.set(execution);
+                last.set(execution.getLeft());
 
                 queueCount.countDown();
-                assertThat(execution.getFlowId(), is("blob-storage-listen"));
+                assertThat(execution.getLeft().getFlowId(), is("blob-storage-listen"));
             });
 
 

@@ -87,7 +87,7 @@ class CreateTest extends AbstractTest {
     @Test
     void run() throws Exception {
         ArrayList<LogEntry> objects = new ArrayList<>();
-        logQueue.receive(objects::add);
+        logQueue.receive(l -> objects.add(l.getLeft()));
 
         String random = IdUtils.create();
         SharedAccess.Output outputs = sas(this.container, null, SharedAccess.Permission.WRITE);
@@ -179,7 +179,7 @@ class CreateTest extends AbstractTest {
     @Test
     void errors() throws Exception {
         ArrayList<LogEntry> objects = new ArrayList<>();
-        logQueue.receive(objects::add);
+        logQueue.receive(l -> objects.add(l.getLeft()));
 
         Exception exception = assertThrows(Exception.class, () -> {
             create(

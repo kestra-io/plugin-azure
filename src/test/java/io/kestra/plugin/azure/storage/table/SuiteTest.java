@@ -74,7 +74,7 @@ class SuiteTest {
 
             FileSerde.write(output, data);
         }
-        URI uri = storageInterface.put(URI.create("/" + IdUtils.create() + ".ion"), new FileInputStream(tempFile));
+        URI uri = storageInterface.put(null, URI.create("/" + IdUtils.create() + ".ion"), new FileInputStream(tempFile));
 
         // create
         Bulk bulk = Bulk.builder()
@@ -116,7 +116,7 @@ class SuiteTest {
 
         List.Output listOutput = list.run(runContext);
 
-        BufferedReader inputStream = new BufferedReader(new InputStreamReader(storageInterface.get(listOutput.getUri())));
+        BufferedReader inputStream = new BufferedReader(new InputStreamReader(storageInterface.get(null, listOutput.getUri())));
         java.util.List<Map<String, Object>> result = new ArrayList<>();
         FileSerde.reader(inputStream, r -> result.add((Map<String, Object>) r));
 

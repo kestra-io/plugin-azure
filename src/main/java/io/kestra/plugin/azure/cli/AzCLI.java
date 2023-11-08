@@ -4,6 +4,8 @@ import io.kestra.core.exceptions.IllegalVariableEvaluationException;
 import io.kestra.core.models.annotations.Example;
 import io.kestra.core.models.annotations.Plugin;
 import io.kestra.core.models.annotations.PluginProperty;
+import io.kestra.core.models.tasks.NamespaceFiles;
+import io.kestra.core.models.tasks.NamespaceFilesInterface;
 import io.kestra.core.models.tasks.RunnableTask;
 import io.kestra.core.models.tasks.Task;
 import io.kestra.core.runners.RunContext;
@@ -82,7 +84,7 @@ import java.util.Map;
                 )                
         }
 )
-public class AzCLI extends Task implements RunnableTask<ScriptOutput> {
+public class AzCLI extends Task implements RunnableTask<ScriptOutput>, NamespaceFilesInterface {
     private static final String DEFAULT_IMAGE = "mcr.microsoft.com/azure-cli";
 
     @Schema(
@@ -134,6 +136,8 @@ public class AzCLI extends Task implements RunnableTask<ScriptOutput> {
     @Builder.Default
     protected DockerOptions docker = DockerOptions.builder().build();
 
+    private NamespaceFiles namespaceFiles;
+
     @Override
     public ScriptOutput run(RunContext runContext) throws Exception {
         List<String> loginCommands = this.getLoginCommands(runContext);
@@ -149,7 +153,8 @@ public class AzCLI extends Task implements RunnableTask<ScriptOutput> {
                                 this.commands)
                 );
 
-        commands = commands.withEnv(this.env);
+        commands = commands.withEnv(this.env)
+            .withNamespaceFiles(namespaceFiles);
 
         return commands.run();
     }

@@ -55,7 +55,7 @@ dependencies {
     implementation group: "io.kestra.plugin", name: "plugin-script", version: kestraVersion
 
     // azure
-    api platform("com.azure:azure-sdk-bom:1.2.12")
+    api platform("com.azure:azure-sdk-bom:1.2.19")
     api group: 'com.azure', name: 'azure-identity'
     api group: 'com.azure', name: 'azure-storage-blob'
     api group: 'com.azure', name: 'azure-data-tables'

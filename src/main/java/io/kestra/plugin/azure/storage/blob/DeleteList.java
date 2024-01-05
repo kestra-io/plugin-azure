@@ -14,10 +14,6 @@ import io.kestra.plugin.azure.storage.blob.abstracts.AbstractBlobStorageContaine
 import io.kestra.plugin.azure.storage.blob.abstracts.ListInterface;
 import io.kestra.plugin.azure.storage.blob.models.Blob;
 import io.kestra.plugin.azure.storage.blob.services.BlobService;
-import io.reactivex.BackpressureStrategy;
-import io.reactivex.Flowable;
-import io.reactivex.functions.Function;
-import io.reactivex.schedulers.Schedulers;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
@@ -25,7 +21,14 @@ import org.apache.commons.lang3.tuple.Pair;
 import org.slf4j.Logger;
 
 import java.util.NoSuchElementException;
+import java.util.function.Function;
+
 import jakarta.validation.constraints.Min;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.FluxSink;
+import reactor.core.scheduler.Schedulers;
+
+import static io.kestra.core.utils.Rethrow.throwConsumer;
 
 @SuperBuilder
 @ToString
@@ -82,21 +85,21 @@ public class DeleteList extends AbstractBlobStorage implements RunnableTask<Dele
         BlobServiceClient client = this.client(runContext);
         BlobContainerClient containerClient = client.getBlobContainerClient(runContext.render(this.container));
 
-        Flowable<Blob> flowable = Flowable
-            .create(emitter -> {
+        Flux<Blob> flowable = Flux
+            .create(throwConsumer(emitter -> {
                 BlobService
                     .list(runContext, containerClient, this)
-                        .forEach(emitter::onNext);
+                        .forEach(emitter::next);
 
-                emitter.onComplete();
-            }, BackpressureStrategy.BUFFER);
+                emitter.complete();
+            }), FluxSink.OverflowStrategy.BUFFER);
 
-        Flowable<Long> result;
+        Flux<Long> result;
 
         if (this.concurrent != null) {
             result = flowable
                 .parallel(this.concurrent)
-                .runOn(Schedulers.io())
+                .runOn(Schedulers.boundedElastic())
                 .map(delete(logger, containerClient))
                 .sequential();
         } else {
@@ -106,7 +109,7 @@ public class DeleteList extends AbstractBlobStorage implements RunnableTask<Dele
 
         Pair<Long, Long> finalResult = result
             .reduce(Pair.of(0L, 0L), (pair, size) -> Pair.of(pair.getLeft() + 1, pair.getRight() + size))
-            .blockingGet();
+            .block();
 
         runContext.metric(Counter.of("count", finalResult.getLeft()));
         runContext.metric(Counter.of("size", finalResult.getRight()));

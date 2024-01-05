@@ -10,9 +10,9 @@ import io.kestra.plugin.azure.eventhubs.config.EventHubClientConfig;
 import io.kestra.plugin.azure.eventhubs.config.EventHubConsumerConfig;
 import io.kestra.plugin.azure.eventhubs.model.EventDataObject;
 import io.kestra.plugin.azure.eventhubs.service.EventDataObjectConverter;
-import io.reactivex.BackpressureStrategy;
-import io.reactivex.Flowable;
 import org.slf4j.Logger;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.FluxSink;
 import reactor.core.publisher.Mono;
 
 import java.io.BufferedReader;
@@ -56,9 +56,9 @@ public class EventHubProducerService {
      * @return The sender result.
      */
     public Result sendEvents(BufferedReader eventStream, ProducerContext context) throws IllegalVariableEvaluationException {
-        Flowable<EventDataObject> flowable = Flowable.create(
+        Flux<EventDataObject> flowable = Flux.create(
             FileSerde.reader(eventStream, EventDataObject.class),
-            BackpressureStrategy.BUFFER
+            FluxSink.OverflowStrategy.BUFFER
         );
         try (EventHubProducerAsyncClient producer = clientFactory.createAsyncProducerClient(config)) {
             return sendEvents(producer, adapter, flowable, context);
@@ -67,7 +67,7 @@ public class EventHubProducerService {
 
     private Result sendEvents(EventHubProducerAsyncClient producer,
                               EventDataObjectConverter adapter,
-                              Flowable<EventDataObject> flowable,
+                              Flux<EventDataObject> flowable,
                               ProducerContext context
     ) {
 
@@ -122,7 +122,7 @@ public class EventHubProducerService {
                 ).then(Mono.just(1));
             })
             .reduce(Integer::sum)
-            .blockingGet();
+            .block();
 
         // Eventually send last partial batch.
         final EventDataBatch batch = currentBatch.getAndSet(null);

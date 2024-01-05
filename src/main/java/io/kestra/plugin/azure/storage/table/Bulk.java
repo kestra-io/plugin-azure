@@ -12,8 +12,6 @@ import io.kestra.core.runners.RunContext;
 import io.kestra.core.serializers.FileSerde;
 import io.kestra.plugin.azure.storage.table.abstracts.AbstractTableStorage;
 import io.kestra.plugin.azure.storage.table.models.Entity;
-import io.reactivex.BackpressureStrategy;
-import io.reactivex.Flowable;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
@@ -24,6 +22,8 @@ import java.net.URI;
 import java.util.List;
 import java.util.Map;
 import jakarta.validation.constraints.NotNull;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.FluxSink;
 
 @SuperBuilder
 @ToString
@@ -75,16 +75,16 @@ public class Bulk extends AbstractTableStorage implements RunnableTask<Bulk.Outp
         BufferedReader inputStream = null;
 
         try {
-            Flowable<Object> flowable;
+            Flux<Object> flowable;
 
             if (this.from instanceof String) {
                 URI from = new URI(runContext.render((String) this.from));
                 inputStream = new BufferedReader(new InputStreamReader(runContext.uriToInputStream(from)));
-                flowable = Flowable.create(FileSerde.reader(inputStream), BackpressureStrategy.BUFFER);
+                flowable = Flux.create(FileSerde.reader(inputStream), FluxSink.OverflowStrategy.BUFFER);
             } else if (this.from instanceof List) {
-                flowable = Flowable.fromArray(((List<Entity>) this.from).toArray());
+                flowable = Flux.fromIterable(((List<Entity>) this.from));
             } else {
-                flowable = Flowable.fromArray(this.createEntity(this.from).to());
+                flowable = Flux.just(this.createEntity(this.from).to());
             }
 
             Integer count = flowable
@@ -100,7 +100,7 @@ public class Bulk extends AbstractTableStorage implements RunnableTask<Bulk.Outp
                     return o.size();
                 })
                 .reduce(Integer::sum)
-                .blockingGet();
+                .block();
 
             runContext.metric(Counter.of("records", count, "table", tableClient.getTableName()));
 

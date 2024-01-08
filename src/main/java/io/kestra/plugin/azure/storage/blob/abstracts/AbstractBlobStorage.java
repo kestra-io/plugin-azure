@@ -7,7 +7,7 @@ import com.azure.storage.blob.BlobServiceClientBuilder;
 import io.kestra.core.exceptions.IllegalVariableEvaluationException;
 import io.kestra.core.runners.RunContext;
 import io.kestra.plugin.azure.storage.abstracts.AbstractStorage;
-import io.kestra.plugin.azure.storage.abstracts.AbstractStorageInterface;
+import io.kestra.plugin.azure.AzureClientInterface;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -19,7 +19,7 @@ import lombok.experimental.SuperBuilder;
 @EqualsAndHashCode
 @Getter
 @NoArgsConstructor
-public abstract class AbstractBlobStorage extends AbstractStorage implements AbstractStorageInterface {
+public abstract class AbstractBlobStorage extends AbstractStorage implements AzureClientInterface {
     protected BlobServiceClient client(RunContext runContext) throws IllegalVariableEvaluationException {
         BlobServiceClientBuilder builder = new BlobServiceClientBuilder()
             .endpoint(runContext.render(endpoint));

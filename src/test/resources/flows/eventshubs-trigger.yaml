@@ -1,0 +1,19 @@
+id: eventhubs-listen
+namespace: io.kestra.tests
+
+triggers:
+  - id: watch
+    type: io.kestra.plugin.azure.eventhubs.Trigger
+    interval: PT10S
+    eventHubName: "{{ globals.azure.eventhubs['eventhub-name'] }}"
+    connectionString: "{{ globals.azure.eventhubs['connection-string'] }}"
+    bodyDeserializer: STRING
+    consumerGroup: "$Default"
+    checkpointStoreProperties:
+      containerName: "{{ globals.azure.eventhubs.checkpointstore['container-name'] }}"
+      connectionString: "{{ globals.azure.eventhubs.checkpointstore['connection-string'] }}"
+
+tasks:
+  - id: end
+    type: io.kestra.core.tasks.debugs.Return
+    format: "{{task.id}} > {{taskrun.startDate}}"

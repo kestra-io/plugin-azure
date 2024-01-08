@@ -12,7 +12,7 @@ import io.kestra.core.models.triggers.TriggerContext;
 import io.kestra.core.models.triggers.TriggerOutput;
 import io.kestra.core.runners.RunContext;
 import io.kestra.plugin.azure.AbstractConnectionInterface;
-import io.kestra.plugin.azure.storage.abstracts.AbstractStorageInterface;
+import io.kestra.plugin.azure.AzureClientInterface;
 import io.kestra.plugin.azure.storage.blob.abstracts.AbstractBlobStorageContainerInterface;
 import io.kestra.plugin.azure.storage.blob.abstracts.ActionInterface;
 import io.kestra.plugin.azure.storage.blob.abstracts.ListInterface;
@@ -110,7 +110,8 @@ import static io.kestra.core.utils.Rethrow.throwFunction;
         )
     }
 )
-public class Trigger extends AbstractTrigger implements PollingTriggerInterface, TriggerOutput<List.Output>, AbstractConnectionInterface, ListInterface, ActionInterface, AbstractBlobStorageContainerInterface, AbstractStorageInterface {
+public class Trigger extends AbstractTrigger implements PollingTriggerInterface, TriggerOutput<List.Output>, AbstractConnectionInterface, ListInterface, ActionInterface, AbstractBlobStorageContainerInterface, AzureClientInterface {
+
     @Builder.Default
     private final Duration interval = Duration.ofSeconds(60);
 

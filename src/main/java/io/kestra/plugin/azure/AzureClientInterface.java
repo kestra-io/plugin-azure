@@ -1,9 +1,13 @@
-package io.kestra.plugin.azure.storage.abstracts;
+package io.kestra.plugin.azure;
 
 import io.kestra.core.models.annotations.PluginProperty;
 import io.swagger.v3.oas.annotations.media.Schema;
 
-public interface AbstractStorageInterface {
+/**
+ * Top-level interface that can be used by plugins to retrieve
+ * required configuration properties in order to establish connection to Azure services.
+ */
+public interface AzureClientInterface {
     @Schema(
         title = "Connection string of the Storage Account."
     )
@@ -15,7 +19,6 @@ public interface AbstractStorageInterface {
     )
     @PluginProperty(dynamic = true)
     String getSharedKeyAccountName();
-
 
     @Schema(
         title = "Shared Key access key for authenticating requests."
@@ -29,4 +32,5 @@ public interface AbstractStorageInterface {
     )
     @PluginProperty(dynamic = true)
     String getSasToken();
+
 }

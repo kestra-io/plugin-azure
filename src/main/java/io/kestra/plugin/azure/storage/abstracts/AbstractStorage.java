@@ -1,6 +1,7 @@
 package io.kestra.plugin.azure.storage.abstracts;
 
 import io.kestra.plugin.azure.AbstractConnection;
+import io.kestra.plugin.azure.AzureClientInterface;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -12,7 +13,7 @@ import lombok.experimental.SuperBuilder;
 @EqualsAndHashCode
 @Getter
 @NoArgsConstructor
-public abstract class AbstractStorage extends AbstractConnection implements AbstractStorageInterface {
+public abstract class AbstractStorage extends AbstractConnection implements AzureClientInterface {
 
     protected String connectionString;
 

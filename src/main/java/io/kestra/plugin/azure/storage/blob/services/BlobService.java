@@ -10,7 +10,7 @@ import io.kestra.core.exceptions.IllegalVariableEvaluationException;
 import io.kestra.core.models.executions.metrics.Counter;
 import io.kestra.core.runners.RunContext;
 import io.kestra.plugin.azure.AbstractConnectionInterface;
-import io.kestra.plugin.azure.storage.abstracts.AbstractStorageInterface;
+import io.kestra.plugin.azure.AzureClientInterface;
 import io.kestra.plugin.azure.storage.blob.Copy;
 import io.kestra.plugin.azure.storage.blob.Delete;
 import io.kestra.plugin.azure.storage.blob.abstracts.ActionInterface;
@@ -43,7 +43,7 @@ public class BlobService {
         Copy.CopyObject moveTo,
         RunContext runContext,
         AbstractConnectionInterface connectionInterface,
-        AbstractStorageInterface blobStorageInterface
+        AzureClientInterface blobStorageInterface
     ) throws Exception {
         if (action == ActionInterface.Action.DELETE) {
             for (Blob object : blobsObjects) {

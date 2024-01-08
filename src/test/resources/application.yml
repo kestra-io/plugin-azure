@@ -21,4 +21,9 @@ kestra:
           account: batchunitest
           pool-id: azure-unit-test
           job-id: job-unit-test
-
+        eventhubs:
+          eventhub-name: ""
+          connection-string: ""
+          checkpointstore:
+            connection-string: ""
+            container-name: ""

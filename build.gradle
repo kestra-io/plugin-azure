@@ -55,12 +55,14 @@ dependencies {
     implementation group: "io.kestra.plugin", name: "plugin-script", version: kestraVersion
 
     // azure
-    api platform("com.azure:azure-sdk-bom:1.2.12")
+    api platform("com.azure:azure-sdk-bom:1.2.19")
     api group: 'com.azure', name: 'azure-identity'
     api group: 'com.azure', name: 'azure-storage-blob'
     api group: 'com.azure', name: 'azure-data-tables'
     api group: 'com.microsoft.azure', name: 'azure-batch', version: '10.1.0'
     api group: 'com.microsoft.azure', name: 'azure-storage', version: '8.6.6'
+    api group: 'com.azure', name: 'azure-messaging-eventhubs-checkpointstore-blob'
+    api group: 'com.azure', name: 'azure-messaging-eventhubs'
 }
 
 
@@ -96,6 +98,8 @@ dependencies {
     testImplementation "org.junit.jupiter:junit-jupiter-engine"
     testImplementation "org.hamcrest:hamcrest:2.2"
     testImplementation "org.hamcrest:hamcrest-library:2.2"
+    testImplementation "org.mockito:mockito-core:5.8.0"
+    testImplementation "org.mockito:mockito-junit-jupiter:5.8.0"
 }
 
 /**********************************************************************************************************************\

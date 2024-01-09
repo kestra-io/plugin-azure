@@ -42,7 +42,7 @@ import javax.validation.constraints.NotNull;
                 "    rowKey: \"green\"",
                 "    type: \"UPSERT_MERGE\"",
                 "    properties:",
-                "      \"code\": \"00FF00\"",
+                "      \"code\": \"00FF00\""
             }
         )
     }
@@ -62,7 +62,6 @@ public class Bulk extends AbstractTableStorage implements RunnableTask<Bulk.Outp
 
     @Schema(
         title = "The default operation type to be applied to the entity."
-    )
     )
     @NotNull
     @PluginProperty(dynamic = true)

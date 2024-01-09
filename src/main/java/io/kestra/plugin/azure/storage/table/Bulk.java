@@ -38,32 +38,31 @@ import javax.validation.constraints.NotNull;
                 "connectionString: \"DefaultEndpointsProtocol=...==\"",
                 "table: \"mydata\"",
                 "from:",
-                "  partitionKey: \"color\"",
-                "  rowKey: \"green\"",
-                "  type: \"UPSERT_MERGE\"",
-                "  properties:",
-                "    \"code\": \"00FF00\"",
+                "  - partitionKey: \"color\"",
+                "    rowKey: \"green\"",
+                "    type: \"UPSERT_MERGE\"",
+                "    properties:",
+                "      \"code\": \"00FF00\"",
             }
         )
     }
 )
 @Schema(
-    title = "Inserts or update an entities into the table."
+    title = "Inserts or updates entities into the table. Make sure to pass either a list of entities or a file with a list of entities."
 )
 public class Bulk extends AbstractTableStorage implements RunnableTask<Bulk.Output> {
     @Schema(
-        title = "Source of message send",
-        description = "Can be an internal storage uri, a map or a list." +
-            "with the following format: partitionKey, rowKey, type, properties"
+        title = "Source of a message",
+        description = "Can be an internal storage URI or a list of maps " +
+            "in the format `partitionKey`, `rowKey`, `type`, `properties`, as shown in the example."
     )
     @NotNull
     @PluginProperty(dynamic = true)
     private Object from;
 
     @Schema(
-        title = "The default operation type to be applied to the entity.",
-        description = "Can be an internal storage uri, a map or a list." +
-            "with the following format: partitionKey, rowKey, properties"
+        title = "The default operation type to be applied to the entity."
+    )
     )
     @NotNull
     @PluginProperty(dynamic = true)

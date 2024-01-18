@@ -2,7 +2,6 @@ package io.kestra.plugin.azure.storage.blob;
 
 import io.kestra.core.utils.IdUtils;
 import io.kestra.plugin.azure.BaseTest;
-import io.micronaut.context.annotation.Value;
 
 import java.net.URI;
 
@@ -32,5 +31,15 @@ abstract class AbstractTest extends BaseTest {
             .endpoint(this.storageEndpoint)
             .connectionString(this.connectionString)
             .container(this.container);
+    }
+
+    protected DeleteList.DeleteListBuilder<?, ?> deleteDir(String dir) {
+        return DeleteList.builder()
+            .id(AbstractTest.class.getSimpleName())
+            .type(DeleteList.class.getName())
+            .endpoint(this.storageEndpoint)
+            .connectionString(this.connectionString)
+            .container(this.container)
+            .prefix(dir);
     }
 }

@@ -41,7 +41,7 @@ class TriggerTest extends AbstractTest {
     protected LocalFlowRepositoryLoader repositoryLoader;
 
     @Test
-    void flow() throws Exception {
+    void deleteAction() throws Exception {
         // mock flow listeners
         CountDownLatch queueCount = new CountDownLatch(1);
 
@@ -57,27 +57,100 @@ class TriggerTest extends AbstractTest {
             AtomicReference<Execution> last = new AtomicReference<>();
 
             // wait for execution
-            executionQueue.receive(TriggerTest.class, execution -> {
-                last.set(execution.getLeft());
-
-                queueCount.countDown();
-                assertThat(execution.getLeft().getFlowId(), is("blob-storage-listen"));
+            executionQueue.receive(TriggerTest.class, executionWithError -> {
+                Execution execution = executionWithError.getLeft();
+                if (execution.getFlowId().equals("blob-storage-listen")) {
+                    last.set(execution);
+                    queueCount.countDown();
+                }
             });
 
 
-            upload("trigger/storage-listen");
-            upload("trigger/storage-listen");
+            String toUploadDir = "trigger/storage-listen";
+            upload(toUploadDir);
+            upload(toUploadDir);
 
             worker.run();
             scheduler.run();
-            repositoryLoader.load(Objects.requireNonNull(TriggerTest.class.getClassLoader().getResource("flows")));
+            repositoryLoader.load(Objects.requireNonNull(TriggerTest.class.getClassLoader().getResource("flows/blob-storage-listen.yaml")));
 
-            queueCount.await(1, TimeUnit.MINUTES);
+            boolean await = queueCount.await(10, TimeUnit.SECONDS);
+            try {
+                assertThat(await, is(true));
+            } finally {
+                worker.shutdown();
+            }
 
             @SuppressWarnings("unchecked")
             java.util.List<Blob> trigger = (java.util.List<Blob>) last.get().getTrigger().getVariables().get("blobs");
 
             assertThat(trigger.size(), is(2));
+
+            List listTask = list()
+                .prefix(toUploadDir)
+                .build();
+            int remainingFilesOnBucket = listTask.run(runContext(listTask))
+                .getBlobs()
+                .size();
+            assertThat(remainingFilesOnBucket, is(0));
+        }
+    }
+
+    @Test
+    void noneAction() throws Exception {
+        // mock flow listeners
+        CountDownLatch queueCount = new CountDownLatch(1);
+
+        // scheduler
+        Worker worker = new Worker(applicationContext, 8, null);
+        try (
+            AbstractScheduler scheduler = new DefaultScheduler(
+                this.applicationContext,
+                this.flowListenersService,
+                this.triggerState
+            );
+        ) {
+            AtomicReference<Execution> last = new AtomicReference<>();
+
+            // wait for execution
+            executionQueue.receive(TriggerTest.class, executionWithError -> {
+                Execution execution = executionWithError.getLeft();
+                if (execution.getFlowId().equals("blob-storage-listen-none-action")) {
+                    last.set(execution);
+                    queueCount.countDown();
+                }
+            });
+
+
+            upload("trigger/none-action-storage-listen");
+            upload("trigger/none-action-storage-listen");
+
+            worker.run();
+            scheduler.run();
+            repositoryLoader.load(Objects.requireNonNull(TriggerTest.class.getClassLoader().getResource("flows/blob-storage-listen-none-action.yaml")));
+
+            boolean await = queueCount.await(10, TimeUnit.SECONDS);
+            try {
+                assertThat(await, is(true));
+            } finally {
+                worker.shutdown();
+            }
+
+            @SuppressWarnings("unchecked")
+            java.util.List<Blob> trigger = (java.util.List<Blob>) last.get().getTrigger().getVariables().get("blobs");
+
+            assertThat(trigger.size(), is(2));
+
+            List listTask = list()
+                .prefix("trigger/none-action-storage-listen")
+                .build();
+            int remainingFilesOnBucket = listTask.run(runContext(listTask))
+                .getBlobs()
+                .size();
+            assertThat(remainingFilesOnBucket, is(2));
+        } finally {
+            DeleteList cleaner = deleteDir("trigger/none-action-storage-listen").build();
+            cleaner.run(runContext(cleaner));
         }
     }
 }

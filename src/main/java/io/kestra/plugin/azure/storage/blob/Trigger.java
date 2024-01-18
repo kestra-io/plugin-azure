@@ -11,7 +11,6 @@ import io.kestra.core.models.triggers.PollingTriggerInterface;
 import io.kestra.core.models.triggers.TriggerContext;
 import io.kestra.core.models.triggers.TriggerOutput;
 import io.kestra.core.runners.RunContext;
-import io.kestra.core.utils.IdUtils;
 import io.kestra.plugin.azure.AbstractConnectionInterface;
 import io.kestra.plugin.azure.storage.abstracts.AbstractStorageInterface;
 import io.kestra.plugin.azure.storage.blob.abstracts.AbstractBlobStorageContainerInterface;
@@ -72,10 +71,45 @@ import static io.kestra.core.utils.Rethrow.throwFunction;
                 "      container: mydata",
                 "      name: archive",
             }
+        ),
+        @Example(
+            title = "Wait for a list of file on a Azure Blob Storage bucket and iterate through the files. Delete files manually after processing to prevent infinite triggering.",
+            full = true,
+            code = {
+                "id: storage-listen",
+                "namespace: io.kestra.tests",
+                "",
+                "tasks:",
+                "  - id: each",
+                "    type: io.kestra.core.tasks.flows.EachSequential",
+                "    tasks:",
+                "      - id: return",
+                "        type: io.kestra.core.tasks.debugs.Return",
+                "        format: \"{{taskrun.value}}\"",
+                "      - id: delete",
+                "        type: io.kestra.plugin.azure.storage.blob.Delete",
+                "        endpoint: \"https://yourblob.blob.core.windows.net\"",
+                "        connectionString: \"DefaultEndpointsProtocol=...==\"",
+                "        container: \"mydata\"",
+                "        name: \"{{ taskrun.value }}\"",
+                "    value: \"{{ trigger.blobs | jq('.[].name') }}\"",
+                "",
+                "triggers:",
+                "  - id: watch",
+                "    type: io.kestra.plugin.azure.storage.blob.Trigger",
+                "    endpoint: \"https://yourblob.blob.core.windows.net\"",
+                "    connectionString: \"DefaultEndpointsProtocol=...==\"",
+                "    container: \"mydata\"",
+                "    prefix: \"trigger/storage-listen\"",
+                "    action: MOVE",
+                "    moveTo: ",
+                "      container: mydata",
+                "      name: archive",
+            }
         )
     }
 )
-public class Trigger extends AbstractTrigger implements PollingTriggerInterface, TriggerOutput<List.Output>, AbstractConnectionInterface, ListInterface, AbstractBlobStorageContainerInterface, AbstractStorageInterface {
+public class Trigger extends AbstractTrigger implements PollingTriggerInterface, TriggerOutput<List.Output>, AbstractConnectionInterface, ListInterface, ActionInterface, AbstractBlobStorageContainerInterface, AbstractStorageInterface {
     @Builder.Default
     private final Duration interval = Duration.ofSeconds(60);
 
@@ -124,7 +158,7 @@ public class Trigger extends AbstractTrigger implements PollingTriggerInterface,
             .build();
         List.Output run = task.run(runContext);
 
-        if (run.getBlobs().size() == 0) {
+        if (run.getBlobs().isEmpty()) {
             return Optional.empty();
         }
 

@@ -13,7 +13,7 @@ import javax.validation.constraints.NotNull;
 @Value
 public class OutputFileDestination {
     @Schema(
-        title = "A location in Azure blob storage to which files are uploaded."
+        title = "A location in Azure Blob Storage to which the files are uploaded."
     )
     @PluginProperty(dynamic = true)
     @NotNull

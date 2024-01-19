@@ -37,7 +37,7 @@ import java.net.URI;
     }
 )
 @Schema(
-    title = "Download a file from an Azure Blob Storage."
+    title = "Download a file from the Azure Blob Storage."
 )
 public class Download extends AbstractBlobStorageObject implements RunnableTask<Download.Output> {
     @Override
@@ -57,7 +57,7 @@ public class Download extends AbstractBlobStorageObject implements RunnableTask<
     @Getter
     public static class Output implements io.kestra.core.models.tasks.Output {
         @Schema(
-            title = "The blob"
+            title = "The downloaded blob."
         )
         private final Blob blob;
     }

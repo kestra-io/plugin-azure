@@ -11,7 +11,7 @@ import lombok.Value;
 @Value
 public class ComputeNodeIdentityReference {
     @Schema(
-        title = "The ARM resource id of the user assigned identity. "
+        title = "The ARM resource ID of the user assigned identity."
     )
     @PluginProperty(dynamic = true)
     private String resourceId;

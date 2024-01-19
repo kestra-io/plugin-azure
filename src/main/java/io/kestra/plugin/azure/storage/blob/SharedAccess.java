@@ -45,7 +45,7 @@ import javax.validation.constraints.NotNull;
     }
 )
 @Schema(
-    title = "Download a file from an Azure Blob Storage."
+    title = "Shared Access on the Azure Blob Storage."
 )
 public class SharedAccess extends AbstractBlobStorageObject implements RunnableTask<SharedAccess.Output> {
     @Schema(
@@ -56,7 +56,7 @@ public class SharedAccess extends AbstractBlobStorageObject implements RunnableT
     private String expirationDate;
 
     @Schema(
-        title = " The time after which the SAS will no longer work."
+        title = " The permissions to be set for the Shared Access."
     )
     @PluginProperty(dynamic = true)
     @NotNull
@@ -114,7 +114,7 @@ public class SharedAccess extends AbstractBlobStorageObject implements RunnableT
     @Getter
     public static class Output implements io.kestra.core.models.tasks.Output {
         @Schema(
-            title = "The sas url"
+            title = "The SAS URI."
         )
         private final URI uri;
     }

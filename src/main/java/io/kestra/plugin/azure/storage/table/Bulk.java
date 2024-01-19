@@ -48,11 +48,11 @@ import javax.validation.constraints.NotNull;
     }
 )
 @Schema(
-    title = "Inserts or updates entities into the table. Make sure to pass either a list of entities or a file with a list of entities."
+    title = "Inserts or updates entities into the Azure Storage Table. Make sure to pass either a list of entities or a file with a list of entities."
 )
 public class Bulk extends AbstractTableStorage implements RunnableTask<Bulk.Output> {
     @Schema(
-        title = "Source of a message",
+        title = "Source of a message.",
         description = "Can be an internal storage URI or a list of maps " +
             "in the format `partitionKey`, `rowKey`, `type`, `properties`, as shown in the example."
     )
@@ -134,7 +134,7 @@ public class Bulk extends AbstractTableStorage implements RunnableTask<Bulk.Outp
     @Getter
     public static class Output implements io.kestra.core.models.tasks.Output {
         @Schema(
-            title = "Number of entity created"
+            title = "Number of entities created."
         )
         private final Integer count;
     }

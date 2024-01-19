@@ -37,7 +37,7 @@ import javax.validation.constraints.NotNull;
     }
 )
 @Schema(
-    title = "Gets an entity on the table."
+    title = "Gets an entity from the Azure Storage Table."
 )
 public class Get extends AbstractTableStorage implements RunnableTask<Get.Output> {
     @Schema(
@@ -48,7 +48,7 @@ public class Get extends AbstractTableStorage implements RunnableTask<Get.Output
     private String partitionKey;
 
     @Schema(
-        title = "The partition key of the entity."
+        title = "The row key of the entity."
     )
     @PluginProperty(dynamic = true)
     private String rowKey;
@@ -71,7 +71,7 @@ public class Get extends AbstractTableStorage implements RunnableTask<Get.Output
     @Getter
     public static class Output implements io.kestra.core.models.tasks.Output {
         @Schema(
-            title = "the entity"
+            title = "The entity retrieved from the table."
         )
         private final Entity row;
     }

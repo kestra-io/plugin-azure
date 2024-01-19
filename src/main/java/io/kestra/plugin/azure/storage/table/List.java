@@ -43,27 +43,27 @@ import javax.validation.constraints.NotNull;
     }
 )
 @Schema(
-    title = "Lists entities using the parameters in the provided options.",
-    description = "If the `filter` parameter in the options is set, only entities matching the filter will be returned. " +
-        "If the `select` parameter is set, only the properties included in the select parameter will be returned for each entity. " +
+    title = "Lists entities from the Azure Storage Table using the parameters in the provided options.",
+    description = "If the `filter` parameter in the options is set, only entities matching the filter will be returned.\n" +
+        "If the `select` parameter is set, only the properties included in the select parameter will be returned for each entity.\n" +
         "If the `top` parameter is set, the maximum number of returned entities per page will be limited to that value."
 )
 public class List extends AbstractTableStorage implements RunnableTask<List.Output> {
     @Schema(
         title = "Returns only tables or entities that satisfy the specified filter.",
-        description = "using [Filter Strings](https://docs.microsoft.com/en-us/visualstudio/azure/vs-azure-tools-table-designer-construct-filter-strings?view=vs-2022) "
+        description = "You can specify the filter using [Filter Strings](https://docs.microsoft.com/en-us/visualstudio/azure/vs-azure-tools-table-designer-construct-filter-strings?view=vs-2022)."
     )
     @PluginProperty(dynamic = true)
     private String filter;
 
     @Schema(
-        title = "Returns the desired properties of an entity from the set."
+        title = "The desired properties of an entity from the Azure Storage Table."
     )
     @PluginProperty(dynamic = true)
     private java.util.List<String> select;
 
     @Schema(
-        title = "Returns only the top `n` tables or entities from the set."
+        title = "List the top `n` tables or entities from the Azure Storage Table."
     )
     @PluginProperty(dynamic = true)
     private Integer top;
@@ -108,12 +108,12 @@ public class List extends AbstractTableStorage implements RunnableTask<List.Outp
     @Getter
     public static class Output implements io.kestra.core.models.tasks.Output {
         @Schema(
-            title = "Number of entity"
+            title = "Number of listed entities."
         )
         private final Integer count;
 
         @Schema(
-            title = "URI of a kestra internal storage file"
+            title = "URI of the Kestra internal storage file containing the output."
         )
         private URI uri;
     }

@@ -13,7 +13,7 @@ public interface ListInterface {
     String getPrefix();
 
     @Schema(
-        title = "A regexp to filter on full key",
+        title = "A regular expression to filter on the full key.",
         description = "ex:\n"+
             "`regExp: .*` to match all files\n"+
             "`regExp: .*2020-01-0.\\\\.csv` to match files between 01 and 09 of january ending with `.csv`"
@@ -28,7 +28,7 @@ public interface ListInterface {
     String getDelimiter();
 
     @Schema(
-        title = "The filter files or directory"
+        title = "The filter for files or directories."
     )
     @NotNull
     Filter getFilter();

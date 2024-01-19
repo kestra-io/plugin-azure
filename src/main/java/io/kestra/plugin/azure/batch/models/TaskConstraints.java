@@ -13,7 +13,7 @@ import java.time.Duration;
 @Value
 public class TaskConstraints {
     @Schema(
-        title = "The maximum elapsed time that the Task may run, measured from the time the Task starts. ",
+        title = "The maximum elapsed time that the Task may run, measured from the time the Task starts.",
         description = "If the Task does not complete within the time limit, the Batch service terminates it. " +
             "If this is not specified, there is no time limit on how long the Task may run."
     )
@@ -21,7 +21,7 @@ public class TaskConstraints {
     Duration maxWallClockTime;
 
     @Schema(
-        title = "The minimum time to retain the Task directory on the Compute Node where it ran, from the time it completes execution. ",
+        title = "The minimum time to retain the Task directory on the Compute Node where it ran, from the time it completes execution.",
         description = "After this time, the Batch service may delete the Task directory and all its contents. " +
             "The default is 7 days, i.e. the Task directory will be retained for 7 days unless " +
             "the Compute Node is removed or the Job is deleted."

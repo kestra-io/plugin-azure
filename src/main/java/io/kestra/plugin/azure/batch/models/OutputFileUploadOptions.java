@@ -16,7 +16,7 @@ import javax.validation.constraints.NotNull;
 @Jacksonized
 public class OutputFileUploadOptions {
     @Schema(
-        title = "The conditions under which the Task output file or set of files should be uploaded.."
+        title = "The conditions under which the Task output file or set of files should be uploaded."
     )
     @PluginProperty(dynamic = false)
     @NotNull

@@ -15,7 +15,7 @@ import javax.validation.constraints.NotNull;
 public class TaskContainerSettings {
     @Schema(
         title = "Additional options to the container create command.",
-        description = "These additional options are supplied as arguments to the \"docker create\" command, in " +
+        description = "These additional options are supplied as arguments to the `docker create` command, in " +
             "addition to those controlled by the Batch Service."
     )
     @PluginProperty(dynamic = true)
@@ -23,15 +23,15 @@ public class TaskContainerSettings {
 
     @Schema(
         title = "The Image to use to create the container in which the Task will run.",
-        description = "This is the full Image reference, as would be specified to \"docker pull\". If no tag is " +
-            "provided as part of the Image name, the tag \":latest\" is used as a default."
+        description = "This is the full Image reference, as would be specified to `docker pull`. If no tag is " +
+            "provided as part of the Image name, the tag `:latest` is used as a default."
     )
     @PluginProperty(dynamic = true)
     @NotNull
     String imageName;
 
     @Schema(
-        title = "The private registry which contains the container Image.",
+        title = "The private registry which contains the container image.",
         description = "This setting can be omitted if was already provided at Pool creation."
     )
     @PluginProperty(dynamic = false)
@@ -39,7 +39,7 @@ public class TaskContainerSettings {
 
     @Schema(
         title = "The location of the container Task working directory.",
-        description = "The default is 'taskWorkingDirectory'. Possible values include: 'taskWorkingDirectory', 'containerImageDefault'."
+        description = "The default is `taskWorkingDirectory`. Possible values include: `taskWorkingDirectory`, `containerImageDefault`."
     )
     @PluginProperty(dynamic = false)
     ContainerWorkingDirectory workingDirectory;

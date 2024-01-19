@@ -11,7 +11,7 @@ import lombok.Value;
 @Value
 public class ContainerRegistry {
     @Schema(
-        title = "The registry URL.",
+        title = "The registry server URL.",
         description = "If omitted, the default is \"docker.io\"."
     )
     @PluginProperty(dynamic = true)
@@ -30,7 +30,7 @@ public class ContainerRegistry {
     String password;
 
     @Schema(
-        title = "The reference to the user assigned identity to use to access an Azure Container Registry instead of username and password."
+        title = "The reference to the user assigned identity to use to access the Azure Container Registry instead of username and password."
     )
     @PluginProperty(dynamic = true)
     ComputeNodeIdentityReference identityReference;

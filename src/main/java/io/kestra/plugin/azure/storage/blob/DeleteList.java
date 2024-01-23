@@ -47,7 +47,7 @@ import javax.validation.constraints.Min;
     }
 )
 @Schema(
-    title = "Delete a list of key on a Azure Blob Storage."
+    title = "Delete a list of keys from the Azure Blob Storage."
 )
 public class DeleteList extends AbstractBlobStorage implements RunnableTask<DeleteList.Output>, ListInterface, AbstractBlobStorageContainerInterface {
     private String container;
@@ -63,13 +63,13 @@ public class DeleteList extends AbstractBlobStorage implements RunnableTask<Dele
 
     @Min(2)
     @Schema(
-        title = "Number of concurrent parallels deletion"
+        title = "Number of concurrent parallel deletions."
     )
     @PluginProperty(dynamic = false)
     private Integer concurrent;
 
     @Schema(
-        title = "raise an error if the file is not found"
+        title = "Whether to raise an error if the file is not found."
     )
     @PluginProperty(dynamic = true)
     @Builder.Default
@@ -147,13 +147,13 @@ public class DeleteList extends AbstractBlobStorage implements RunnableTask<Dele
     public static class Output implements io.kestra.core.models.tasks.Output {
         @Builder.Default
         @Schema(
-            title = "The count of blobs deleted"
+            title = "The count of deleted blobs."
         )
         private final long count = 0;
 
         @Builder.Default
         @Schema(
-            title = "The size of all blobs deleted"
+            title = "The size of all the deleted blobs."
         )
         private final long size = 0;
     }

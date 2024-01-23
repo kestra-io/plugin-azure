@@ -36,7 +36,7 @@ import lombok.experimental.SuperBuilder;
     }
 )
 @Schema(
-    title = "List blobs on an Azure Blob Storage."
+    title = "List blobs on the Azure Blob Storage."
 )
 public class List extends AbstractBlobStorage implements RunnableTask<List.Output>, ListInterface, AbstractBlobStorageContainerInterface {
     private String container;
@@ -76,7 +76,7 @@ public class List extends AbstractBlobStorage implements RunnableTask<List.Outpu
     @Getter
     public static class Output implements io.kestra.core.models.tasks.Output {
         @Schema(
-            title = "The list of objects"
+            title = "The list of blobs."
         )
         private final java.util.List<Blob> blobs;
     }

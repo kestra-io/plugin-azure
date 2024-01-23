@@ -33,7 +33,7 @@ import lombok.experimental.SuperBuilder;
     }
 )
 @Schema(
-    title = "Delete a file from an Azure Blob Storage."
+    title = "Delete a file from the Azure Blob Storage."
 )
 public class Delete extends AbstractBlobStorageObject implements RunnableTask<Delete.Output> {
     @Override
@@ -53,7 +53,7 @@ public class Delete extends AbstractBlobStorageObject implements RunnableTask<De
     @Getter
     public static class Output implements io.kestra.core.models.tasks.Output {
         @Schema(
-            title = "The blob"
+            title = "The deleted blob."
         )
         private final Blob blob;
     }

@@ -96,7 +96,7 @@ public class Resize extends AbstractBatch implements RunnableTask<Resize.Output>
     @NoArgsConstructor
     public static class Output implements io.kestra.core.models.tasks.Output {
         @Schema(
-            title = "The pool"
+            title = "The pool that has been resized."
         )
         private Pool pool;
     }

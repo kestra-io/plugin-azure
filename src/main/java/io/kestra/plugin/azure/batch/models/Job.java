@@ -42,10 +42,10 @@ public class Job {
     private Integer priority;
 
     @Schema(
-        title = "The maximum number of tasks that can be executed in parallel for the job.",
-        description = "The value of maxParallelTasks must be -1 or greater than 0 if specified. " +
+        title = "The maximum number of tasks that can be executed in parallel for the Job.",
+        description = "The value of `maxParallelTasks` must be -1 or greater than 0, if specified. " +
             "If not specified, the default value is -1, which means there's no limit to the number of tasks that " +
-            "can be run at once. You can update a job's maxParallelTasks after it has been created using the update job API."
+            "can be run at once. You can update a job's `maxParallelTasks` after it has been created using the update job API."
     )
     @PluginProperty(dynamic = false)
     private Integer maxParallelTasks;

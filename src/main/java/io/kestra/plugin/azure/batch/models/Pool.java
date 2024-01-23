@@ -22,16 +22,16 @@ public class Pool {
 
     @Schema(
         title = "The desired number of dedicated Compute Nodes in the Pool.",
-        description = "This property must not be specified if enableAutoScale is set to true. " +
-            "If enableAutoScale is set to false, then you must set either targetDedicatedNodes, targetLowPriorityNodes, or both."
+        description = "This property must not be specified if `enableAutoScale` is set to `true`. " +
+            "If `enableAutoScale` is set to `false`, then you must set either `targetDedicatedNodes`, `targetLowPriorityNodes`, or both."
     )
     @PluginProperty(dynamic = true)
     Integer targetDedicatedNodes;
 
     @Schema(
         title = "The desired number of low-priority Compute Nodes in the Pool.",
-        description = "This property must not be specified if enableAutoScale is set to true. " +
-            "If enableAutoScale is set to false, then you must set either targetDedicatedNodes, targetLowPriorityNodes, " +
+        description = "This property must not be specified if `enableAutoScale` is set to `true`. " +
+            "If `enableAutoScale` is set to `false`, then you must set either `targetDedicatedNodes`, `targetLowPriorityNodes`, " +
             "or both."
     )
     @PluginProperty(dynamic = true)

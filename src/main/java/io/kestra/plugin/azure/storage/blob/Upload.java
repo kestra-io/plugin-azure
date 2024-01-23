@@ -44,17 +44,17 @@ import static io.kestra.core.utils.Rethrow.throwFunction;
     }
 )
 @Schema(
-    title = "Upload a file to a Azure Blob Storage."
+    title = "Upload a file to the Azure Blob Storage."
 )
 public class Upload extends AbstractBlobStorageObject implements RunnableTask<Upload.Output> {
     @Schema(
-        title = "The file to upload"
+        title = "The file from the internal storage to upload to the Azure Blob Storage."
     )
     @PluginProperty(dynamic = true)
     private String from;
 
     @Schema(
-        title = "Blob's metadata."
+        title = "Metadata for the blob."
     )
     @PluginProperty(dynamic = true)
     private Map<String, String> metadata;
@@ -66,9 +66,9 @@ public class Upload extends AbstractBlobStorageObject implements RunnableTask<Up
     private Map<String, String> tags;
 
     @Schema(
-        title = "The tier on a blob.",
-        description = "The operation is allowed on a page blob in a premium storage account or a block blob in a blob " +
-            "storage or GPV2 account. A premium page blob's tier determines the allowed size, IOPS, and bandwidth " +
+        title = "The access tier of the uploaded blob.",
+        description = "The operation is allowed on a page blob in a premium Storage Account or a block blob in a blob " +
+            "Storage Account or GPV2 Account. A premium page blob's tier determines the allowed size, IOPS, and bandwidth " +
             "of the blob. A block blob's tier determines the Hot/Cool/Archive storage type. " +
             "This does not update the blob's etag."
     )
@@ -148,7 +148,7 @@ public class Upload extends AbstractBlobStorageObject implements RunnableTask<Up
     @Getter
     public static class Output implements io.kestra.core.models.tasks.Output {
         @Schema(
-            title = "The blob"
+            title = "The uploaded blob."
         )
         private final Blob blob;
     }

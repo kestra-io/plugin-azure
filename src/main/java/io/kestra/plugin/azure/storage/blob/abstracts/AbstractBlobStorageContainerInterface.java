@@ -7,7 +7,7 @@ import javax.validation.constraints.NotNull;
 
 public interface AbstractBlobStorageContainerInterface {
     @Schema(
-        title = "The blob container"
+        title = "The blob container."
     )
     @PluginProperty(dynamic = true)
     @NotNull

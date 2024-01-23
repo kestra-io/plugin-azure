@@ -77,7 +77,7 @@ import javax.validation.constraints.NotNull;
             }
         ),
         @Example(
-            title = "Use a container to start the task, the pool must used a `microsoft-azure-batch` publisher",
+            title = "Use a container to start the task, the pool must use a `microsoft-azure-batch` publisher.",
             code = {
                 "endpoint: https://***.francecentral.batch.azure.com",
                 "account: <batch-account>",
@@ -121,8 +121,8 @@ public class Create extends AbstractBatch implements RunnableTask<Create.Output>
     private List<Task> tasks;
 
     @Schema(
-        title = "The max total wait duration",
-        description = "If null, there is no timeout and end is delegate to Azure Batch"
+        title = "The maximum total wait duration.",
+        description = "If null, there is no timeout and the task is delegated to Azure Batch."
     )
     @PluginProperty(dynamic = false)
     private Duration maxDuration;
@@ -267,12 +267,12 @@ public class Create extends AbstractBatch implements RunnableTask<Create.Output>
     @NoArgsConstructor
     public static class Output implements io.kestra.core.models.tasks.Output {
         @Schema(
-            title = "The value extract from output of the commands"
+            title = "The values from the output of the commands."
         )
         private Map<String, Object> vars;
 
         @Schema(
-            title = "The output files uri in Kestra internal storage"
+            title = "The output files' URIs in Kestra's internal storage."
         )
         @PluginProperty(additionalProperties = URI.class)
         private Map<String, URI> outputFiles;

@@ -46,21 +46,21 @@ import javax.validation.constraints.NotNull;
 )
 public class Copy extends AbstractBlobStorage implements RunnableTask<Copy.Output> {
     @Schema(
-        title = "The source."
+        title = "The source from where the file should be copied."
     )
     @PluginProperty(dynamic = true)
     @NotNull
     private CopyObject from;
 
     @Schema(
-        title = "The destination."
+        title = "The destination to copy the file to."
     )
     @PluginProperty(dynamic = false)
     @NotNull
     private CopyObject to;
 
     @Schema(
-        title = "Delete the source file after copy"
+        title = "Whether to delete the source file after copy."
     )
     @PluginProperty(dynamic = false)
     @Builder.Default
@@ -110,14 +110,14 @@ public class Copy extends AbstractBlobStorage implements RunnableTask<Copy.Outpu
     @NoArgsConstructor
     public static class CopyObject {
         @Schema(
-            title = "The blob container"
+            title = "The blob container."
         )
         @PluginProperty(dynamic = true)
         @NotNull
         String container;
 
         @Schema(
-            title = "The full blob path on the container"
+            title = "The full blob path on the container."
         )
         @PluginProperty(dynamic = true)
         @NotNull
@@ -128,7 +128,7 @@ public class Copy extends AbstractBlobStorage implements RunnableTask<Copy.Outpu
     @NoArgsConstructor
     public static class Output implements io.kestra.core.models.tasks.Output {
         @Schema(
-            title = "The blob copied"
+            title = "The copied blob."
         )
         private Blob blob;
     }

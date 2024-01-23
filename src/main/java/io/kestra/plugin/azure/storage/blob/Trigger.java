@@ -34,8 +34,8 @@ import static io.kestra.core.utils.Rethrow.throwFunction;
 @Getter
 @NoArgsConstructor
 @Schema(
-    title = "Wait for files on Azure Blob Storage",
-    description = "This trigger will poll every `interval` blob storage. " +
+    title = "Wait for files on the Azure Blob Storage.",
+    description = "This trigger will poll every `interval` on the Azure Blob Storage. " +
         "You can search for all files in a container or directory in `from` or you can filter the files with a `regExp`." +
         "The detection is atomic, internally we do a list and interact only with files listed.\n" +
         "Once a file is detected, we download the file on internal storage and processed with declared `action` " +
@@ -44,7 +44,7 @@ import static io.kestra.core.utils.Rethrow.throwFunction;
 @Plugin(
     examples = {
         @Example(
-            title = "Wait for a list of file on a Azure Blob Storage bucket and iterate through the files",
+            title = "Wait for a list of files on Azure Blob Storage bucket, and then iterate through the files.",
             full = true,
             code = {
                 "id: storage-listen",
@@ -62,6 +62,7 @@ import static io.kestra.core.utils.Rethrow.throwFunction;
                 "triggers:",
                 "  - id: watch",
                 "    type: io.kestra.plugin.azure.storage.blob.Trigger",
+                "    interval: PT5M",
                 "    endpoint: \"https://yourblob.blob.core.windows.net\"",
                 "    connectionString: \"DefaultEndpointsProtocol=...==\"",
                 "    container: \"mydata\"",

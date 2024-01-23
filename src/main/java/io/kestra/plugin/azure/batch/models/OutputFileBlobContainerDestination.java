@@ -14,9 +14,9 @@ import javax.validation.constraints.NotNull;
 public class OutputFileBlobContainerDestination {
     @Schema(
         title = "The destination blob or virtual directory within the Azure Storage container.",
-        description = "If filePattern refers to a specific file (i.e. contains no wildcards), then path is the name of " +
-            "the blob to which to upload that file. If filePattern contains one or more wildcards (and therefore may " +
-            "match multiple files), then path is the name of the blob virtual directory (which is prepended to each " +
+        description = "If `filePattern` refers to a specific file (i.e. contains no wildcards), then `path` is the name of " +
+            "the blob to which to upload that file. If `filePattern` contains one or more wildcards (and therefore may " +
+            "match multiple files), then `path` is the name of the blob virtual directory (which is prepended to each " +
             "blob name) to which to upload the file(s). If omitted, file(s) are uploaded to the root of the container " +
             "with a blob name matching their file name."
     )
@@ -32,7 +32,7 @@ public class OutputFileBlobContainerDestination {
     String containerUrl;
 
     @Schema(
-        title = "The reference to the user assigned identity to use to access Azure Blob Storage specified by containerUrl.",
+        title = "The reference to the user assigned identity to use to access Azure Blob Storage specified by `containerUrl`.",
         description = "The identity must have write access to the Azure Blob Storage container."
     )
     ComputeNodeIdentityReference identityReference;

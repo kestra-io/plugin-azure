@@ -7,7 +7,7 @@ import javax.validation.constraints.NotNull;
 
 public interface AbstractTableStorageInterface {
     @Schema(
-        title = "The table name"
+        title = "The Azure Storage Table name."
     )
     @PluginProperty(dynamic = true)
     @NotNull

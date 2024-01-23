@@ -36,7 +36,7 @@ import javax.validation.constraints.NotNull;
     }
 )
 @Schema(
-    title = "Delete an entity on the table."
+    title = "Delete an entity on the Azure Storage Table."
 )
 public class Delete extends AbstractTableStorage implements RunnableTask<VoidOutput> {
     @Schema(
@@ -47,7 +47,7 @@ public class Delete extends AbstractTableStorage implements RunnableTask<VoidOut
     private String partitionKey;
 
     @Schema(
-        title = "The partition key of the entity."
+        title = "The row key of the entity."
     )
     @PluginProperty(dynamic = true)
     private String rowKey;

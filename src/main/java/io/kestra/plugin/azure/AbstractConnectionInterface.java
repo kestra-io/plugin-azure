@@ -7,8 +7,7 @@ import javax.validation.constraints.NotNull;
 
 public interface AbstractConnectionInterface {
     @Schema(
-        title = "The blob service endpoint.",
-        description = "additionally parses it for information (SAS token)"
+        title = "The blob service endpoint."
     )
     @PluginProperty(dynamic = true)
     @NotNull

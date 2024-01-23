@@ -28,7 +28,7 @@ public class Task {
         description = "The ID can contain any combination of alphanumeric characters including hyphens and underscores, a" +
             "nd cannot contain more than 64 characters. The ID is case-preserving and case-insensitive " +
             "(that is, you may not have two IDs within a Job that differ only by case).\n" +
-            "If not provided, a random uuid will be generated."
+            "If not provided, a random UUID will be generated."
     )
     @PluginProperty(dynamic = true)
     @NotNull
@@ -45,7 +45,7 @@ public class Task {
 
     @Builder.Default
     @Schema(
-        title = "Interpreter to used"
+        title = "Interpreter to be used."
     )
     @PluginProperty(dynamic = false)
     @NotNull
@@ -54,7 +54,7 @@ public class Task {
 
     @Builder.Default
     @Schema(
-        title = "Interpreter args used"
+        title = "Interpreter args to be used."
     )
     @PluginProperty(dynamic = false)
     String[] interpreterArgs = {"-c"};
@@ -65,10 +65,10 @@ public class Task {
             "Task and all subtasks have finished executing the coordination command line. The command line does not " +
             "run under a shell, and therefore cannot take advantage of shell features such as environment variable " +
             "expansion. If you want to take advantage of such features, you should invoke the shell in the command line, " +
-            "for example using \"cmd /c MyCommand\" in Windows or \"/bin/sh -c MyCommand\" in Linux. If the command " +
+            "for example, using `cmd /c MyCommand` in Windows or `/bin/sh -c MyCommand` in Linux. If the command " +
             "line refers to file paths, it should use a relative path (relative to the Task working directory), or " +
             "use the Batch provided [environment variable](https://docs.microsoft.com/en-us/azure/batch/batch-compute-node-environment-variables).\n\n" +
-            "Command will be passed as /bin/sh -c \"command\" by default."
+            "Command will be passed as `/bin/sh -c \"command\"` by default."
     )
     @PluginProperty(dynamic = true)
     @NotNull
@@ -76,8 +76,8 @@ public class Task {
 
     @Schema(
         title = "The settings for the container under which the Task runs.",
-        description = "If the Pool that will run this Task has containerConfiguration set, this must be set as well. " +
-            "If the Pool that will run this Task doesn't have containerConfiguration set, this must not be set. " +
+        description = "If the Pool that will run this Task has `containerConfiguration` set, this must be set as well. " +
+            "If the Pool that will run this Task doesn't have `containerConfiguration` set, this must not be set. " +
             "When this is specified, all directories recursively below the AZ_BATCH_NODE_ROOT_DIR (the root of Azure " +
             "Batch directories on the node) are mapped into the container, all Task environment variables are mapped " +
             "into the container, and the Task command line is executed in the container. Files produced in the " +
@@ -88,22 +88,22 @@ public class Task {
     TaskContainerSettings containerSettings;
 
     @Schema(
-        title = "Output file list that will be uploaded to internal storage",
-        description = "List of key that will generate temporary files.\n" +
-            "On the command, just can use with special variable named `outputFiles.key`.\n" +
-            "If you add a files with `[\"first\"]`, you can use the special vars `echo 1 >> {[ outputFiles.first }}`" +
-            " and you used on others tasks using `{{ outputs.taskId.outputFiles.first }}`"
+        title = "Output file list that will be uploaded to the internal storage.",
+        description = "List of keys that will generate temporary files.\n" +
+            "In the command, you can use a special variable named `outputFiles.key`.\n" +
+            "If you add a file with `[\"first\"]`, you can use the special variable `echo 1 >> {{ outputFiles.first }}`" +
+            "on this task, and reference this file on others tasks using `{{ outputs.taskId.outputFiles.first }}`."
     )
     @PluginProperty(dynamic = false)
     List<String> outputFiles;
 
     @Schema(
-        title = "Output dirs list that will be uploaded to internal storage",
-        description = "List of key that will generate temporary directories.\n" +
-            "On the command, just can use with special variable named `outputDirs.key`.\n" +
-            "If you add a files with `[\"myDir\"]`, you can use the special vars `echo 1 >> {[ outputDirs.myDir }}/file1.txt` " +
-            "and `echo 2 >> {[ outputDirs.myDir }}/file2.txt` and both files will be uploaded to internal storage." +
-            " Then you can used them on others tasks using `{{ outputs.taskId.files['myDir/file1.txt'] }}`"
+        title = "Output directories list that will be uploaded to the internal storage.",
+        description = "List of keys that will generate temporary directories.\n" +
+            "In the command, you can use a special variable named `outputDirs.key`.\n" +
+            "If you add a file with `[\"myDir\"]`, you can use the special variable `echo 1 >> {{ outputDirs.myDir }}/file1.txt` " +
+            "and `echo 2 >> {{ outputDirs.myDir }}/file2.txt`, and both files will be uploaded to the internal storage. " +
+            "Then, you can use them on other tasks using `{{ outputs.taskId.files['myDir/file1.txt'] }}`"
     )
     @PluginProperty(dynamic = false)
     List<String> outputDirs;

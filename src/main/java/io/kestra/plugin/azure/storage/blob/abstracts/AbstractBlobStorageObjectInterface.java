@@ -7,14 +7,14 @@ import javax.validation.constraints.NotNull;
 
 public interface AbstractBlobStorageObjectInterface {
     @Schema(
-        title = "The blob container"
+        title = "The blob container."
     )
     @PluginProperty(dynamic = true)
     @NotNull
     String getContainer();
 
     @Schema(
-        title = "The full blob path on the container"
+        title = "The full blob path on the container."
     )
     @PluginProperty(dynamic = true)
     @NotNull

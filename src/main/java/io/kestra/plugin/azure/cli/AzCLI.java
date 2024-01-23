@@ -27,59 +27,59 @@ import java.util.Map;
 @Getter
 @NoArgsConstructor
 @Schema(
-        title = "Execute one or more `az` commands from a Command Line Interface. We recommend using a Service Principal and a Client Secret for authentication. " +
-                "To create a Service Principal and Client Secret, you can use the following " + 
-                "[documentation](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/guides/service_principal_client_secret). " + 
-                "Then, use the generated `appId` as the `username` and the generated `password` as the `password` in the Kestra task configuration. " + 
-                "Finally, pass the returned `tenantId` to the `tenant` field in the Kestra task configuration and set `servicePrincipal` to `true`."
+    title = "Execute one or more `az` commands from a Command Line Interface. We recommend using a Service Principal and a Client Secret for authentication. " +
+        "To create a Service Principal and Client Secret, you can use the following " +
+        "[documentation](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/guides/service_principal_client_secret). " +
+        "Then, use the generated `appId` as the `username` and the generated `password` as the `password` in the Kestra task configuration. " +
+        "Finally, pass the returned `tenantId` to the `tenant` field in the Kestra task configuration and set `servicePrincipal` to `true`."
 )
 @Plugin(
-        examples = {
-                @Example(
-                        title = "List Azure Active Directory users for the currently authenticated tenant",
-                        code = {
-                                "username: \"<appId>\"",
-                                "password: \"{{secret('AZURE_SERVICE_PRINCIPAL_PASSWORD')}}\"",
-                                "tenant: \"{{secret('AZURE_TENANT_ID')}}\"",
-                                "commands:",
-                                "  - az ad user list"
-                        }
-                ),
-                @Example(
-                        title = "List all successfully provisioned VMs using a service principal authentication",
-                        code = {
-                                "username: \"<app-id>\"",
-                                "password: \"secret('az-sp-pass-or-cert')\"",
-                                "tenant: \"<tenant-id>\"",
-                                "servicePrincipal: true",
-                                "commands:",
-                                "  - az vm list --query \"[?provisioningState=='Succeeded']\""
-                        }
-                ),
-                @Example(
-                        title = "Command without authentication",
-                        code = {
-                                "commands:",
-                                "  - az --help"
-                        }
-                ),
-                @Example(
-                        full = true,
-                        title = "List supported regions for the current Azure subscription",
-                        code = """
-                        id: azureRegions
-                        namespace: dev
-                        tasks:
-                          - id: list-locations
-                            type: io.kestra.plugin.azure.cli.AzCLI
-                            tenant: {{secret('AZURE_TENANT_ID')}}
-                            username: {{secret('AZURE_SERVICE_PRINCIPAL_CLIENT_ID')}}
-                            password: {{secret('AZURE_SERVICE_PRINCIPAL_PASSWORD')}}
-                            servicePrincipal: true
-                            commands:
-                              - az account list-locations --query "[].{Region:name}" -o table"""
-                )                
-        }
+    examples = {
+        @Example(
+            title = "List Azure Active Directory users for the currently authenticated tenant.",
+            code = {
+                "username: \"<appId>\"",
+                "password: \"{{secret('AZURE_SERVICE_PRINCIPAL_PASSWORD')}}\"",
+                "tenant: \"{{secret('AZURE_TENANT_ID')}}\"",
+                "commands:",
+                "  - az ad user list"
+            }
+        ),
+        @Example(
+            title = "List all successfully provisioned VMs using a Service Principal authentication.",
+            code = {
+                "username: \"<app-id>\"",
+                "password: \"secret('az-sp-pass-or-cert')\"",
+                "tenant: \"<tenant-id>\"",
+                "servicePrincipal: true",
+                "commands:",
+                "  - az vm list --query \"[?provisioningState=='Succeeded']\""
+            }
+        ),
+        @Example(
+            title = "Command without authentication.",
+            code = {
+                "commands:",
+                "  - az --help"
+            }
+        ),
+        @Example(
+            full = true,
+            title = "List supported regions for the current Azure subscription.",
+            code = """
+            id: azureRegions
+            namespace: dev
+            tasks:
+              - id: list-locations
+                type: io.kestra.plugin.azure.cli.AzCLI
+                tenant: {{secret('AZURE_TENANT_ID')}}
+                username: {{secret('AZURE_SERVICE_PRINCIPAL_CLIENT_ID')}}
+                password: {{secret('AZURE_SERVICE_PRINCIPAL_PASSWORD')}}
+                servicePrincipal: true
+                commands:
+                  - az account list-locations --query "[].{Region:name}" -o table"""
+        )
+    }
 )
 public class AzCLI extends Task implements RunnableTask<ScriptOutput>, NamespaceFilesInterface, InputFilesInterface, OutputFilesInterface {
     private static final String DEFAULT_IMAGE = "mcr.microsoft.com/azure-cli";
@@ -105,13 +105,13 @@ public class AzCLI extends Task implements RunnableTask<ScriptOutput>, Namespace
     private String password;
 
     @Schema(
-        title = "Tenant id to use."
+        title = "Tenant ID to use."
     )
     @PluginProperty(dynamic = true)
     private String tenant;
 
     @Schema(
-        title = "Is the account a service principal ?"
+        title = "Is the account a service principal?"
     )
     @PluginProperty
     private boolean servicePrincipal;
@@ -144,15 +144,15 @@ public class AzCLI extends Task implements RunnableTask<ScriptOutput>, Namespace
         List<String> loginCommands = this.getLoginCommands(runContext);
 
         CommandsWrapper commands = new CommandsWrapper(runContext)
-                .withWarningOnStdErr(true)
-                .withRunnerType(RunnerType.DOCKER)
-                .withDockerOptions(injectDefaults(getDocker()))
-                .withCommands(
-                        ScriptService.scriptCommands(
-                                List.of("/bin/sh", "-c"),
-                                loginCommands,
-                                this.commands)
-                );
+            .withWarningOnStdErr(true)
+            .withRunnerType(RunnerType.DOCKER)
+            .withDockerOptions(injectDefaults(getDocker()))
+            .withCommands(
+                ScriptService.scriptCommands(
+                    List.of("/bin/sh", "-c"),
+                    loginCommands,
+                    this.commands)
+            );
 
         commands = commands.withEnv(this.env)
             .withNamespaceFiles(namespaceFiles)

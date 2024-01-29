@@ -47,7 +47,7 @@ import java.util.Map;
                 namespace: company.team
                 inputs:
                   - type: FILE
-                    name: file
+                    id: file
                     description: a CSV file with columns id, username, tweet, and timestamp
                 tasks:
                   - id: readCsvFile

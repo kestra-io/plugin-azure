@@ -3,7 +3,6 @@ package io.kestra.plugin.azure.storage.blob;
 import com.azure.storage.blob.BlobClient;
 import com.azure.storage.blob.sas.BlobContainerSasPermission;
 import com.azure.storage.blob.sas.BlobServiceSasSignatureValues;
-import com.fasterxml.jackson.annotation.JsonValue;
 import io.kestra.core.models.annotations.Example;
 import io.kestra.core.models.annotations.Plugin;
 import io.kestra.core.models.annotations.PluginProperty;
@@ -22,7 +21,7 @@ import java.time.OffsetDateTime;
 import java.time.ZonedDateTime;
 import java.util.Set;
 import java.util.stream.Collectors;
-import javax.validation.constraints.NotNull;
+import jakarta.validation.constraints.NotNull;
 
 @SuperBuilder
 @ToString

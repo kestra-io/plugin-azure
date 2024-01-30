@@ -17,6 +17,7 @@ import io.kestra.plugin.azure.eventhubs.service.producer.EventDataBatchFactory;
 import io.kestra.plugin.azure.eventhubs.service.producer.EventHubProducerService;
 import io.kestra.plugin.azure.eventhubs.service.producer.ProducerContext;
 import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.NotNull;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -25,7 +26,6 @@ import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
 import lombok.extern.slf4j.Slf4j;
 
-import javax.validation.constraints.NotNull;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;

@@ -2,7 +2,7 @@ package io.kestra.plugin.azure.eventhubs.service.consumer;
 
 import com.azure.messaging.eventhubs.models.EventPosition;
 
-import javax.validation.constraints.NotNull;
+import jakarta.validation.constraints.NotNull;
 import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;

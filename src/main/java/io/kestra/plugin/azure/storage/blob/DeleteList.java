@@ -25,7 +25,7 @@ import org.apache.commons.lang3.tuple.Pair;
 import org.slf4j.Logger;
 
 import java.util.NoSuchElementException;
-import javax.validation.constraints.Min;
+import jakarta.validation.constraints.Min;
 
 @SuperBuilder
 @ToString

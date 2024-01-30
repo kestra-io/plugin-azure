@@ -17,7 +17,7 @@ import lombok.*;
 import lombok.experimental.SuperBuilder;
 
 import java.time.OffsetDateTime;
-import javax.validation.constraints.NotNull;
+import jakarta.validation.constraints.NotNull;
 
 @SuperBuilder
 @ToString

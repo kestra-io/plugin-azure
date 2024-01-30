@@ -1,6 +1,6 @@
 package io.kestra.plugin.azure.eventhubs.model;
 
-import javax.validation.constraints.NotNull;
+import jakarta.validation.constraints.NotNull;
 import java.util.Collections;
 import java.util.Map;
 

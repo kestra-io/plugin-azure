@@ -4,7 +4,7 @@ import io.kestra.core.models.annotations.PluginProperty;
 import io.kestra.plugin.azure.storage.blob.Copy;
 import io.swagger.v3.oas.annotations.media.Schema;
 
-import javax.validation.constraints.NotNull;
+import jakarta.validation.constraints.NotNull;
 
 public interface ActionInterface {
     @Schema(

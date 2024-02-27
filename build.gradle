@@ -104,7 +104,7 @@ dependencies {
     testImplementation "org.hamcrest:hamcrest:2.2"
     testImplementation "org.hamcrest:hamcrest-library:2.2"
     testImplementation "org.mockito:mockito-core:5.8.0"
-    testImplementation "org.mockito:mockito-junit-jupiter:5.8.0"
+    testImplementation "org.mockito:mockito-junit-jupiter"
 }
 
 /**********************************************************************************************************************\

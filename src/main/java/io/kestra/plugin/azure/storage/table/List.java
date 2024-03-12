@@ -33,9 +33,9 @@ import java.net.URI;
     examples = {
         @Example(
             code = {
-                "endpoint: \"https://yourblob.blob.core.windows.net\"",
+                "endpoint: \"https://yourstorageaccount.table.core.windows.net\"",
                 "connectionString: \"DefaultEndpointsProtocol=...==\"",
-                "table: \"mydata\"",
+                "table: \"table_name\"",
             }
         )
     }

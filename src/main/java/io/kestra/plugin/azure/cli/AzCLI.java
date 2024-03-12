@@ -39,8 +39,8 @@ import java.util.Map;
             title = "List Azure Active Directory users for the currently authenticated tenant.",
             code = {
                 "username: \"<appId>\"",
-                "password: \"{{secret('AZURE_SERVICE_PRINCIPAL_PASSWORD')}}\"",
-                "tenant: \"{{secret('AZURE_TENANT_ID')}}\"",
+                "password: \"{{ secret('AZURE_SERVICE_PRINCIPAL_PASSWORD') }}\"",
+                "tenant: \"{{ secret('AZURE_TENANT_ID') }}\"",
                 "commands:",
                 "  - az ad user list"
             }
@@ -49,7 +49,7 @@ import java.util.Map;
             title = "List all successfully provisioned VMs using a Service Principal authentication.",
             code = {
                 "username: \"<app-id>\"",
-                "password: \"secret('az-sp-pass-or-cert')\"",
+                "password: \"{{ secret('AZURE_SERVICE_PRINCIPAL_PASSWORD') }}\"",
                 "tenant: \"<tenant-id>\"",
                 "servicePrincipal: true",
                 "commands:",
@@ -72,9 +72,9 @@ import java.util.Map;
             tasks:
               - id: list-locations
                 type: io.kestra.plugin.azure.cli.AzCLI
-                tenant: {{secret('AZURE_TENANT_ID')}}
-                username: {{secret('AZURE_SERVICE_PRINCIPAL_CLIENT_ID')}}
-                password: {{secret('AZURE_SERVICE_PRINCIPAL_PASSWORD')}}
+                tenant: {{ secret('AZURE_TENANT_ID') }}
+                username: {{ secret('AZURE_SERVICE_PRINCIPAL_CLIENT_ID') }}
+                password: {{ secret('AZURE_SERVICE_PRINCIPAL_PASSWORD') }}
                 servicePrincipal: true
                 commands:
                   - az account list-locations --query "[].{Region:name}" -o table"""

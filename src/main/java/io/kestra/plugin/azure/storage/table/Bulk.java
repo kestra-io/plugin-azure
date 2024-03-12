@@ -34,9 +34,9 @@ import reactor.core.publisher.FluxSink;
     examples = {
         @Example(
             code = {
-                "endpoint: \"https://yourblob.blob.core.windows.net\"",
+                "endpoint: \"https://yourstorageaccount.blob.core.windows.net\"",
                 "connectionString: \"DefaultEndpointsProtocol=...==\"",
-                "table: \"mydata\"",
+                "table: \"table_name\"",
                 "from:",
                 "  - partitionKey: \"color\"",
                 "    rowKey: \"green\"",

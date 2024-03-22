@@ -4,21 +4,12 @@ import io.kestra.core.models.annotations.Example;
 import io.kestra.core.models.annotations.Plugin;
 import io.kestra.core.models.conditions.ConditionContext;
 import io.kestra.core.models.executions.Execution;
-import io.kestra.core.models.executions.ExecutionTrigger;
-import io.kestra.core.models.flows.State;
-import io.kestra.core.models.triggers.AbstractTrigger;
-import io.kestra.core.models.triggers.PollingTriggerInterface;
-import io.kestra.core.models.triggers.TriggerContext;
-import io.kestra.core.models.triggers.TriggerOutput;
+import io.kestra.core.models.triggers.*;
 import io.kestra.core.runners.RunContext;
 import io.kestra.plugin.azure.eventhubs.serdes.Serdes;
 import io.kestra.plugin.azure.eventhubs.service.consumer.StartingPosition;
 import io.swagger.v3.oas.annotations.media.Schema;
-import lombok.Builder;
-import lombok.EqualsAndHashCode;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.ToString;
+import lombok.*;
 import lombok.experimental.SuperBuilder;
 import lombok.extern.slf4j.Slf4j;
 
@@ -134,15 +125,7 @@ public class Trigger extends AbstractTrigger implements EventHubConsumerInterfac
             return Optional.empty();
         }
 
-        ExecutionTrigger executionTrigger = ExecutionTrigger.of(this, output);
-        Execution execution = Execution.builder()
-            .id(runContext.getTriggerExecutionId())
-            .namespace(context.getNamespace())
-            .flowId(context.getFlowId())
-            .flowRevision(context.getFlowRevision())
-            .state(new State())
-            .trigger(executionTrigger)
-            .build();
+        Execution execution = TriggerService.generateExecution(this, conditionContext, context, output);
 
         return Optional.of(execution);
     }

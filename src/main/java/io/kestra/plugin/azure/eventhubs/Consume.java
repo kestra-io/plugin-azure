@@ -57,8 +57,9 @@ import java.util.concurrent.atomic.AtomicReference;
                 - id: consumeFromEventHubs
                   type: io.kestra.plugin.azure.eventhubs.Consume
                   eventHubName: my-eventhub
-                  connectionString:"{{ secret('EVENTHUBS_CONNECTION') }}"
-                  bodyDeserializer: STRING
+                  namespace: my-eventhub-namespace
+                  connectionString: "{{ secret('EVENTHUBS_CONNECTION') }}"
+                  bodyDeserializer: JSON
                   consumerGroup: "$Default"
                   checkpointStoreProperties:
                     containerName: kestra

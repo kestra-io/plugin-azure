@@ -32,18 +32,19 @@ import java.util.Optional;
                 tasks:
                   - id: hello
                     type: io.kestra.core.tasks.log.Log
-                    message: Hello there! I received {{trigger.eventsCount}} from Azure EventHubs!
+                    message: Hello there! I received {{ trigger.eventsCount }} from Azure EventHubs!
                 triggers:
                   - id: readFromEventHubs
                     type: "io.kestra.plugin.azure.eventhubs.Trigger"
                     interval: PT30S
                     eventHubName: my-eventhub
-                    connectionString:"secret('EVENTHUBS_CONNECTION')"
-                    bodyDeserializer: STRING
+                    namespace: my-eventhub-namespace
+                    connectionString: "{{ secret('EVENTHUBS_CONNECTION') }}"
+                    bodyDeserializer: JSON
                     consumerGroup: "$Default"
                     checkpointStoreProperties:
                       containerName: kestra
-                      connectionString: "secret('BLOB_CONNECTION')"
+                      connectionString: "{{ secret('BLOB_CONNECTION') }}"
                 """
         }
     )

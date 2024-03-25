@@ -68,13 +68,14 @@ import java.util.Map;
                     type: io.kestra.plugin.azure.eventhubs.Produce
                     from: "{{ outputs.transformRowToJson.uri }}"
                     eventHubName: my-eventhub
-                    connectionString: "secret('EVENTHUBS_CONNECTION')"
+                    namespace: my-event-hub-namespace
+                    connectionString: "{{ secret('EVENTHUBS_CONNECTION') }}"
                     maxBatchSizeInBytes: 4096
                     maxEventsPerBatch: 100
                     bodySerializer: "JSON"
                     bodyContentType: application/json
                     eventProperties:
-                        source: kestra
+                      source: kestra
                 """
         }
     )

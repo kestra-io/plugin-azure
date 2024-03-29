@@ -10,7 +10,6 @@ import io.kestra.plugin.azure.storage.blob.SharedAccess;
 import io.kestra.plugin.azure.storage.blob.Upload;
 import jakarta.inject.Inject;
 import jakarta.inject.Named;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.slf4j.event.Level;
 
@@ -83,7 +82,7 @@ class CreateTest extends AbstractTest {
         return task.run(runContext(task, inputs));
     }
 
-    @Disabled("pool are not running !")
+    //@Disabled("pool are not running !")
     @Test
     void run() throws Exception {
         ArrayList<LogEntry> objects = new ArrayList<>();
@@ -175,29 +174,27 @@ class CreateTest extends AbstractTest {
         assertThat(CharStreams.toString(new InputStreamReader(get)), is("3\n"));
     }
 
-    @Disabled("pool are not running !")
+    //@Disabled("pool are not running !")
     @Test
     void errors() throws Exception {
         ArrayList<LogEntry> objects = new ArrayList<>();
         logQueue.receive(l -> objects.add(l.getLeft()));
 
-        Exception exception = assertThrows(Exception.class, () -> {
-            create(
-                List.of(
-                    Task.builder()
-                        .id("echo")
-                        .commands(List.of(("echo ok")))
-                        .containerSettings(TaskContainerSettings.builder().imageName("ubuntu").build())
-                        .build(),
-                    Task.builder()
-                        .id("failed")
-                        .commands(List.of(("cat failed")))
-                        .containerSettings(TaskContainerSettings.builder().imageName("ubuntu").build())
-                        .build()
-                ),
-                Map.of()
-            );
-        });
+        Exception exception = assertThrows(Exception.class, () -> create(
+            List.of(
+                Task.builder()
+                    .id("echo")
+                    .commands(List.of(("echo ok")))
+                    .containerSettings(TaskContainerSettings.builder().imageName("ubuntu").build())
+                    .build(),
+                Task.builder()
+                    .id("failed")
+                    .commands(List.of(("cat failed")))
+                    .containerSettings(TaskContainerSettings.builder().imageName("ubuntu").build())
+                    .build()
+            ),
+            Map.of()
+        ));
         Thread.sleep(100);
 
         assertThat(exception.getMessage(), containsString("1/2 task(s) failed"));

@@ -14,7 +14,7 @@ public class ComputeNodeIdentityReference {
         title = "The ARM resource ID of the user assigned identity."
     )
     @PluginProperty(dynamic = true)
-    private String resourceId;
+    String resourceId;
 
     public com.microsoft.azure.batch.protocol.models.ComputeNodeIdentityReference to(RunContext runContext) throws IllegalVariableEvaluationException {
         return new com.microsoft.azure.batch.protocol.models.ComputeNodeIdentityReference()

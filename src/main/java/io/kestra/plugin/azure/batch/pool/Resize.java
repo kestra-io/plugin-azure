@@ -9,6 +9,7 @@ import io.kestra.core.models.annotations.PluginProperty;
 import io.kestra.core.models.tasks.RunnableTask;
 import io.kestra.core.runners.RunContext;
 import io.kestra.plugin.azure.batch.AbstractBatch;
+import io.kestra.plugin.azure.batch.BatchService;
 import io.kestra.plugin.azure.batch.models.Pool;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.*;
@@ -60,7 +61,7 @@ public class Resize extends AbstractBatch implements RunnableTask<Resize.Output>
 
     @Override
     public Output run(RunContext runContext) throws Exception {
-        BatchClient client = this.client(runContext);
+        BatchClient client = BatchService.client(this.endpoint, this.account, this.accessKey, runContext);
 
         String poolId = runContext.render(this.poolId);
 

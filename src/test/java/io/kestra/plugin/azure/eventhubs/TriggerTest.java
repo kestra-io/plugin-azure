@@ -23,6 +23,7 @@ import org.junit.jupiter.api.Test;
 
 import java.util.List;
 import java.util.Objects;
+import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
@@ -66,7 +67,7 @@ class TriggerTest {
         CountDownLatch queueCount = new CountDownLatch(1);
 
         // scheduler
-        Worker worker = new Worker(applicationContext, 8, null);
+        Worker worker = applicationContext.createBean(Worker.class, UUID.randomUUID().toString(), 8, null);
         try (
             AbstractScheduler scheduler = new DefaultScheduler(
                 this.applicationContext,

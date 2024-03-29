@@ -1,8 +1,12 @@
 package io.kestra.plugin.azure.storage.blob.services;
 
+import com.azure.core.credential.AzureNamedKeyCredential;
 import com.azure.core.http.rest.PagedIterable;
+import com.azure.identity.DefaultAzureCredentialBuilder;
 import com.azure.storage.blob.BlobClient;
 import com.azure.storage.blob.BlobContainerClient;
+import com.azure.storage.blob.BlobServiceClient;
+import com.azure.storage.blob.BlobServiceClientBuilder;
 import com.azure.storage.blob.models.BlobItem;
 import com.azure.storage.blob.models.BlobProperties;
 import com.azure.storage.blob.models.ListBlobsOptions;
@@ -120,5 +124,33 @@ public class BlobService {
                 (filter == ListInterface.Filter.DIRECTORY && object.getProperties().getContentType() == null) ||
                 (filter == ListInterface.Filter.FILES && object.getProperties().getContentType() != null)
             );
+    }
+
+    public static BlobServiceClient client(
+        String endpoint,
+        String connectionString,
+        String sharedKeyAccountName,
+        String sharedKeyAccountAccessKey,
+        String sasToken,
+        RunContext runContext
+    ) throws IllegalVariableEvaluationException {
+        BlobServiceClientBuilder builder = new BlobServiceClientBuilder()
+            .endpoint(runContext.render(endpoint));
+
+        if (connectionString != null) {
+            builder.connectionString(runContext.render(connectionString));
+        } else if (sharedKeyAccountName != null && sharedKeyAccountAccessKey != null) {
+            builder.credential(new AzureNamedKeyCredential(
+                runContext.render(sharedKeyAccountName),
+                runContext.render(sharedKeyAccountAccessKey)
+            ));
+        } else if (sasToken != null ) {
+            builder.sasToken(runContext.render(sasToken));
+        } else {
+            builder.credential(new DefaultAzureCredentialBuilder().build());
+        }
+
+
+        return builder.buildClient();
     }
 }

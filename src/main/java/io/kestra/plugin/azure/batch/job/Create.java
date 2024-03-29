@@ -1,5 +1,6 @@
 package io.kestra.plugin.azure.batch.job;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.microsoft.azure.PagedList;
 import com.microsoft.azure.batch.BatchClient;
 import com.microsoft.azure.batch.DetailLevel;
@@ -9,13 +10,16 @@ import io.kestra.core.models.annotations.Plugin;
 import io.kestra.core.models.annotations.PluginProperty;
 import io.kestra.core.models.executions.metrics.Counter;
 import io.kestra.core.models.executions.metrics.Timer;
+import io.kestra.core.models.script.AbstractLogConsumer;
+import io.kestra.core.models.script.DefaultLogConsumer;
 import io.kestra.core.models.tasks.RunnableTask;
 import io.kestra.core.runners.RunContext;
-import io.kestra.core.tasks.PluginUtilsService;
 import io.kestra.plugin.azure.batch.AbstractBatch;
+import io.kestra.plugin.azure.batch.BatchService;
 import io.kestra.plugin.azure.batch.models.Job;
 import io.kestra.plugin.azure.batch.models.Task;
 import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.NotNull;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
 import org.slf4j.Logger;
@@ -29,7 +33,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
-import jakarta.validation.constraints.NotNull;
 
 @SuperBuilder
 @ToString
@@ -127,10 +130,21 @@ public class Create extends AbstractBatch implements RunnableTask<Create.Output>
     @PluginProperty(dynamic = false)
     private Duration maxDuration;
 
+    @JsonIgnore
+    private AbstractLogConsumer logConsumer;
+
+    @JsonIgnore
+    @Builder.Default
+    private Boolean pushOutputFilesToInternalStorage = true;
+
     @Override
     public Output run(RunContext runContext) throws Exception {
+        if (logConsumer == null) {
+            logConsumer = new DefaultLogConsumer(runContext);
+        }
+
         Logger logger = runContext.logger();
-        BatchClient client = this.client(runContext);
+        BatchClient client = BatchService.client(this.endpoint, this.account, this.accessKey, runContext);
         String jobId = null;
 
         try {
@@ -198,13 +212,13 @@ public class Create extends AbstractBatch implements RunnableTask<Create.Output>
 
                 // log
                 TaskService.readRemoteLog(runContext, client, jobId, task, "stdout.txt", msg -> {
-                    outputs.putAll(PluginUtilsService.parseOut(msg, logger, runContext));
-                    logger.info(msg);
+                    logConsumer.accept(msg, false);
+                    outputs.putAll(logConsumer.getOutputs());
                 });
 
                 TaskService.readRemoteLog(runContext, client, jobId, task, "stderr.txt", msg -> {
-                    outputs.putAll(PluginUtilsService.parseOut(msg, logger, runContext));
-                    logger.warn(msg);
+                    logConsumer.accept(msg, true);
+                    outputs.putAll(logConsumer.getOutputs());
                 });
 
                 if (task.executionInfo().failureInfo() != null) {
@@ -213,10 +227,15 @@ public class Create extends AbstractBatch implements RunnableTask<Create.Output>
 
                 // outputsFiles
                 Task currentTask = this.tasks.get(tasksMapping.get(task.id()));
+                String remoteWorkingDir = "wd/";
                 if (currentTask.getOutputFiles() != null) {
                     for (String s : currentTask.getOutputFiles()) {
-                        File file = TaskService.readRemoteFile(runContext, client, jobId, task, "wd/" + s, true);
-                        outputFiles.put(s, runContext.putTempFile(file));
+                        File file = TaskService.readRemoteFile(runContext, client, jobId, task, remoteWorkingDir + s, s, true);
+
+                        // As this task is used in the script runner, this processing is already done by the CommandsWrapper so we need some guard
+                        if (pushOutputFilesToInternalStorage) {
+                            outputFiles.put(s, runContext.putTempFile(file));
+                        }
                     }
                 }
 
@@ -226,9 +245,12 @@ public class Create extends AbstractBatch implements RunnableTask<Create.Output>
 
                     for (String s : currentTask.getOutputDirs()) {
                         for (NodeFile nodeFile : nodeFiles) {
-                            if (nodeFile.name().startsWith("wd/"+ s) && !nodeFile.isDirectory()) {
-                                File file = TaskService.readRemoteFile(runContext, client, jobId, task, nodeFile.name(), true);
-                                outputFiles.put(nodeFile.name().substring(3), runContext.putTempFile(file));
+                            if (nodeFile.name().startsWith(remoteWorkingDir + s) && !nodeFile.isDirectory()) {
+                                String relativeFileName = nodeFile.name().substring(remoteWorkingDir.length());
+                                File file = TaskService.readRemoteFile(runContext, client, jobId, task, nodeFile.name(), relativeFileName, true);
+                                if (pushOutputFilesToInternalStorage) {
+                                    outputFiles.put(relativeFileName, runContext.putTempFile(file));
+                                }
                             }
                         }
                     }

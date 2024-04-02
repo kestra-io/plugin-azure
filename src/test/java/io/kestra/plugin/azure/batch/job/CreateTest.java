@@ -10,6 +10,7 @@ import io.kestra.plugin.azure.storage.blob.SharedAccess;
 import io.kestra.plugin.azure.storage.blob.Upload;
 import jakarta.inject.Inject;
 import jakarta.inject.Named;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.slf4j.event.Level;
 
@@ -82,7 +83,7 @@ class CreateTest extends AbstractTest {
         return task.run(runContext(task, inputs));
     }
 
-    //@Disabled("pool are not running !")
+    @Disabled("pool are not running !")
     @Test
     void run() throws Exception {
         ArrayList<LogEntry> objects = new ArrayList<>();
@@ -174,7 +175,7 @@ class CreateTest extends AbstractTest {
         assertThat(CharStreams.toString(new InputStreamReader(get)), is("3\n"));
     }
 
-    //@Disabled("pool are not running !")
+    @Disabled("pool are not running !")
     @Test
     void errors() throws Exception {
         ArrayList<LogEntry> objects = new ArrayList<>();

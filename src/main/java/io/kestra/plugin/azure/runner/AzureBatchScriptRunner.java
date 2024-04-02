@@ -95,37 +95,43 @@ public class AzureBatchScriptRunner extends ScriptRunner implements AbstractBatc
             throw new IllegalArgumentException("You must provide a way to connect to a Blob Storage container to use `outputFiles`");
         }
 
-        BlobContainerClient blobContainerClient = blobStorage.blobContainerClient(runContext);
-
         String jobId = IdUtils.create();
+        List<ResourceFile> resourceFiles = new ArrayList<>();
+        if (hasFilesToUpload) {
+            BlobContainerClient blobContainerClient = blobStorage.blobContainerClient(runContext);
 
-        List<ResourceFile> resourceFiles = filesToUpload.stream().map(throwFunction(file -> {
-            // Use path to eventually deduplicate leading '/'
-            String blobName = blobStorageWorkingDirName + Path.of("/" + file);
-            blobContainerClient.getBlobClient(blobName)
-                .uploadFromFile(runContext.resolve(Path.of(file)).toString(), true);
-
-            SharedAccess task = SharedAccess.builder()
-                .id(SharedAccess.class.getSimpleName())
-                .type(io.kestra.plugin.azure.storage.blob.List.class.getName())
-                .endpoint(this.endpoint)
-                .connectionString(blobStorage.getConnectionString())
-                .container(blobStorage.getContainerName())
-                .name(blobName)
-                .expirationDate("{{ now() | dateAdd(1, 'DAYS')  }}")
-                .permissions(Set.of(SharedAccess.Permission.READ))
-                .build();
-
-            SharedAccess.Output sas = task.run(runContext);
-
-            return ResourceFile.builder()
-                .filePath(file.startsWith("/") ? file.substring(1) : file)
+            filesToUpload.stream().map(throwFunction(file -> {
                 // Use path to eventually deduplicate leading '/'
-                .httpUrl(sas.getUri().toString())
-                .build();
-        })).toList();
+                String blobName = blobStorageWorkingDirName + Path.of("/" + file);
+                blobContainerClient.getBlobClient(blobName)
+                    .uploadFromFile(runContext.resolve(Path.of(file)).toString(), true);
+
+                SharedAccess task = SharedAccess.builder()
+                    .id(SharedAccess.class.getSimpleName())
+                    .type(io.kestra.plugin.azure.storage.blob.List.class.getName())
+                    .endpoint(this.endpoint)
+                    .connectionString(blobStorage.getConnectionString())
+                    .container(blobStorage.getContainerName())
+                    .name(blobName)
+                    .expirationDate("{{ now() | dateAdd(1, 'DAYS')  }}")
+                    .permissions(Set.of(SharedAccess.Permission.READ))
+                    .build();
+
+                SharedAccess.Output sas = task.run(runContext);
+
+                return ResourceFile.builder()
+                    .filePath(file.startsWith("/") ? file.substring(1) : file)
+                    // Use path to eventually deduplicate leading '/'
+                    .httpUrl(sas.getUri().toString())
+                    .build();
+            })).forEach(resourceFiles::add);
+        }
 
         AbstractLogConsumer logConsumer = commandsWrapper.getLogConsumer();
+
+        Map<String, String> environment = Optional.ofNullable(commandsWrapper.getEnv()).orElse(new HashMap<>());
+        environment.put("WORKING_DIR", blobStorageWorkingDirName);
+
         Create createJob = Create.builder()
             .id("create")
             .type(Create.class.getName())
@@ -160,6 +166,7 @@ public class AzureBatchScriptRunner extends ScriptRunner implements AbstractBatc
                             .imageName(commandsWrapper.getContainerImage())
                             .build()
                     )
+                    .environments(environment)
                     .build()
             ))
             .logConsumer(new AbstractLogConsumer() {

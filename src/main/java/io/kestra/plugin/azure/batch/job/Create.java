@@ -102,6 +102,7 @@ import java.util.stream.Collectors;
     title = "Create a Azure Batch job with tasks."
 )
 public class Create extends AbstractBatch implements RunnableTask<Create.Output> {
+    public static final String DIRECTORY_MARKER = ".kestradirectory";
     @Schema(
         title = "The ID of the pool."
     )
@@ -245,7 +246,7 @@ public class Create extends AbstractBatch implements RunnableTask<Create.Output>
 
                     for (String s : currentTask.getOutputDirs()) {
                         for (NodeFile nodeFile : nodeFiles) {
-                            if (nodeFile.name().startsWith(remoteWorkingDir + s) && !nodeFile.isDirectory()) {
+                            if (nodeFile.name().startsWith(remoteWorkingDir + s) && !nodeFile.isDirectory() && !nodeFile.name().endsWith("/" + DIRECTORY_MARKER)) {
                                 String relativeFileName = nodeFile.name().substring(remoteWorkingDir.length());
                                 File file = TaskService.readRemoteFile(runContext, client, jobId, task, nodeFile.name(), relativeFileName, true);
                                 if (pushOutputFilesToInternalStorage) {

@@ -1,7 +1,6 @@
 package io.kestra.plugin.azure.runner;
 
 import com.azure.storage.blob.BlobContainerClient;
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.microsoft.azure.batch.protocol.models.ContainerWorkingDirectory;
 import io.kestra.core.models.annotations.Plugin;
 import io.kestra.core.models.annotations.PluginProperty;
@@ -72,10 +71,6 @@ public class AzureBatchScriptRunner extends ScriptRunner implements AbstractBatc
     )
     private ContainerRegistry registry;
 
-    @JsonIgnore
-    @Getter(AccessLevel.NONE)
-    private Path outputDirectory;
-
     @Override
     public RunnerResult run(RunContext runContext, ScriptCommands commandsWrapper, List<String> filesToUpload, List<String> filesToDownload) throws Exception {
         boolean hasBlobStorage = blobStorage != null && blobStorage.valid();
@@ -89,13 +84,14 @@ public class AzureBatchScriptRunner extends ScriptRunner implements AbstractBatc
             throw new IllegalArgumentException("You must provide a way to connect to a Blob Storage container to use `outputFiles`");
         }
 
-        Map<String, Object> additionalVars = this.additionalVars(commandsWrapper);
-        String blobStorageWdirPath = additionalVars.get(ScriptService.VAR_WORKING_DIR).toString();
+        Map<String, Object> additionalVars = this.additionalVars(runContext, commandsWrapper);
+        Path outputDirectory = (Path) additionalVars.get(ScriptService.VAR_OUTPUT_DIR);
+        String blobStorageWdir = additionalVars.get(ScriptService.VAR_BUCKET_PATH).toString();
 
         String jobId = ScriptService.jobName(runContext);
         List<ResourceFile> resourceFiles = new ArrayList<>();
         if (hasBlobStorage) {
-            String relativeOutputDirectoryMarkerPath = this.outputDirectory + "/.kestradirectory";
+            String relativeOutputDirectoryMarkerPath = outputDirectory + "/.kestradirectory";
             File outputDirectoryMarker = runContext.resolve(Path.of(relativeOutputDirectoryMarkerPath)).toFile();
             outputDirectoryMarker.getParentFile().mkdirs();
             outputDirectoryMarker.createNewFile();
@@ -106,7 +102,7 @@ public class AzureBatchScriptRunner extends ScriptRunner implements AbstractBatc
             filesToUploadWithOutputDir.add(relativeOutputDirectoryMarkerPath);
             filesToUploadWithOutputDir.stream().map(throwFunction(file -> {
                 // Use path to eventually deduplicate leading '/'
-                String blobName = blobStorageWdirPath + Path.of("/" + file);
+                String blobName = blobStorageWdir + Path.of("/" + file);
                 blobContainerClient.getBlobClient(blobName)
                     .uploadFromFile(runContext.resolve(Path.of(file)).toString(), true);
 
@@ -170,7 +166,7 @@ public class AzureBatchScriptRunner extends ScriptRunner implements AbstractBatc
                             .imageName(commandsWrapper.getContainerImage())
                             .build()
                     )
-                    .environments(this.env(commandsWrapper))
+                    .environments(this.env(runContext, commandsWrapper))
                     .build()
             ))
             .logConsumer(new AbstractLogConsumer() {
@@ -187,12 +183,14 @@ public class AzureBatchScriptRunner extends ScriptRunner implements AbstractBatc
         try {
             createJob.run(runContext);
 
-            Path outputDirectoryAbsolutePath = runContext.resolve(this.outputDirectory);
-            try (Stream<Path> paths = Files.walk(outputDirectoryAbsolutePath, FileVisitOption.FOLLOW_LINKS)) {
-                paths.filter(path -> path.toFile().isFile())
-                    .forEach(throwConsumer(path ->
-                        FileUtils.moveFile(path.toFile(), commandsWrapper.getOutputDirectory().resolve(outputDirectoryAbsolutePath.relativize(path)).toFile())
-                    ));
+            if (hasBlobStorage) {
+                Path outputDirectoryAbsolutePath = runContext.resolve(outputDirectory);
+                try (Stream<Path> paths = Files.walk(outputDirectoryAbsolutePath, FileVisitOption.FOLLOW_LINKS)) {
+                    paths.filter(path -> path.toFile().isFile())
+                        .forEach(throwConsumer(path ->
+                            FileUtils.moveFile(path.toFile(), commandsWrapper.getOutputDirectory().resolve(outputDirectoryAbsolutePath.relativize(path)).toFile())
+                        ));
+                }
             }
         } catch (Exception e) {
             throw new ScriptException(e.getMessage(), 1, logConsumer.getStdOutCount(), logConsumer.getStdErrCount());
@@ -202,19 +200,16 @@ public class AzureBatchScriptRunner extends ScriptRunner implements AbstractBatc
     }
 
     @Override
-    public Map<String, Object> additionalVars(ScriptCommands scriptCommands) {
-        if (this.additionalVars == null) {
-            this.additionalVars = new HashMap<>();
-            this.additionalVars.putAll(scriptCommands.getAdditionalVars());
-
-            if (blobStorage != null && blobStorage.valid()) {
-                this.additionalVars.put(ScriptService.VAR_WORKING_DIR, "");
-                this.outputDirectory = Path.of(IdUtils.create());
-                this.additionalVars.put(ScriptService.VAR_OUTPUT_DIR, this.outputDirectory);
-                this.additionalVars.put(ScriptService.VAR_BUCKET_PATH, this.outputDirectory);
-            }
+    public Map<String, Object> runnerAdditionalVars(RunContext runContext, ScriptCommands scriptCommands) {
+        if (blobStorage != null && blobStorage.valid()) {
+            Path outputDirectory = Path.of(IdUtils.create());
+            return Map.of(
+                ScriptService.VAR_WORKING_DIR, "",
+                ScriptService.VAR_OUTPUT_DIR, outputDirectory,
+                ScriptService.VAR_BUCKET_PATH, outputDirectory
+            );
         }
 
-        return super.additionalVars(scriptCommands);
+        return Collections.emptyMap();
     }
 }

@@ -1,7 +1,7 @@
 package io.kestra.plugin.azure.runner;
 
-import io.kestra.core.models.script.AbstractScriptRunnerTest;
-import io.kestra.core.models.script.ScriptRunner;
+import io.kestra.core.models.tasks.runners.AbstractTaskRunnerTest;
+import io.kestra.core.models.tasks.runners.TaskRunner;
 import io.kestra.plugin.azure.storage.blob.models.BlobStorageForBatch;
 import io.micronaut.context.annotation.Value;
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest;
@@ -11,7 +11,7 @@ import java.time.Duration;
 
 @MicronautTest
 @Disabled("Too costly to run on CI")
-public class AzureBatchScriptRunnerTest extends AbstractScriptRunnerTest {
+public class AzureBatchTaskRunnerTest extends AbstractTaskRunnerTest {
     @Value("${kestra.variables.globals.azure.batch.accessKey}")
     private String accessKey;
 
@@ -34,8 +34,8 @@ public class AzureBatchScriptRunnerTest extends AbstractScriptRunnerTest {
     private String blobContainerName;
 
     @Override
-    protected ScriptRunner scriptRunner() {
-        return AzureBatchScriptRunner.builder()
+    protected TaskRunner taskRunner() {
+        return AzureBatchTaskRunner.builder()
             .accessKey(accessKey)
             .account(account)
             .endpoint(endpoint)

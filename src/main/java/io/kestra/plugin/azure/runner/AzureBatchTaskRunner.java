@@ -4,7 +4,7 @@ import com.azure.storage.blob.BlobContainerClient;
 import com.microsoft.azure.batch.protocol.models.ContainerWorkingDirectory;
 import io.kestra.core.models.annotations.Plugin;
 import io.kestra.core.models.annotations.PluginProperty;
-import io.kestra.core.models.script.*;
+import io.kestra.core.models.tasks.runners.*;
 import io.kestra.core.runners.RunContext;
 import io.kestra.core.utils.ListUtils;
 import io.kestra.plugin.azure.AbstractConnectionInterface;
@@ -32,14 +32,14 @@ import static io.kestra.core.utils.Rethrow.throwFunction;
 @EqualsAndHashCode
 @Getter
 @NoArgsConstructor
-@Schema(title = "Azure Batch script runner", description = """
+@Schema(title = "Azure Batch task runner", description = """
     Run a script in a container on Azure Batch.
     Upon worker restart, this job will be requeued and executed again. Moreover, the existing job will be kept running and handled by Azure Batch till this issue (https://github.com/kestra-io/plugin-azure/issues/80) is handled.
     To use `inputFiles`, `outputFiles` and `namespaceFiles` properties, you must provide a `blobStorage` to connect to.
     Doing so will upload the files to the bucket before running the script and download them after the script execution.
     This runner will wait for the task to succeed or fail up to a max `waitUntilCompletion` duration.""")
 @Plugin(examples = {}, beta = true)
-public class AzureBatchScriptRunner extends ScriptRunner implements AbstractBatchInterface, AbstractConnectionInterface, RemoteRunnerInterface {
+public class AzureBatchTaskRunner extends TaskRunner implements AbstractBatchInterface, AbstractConnectionInterface, RemoteRunnerInterface {
 
     private String account;
     private String accessKey;
@@ -66,7 +66,7 @@ public class AzureBatchScriptRunner extends ScriptRunner implements AbstractBatc
     private ContainerRegistry registry;
 
     @Override
-    public RunnerResult run(RunContext runContext, ScriptCommands commandsWrapper, List<String> filesToUpload, List<String> filesToDownload) throws Exception {
+    public RunnerResult run(RunContext runContext, TaskCommands commandsWrapper, List<String> filesToUpload, List<String> filesToDownload) throws Exception {
         boolean hasBlobStorage = blobStorage != null && blobStorage.valid();
 
         boolean hasFilesToUpload = !ListUtils.isEmpty(filesToUpload);
@@ -177,16 +177,16 @@ public class AzureBatchScriptRunner extends ScriptRunner implements AbstractBatc
         try {
             createJob.run(runContext);
         } catch (Exception e) {
-            throw new ScriptException(e.getMessage(), 1, logConsumer.getStdOutCount(), logConsumer.getStdErrCount());
+            throw new TaskException(e.getMessage(), 1, logConsumer.getStdOutCount(), logConsumer.getStdErrCount());
         }
 
         return new RunnerResult(0, logConsumer);
     }
 
     @Override
-    public Map<String, Object> runnerAdditionalVars(RunContext runContext, ScriptCommands scriptCommands) {
+    public Map<String, Object> runnerAdditionalVars(RunContext runContext, TaskCommands taskCommands) {
         if (blobStorage != null && blobStorage.valid()) {
-            Path outputDirectory = scriptCommands.getWorkingDirectory().relativize(scriptCommands.getOutputDirectory());
+            Path outputDirectory = taskCommands.getWorkingDirectory().relativize(taskCommands.getOutputDirectory());
             return Map.of(
                 ScriptService.VAR_WORKING_DIR, "",
                 ScriptService.VAR_OUTPUT_DIR, outputDirectory,

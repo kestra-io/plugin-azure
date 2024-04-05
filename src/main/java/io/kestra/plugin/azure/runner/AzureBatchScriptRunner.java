@@ -6,7 +6,6 @@ import io.kestra.core.models.annotations.Plugin;
 import io.kestra.core.models.annotations.PluginProperty;
 import io.kestra.core.models.script.*;
 import io.kestra.core.runners.RunContext;
-import io.kestra.core.utils.IdUtils;
 import io.kestra.core.utils.ListUtils;
 import io.kestra.plugin.azure.AbstractConnectionInterface;
 import io.kestra.plugin.azure.batch.AbstractBatchInterface;
@@ -19,17 +18,12 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotNull;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
-import org.apache.commons.io.FileUtils;
 
 import java.io.File;
-import java.nio.file.FileVisitOption;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.*;
-import java.util.stream.Stream;
 
-import static io.kestra.core.utils.Rethrow.throwConsumer;
 import static io.kestra.core.utils.Rethrow.throwFunction;
 
 @Introspected
@@ -182,16 +176,6 @@ public class AzureBatchScriptRunner extends ScriptRunner implements AbstractBatc
 
         try {
             createJob.run(runContext);
-
-            if (hasBlobStorage) {
-                Path outputDirectoryAbsolutePath = runContext.resolve(outputDirectory);
-                try (Stream<Path> paths = Files.walk(outputDirectoryAbsolutePath, FileVisitOption.FOLLOW_LINKS)) {
-                    paths.filter(path -> path.toFile().isFile())
-                        .forEach(throwConsumer(path ->
-                            FileUtils.moveFile(path.toFile(), commandsWrapper.getOutputDirectory().resolve(outputDirectoryAbsolutePath.relativize(path)).toFile())
-                        ));
-                }
-            }
         } catch (Exception e) {
             throw new ScriptException(e.getMessage(), 1, logConsumer.getStdOutCount(), logConsumer.getStdErrCount());
         }
@@ -202,7 +186,7 @@ public class AzureBatchScriptRunner extends ScriptRunner implements AbstractBatc
     @Override
     public Map<String, Object> runnerAdditionalVars(RunContext runContext, ScriptCommands scriptCommands) {
         if (blobStorage != null && blobStorage.valid()) {
-            Path outputDirectory = Path.of(IdUtils.create());
+            Path outputDirectory = scriptCommands.getWorkingDirectory().relativize(scriptCommands.getOutputDirectory());
             return Map.of(
                 ScriptService.VAR_WORKING_DIR, "",
                 ScriptService.VAR_OUTPUT_DIR, outputDirectory,

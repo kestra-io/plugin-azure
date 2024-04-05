@@ -10,8 +10,8 @@ import io.kestra.core.models.annotations.Plugin;
 import io.kestra.core.models.annotations.PluginProperty;
 import io.kestra.core.models.executions.metrics.Counter;
 import io.kestra.core.models.executions.metrics.Timer;
-import io.kestra.core.models.script.AbstractLogConsumer;
-import io.kestra.core.models.script.DefaultLogConsumer;
+import io.kestra.core.models.tasks.runners.AbstractLogConsumer;
+import io.kestra.core.models.tasks.runners.DefaultLogConsumer;
 import io.kestra.core.models.tasks.RunnableTask;
 import io.kestra.core.runners.RunContext;
 import io.kestra.plugin.azure.batch.AbstractBatch;
@@ -233,7 +233,7 @@ public class Create extends AbstractBatch implements RunnableTask<Create.Output>
                     for (String s : currentTask.getOutputFiles()) {
                         File file = TaskService.readRemoteFile(runContext, client, jobId, task, remoteWorkingDir + s, s, true);
 
-                        // As this task is used in the script runner, this processing is already done by the CommandsWrapper so we need some guard
+                        // As this task is used in the task runner, this processing is already done by the CommandsWrapper so we need some guard
                         if (pushOutputFilesToInternalStorage) {
                             outputFiles.put(s, runContext.putTempFile(file));
                         }

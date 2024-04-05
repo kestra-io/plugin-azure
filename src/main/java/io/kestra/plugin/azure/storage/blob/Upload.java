@@ -121,10 +121,6 @@ public class Upload extends AbstractBlobStorageObject implements RunnableTask<Up
             blobClient.setLegalHold(this.legalHold);
         }
 
-        if (this.accessTier != null) {
-            blobClient.setLegalHold(this.legalHold);
-        }
-
         if (this.immutabilityPolicy != null) {
             blobClient.setImmutabilityPolicy(this.immutabilityPolicy.to(runContext));
         }

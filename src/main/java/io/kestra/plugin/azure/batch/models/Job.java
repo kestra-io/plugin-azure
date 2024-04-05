@@ -1,6 +1,7 @@
 package io.kestra.plugin.azure.batch.models;
 
 import com.microsoft.azure.batch.protocol.models.JobAddParameter;
+import com.microsoft.azure.batch.protocol.models.MetadataItem;
 import com.microsoft.azure.batch.protocol.models.PoolInformation;
 import io.kestra.core.exceptions.IllegalVariableEvaluationException;
 import io.kestra.core.models.annotations.PluginProperty;
@@ -11,6 +12,12 @@ import lombok.Value;
 
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
+
+import java.util.Collection;
+import java.util.Map;
+import java.util.Optional;
+
+import static io.kestra.core.utils.Rethrow.throwFunction;
 
 @Builder
 @Value
@@ -50,6 +57,12 @@ public class Job {
     @PluginProperty(dynamic = false)
     private Integer maxParallelTasks;
 
+    @Schema(
+        title = "Labels to attach to the created job."
+    )
+    @PluginProperty(dynamic = true)
+    private Map<String, String> labels;
+
 
     public JobAddParameter to(RunContext runContext, PoolInformation poolInformation) throws IllegalVariableEvaluationException {
         return new JobAddParameter()
@@ -57,6 +70,15 @@ public class Job {
             .withDisplayName(runContext.render(this.displayName))
             .withPriority(this.priority)
             .withMaxParallelTasks(this.maxParallelTasks)
-            .withPoolInfo(poolInformation);
+            .withPoolInfo(poolInformation)
+            .withMetadata(
+                Optional.ofNullable(labels)
+                    .stream()
+                    .map(throwFunction(runContext::renderMap))
+                    .map(throwFunction(Map::entrySet))
+                    .flatMap(Collection::stream)
+                    .map(e -> new MetadataItem().withName(e.getKey()).withValue(e.getValue()))
+                    .toList()
+            );
     }
 }

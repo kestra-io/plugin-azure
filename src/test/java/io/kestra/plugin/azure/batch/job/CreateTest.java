@@ -181,23 +181,21 @@ class CreateTest extends AbstractTest {
         ArrayList<LogEntry> objects = new ArrayList<>();
         logQueue.receive(l -> objects.add(l.getLeft()));
 
-        Exception exception = assertThrows(Exception.class, () -> {
-            create(
-                List.of(
-                    Task.builder()
-                        .id("echo")
-                        .commands(List.of(("echo ok")))
-                        .containerSettings(TaskContainerSettings.builder().imageName("ubuntu").build())
-                        .build(),
-                    Task.builder()
-                        .id("failed")
-                        .commands(List.of(("cat failed")))
-                        .containerSettings(TaskContainerSettings.builder().imageName("ubuntu").build())
-                        .build()
-                ),
-                Map.of()
-            );
-        });
+        Exception exception = assertThrows(Exception.class, () -> create(
+            List.of(
+                Task.builder()
+                    .id("echo")
+                    .commands(List.of(("echo ok")))
+                    .containerSettings(TaskContainerSettings.builder().imageName("ubuntu").build())
+                    .build(),
+                Task.builder()
+                    .id("failed")
+                    .commands(List.of(("cat failed")))
+                    .containerSettings(TaskContainerSettings.builder().imageName("ubuntu").build())
+                    .build()
+            ),
+            Map.of()
+        ));
         Thread.sleep(100);
 
         assertThat(exception.getMessage(), containsString("1/2 task(s) failed"));

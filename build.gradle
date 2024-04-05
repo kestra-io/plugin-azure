@@ -52,7 +52,7 @@ dependencies {
     implementation group: "io.kestra.plugin", name: "plugin-script", version: kestraVersion
 
     // azure
-    api platform("com.azure:azure-sdk-bom:1.2.21")
+    api platform("com.azure:azure-sdk-bom:1.2.22")
     api group: 'com.azure', name: 'azure-identity'
     api group: 'com.azure', name: 'azure-storage-blob'
     api group: 'com.azure', name: 'azure-data-tables'
@@ -67,6 +67,10 @@ dependencies {
  * Test
  **********************************************************************************************************************/
 test {
+    // Needed till https://github.com/Azure/azure-sdk-for-java/issues/27806 is solved
+    jvmArgs = [
+        '--add-opens', 'java.base/java.util=ALL-UNNAMED'
+    ]
     useJUnitPlatform()
 }
 
@@ -95,6 +99,7 @@ dependencies {
 
     // test deps needed only for to have a runner
     testImplementation group: "io.kestra", name: "core", version: kestraVersion
+    testImplementation group: "io.kestra", name: "core", version: kestraVersion, classifier: 'tests'
     testImplementation group: "io.kestra", name: "repository-memory", version: kestraVersion
     testImplementation group: "io.kestra", name: "runner-memory", version: kestraVersion
     testImplementation group: "io.kestra", name: "storage-local", version: kestraVersion

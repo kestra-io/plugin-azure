@@ -6,6 +6,7 @@ import com.microsoft.azure.batch.protocol.models.BatchErrorException;
 import com.microsoft.azure.batch.protocol.models.CloudTask;
 import com.microsoft.azure.batch.protocol.models.TaskState;
 import io.kestra.core.runners.RunContext;
+import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 
 import java.io.File;
@@ -13,6 +14,7 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Path;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Date;
@@ -76,13 +78,29 @@ public class TaskService {
         BatchClient client,
         String jobId,
         CloudTask task,
-        String fileName,
+        String remoteFileName,
         Boolean copy
     ) throws IOException {
-        File file = runContext.tempFile().toFile();
+        return readRemoteFile(runContext, client, jobId, task, remoteFileName, null, copy);
+    }
+
+    public static File readRemoteFile(
+        RunContext runContext,
+        BatchClient client,
+        String jobId,
+        CloudTask task,
+        String remoteFileName,
+        String localFileName,
+        Boolean copy
+    ) throws IOException {
+        File file = localFileName == null
+            ? runContext.tempFile().toFile()
+            : runContext.resolve(Path.of(localFileName)).toFile();
+
+        FileUtils.createParentDirectories(file);
 
         FileOutputStream fileOutputStream = new FileOutputStream(file);
-        client.fileOperations().getFileFromTask(jobId, task.id(), fileName, fileOutputStream);
+        client.fileOperations().getFileFromTask(jobId, task.id(), remoteFileName, fileOutputStream);
 
         if (copy) {
             fileOutputStream.flush();

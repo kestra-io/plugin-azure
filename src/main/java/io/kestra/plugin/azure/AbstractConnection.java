@@ -14,4 +14,8 @@ import lombok.experimental.SuperBuilder;
 @NoArgsConstructor
 public abstract class AbstractConnection extends Task implements AbstractConnectionInterface {
     protected String endpoint;
+
+    public boolean valid() {
+        return this.endpoint != null;
+    }
 }

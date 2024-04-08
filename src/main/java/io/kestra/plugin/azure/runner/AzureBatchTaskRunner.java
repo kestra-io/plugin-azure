@@ -2,6 +2,7 @@ package io.kestra.plugin.azure.runner;
 
 import com.azure.storage.blob.BlobContainerClient;
 import com.microsoft.azure.batch.protocol.models.ContainerWorkingDirectory;
+import io.kestra.core.models.annotations.Example;
 import io.kestra.core.models.annotations.Plugin;
 import io.kestra.core.models.annotations.PluginProperty;
 import io.kestra.core.models.tasks.runners.*;
@@ -32,13 +33,74 @@ import static io.kestra.core.utils.Rethrow.throwFunction;
 @EqualsAndHashCode
 @Getter
 @NoArgsConstructor
-@Schema(title = "Azure Batch task runner", description = """
-    Run a script in a container on Azure Batch.
-    Upon worker restart, this job will be requeued and executed again. Moreover, the existing job will be kept running and handled by Azure Batch till this issue (https://github.com/kestra-io/plugin-azure/issues/80) is handled.
-    To use `inputFiles`, `outputFiles` and `namespaceFiles` properties, you must provide a `blobStorage` to connect to.
-    Doing so will upload the files to the bucket before running the script and download them after the script execution.
-    This runner will wait for the task to succeed or fail up to a max `waitUntilCompletion` duration.""")
-@Plugin(examples = {}, beta = true)
+@Schema(title = "Task runner that executes a task inside a job in Azure Batch.",
+    description = """
+        This task runner is container-based so the `containerImage` property must be set.
+        
+        To access the task's working directory, use the `{{workingDir}}` Pebble expression or the `WORKING_DIR` environment variable. Input files and namespace files will be available in this directory.
+
+        To generate output files you can either use the `outputFiles` task's property and create a file with the same name in the task's working directory, or create any file in the output directory which can be accessed by the `{{outputDir}}` Pebble expression or the `OUTPUT_DIR` environment variables.
+        
+        To use `inputFiles`, `outputFiles` or `namespaceFiles` properties, make sure to set the `blobStorage` property. The blob storage serves as an intermediary storage layer for the task runner. Input and namespace files will be uploaded to the cloud storage bucket before the task run. Similarly, the task runner will store outputFiles in this blob storage during the task run. In the end, the task runner will make those files available for download and preview from the UI by sending them to internal storage.
+        To make it easier to track where all files are stored, the task runner will generate a folder for each task run. You can access that folder using the `{{bucketPath}}` Pebble expression or the `BUCKET_PATH` environment variable.
+        
+        Note that when the Kestra Worker running this task is terminated, the batch job will still run until completion."""
+)
+@Plugin(
+    examples = {
+        @Example(
+            title = "Execute a Shell command.",
+            code = """
+                id: new-shell
+                namespace: myteam
+                                
+                tasks:
+                  - id: shell
+                    type: io.kestra.plugin.scripts.shell.Commands
+                    containerImage: centos
+                    taskRunner:
+                      type: io.kestra.plugin.azure.runner.AzureBatchTaskRunner
+                      account: "{{vars.account}}"
+                      accessKey: "{{vars.accessKey}}"
+                      endpoint: "{{vars.endpoint}}"
+                      poolId: "{{vars.poolId}}"
+                    commands:
+                    - echo "Hello World\"""",
+            full = true
+        ),
+        @Example(
+            title = "Pass input files to the task, execute a Shell command, then retrieve output files.",
+            code = """
+                id: new-shell-with-file
+                namespace: myteam
+                                
+                inputs:
+                  - id: file
+                    type: FILE
+                                
+                tasks:
+                  - id: shell
+                    type: io.kestra.plugin.scripts.shell.Commands
+                    inputFiles:
+                      data.txt: "{{inputs.file}}"
+                    outputFiles:
+                      - out.txt
+                    containerImage: centos
+                    taskRunner:
+                      type: io.kestra.plugin.azure.runner.AzureBatchTaskRunner
+                      account: "{{vars.account}}"
+                      accessKey: "{{vars.accessKey}}"
+                      endpoint: "{{vars.endpoint}}"
+                      poolId: "{{vars.poolId}}"
+                      blobStorage:
+                        containerName: "{{vars.containerName}}"
+                    commands:
+                    - cp {{workingDir}}/data.txt {{workingDir}}/out.txt""",
+            full = true
+        )
+    },
+    beta = true
+)
 public class AzureBatchTaskRunner extends TaskRunner implements AbstractBatchInterface, AbstractConnectionInterface, RemoteRunnerInterface {
 
     private String account;

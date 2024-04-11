@@ -59,9 +59,9 @@ import static io.kestra.core.utils.Rethrow.throwFunction;
                     type: io.kestra.plugin.scripts.shell.Commands
                     taskRunner:
                       type: io.kestra.plugin.azure.runner.AzureBatchTaskRunner
-                      account: "{{vars.account}}"
-                      accessKey: "{{vars.accessKey}}"
-                      endpoint: "{{vars.endpoint}}"
+                      account: "{{secrets.account}}"
+                      accessKey: "{{secrets.accessKey}}"
+                      endpoint: "{{secrets.endpoint}}"
                       poolId: "{{vars.poolId}}"
                     commands:
                     - echo "Hello World\"""",
@@ -87,11 +87,12 @@ import static io.kestra.core.utils.Rethrow.throwFunction;
                     containerImage: centos
                     taskRunner:
                       type: io.kestra.plugin.azure.runner.AzureBatchTaskRunner
-                      account: "{{vars.account}}"
-                      accessKey: "{{vars.accessKey}}"
-                      endpoint: "{{vars.endpoint}}"
+                      account: "{{secrets.account}}"
+                      accessKey: "{{secrets.accessKey}}"
+                      endpoint: "{{secrets.endpoint}}"
                       poolId: "{{vars.poolId}}"
                       blobStorage:
+                        connectionString: "{{secrets.connectionString}}"
                         containerName: "{{vars.containerName}}"
                     commands:
                     - cp {{workingDir}}/data.txt {{workingDir}}/out.txt""",

@@ -117,7 +117,8 @@ public class AzureBatchTaskRunner extends TaskRunner implements AbstractBatchInt
     private String poolId;
 
     @Schema(
-        title = "The maximum duration to wait for the job completion. Azure Batch will automatically timeout the job upon reaching such duration and the task will be failed."
+        title = "The maximum duration to wait for the job completion unless the task `timeout` property is set which will take precedence over this property.",
+        description = "Azure Batch will automatically timeout the job upon reaching such duration and the task will be failed."
     )
     @Builder.Default
     private final Duration waitUntilCompletion = Duration.ofHours(1);
@@ -189,11 +190,12 @@ public class AzureBatchTaskRunner extends TaskRunner implements AbstractBatchInt
         AbstractLogConsumer logConsumer = taskCommands.getLogConsumer();
 
         List<String> commands = taskCommands.getCommands();
+        Duration waitDuration = Optional.ofNullable(taskCommands.getTimeout()).orElse(this.waitUntilCompletion);
         Task.TaskBuilder taskBuilder = Task.builder()
             .id("task-" + jobId)
             .constraints(
                 TaskConstraints.builder()
-                    .maxWallClockTime(this.waitUntilCompletion)
+                    .maxWallClockTime(waitDuration)
                     .maxTaskRetryCount(0)
                     .build()
             )
@@ -222,7 +224,7 @@ public class AzureBatchTaskRunner extends TaskRunner implements AbstractBatchInt
             .accessKey(this.accessKey)
             .endpoint(this.endpoint)
             .poolId(this.poolId)
-            .maxDuration(this.waitUntilCompletion)
+            .maxDuration(waitDuration)
             .job(
                 Job.builder()
                     .id(jobId)

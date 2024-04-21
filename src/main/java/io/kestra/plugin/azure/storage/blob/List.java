@@ -28,7 +28,6 @@ import lombok.experimental.SuperBuilder;
                 "endpoint: \"https://yourblob.blob.core.windows.net\"",
                 "connectionString: \"DefaultEndpointsProtocol=...==\"",
                 "container: \"mydata\"",
-                "name: \"myblob\"",
                 "prefix: \"sub-dir\"",
                 "delimiter: \"/\""
             }

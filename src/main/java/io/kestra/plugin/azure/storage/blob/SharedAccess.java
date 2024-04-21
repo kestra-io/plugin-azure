@@ -38,7 +38,7 @@ import jakarta.validation.constraints.NotNull;
                 "name: \"myblob\"",
                 "expirationDate: \"{{ now() | dateAdd(1, 'DAYS') }}\"",
                 "permissions:",
-                " - r"
+                "  - r"
             }
         )
     }

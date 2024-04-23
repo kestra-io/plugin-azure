@@ -14,7 +14,6 @@ import io.kestra.plugin.azure.batch.job.Create;
 import io.kestra.plugin.azure.batch.models.*;
 import io.kestra.plugin.azure.storage.blob.SharedAccess;
 import io.kestra.plugin.azure.storage.blob.models.BlobStorageForBatch;
-import io.micronaut.core.annotation.Introspected;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotNull;
 import lombok.*;
@@ -27,7 +26,6 @@ import java.util.*;
 
 import static io.kestra.core.utils.Rethrow.throwFunction;
 
-@Introspected
 @SuperBuilder
 @ToString
 @EqualsAndHashCode

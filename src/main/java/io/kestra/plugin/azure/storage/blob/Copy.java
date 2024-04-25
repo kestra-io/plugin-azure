@@ -28,9 +28,6 @@ import jakarta.validation.constraints.NotNull;
     examples = {
         @Example(
             code = {
-                "accessKeyId: \"<access-key>\"",
-                "secretKeyId: \"<secret-key>\"",
-                "region: \"eu-central-1\"",
                 "from:",
                 "  container: \"my-bucket\"",
                 "  key: \"path/to/file\"",

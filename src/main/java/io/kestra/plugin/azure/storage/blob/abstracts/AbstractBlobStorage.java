@@ -17,7 +17,7 @@ import lombok.experimental.SuperBuilder;
 @EqualsAndHashCode
 @Getter
 @NoArgsConstructor
-public class AbstractBlobStorage extends AbstractStorage implements AzureClientInterface {
+public abstract class AbstractBlobStorage extends AbstractStorage implements AzureClientInterface {
     public BlobServiceClient client(RunContext runContext) throws IllegalVariableEvaluationException {
         return BlobService.client(this.endpoint, this.connectionString, this.sharedKeyAccountName, this.sharedKeyAccountAccessKey, this.sasToken, runContext);
     }

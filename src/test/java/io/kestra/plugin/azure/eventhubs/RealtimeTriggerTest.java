@@ -29,11 +29,10 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.hamcrest.Matchers.is;
 
 @MicronautTest
-class TriggerTest {
+class RealtimeTriggerTest {
 
     @Inject
     private ApplicationContext applicationContext;
@@ -60,15 +59,15 @@ class TriggerTest {
     @Value("${kestra.variables.globals.azure.eventhubs.eventhub-name}")
     protected String eventHubName;
 
-    @Disabled
     @Test
+    @Disabled
     void testTrigger() throws Exception {
         // mock flow listeners
         CountDownLatch queueCount = new CountDownLatch(1);
 
         // scheduler
-        Worker worker = applicationContext.createBean(Worker.class, UUID.randomUUID().toString(), 8, null);
         try (
+            Worker worker = applicationContext.createBean(Worker.class, UUID.randomUUID().toString(), 8, null);
             AbstractScheduler scheduler = new DefaultScheduler(
                 this.applicationContext,
                 this.flowListenersService,
@@ -78,25 +77,23 @@ class TriggerTest {
             AtomicReference<Execution> last = new AtomicReference<>();
 
             // wait for execution
-            executionQueue.receive(TriggerTest.class, execution -> {
+            executionQueue.receive(RealtimeTriggerTest.class, execution -> {
                 last.set(execution.getLeft());
 
                 queueCount.countDown();
-                assertThat(execution.getLeft().getFlowId(), is("trigger"));
+                assertThat(execution.getLeft().getFlowId(), is("eventhubs-realtime-listen"));
             });
 
             worker.run();
             scheduler.run();
 
-            repositoryLoader.load(Objects.requireNonNull(TriggerTest.class.getClassLoader().getResource("flows/eventshubs-trigger.yaml")));
+            repositoryLoader.load(Objects.requireNonNull(RealtimeTriggerTest.class.getClassLoader().getResource("flows/eventshubs-realtime.yaml")));
 
             produceEvents();
 
             queueCount.await(1, TimeUnit.MINUTES);
 
-            Integer trigger = (Integer) last.get().getTrigger().getVariables().get("eventsCount");
-
-            assertThat(trigger, greaterThanOrEqualTo(2));
+            assertThat(last.get().getTrigger().getVariables().get("body"), is("event-1"));
         }
     }
 
@@ -110,9 +107,6 @@ class TriggerTest {
             .from(List.of(
                 ImmutableMap.builder()
                     .put("body", "event-1")
-                    .build(),
-                ImmutableMap.builder()
-                    .put("body", "event-2")
                     .build()
             ))
             .build();

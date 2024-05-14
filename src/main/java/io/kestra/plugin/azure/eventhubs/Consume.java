@@ -15,6 +15,7 @@ import io.kestra.plugin.azure.eventhubs.client.EventHubClientFactory;
 import io.kestra.plugin.azure.eventhubs.config.BlobContainerClientConfig;
 import io.kestra.plugin.azure.eventhubs.config.EventHubConsumerConfig;
 import io.kestra.plugin.azure.eventhubs.model.EventDataObject;
+import io.kestra.plugin.azure.eventhubs.model.EventDataOutput;
 import io.kestra.plugin.azure.eventhubs.serdes.Serde;
 import io.kestra.plugin.azure.eventhubs.serdes.Serdes;
 import io.kestra.plugin.azure.eventhubs.service.EventDataObjectConverter;
@@ -31,7 +32,11 @@ import lombok.NoArgsConstructor;
 import lombok.ToString;
 import lombok.experimental.SuperBuilder;
 import lombok.extern.slf4j.Slf4j;
+import org.reactivestreams.Publisher;
 import org.slf4j.Logger;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.FluxSink;
+import reactor.core.scheduler.Schedulers;
 
 import java.io.BufferedOutputStream;
 import java.io.File;
@@ -204,6 +209,75 @@ public class Consume extends AbstractEventHubTask implements EventHubConsumerInt
 
             return new Output(numEvents, uri.get());
         }
+    }
+
+    public Publisher<EventDataOutput> stream(RunContext runContext, EventHubConsumerInterface task) throws Exception {
+        final EventHubConsumerConfig config = new EventHubConsumerConfig(runContext, task);
+
+        // Create converter
+        Serdes serdes = task.getBodyDeserializer();
+        Serde serde = serdes.create(task.getBodyDeserializerProperties());
+        EventDataObjectConverter converter = new EventDataObjectConverter(serde);
+
+        final EventHubConsumerService service = new EventHubConsumerService(
+            clientFactory,
+            config,
+            converter,
+            getBlobCheckpointStore(runContext, task, clientFactory)
+        );
+
+        return Flux.<EventDataOutput>create(
+            fluxSink -> {
+                Logger contextLogger = runContext.logger();
+
+                final ConsumerContext consumerContext = new ConsumerContext(
+                    task.getMaxBatchSizePerPartition(),
+                    task.getMaxWaitTimePerPartition(),
+                    task.getMaxDuration(),
+                    contextLogger
+                );
+
+                try {
+                    Map<EventHubNamePartition, Integer> result = service.poll(
+                        consumerContext,
+                        new EventHubConsumerService.EventProcessorListener() {
+                            @Override
+                            public void onEvent(EventDataObject event, PartitionContext context) {
+                                if (contextLogger.isTraceEnabled()) {
+                                    contextLogger.trace(
+                                        "Received new event from eventHub {} and partitionId={} [offset={}, sequenceId={}]",
+                                        context.getEventHubName(),
+                                        context.getPartitionId(),
+                                        event.offset(),
+                                        event.sequenceNumber()
+                                    );
+                                }
+
+                                fluxSink.next(EventDataOutput.of(event));
+                            }
+
+                            @Override
+                            public void onStop() {
+                                fluxSink.complete();
+                            }
+                        });
+
+                    result.forEach((key, value) -> {
+                        Counter counter = Counter.of(
+                            "records",
+                            value,
+                            "eventHubName",
+                            key.eventHubName(),
+                            "partitionId",
+                            key.partitionId()
+                        );
+                        runContext.metric(counter);
+                    });
+                } catch (Throwable throwable) {
+                    fluxSink.error(throwable);
+                }
+            }, FluxSink.OverflowStrategy.BUFFER
+        ).subscribeOn(Schedulers.boundedElastic());
     }
 
     private CheckpointStore getBlobCheckpointStore(final RunContext runContext,

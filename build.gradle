@@ -32,6 +32,13 @@ tasks.withType(JavaCompile) {
     options.compilerArgs.add("-parameters")
 }
 
+configurations.all {
+    resolutionStrategy {
+        // ugly bug for jackson
+        force("com.fasterxml.jackson:jackson-bom:" + jacksonVersion)
+    }
+}
+
 dependencies {
     // lombok
     annotationProcessor "org.projectlombok:lombok:$lombokVersion"

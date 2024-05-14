@@ -185,7 +185,7 @@ public class Consume extends AbstractEventHubTask implements EventHubConsumerInt
                         output.flush();
                         output.close();
                         contextLogger.debug("Copying data to storage.");
-                        uri.set(runContext.putTempFile(tempFile));
+                        uri.set(runContext.storage().putFile(tempFile));
                         contextLogger.debug("Copy on storage completed.");
 
                     }

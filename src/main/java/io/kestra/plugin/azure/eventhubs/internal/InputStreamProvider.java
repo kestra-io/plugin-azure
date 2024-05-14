@@ -25,7 +25,7 @@ public final class InputStreamProvider {
     public InputStream get(final String path) {
         try {
             URI from = new URI(context.render(path));
-            return context.uriToInputStream(from);
+            return context.storage().getFile(from);
         } catch (Exception e) {
             throw new RuntimeException(e);
         }

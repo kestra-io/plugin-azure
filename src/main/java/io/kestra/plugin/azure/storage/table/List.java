@@ -98,7 +98,7 @@ public class List extends AbstractTableStorage implements RunnableTask<List.Outp
 
         return Output.builder()
             .count(count)
-            .uri(runContext.putTempFile(tempFile))
+            .uri(runContext.storage().putFile(tempFile))
             .build();
     }
 

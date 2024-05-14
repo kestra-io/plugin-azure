@@ -79,7 +79,7 @@ public class Bulk extends AbstractTableStorage implements RunnableTask<Bulk.Outp
 
             if (this.from instanceof String) {
                 URI from = new URI(runContext.render((String) this.from));
-                inputStream = new BufferedReader(new InputStreamReader(runContext.uriToInputStream(from)));
+                inputStream = new BufferedReader(new InputStreamReader(runContext.storage().getFile(from)));
                 flowable = Flux.create(FileSerde.reader(inputStream), FluxSink.OverflowStrategy.BUFFER);
             } else if (this.from instanceof List) {
                 flowable = Flux.fromIterable(((List<Entity>) this.from));

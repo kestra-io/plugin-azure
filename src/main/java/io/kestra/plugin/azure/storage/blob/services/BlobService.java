@@ -38,7 +38,7 @@ public class BlobService {
 
         runContext.metric(Counter.of("file.size", blobProperties.getBlobSize()));
 
-        return Pair.of(blobProperties, runContext.putTempFile(tempFile));
+        return Pair.of(blobProperties, runContext.storage().putFile(tempFile));
     }
 
     public static void archive(

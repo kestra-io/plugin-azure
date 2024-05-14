@@ -235,7 +235,7 @@ public class Create extends AbstractBatch implements RunnableTask<Create.Output>
 
                         // As this task is used in the task runner, this processing is already done by the CommandsWrapper so we need some guard
                         if (pushOutputFilesToInternalStorage) {
-                            outputFiles.put(s, runContext.putTempFile(file));
+                            outputFiles.put(s, runContext.storage().putFile(file));
                         }
                     }
                 }
@@ -250,7 +250,7 @@ public class Create extends AbstractBatch implements RunnableTask<Create.Output>
                                 String relativeFileName = nodeFile.name().substring(remoteWorkingDir.length());
                                 File file = TaskService.readRemoteFile(runContext, client, jobId, task, nodeFile.name(), relativeFileName, true);
                                 if (pushOutputFilesToInternalStorage) {
-                                    outputFiles.put(relativeFileName, runContext.putTempFile(file));
+                                    outputFiles.put(relativeFileName, runContext.storage().putFile(file));
                                 }
                             }
                         }

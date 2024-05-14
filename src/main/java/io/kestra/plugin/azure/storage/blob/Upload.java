@@ -127,7 +127,7 @@ public class Upload extends AbstractBlobStorageObject implements RunnableTask<Up
 
         runContext.logger().debug("Upload from '{}' to '{}'", from, blobClient.getBlobName());
 
-        try (var is = runContext.uriToInputStream(from)) {
+        try (var is = runContext.storage().getFile(from)) {
             blobClient.upload(is, true);
         }
 

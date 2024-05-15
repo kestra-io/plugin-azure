@@ -158,7 +158,9 @@ shadowJar {
     archiveClassifier.set(null)
     mergeServiceFiles()
     dependencies {
-        exclude "com/fasterxml/jackson/**"
+        exclude dependency {
+            it.moduleGroup.startsWith('com.fasterxml.jackson') && !it.moduleName.equals('jackson-datatype-joda')
+        }
         exclude "org/slf4j/**"
     }
 }

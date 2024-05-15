@@ -29,7 +29,8 @@ public class TaskService {
         RunContext runContext,
         BatchClient client,
         String jobId,
-        @Nullable Duration timeout
+        @Nullable Duration timeout,
+        Duration completionCheckInterval
     ) throws BatchErrorException, IOException, InterruptedException, TimeoutException {
         long startTime = System.currentTimeMillis();
         long elapsedTime = 0L;
@@ -66,7 +67,7 @@ public class TaskService {
                 return taskCollection;
             }
 
-            TimeUnit.SECONDS.sleep(10);
+            TimeUnit.SECONDS.sleep(completionCheckInterval.toSeconds());
             elapsedTime = (new Date()).getTime() - startTime;
         }
 

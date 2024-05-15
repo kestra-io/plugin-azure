@@ -126,6 +126,13 @@ public class AzureBatchTaskRunner extends TaskRunner implements AbstractBatchInt
     )
     private ContainerRegistry registry;
 
+    @Schema(
+        title = "The frequency with which the TaskRunner checks whether the job is completed."
+    )
+    @Builder.Default
+    @PluginProperty
+    private final Duration completionCheckInterval = Duration.ofSeconds(1);
+
     @Override
     public RunnerResult run(RunContext runContext, TaskCommands taskCommands, List<String> filesToUpload, List<String> filesToDownload) throws Exception {
         boolean hasBlobStorage = blobStorage != null && blobStorage.valid();
@@ -223,6 +230,7 @@ public class AzureBatchTaskRunner extends TaskRunner implements AbstractBatchInt
             .endpoint(this.endpoint)
             .poolId(this.poolId)
             .maxDuration(waitDuration)
+            .completionCheckInterval(completionCheckInterval)
             .job(
                 Job.builder()
                     .id(jobId)

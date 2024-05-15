@@ -134,6 +134,13 @@ public class Create extends AbstractBatch implements RunnableTask<Create.Output>
     @PluginProperty(dynamic = false)
     private Duration maxDuration;
 
+    @Schema(
+        title = "The frequency with which the task checks whether the job is completed."
+    )
+    @Builder.Default
+    @PluginProperty
+    private final Duration completionCheckInterval = Duration.ofSeconds(1);
+
     @JsonIgnore
     private AbstractLogConsumer logConsumer;
 
@@ -193,7 +200,7 @@ public class Create extends AbstractBatch implements RunnableTask<Create.Output>
 
             client.taskOperations().createTasks(jobId, tasks);
 
-            TaskService.waitForTasksToComplete(runContext, client, jobId, maxDuration);
+            TaskService.waitForTasksToComplete(runContext, client, jobId, maxDuration, completionCheckInterval);
 
             // get tasks result
             List<CloudTask> results = client.taskOperations().listTasks(jobId);

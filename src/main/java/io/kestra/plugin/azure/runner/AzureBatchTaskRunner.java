@@ -242,6 +242,7 @@ public class AzureBatchTaskRunner extends TaskRunner implements AbstractBatchInt
             .build();
 
         try {
+            onKill(createJob::kill);
             createJob.run(runContext);
         } catch (Exception e) {
             throw new TaskException(e.getMessage(), 1, logConsumer.getStdOutCount(), logConsumer.getStdErrCount());

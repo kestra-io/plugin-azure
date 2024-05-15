@@ -50,7 +50,9 @@ import java.util.Optional;
                 """
         }
     )
-})
+},
+    beta = true
+)
 @Schema(
     title = "Trigger flow based on events received from Azure Event Hubs."
 )

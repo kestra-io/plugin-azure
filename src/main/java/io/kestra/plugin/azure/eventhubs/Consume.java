@@ -35,8 +35,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.reactivestreams.Publisher;
 import org.slf4j.Logger;
 import reactor.core.publisher.Flux;
-import reactor.core.publisher.FluxSink;
-import reactor.core.scheduler.Schedulers;
 
 import java.io.BufferedOutputStream;
 import java.io.File;
@@ -226,7 +224,7 @@ public class Consume extends AbstractEventHubTask implements EventHubConsumerInt
             getBlobCheckpointStore(runContext, task, clientFactory)
         );
 
-        return Flux.<EventDataOutput>create(
+        return Flux.create(
             fluxSink -> {
                 Logger contextLogger = runContext.logger();
 
@@ -273,11 +271,10 @@ public class Consume extends AbstractEventHubTask implements EventHubConsumerInt
                         );
                         runContext.metric(counter);
                     });
-                } catch (Throwable throwable) {
+                } catch (Exception throwable) {
                     fluxSink.error(throwable);
                 }
-            }, FluxSink.OverflowStrategy.BUFFER
-        ).subscribeOn(Schedulers.boundedElastic());
+            });
     }
 
     private CheckpointStore getBlobCheckpointStore(final RunContext runContext,

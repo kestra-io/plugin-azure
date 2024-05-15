@@ -11,7 +11,7 @@ import java.time.Duration;
 
 @MicronautTest
 @Disabled("Too costly to run on CI")
-public class AzureBatchTaskRunnerTest extends AbstractTaskRunnerTest {
+public class BatchTest extends AbstractTaskRunnerTest {
     @Value("${kestra.variables.globals.azure.batch.accessKey}")
     private String accessKey;
 
@@ -35,7 +35,7 @@ public class AzureBatchTaskRunnerTest extends AbstractTaskRunnerTest {
 
     @Override
     protected TaskRunner taskRunner() {
-        return AzureBatchTaskRunner.builder()
+        return Batch.builder()
             .accessKey(accessKey)
             .account(account)
             .endpoint(endpoint)

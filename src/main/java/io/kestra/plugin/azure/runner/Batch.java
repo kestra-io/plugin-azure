@@ -99,7 +99,7 @@ import static io.kestra.core.utils.Rethrow.throwFunction;
     },
     beta = true
 )
-public class AzureBatchTaskRunner extends TaskRunner implements AbstractBatchInterface, AbstractConnectionInterface, RemoteRunnerInterface {
+public class Batch extends TaskRunner implements AbstractBatchInterface, AbstractConnectionInterface, RemoteRunnerInterface {
 
     private String account;
     private String accessKey;

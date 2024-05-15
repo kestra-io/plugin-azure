@@ -141,14 +141,13 @@ public class AzureBatchTaskRunner extends TaskRunner implements AbstractBatchInt
         }
 
         Map<String, Object> additionalVars = this.additionalVars(runContext, taskCommands);
-        Path outputDirectory = (Path) additionalVars.get(ScriptService.VAR_OUTPUT_DIR);
-        String blobStorageWdir = additionalVars.get(ScriptService.VAR_BUCKET_PATH).toString();
 
         String jobId = ScriptService.jobName(runContext);
         List<ResourceFile> resourceFiles = new ArrayList<>();
         if (hasFilesToUpload || outputDirectoryEnabled) {
             List<String> filesToUploadWithOutputDir = new ArrayList<>(filesToUpload);
             if (outputDirectoryEnabled) {
+                Path outputDirectory = (Path) additionalVars.get(ScriptService.VAR_OUTPUT_DIR);
                 String relativeOutputDirectoryMarkerPath = outputDirectory + "/.kestradirectory";
                 File outputDirectoryMarker = runContext.resolve(Path.of(relativeOutputDirectoryMarkerPath)).toFile();
                 outputDirectoryMarker.getParentFile().mkdirs();
@@ -158,6 +157,7 @@ public class AzureBatchTaskRunner extends TaskRunner implements AbstractBatchInt
 
             BlobContainerClient blobContainerClient = blobStorage.blobContainerClient(runContext);
 
+            String blobStorageWdir = additionalVars.get(ScriptService.VAR_BUCKET_PATH).toString();
             filesToUploadWithOutputDir.stream().map(throwFunction(file -> {
                 // Use path to eventually deduplicate leading '/'
                 String blobName = blobStorageWdir + Path.of("/" + file);

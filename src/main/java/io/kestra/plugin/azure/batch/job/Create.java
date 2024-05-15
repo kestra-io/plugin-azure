@@ -25,6 +25,7 @@ import lombok.experimental.SuperBuilder;
 import org.slf4j.Logger;
 
 import java.io.File;
+import java.io.IOException;
 import java.net.URI;
 import java.time.Duration;
 import java.util.ArrayList;
@@ -32,6 +33,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 
 @SuperBuilder
@@ -138,6 +141,16 @@ public class Create extends AbstractBatch implements RunnableTask<Create.Output>
     @Builder.Default
     private Boolean pushOutputFilesToInternalStorage = true;
 
+    @JsonIgnore
+    @Builder.Default
+    @Getter(AccessLevel.NONE)
+    private AtomicReference<Runnable> killable = new AtomicReference<>();
+
+    @JsonIgnore
+    @Builder.Default
+    @Getter(AccessLevel.NONE)
+    private final AtomicBoolean isKilled = new AtomicBoolean(false);
+
     @Override
     public Output run(RunContext runContext) throws Exception {
         if (logConsumer == null) {
@@ -146,17 +159,18 @@ public class Create extends AbstractBatch implements RunnableTask<Create.Output>
 
         Logger logger = runContext.logger();
         BatchClient client = BatchService.client(this.endpoint, this.account, this.accessKey, runContext);
-        String jobId = null;
+
 
         try {
             // create job
             PoolInformation poolInfo = new PoolInformation()
                 .withPoolId(runContext.render(poolId));
 
-            JobAddParameter job = this.job.to(runContext, poolInfo);
-            jobId = job.id();
+            final JobAddParameter job = this.job.to(runContext, poolInfo);
+            final String jobId = job.id();
             client.jobOperations().createJob(job);
 
+            this.killable.set(() -> safelyKillJobTask(runContext, client, jobId));
             logger.info("Job '{}' created on pool '{}'", jobId, poolInfo.poolId());
 
             // create tasks
@@ -187,7 +201,7 @@ public class Create extends AbstractBatch implements RunnableTask<Create.Output>
             // failed ?
             List<CloudTask> failed = results.stream()
                 .filter(cloudTask -> cloudTask.executionInfo().failureInfo() != null)
-                .collect(Collectors.toList());
+                .toList();
 
             // populate results
             Map<String, Object> outputs = new ConcurrentHashMap<>();
@@ -258,7 +272,7 @@ public class Create extends AbstractBatch implements RunnableTask<Create.Output>
                 }
             }
 
-            if (failed.size() > 0) {
+            if (!failed.isEmpty()) {
                 throw new Exception(failed.size() + "/" + this.tasks.size() + " task(s) failed, terminating!");
             }
 
@@ -279,8 +293,28 @@ public class Create extends AbstractBatch implements RunnableTask<Create.Output>
 
             throw new Exception(e.toString(), e);
         } finally {
-            if (jobId != null) {
-                client.jobOperations().deleteJob(jobId);
+            kill();
+        }
+    }
+
+    private void safelyKillJobTask(final RunContext runContext,
+                                   final BatchClient client,
+                                   final String jobId) {
+        try {
+            client.jobOperations().deleteJob(jobId);
+            runContext.logger().debug("Job deleted: {}", jobId);
+        } catch (IOException e) {
+            runContext.logger().warn("Failed to delete job: {}.", jobId, e);
+        }
+    }
+
+    /** {@inheritDoc} **/
+    @Override
+    public void kill() {
+        if (isKilled.compareAndSet(false, true)) {
+            Runnable runnable = killable.get();
+            if (runnable != null) {
+                runnable.run();
             }
         }
     }

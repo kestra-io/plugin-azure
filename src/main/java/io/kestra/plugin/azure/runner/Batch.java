@@ -100,9 +100,9 @@ import static io.kestra.core.utils.Rethrow.throwFunction;
     beta = true
 )
 public class Batch extends TaskRunner implements AbstractBatchInterface, AbstractConnectionInterface, RemoteRunnerInterface {
-
     private String account;
     private String accessKey;
+    @NotNull
     private String endpoint;
 
     private BlobStorageForBatch blobStorage;

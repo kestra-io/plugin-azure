@@ -4,8 +4,9 @@ import com.azure.storage.blob.BlobContainerClient;
 import io.kestra.core.exceptions.IllegalVariableEvaluationException;
 import io.kestra.core.models.annotations.PluginProperty;
 import io.kestra.core.runners.RunContext;
-import io.kestra.plugin.azure.storage.blob.abstracts.AbstractBlobStorage;
-import io.swagger.v3.oas.annotations.Hidden;
+import io.kestra.plugin.azure.AbstractConnectionInterface;
+import io.kestra.plugin.azure.AzureClientInterface;
+import io.kestra.plugin.azure.storage.blob.services.BlobService;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotNull;
 import lombok.EqualsAndHashCode;
@@ -19,8 +20,13 @@ import lombok.experimental.SuperBuilder;
 @EqualsAndHashCode
 @Getter
 @NoArgsConstructor
-@Hidden
-public class BlobStorageForBatch extends AbstractBlobStorage {
+public class BlobStorageForBatch implements AzureClientInterface, AbstractConnectionInterface {
+    protected String endpoint;
+    protected String connectionString;
+    protected String sharedKeyAccountName;
+    protected String sharedKeyAccountAccessKey;
+    protected String sasToken;
+
     @Schema(
         title = "The URL of the blob container the compute node should use.",
         description = "Mandatory if you want to use `namespaceFiles`, `inputFiles` or `outputFiles` properties."
@@ -31,10 +37,20 @@ public class BlobStorageForBatch extends AbstractBlobStorage {
 
     public boolean valid() {
         return this.containerName != null &&
-            super.valid();
+            this.endpoint != null ||
+            this.connectionString != null ||
+            (this.sharedKeyAccountName != null && this.sharedKeyAccountAccessKey != null) ||
+            this.sasToken != null;
     }
 
     public BlobContainerClient blobContainerClient(RunContext runContext) throws IllegalVariableEvaluationException {
-        return this.client(runContext).getBlobContainerClient(containerName);
+        return BlobService.client(
+            this.endpoint,
+            this.connectionString,
+            this.sharedKeyAccountName,
+            this.sharedKeyAccountAccessKey,
+            this.sasToken,
+            runContext
+        ).getBlobContainerClient(containerName);
     }
 }

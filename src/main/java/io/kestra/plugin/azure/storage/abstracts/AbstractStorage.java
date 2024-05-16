@@ -22,11 +22,4 @@ public abstract class AbstractStorage extends AbstractConnection implements Azur
     protected String sharedKeyAccountAccessKey;
 
     protected String sasToken;
-
-    public boolean valid() {
-        return super.valid() &&
-            this.connectionString != null ||
-            (this.sharedKeyAccountName != null && this.sharedKeyAccountAccessKey != null) ||
-            this.sasToken != null;
-    }
 }

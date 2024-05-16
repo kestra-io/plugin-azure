@@ -134,8 +134,11 @@ public class BlobService {
         String sasToken,
         RunContext runContext
     ) throws IllegalVariableEvaluationException {
-        BlobServiceClientBuilder builder = new BlobServiceClientBuilder()
-            .endpoint(runContext.render(endpoint));
+        BlobServiceClientBuilder builder = new BlobServiceClientBuilder();
+
+        if (endpoint != null) {
+            builder.endpoint(runContext.render(endpoint));
+        }
 
         if (connectionString != null) {
             builder.connectionString(runContext.render(connectionString));

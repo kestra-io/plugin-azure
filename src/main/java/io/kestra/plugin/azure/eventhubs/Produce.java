@@ -51,7 +51,7 @@ import java.util.Map;
                     description: a CSV file with columns id, username, tweet, and timestamp
                 tasks:
                   - id: readCsvFile
-                    type: io.kestra.plugin.serdes.csv.CsvReader
+                    type: io.kestra.plugin.serdes.csv.CsvToIon
                     from: "{{ inputs.file }}"
                   - id: transformRowToJson
                     type: io.kestra.plugin.scripts.nashorn.FileTransform

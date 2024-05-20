@@ -20,6 +20,8 @@ import lombok.experimental.SuperBuilder;
 import org.apache.commons.lang3.tuple.Pair;
 
 import java.net.URI;
+import java.util.AbstractMap;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 import static io.kestra.core.utils.Rethrow.throwFunction;
@@ -45,7 +47,7 @@ import static io.kestra.core.utils.Rethrow.throwFunction;
 @Schema(
     title = "Downloads files from the Azure Blob Storage."
 )
-public class Downloads extends AbstractBlobStorage implements RunnableTask<List.Output>, ListInterface, ActionInterface, AbstractBlobStorageContainerInterface {
+public class Downloads extends AbstractBlobStorage implements RunnableTask<Downloads.Output>, ListInterface, ActionInterface, AbstractBlobStorageContainerInterface {
     private String container;
 
     private String prefix;
@@ -62,7 +64,7 @@ public class Downloads extends AbstractBlobStorage implements RunnableTask<List.
     private Filter filter = Filter.FILES;
 
     @Override
-    public List.Output run(RunContext runContext) throws Exception {
+    public Output run(RunContext runContext) throws Exception {
         List task = List.builder()
             .id(this.id)
             .type(List.class.getName())
@@ -95,6 +97,10 @@ public class Downloads extends AbstractBlobStorage implements RunnableTask<List.
             }))
             .collect(Collectors.toList());
 
+        Map<String, URI> outputFiles = list.stream()
+            .map(blob -> new AbstractMap.SimpleEntry<>(blob.getName(), blob.getUri()))
+            .collect(Collectors.toMap(entry -> entry.getKey(), entry -> entry.getValue()));
+
         BlobService.archive(
             run.getBlobs(),
             this.action,
@@ -104,9 +110,24 @@ public class Downloads extends AbstractBlobStorage implements RunnableTask<List.
             this
         );
 
-        return List.Output
+        return Output
             .builder()
             .blobs(list)
+            .outputFiles(outputFiles)
             .build();
+    }
+
+    @Builder
+    @Getter
+    public static class Output implements io.kestra.core.models.tasks.Output {
+        @Schema(
+            title = "The list of blobs."
+        )
+        private final java.util.List<Blob> blobs;
+
+        @Schema(
+            title = "The downloaded files as a map of from/to URIs."
+        )
+        private final Map<String, URI> outputFiles;
     }
 }

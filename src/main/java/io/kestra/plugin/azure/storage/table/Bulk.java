@@ -3,6 +3,7 @@ package io.kestra.plugin.azure.storage.table;
 import com.azure.data.tables.TableClient;
 import com.azure.data.tables.models.TableTransactionAction;
 import com.azure.data.tables.models.TableTransactionActionType;
+import io.kestra.core.exceptions.IllegalVariableEvaluationException;
 import io.kestra.core.models.annotations.Example;
 import io.kestra.core.models.annotations.Plugin;
 import io.kestra.core.models.annotations.PluginProperty;
@@ -24,6 +25,8 @@ import java.util.Map;
 import jakarta.validation.constraints.NotNull;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.FluxSink;
+
+import static io.kestra.core.utils.Rethrow.throwFunction;
 
 @SuperBuilder
 @ToString
@@ -84,15 +87,15 @@ public class Bulk extends AbstractTableStorage implements RunnableTask<Bulk.Outp
             } else if (this.from instanceof List) {
                 flowable = Flux.fromIterable(((List<Entity>) this.from));
             } else {
-                flowable = Flux.just(this.createEntity(this.from).to());
+                flowable = Flux.just(this.createEntity(runContext, this.from).to());
             }
 
             Integer count = flowable
-                .map(row -> {
-                    Entity entity = this.createEntity(row);
+                .map(throwFunction(row -> {
+                    Entity entity = this.createEntity(runContext, row);
 
                     return new TableTransactionAction(entity.getType() != null ? entity.getType() : defaultType, entity.to());
-                })
+                }))
                 .buffer(100, 100)
                 .map(o -> {
                     tableClient.submitTransaction(o);
@@ -116,9 +119,9 @@ public class Bulk extends AbstractTableStorage implements RunnableTask<Bulk.Outp
     }
 
     @SuppressWarnings("unchecked")
-    private Entity createEntity(Object row) {
-        if (row instanceof Map) {
-            Map<String, Object> map = (Map<String, Object>) row;
+    private Entity createEntity(RunContext runContext, Object row) throws IllegalVariableEvaluationException {
+        if (row instanceof Map<?,?> rowMap) {
+            Map<String, Object> map = runContext.render((Map<String, Object>) rowMap);
             return Entity.builder()
                 .partitionKey((String) map.get("partitionKey"))
                 .rowKey((String) map.get("rowKey"))

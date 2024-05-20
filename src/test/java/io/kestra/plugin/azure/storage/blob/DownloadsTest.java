@@ -26,10 +26,11 @@ class DownloadsTest extends AbstractTest {
             .action(ActionInterface.Action.DELETE)
             .build();
 
-        List.Output run = task.run(runContext(task));
+        Downloads.Output run = task.run(runContext(task));
 
         assertThat(run.getBlobs().size(), is(2));
         assertThat(run.getBlobs().get(0).getUri().toString(), endsWith(".yml"));
+        assertThat(run.getOutputFiles().size(), is(2));
 
         List list = list().prefix("/tasks/" + prefix + "/abs/").build();
         List.Output listOutput = list.run(runContext(list));
@@ -58,9 +59,10 @@ class DownloadsTest extends AbstractTest {
             )
             .build();
 
-        List.Output run = task.run(runContext(task));
+        Downloads.Output run = task.run(runContext(task));
 
         assertThat(run.getBlobs().size(), is(2));
+        assertThat(run.getOutputFiles().size(), is(2));
 
         List list = list().prefix("/tasks/" + prefix + "/blobs-from/").build();
         List.Output listOutput = list.run(runContext(list));

@@ -27,9 +27,6 @@ public class BatchTest extends AbstractTaskRunnerTest {
     @Value("${kestra.variables.globals.azure.blobs.connection-string}")
     protected String connectionString;
 
-    @Value("${kestra.variables.globals.azure.batch.blobs.endpoint}")
-    private String blobEndpoint;
-
     @Value("${kestra.variables.globals.azure.batch.blobs.containerName}")
     private String blobContainerName;
 
@@ -41,7 +38,6 @@ public class BatchTest extends AbstractTaskRunnerTest {
             .endpoint(endpoint)
             .blobStorage(
                 BlobStorageForBatch.builder()
-                    .endpoint(blobEndpoint)
                     .containerName(blobContainerName)
                     .connectionString(connectionString)
                     .build()

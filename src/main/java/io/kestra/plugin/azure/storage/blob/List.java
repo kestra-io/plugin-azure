@@ -7,7 +7,7 @@ import io.kestra.core.models.annotations.Plugin;
 import io.kestra.core.models.executions.metrics.Counter;
 import io.kestra.core.models.tasks.RunnableTask;
 import io.kestra.core.runners.RunContext;
-import io.kestra.plugin.azure.storage.blob.abstracts.AbstractBlobStorage;
+import io.kestra.plugin.azure.storage.blob.abstracts.AbstractBlobStorageWithSas;
 import io.kestra.plugin.azure.storage.blob.abstracts.AbstractBlobStorageContainerInterface;
 import io.kestra.plugin.azure.storage.blob.abstracts.ListInterface;
 import io.kestra.plugin.azure.storage.blob.models.Blob;
@@ -37,7 +37,7 @@ import lombok.experimental.SuperBuilder;
 @Schema(
     title = "List blobs on the Azure Blob Storage."
 )
-public class List extends AbstractBlobStorage implements RunnableTask<List.Output>, ListInterface, AbstractBlobStorageContainerInterface {
+public class List extends AbstractBlobStorageWithSas implements RunnableTask<List.Output>, ListInterface, AbstractBlobStorageContainerInterface {
     private String container;
 
     private String prefix;

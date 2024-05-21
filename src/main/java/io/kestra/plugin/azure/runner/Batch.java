@@ -41,6 +41,9 @@ import static io.kestra.core.utils.Rethrow.throwFunction;
         
         To use `inputFiles`, `outputFiles` or `namespaceFiles` properties, make sure to set the `blobStorage` property. The blob storage serves as an intermediary storage layer for the task runner. Input and namespace files will be uploaded to the cloud storage bucket before the task run. Similarly, the task runner will store outputFiles in this blob storage during the task run. In the end, the task runner will make those files available for download and preview from the UI by sending them to internal storage.
         To make it easier to track where all files are stored, the task runner will generate a folder for each task run. You can access that folder using the `{{bucketPath}}` Pebble expression or the `BUCKET_PATH` environment variable.
+        There is two supported way to provide authentication for the blob storage:
+        - `connectionString` and `containerName` properties
+        - `containerName`, `endpoint`, `sharedKeyAccountName` and `sharedKeyAccountAccessKey` properties
         
         Note that when the Kestra Worker running this task is terminated, the batch job will still run until completion."""
 )
@@ -174,9 +177,11 @@ public class Batch extends TaskRunner implements AbstractBatchInterface, Abstrac
                 SharedAccess task = SharedAccess.builder()
                     .id(SharedAccess.class.getSimpleName())
                     .type(io.kestra.plugin.azure.storage.blob.List.class.getName())
-                    .endpoint(this.endpoint)
-                    .connectionString(blobStorage.getConnectionString())
-                    .container(blobStorage.getContainerName())
+                    .endpoint(this.blobStorage.getEndpoint())
+                    .sharedKeyAccountName(this.blobStorage.getSharedKeyAccountName())
+                    .sharedKeyAccountAccessKey(this.blobStorage.getSharedKeyAccountAccessKey())
+                    .connectionString(this.blobStorage.getConnectionString())
+                    .container(this.blobStorage.getContainerName())
                     .name(blobName)
                     .expirationDate("{{ now() | dateAdd(1, 'DAYS')  }}")
                     .permissions(Set.of(SharedAccess.Permission.READ))

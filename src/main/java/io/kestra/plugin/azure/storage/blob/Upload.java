@@ -7,7 +7,7 @@ import io.kestra.core.models.annotations.PluginProperty;
 import io.kestra.core.models.executions.metrics.Counter;
 import io.kestra.core.models.tasks.RunnableTask;
 import io.kestra.core.runners.RunContext;
-import io.kestra.plugin.azure.storage.blob.abstracts.AbstractBlobStorageObject;
+import io.kestra.plugin.azure.storage.blob.abstracts.AbstractBlobStorageWithSasObject;
 import io.kestra.plugin.azure.storage.blob.models.AccessTier;
 import io.kestra.plugin.azure.storage.blob.models.Blob;
 import io.kestra.plugin.azure.storage.blob.models.BlobImmutabilityPolicy;
@@ -46,7 +46,7 @@ import static io.kestra.core.utils.Rethrow.throwFunction;
 @Schema(
     title = "Upload a file to the Azure Blob Storage."
 )
-public class Upload extends AbstractBlobStorageObject implements RunnableTask<Upload.Output> {
+public class Upload extends AbstractBlobStorageWithSasObject implements RunnableTask<Upload.Output> {
     @Schema(
         title = "The file from the internal storage to upload to the Azure Blob Storage."
     )

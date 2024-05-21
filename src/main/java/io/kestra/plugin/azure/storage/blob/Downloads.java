@@ -8,7 +8,7 @@ import io.kestra.core.models.annotations.Example;
 import io.kestra.core.models.annotations.Plugin;
 import io.kestra.core.models.tasks.RunnableTask;
 import io.kestra.core.runners.RunContext;
-import io.kestra.plugin.azure.storage.blob.abstracts.AbstractBlobStorage;
+import io.kestra.plugin.azure.storage.blob.abstracts.AbstractBlobStorageWithSas;
 import io.kestra.plugin.azure.storage.blob.abstracts.AbstractBlobStorageContainerInterface;
 import io.kestra.plugin.azure.storage.blob.abstracts.ActionInterface;
 import io.kestra.plugin.azure.storage.blob.abstracts.ListInterface;
@@ -47,7 +47,7 @@ import static io.kestra.core.utils.Rethrow.throwFunction;
 @Schema(
     title = "Downloads files from the Azure Blob Storage."
 )
-public class Downloads extends AbstractBlobStorage implements RunnableTask<Downloads.Output>, ListInterface, ActionInterface, AbstractBlobStorageContainerInterface {
+public class Downloads extends AbstractBlobStorageWithSas implements RunnableTask<Downloads.Output>, ListInterface, ActionInterface, AbstractBlobStorageContainerInterface {
     private String container;
 
     private String prefix;

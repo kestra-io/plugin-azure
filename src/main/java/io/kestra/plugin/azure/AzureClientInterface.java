@@ -25,12 +25,4 @@ public interface AzureClientInterface {
     )
     @PluginProperty(dynamic = true)
     String getSharedKeyAccountAccessKey();
-
-    @Schema(
-        title = "The SAS token to use for authenticating requests.",
-        description = "This string should only be the query parameters (with or without a leading '?') and not a full URL."
-    )
-    @PluginProperty(dynamic = true)
-    String getSasToken();
-
 }

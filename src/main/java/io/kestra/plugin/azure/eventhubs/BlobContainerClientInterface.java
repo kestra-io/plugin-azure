@@ -1,7 +1,7 @@
 package io.kestra.plugin.azure.eventhubs;
 
 import io.kestra.core.models.annotations.PluginProperty;
-import io.kestra.plugin.azure.AzureClientInterface;
+import io.kestra.plugin.azure.AzureClientWithSasInterface;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Getter;
 import lombok.experimental.SuperBuilder;
@@ -11,7 +11,7 @@ import lombok.experimental.SuperBuilder;
  */
 @SuperBuilder
 @Getter
-public final class BlobContainerClientInterface implements AzureClientInterface {
+public final class BlobContainerClientInterface implements AzureClientWithSasInterface {
 
     private String connectionString;
     private String sharedKeyAccountName;

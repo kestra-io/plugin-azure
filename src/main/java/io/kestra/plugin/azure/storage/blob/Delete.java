@@ -6,7 +6,7 @@ import io.kestra.core.models.annotations.Example;
 import io.kestra.core.models.annotations.Plugin;
 import io.kestra.core.models.tasks.RunnableTask;
 import io.kestra.core.runners.RunContext;
-import io.kestra.plugin.azure.storage.blob.abstracts.AbstractBlobStorageObject;
+import io.kestra.plugin.azure.storage.blob.abstracts.AbstractBlobStorageWithSasObject;
 import io.kestra.plugin.azure.storage.blob.models.Blob;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.EqualsAndHashCode;
@@ -35,7 +35,7 @@ import lombok.experimental.SuperBuilder;
 @Schema(
     title = "Delete a file from the Azure Blob Storage."
 )
-public class Delete extends AbstractBlobStorageObject implements RunnableTask<Delete.Output> {
+public class Delete extends AbstractBlobStorageWithSasObject implements RunnableTask<Delete.Output> {
     @Override
     public Output run(RunContext runContext) throws Exception {
         BlobClient blobClient = this.blobClient(runContext);

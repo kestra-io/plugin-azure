@@ -14,12 +14,9 @@ import lombok.experimental.SuperBuilder;
 @Getter
 @NoArgsConstructor
 public abstract class AbstractStorage extends AbstractConnection implements AzureClientInterface {
-
     protected String connectionString;
 
     protected String sharedKeyAccountName;
 
     protected String sharedKeyAccountAccessKey;
-
-    protected String sasToken;
 }

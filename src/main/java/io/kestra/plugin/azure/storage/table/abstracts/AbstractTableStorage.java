@@ -7,7 +7,7 @@ import com.azure.data.tables.TableServiceClientBuilder;
 import com.azure.identity.DefaultAzureCredentialBuilder;
 import io.kestra.core.exceptions.IllegalVariableEvaluationException;
 import io.kestra.core.runners.RunContext;
-import io.kestra.plugin.azure.storage.abstracts.AbstractStorage;
+import io.kestra.plugin.azure.storage.abstracts.AbstractStorageWithSas;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -19,7 +19,7 @@ import lombok.experimental.SuperBuilder;
 @EqualsAndHashCode
 @Getter
 @NoArgsConstructor
-public abstract class AbstractTableStorage extends AbstractStorage implements AbstractTableStorageInterface {
+public abstract class AbstractTableStorage extends AbstractStorageWithSas implements AbstractTableStorageInterface {
     protected String table;
 
     protected TableServiceClient client(RunContext runContext) throws IllegalVariableEvaluationException {

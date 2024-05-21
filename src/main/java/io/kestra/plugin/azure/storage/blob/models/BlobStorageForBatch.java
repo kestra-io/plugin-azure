@@ -25,7 +25,6 @@ public class BlobStorageForBatch implements AzureClientInterface, AbstractConnec
     protected String connectionString;
     protected String sharedKeyAccountName;
     protected String sharedKeyAccountAccessKey;
-    protected String sasToken;
 
     @Schema(
         title = "The URL of the blob container the compute node should use.",
@@ -37,10 +36,10 @@ public class BlobStorageForBatch implements AzureClientInterface, AbstractConnec
 
     public boolean valid() {
         return this.containerName != null &&
-            this.endpoint != null ||
-            this.connectionString != null ||
-            (this.sharedKeyAccountName != null && this.sharedKeyAccountAccessKey != null) ||
-            this.sasToken != null;
+            (
+                this.connectionString != null ||
+                    (this.endpoint != null && this.sharedKeyAccountName != null && this.sharedKeyAccountAccessKey != null)
+            );
     }
 
     public BlobContainerClient blobContainerClient(RunContext runContext) throws IllegalVariableEvaluationException {
@@ -49,7 +48,7 @@ public class BlobStorageForBatch implements AzureClientInterface, AbstractConnec
             this.connectionString,
             this.sharedKeyAccountName,
             this.sharedKeyAccountAccessKey,
-            this.sasToken,
+            null,
             runContext
         ).getBlobContainerClient(containerName);
     }

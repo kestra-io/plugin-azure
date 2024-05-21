@@ -10,7 +10,7 @@ import io.kestra.core.models.annotations.Plugin;
 import io.kestra.core.models.annotations.PluginProperty;
 import io.kestra.core.models.tasks.RunnableTask;
 import io.kestra.core.runners.RunContext;
-import io.kestra.plugin.azure.storage.blob.abstracts.AbstractBlobStorage;
+import io.kestra.plugin.azure.storage.blob.abstracts.AbstractBlobStorageWithSas;
 import io.kestra.plugin.azure.storage.blob.models.Blob;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.*;
@@ -41,7 +41,7 @@ import jakarta.validation.constraints.NotNull;
 @Schema(
     title = "Copy a file between Azure Blob Storage."
 )
-public class Copy extends AbstractBlobStorage implements RunnableTask<Copy.Output> {
+public class Copy extends AbstractBlobStorageWithSas implements RunnableTask<Copy.Output> {
     @Schema(
         title = "The source from where the file should be copied."
     )

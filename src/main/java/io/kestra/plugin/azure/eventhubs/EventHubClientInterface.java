@@ -1,12 +1,12 @@
 package io.kestra.plugin.azure.eventhubs;
 
 import io.kestra.core.models.annotations.PluginProperty;
-import io.kestra.plugin.azure.AzureClientInterface;
+import io.kestra.plugin.azure.AzureClientWithSasInterface;
 import io.swagger.v3.oas.annotations.media.Schema;
 
 import jakarta.validation.constraints.NotNull;
 
-public interface EventHubClientInterface extends AzureClientInterface {
+public interface EventHubClientInterface extends AzureClientWithSasInterface {
 
     @Schema(
         title = "Custom endpoint address when connecting to the Event Hubs service."

@@ -6,7 +6,7 @@ import io.kestra.core.models.annotations.Example;
 import io.kestra.core.models.annotations.Plugin;
 import io.kestra.core.models.tasks.RunnableTask;
 import io.kestra.core.runners.RunContext;
-import io.kestra.plugin.azure.storage.blob.abstracts.AbstractBlobStorageObject;
+import io.kestra.plugin.azure.storage.blob.abstracts.AbstractBlobStorageWithSasObject;
 import io.kestra.plugin.azure.storage.blob.models.Blob;
 import io.kestra.plugin.azure.storage.blob.services.BlobService;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -39,7 +39,7 @@ import java.net.URI;
 @Schema(
     title = "Download a file from the Azure Blob Storage."
 )
-public class Download extends AbstractBlobStorageObject implements RunnableTask<Download.Output> {
+public class Download extends AbstractBlobStorageWithSasObject implements RunnableTask<Download.Output> {
     @Override
     public Output run(RunContext runContext) throws Exception {
         BlobClient blobClient = this.blobClient(runContext);

@@ -3,14 +3,15 @@ package io.kestra.plugin.azure.eventhubs.service.consumer;
 import com.azure.messaging.eventhubs.CheckpointStore;
 import com.azure.messaging.eventhubs.EventData;
 import com.azure.messaging.eventhubs.EventProcessorClient;
+import com.azure.messaging.eventhubs.EventProcessorClientBuilder;
 import com.azure.messaging.eventhubs.models.Checkpoint;
 import com.azure.messaging.eventhubs.models.EventBatchContext;
 import com.azure.messaging.eventhubs.models.EventPosition;
 import com.azure.messaging.eventhubs.models.PartitionContext;
+import io.kestra.core.exceptions.IllegalVariableEvaluationException;
 import io.kestra.plugin.azure.eventhubs.client.EventHubClientFactory;
 import io.kestra.plugin.azure.eventhubs.config.EventHubConsumerConfig;
 import io.kestra.plugin.azure.eventhubs.model.EventDataObject;
-import io.kestra.plugin.azure.eventhubs.service.EventDataObjectConverter;
 import lombok.extern.slf4j.Slf4j;
 import org.slf4j.Logger;
 
@@ -33,7 +34,6 @@ public final class EventHubConsumerService {
 
     private final EventHubClientFactory clientFactory;
     private final EventHubConsumerConfig config;
-    private final EventDataObjectConverter converter;
     private final CheckpointStore checkpointStore;
 
     /**
@@ -41,36 +41,19 @@ public final class EventHubConsumerService {
      *
      * @param clientFactory   The {@link EventHubClientFactory} - Cannot be {@code null}.
      * @param consumerConfig  The {@link EventHubConsumerConfig} - Cannot be {@code null}.
-     * @param converter       The {@link EventDataObjectConverter} to be used for converting entities to event data.
      * @param checkpointStore The {@link CheckpointStore}.
      */
     public EventHubConsumerService(final EventHubClientFactory clientFactory,
                                    final EventHubConsumerConfig consumerConfig,
-                                   final EventDataObjectConverter converter,
                                    final CheckpointStore checkpointStore) {
         this.clientFactory = Objects.requireNonNull(clientFactory, "clientFactory cannot be null");
         this.config = Objects.requireNonNull(consumerConfig, "consumerConfig cannot be null");
-        this.converter = Objects.requireNonNull(converter, "converter cannot be null");
         this.checkpointStore = Objects.requireNonNull(checkpointStore, "checkpointStoreSupplier cannot be null");
     }
 
-    public Map<EventHubNamePartition, Integer> poll(final ConsumerContext consumerContext,
-                                                    final EventProcessorListener listener) throws Exception {
-
-        Logger logger = consumerContext.logger();
-
-        CountDownLatch latch = new CountDownLatch(1);
-
-        // Create Map that will hold all initialized partitions.
-        Set<String> partitions = Collections.synchronizedSet(new HashSet<>());
-
-        // Counter
-        Map<EventHubNamePartition, AtomicInteger> eventsByEventHubNamePartition = new ConcurrentHashMap<>();
-
-        Map<EventHubNamePartition, Checkpoint> checkpointsByPartitions = new ConcurrentHashMap<>();
-
+    public EventProcessorClientBuilder createEventProcessorClientBuilder(final Logger logger) throws IllegalVariableEvaluationException {
         // Create single EventProcessorClient.
-        EventProcessorClient client = clientFactory.createEventProcessorClientBuilder(config)
+        return clientFactory.createEventProcessorClientBuilder(config)
             .consumerGroup(config.consumerGroup())
             .checkpointStore(checkpointStore)
             // Set the offset reset strategy
@@ -85,7 +68,26 @@ public final class EventHubConsumerService {
                     );
                 }
                 return position;
-            })
+            });
+    }
+
+    public Map<EventHubNamePartition, Integer> poll(final ConsumerContext consumerContext,
+                                                    final EventProcessorListener listener) throws Exception {
+
+        final Logger logger = consumerContext.logger();
+
+        final CountDownLatch latch = new CountDownLatch(1);
+
+        // Create Map that will hold all initialized partitions.
+        final Set<String> partitions = Collections.synchronizedSet(new HashSet<>());
+
+        // Counter
+        final Map<EventHubNamePartition, AtomicInteger> eventsByEventHubNamePartition = new ConcurrentHashMap<>();
+
+        final Map<EventHubNamePartition, Checkpoint> checkpointsByPartitions = new ConcurrentHashMap<>();
+
+        // Create single EventProcessorClient.
+        EventProcessorClient client = createEventProcessorClientBuilder(logger)
             // Capture the partition to process.
             .processPartitionInitialization(context -> {
                 partitions.add(context.getPartitionContext().getPartitionId());
@@ -105,7 +107,7 @@ public final class EventHubConsumerService {
                 List<EventData> events = context.getEvents();
 
                 // Convert eventData, and invoke listener.
-                for (EventDataObject event : converter.convertFromEventData(events)) {
+                for (EventDataObject event : consumerContext.converter().convertFromEventData(events)) {
                     try {
                         listener.onEvent(event, partitionContext);
                     } catch (Exception e) {

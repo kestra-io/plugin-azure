@@ -58,7 +58,7 @@ import java.util.Optional;
 @ToString
 @EqualsAndHashCode
 @Getter
-public class Trigger extends AbstractTrigger implements EventHubConsumerInterface, PollingTriggerInterface, TriggerOutput<Consume.Output> {
+public class Trigger extends AbstractTrigger implements EventHubConsumerInterface, EventHubBatchConsumerInterface, PollingTriggerInterface, TriggerOutput<Consume.Output> {
 
     // TRIGGER'S PROPERTIES
     @Builder.Default

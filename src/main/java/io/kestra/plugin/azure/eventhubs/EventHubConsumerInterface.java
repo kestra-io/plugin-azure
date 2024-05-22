@@ -48,24 +48,6 @@ public interface EventHubConsumerInterface extends EventHubClientInterface {
     String getEnqueueTime();
 
     @Schema(
-        title = "The maximum number of events to consume per event hub partition per poll."
-    )
-    @PluginProperty
-    Integer getMaxBatchSizePerPartition();
-
-    @Schema(
-        title = "The max time duration to wait to receive a batch of events up to the `maxBatchSizePerPartition`."
-    )
-    @PluginProperty
-    Duration getMaxWaitTimePerPartition();
-
-    @Schema(
-        title = "The max time duration to wait to receive events from all partitions."
-    )
-    @PluginProperty
-    Duration getMaxDuration();
-
-    @Schema(
         title = "The config properties to be used for configuring the BlobCheckpointStore.",
         description = "Azure Event Hubs Checkpoint Store can be used for storing checkpoints while processing events from Azure Event Hubs."
     )

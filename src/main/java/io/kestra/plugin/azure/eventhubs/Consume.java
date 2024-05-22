@@ -80,7 +80,7 @@ import java.util.concurrent.atomic.AtomicReference;
 @Getter
 @ToString
 @EqualsAndHashCode
-public class Consume extends AbstractEventHubTask implements EventHubConsumerInterface, RunnableTask<Consume.Output> {
+public class Consume extends AbstractEventHubTask implements EventHubConsumerInterface, EventHubBatchConsumerInterface, RunnableTask<Consume.Output> {
     // TASK'S PARAMETERS
     @Builder.Default
     private Serdes bodyDeserializer = Serdes.STRING;
@@ -129,21 +129,10 @@ public class Consume extends AbstractEventHubTask implements EventHubConsumerInt
      * @return The output.
      * @throws Exception if something wrong happens.
      */
-    Output run(RunContext runContext, EventHubConsumerInterface task) throws Exception {
+    <T extends EventHubConsumerInterface & EventHubBatchConsumerInterface> Output run(RunContext runContext, T task) throws Exception {
 
-        final EventHubConsumerConfig config = new EventHubConsumerConfig(runContext, task);
-
-        // Create converter
-        Serdes serdes = task.getBodyDeserializer();
-        Serde serde = serdes.create(task.getBodyDeserializerProperties());
-        EventDataObjectConverter converter = new EventDataObjectConverter(serde);
-
-        final EventHubConsumerService service = new EventHubConsumerService(
-            clientFactory,
-            config,
-            converter,
-            getBlobCheckpointStore(runContext, task, clientFactory)
-        );
+        final EventHubConsumerService service = newEventHubConsumerService(runContext, task);
+        final EventDataObjectConverter converter = newConverter(task);
 
         File tempFile = runContext.tempFile(".ion").toFile();
         try (
@@ -158,6 +147,7 @@ public class Consume extends AbstractEventHubTask implements EventHubConsumerInt
                 task.getMaxBatchSizePerPartition(),
                 task.getMaxWaitTimePerPartition(),
                 task.getMaxDuration(),
+                converter,
                 contextLogger
             );
 
@@ -209,72 +199,21 @@ public class Consume extends AbstractEventHubTask implements EventHubConsumerInt
         }
     }
 
-    public Publisher<EventDataOutput> stream(RunContext runContext, EventHubConsumerInterface task) throws Exception {
-        final EventHubConsumerConfig config = new EventHubConsumerConfig(runContext, task);
-
-        // Create converter
+    public EventDataObjectConverter newConverter(final EventHubConsumerInterface task) {
         Serdes serdes = task.getBodyDeserializer();
         Serde serde = serdes.create(task.getBodyDeserializerProperties());
-        EventDataObjectConverter converter = new EventDataObjectConverter(serde);
+        return new EventDataObjectConverter(serde);
+    }
 
-        final EventHubConsumerService service = new EventHubConsumerService(
+    public EventHubConsumerService newEventHubConsumerService(final RunContext runContext,
+                                                              final EventHubConsumerInterface task) throws IllegalVariableEvaluationException {
+;
+
+        return new EventHubConsumerService(
             clientFactory,
-            config,
-            converter,
+            new EventHubConsumerConfig(runContext, task),
             getBlobCheckpointStore(runContext, task, clientFactory)
         );
-
-        return Flux.create(
-            fluxSink -> {
-                Logger contextLogger = runContext.logger();
-
-                final ConsumerContext consumerContext = new ConsumerContext(
-                    task.getMaxBatchSizePerPartition(),
-                    task.getMaxWaitTimePerPartition(),
-                    task.getMaxDuration(),
-                    contextLogger
-                );
-
-                try {
-                    Map<EventHubNamePartition, Integer> result = service.poll(
-                        consumerContext,
-                        new EventHubConsumerService.EventProcessorListener() {
-                            @Override
-                            public void onEvent(EventDataObject event, PartitionContext context) {
-                                if (contextLogger.isTraceEnabled()) {
-                                    contextLogger.trace(
-                                        "Received new event from eventHub {} and partitionId={} [offset={}, sequenceId={}]",
-                                        context.getEventHubName(),
-                                        context.getPartitionId(),
-                                        event.offset(),
-                                        event.sequenceNumber()
-                                    );
-                                }
-
-                                fluxSink.next(EventDataOutput.of(event));
-                            }
-
-                            @Override
-                            public void onStop() {
-                                fluxSink.complete();
-                            }
-                        });
-
-                    result.forEach((key, value) -> {
-                        Counter counter = Counter.of(
-                            "records",
-                            value,
-                            "eventHubName",
-                            key.eventHubName(),
-                            "partitionId",
-                            key.partitionId()
-                        );
-                        runContext.metric(counter);
-                    });
-                } catch (Exception throwable) {
-                    fluxSink.error(throwable);
-                }
-            });
     }
 
     private CheckpointStore getBlobCheckpointStore(final RunContext runContext,

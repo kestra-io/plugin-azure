@@ -134,7 +134,7 @@ public class Batch extends TaskRunner implements AbstractBatchInterface, Abstrac
     )
     @Builder.Default
     @PluginProperty
-    private final Duration completionCheckInterval = Duration.ofSeconds(1);
+    private final Duration completionCheckInterval = Duration.ofSeconds(5);
 
     @Override
     public RunnerResult run(RunContext runContext, TaskCommands taskCommands, List<String> filesToUpload, List<String> filesToDownload) throws Exception {

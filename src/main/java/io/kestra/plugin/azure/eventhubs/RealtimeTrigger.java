@@ -62,7 +62,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
     beta = true
 )
 @Schema(
-    title = "Trigger flow based on events received from Azure Event Hubs."
+    title = "Consume a message in real-time from a Azure Event Hubs and create one execution per message "
 )
 @Slf4j
 @NoArgsConstructor

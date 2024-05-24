@@ -50,7 +50,7 @@ import java.util.Optional;
     )
 })
 @Schema(
-    title = "Trigger flow based on events received from Azure Event Hubs."
+    title = "Consume messages periodically from Azure Event Hubs and create one execution per batch."
 )
 @Slf4j
 @NoArgsConstructor

@@ -98,6 +98,7 @@ public class Downloads extends AbstractBlobStorageWithSas implements RunnableTas
             .collect(Collectors.toList());
 
         Map<String, URI> outputFiles = list.stream()
+            .filter(blob -> !blob.getName().endsWith("/"))
             .map(blob -> new AbstractMap.SimpleEntry<>(blob.getName(), blob.getUri()))
             .collect(Collectors.toMap(entry -> entry.getKey(), entry -> entry.getValue()));
 

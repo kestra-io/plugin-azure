@@ -58,9 +58,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
                 """
         }
     )
-},
-    beta = true
-)
+})
 @Schema(
     title = "Consume a message in real-time from a Azure Event Hubs and create one execution per message "
 )

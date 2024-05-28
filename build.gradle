@@ -61,7 +61,7 @@ dependencies {
     api group: 'com.azure', name: 'azure-identity'
     api group: 'com.azure', name: 'azure-storage-blob'
     api group: 'com.azure', name: 'azure-data-tables'
-    api group: 'com.microsoft.azure', name: 'azure-batch', version: '11.0.0'
+    api group: 'com.microsoft.azure', name: 'azure-batch', version: '11.1.1'
     api group: 'com.microsoft.azure', name: 'azure-storage', version: '8.6.6'
     api group: 'com.azure', name: 'azure-messaging-eventhubs-checkpointstore-blob'
     api group: 'com.azure', name: 'azure-messaging-eventhubs'

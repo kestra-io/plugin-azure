@@ -15,7 +15,6 @@ import io.kestra.plugin.azure.eventhubs.client.EventHubClientFactory;
 import io.kestra.plugin.azure.eventhubs.config.BlobContainerClientConfig;
 import io.kestra.plugin.azure.eventhubs.config.EventHubConsumerConfig;
 import io.kestra.plugin.azure.eventhubs.model.EventDataObject;
-import io.kestra.plugin.azure.eventhubs.model.EventDataOutput;
 import io.kestra.plugin.azure.eventhubs.serdes.Serde;
 import io.kestra.plugin.azure.eventhubs.serdes.Serdes;
 import io.kestra.plugin.azure.eventhubs.service.EventDataObjectConverter;
@@ -32,9 +31,7 @@ import lombok.NoArgsConstructor;
 import lombok.ToString;
 import lombok.experimental.SuperBuilder;
 import lombok.extern.slf4j.Slf4j;
-import org.reactivestreams.Publisher;
 import org.slf4j.Logger;
-import reactor.core.publisher.Flux;
 
 import java.io.BufferedOutputStream;
 import java.io.File;
@@ -94,7 +91,7 @@ public class Consume extends AbstractEventHubTask implements EventHubConsumerInt
     @Builder.Default
     private StartingPosition partitionStartingPosition = StartingPosition.EARLIEST;
 
-    private String EnqueueTime;
+    private String enqueueTime;
 
     @Builder.Default
     private Integer maxBatchSizePerPartition = 50;
@@ -207,8 +204,6 @@ public class Consume extends AbstractEventHubTask implements EventHubConsumerInt
 
     public EventHubConsumerService newEventHubConsumerService(final RunContext runContext,
                                                               final EventHubConsumerInterface task) throws IllegalVariableEvaluationException {
-;
-
         return new EventHubConsumerService(
             clientFactory,
             new EventHubConsumerConfig(runContext, task),

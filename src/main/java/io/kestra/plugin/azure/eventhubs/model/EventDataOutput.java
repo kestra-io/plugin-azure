@@ -53,17 +53,17 @@ public final class EventDataOutput implements Output {
 	 */
 	private final Map<String, Object> properties;
 
-    public static EventDataOutput of(EventDataObject eventDataObject) {
+    public static EventDataOutput of(final EventDataObject event) {
         return EventDataOutput.builder()
-            .partitionKey(eventDataObject.partitionKey())
-            .body(eventDataObject.body())
-            .contentType(eventDataObject.contentType())
-            .correlationId(eventDataObject.correlationId())
-            .messageId(eventDataObject.messageId())
-            .enqueuedTimestamp(eventDataObject.enqueuedTimestamp())
-            .offset(eventDataObject.offset())
-            .sequenceNumber(eventDataObject.sequenceNumber())
-            .properties(eventDataObject.properties())
+            .partitionKey(event.partitionKey())
+            .body(event.body())
+            .contentType(event.contentType())
+            .correlationId(event.correlationId())
+            .messageId(event.messageId())
+            .enqueuedTimestamp(event.enqueuedTimestamp())
+            .offset(event.offset())
+            .sequenceNumber(event.sequenceNumber())
+            .properties(event.properties())
             .build();
     }
 

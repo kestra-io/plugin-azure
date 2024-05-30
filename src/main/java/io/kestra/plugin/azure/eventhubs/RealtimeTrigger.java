@@ -43,7 +43,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
                 tasks:
                   - id: hello
                     type: io.kestra.plugin.core.log.Log
-                    message: Hello there! I received {{ trigger.eventsCount }} from Azure EventHubs!
+                    message: Hello there! I received {{ trigger.body }} from Azure EventHubs!
                 triggers:
                   - id: readFromEventHubs
                     type: "io.kestra.plugin.azure.eventhubs.RealtimeTrigger"
@@ -60,7 +60,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
     )
 })
 @Schema(
-    title = "Consume a message in real-time from a Azure Event Hubs and create one execution per message "
+    title = "Consume a message in real-time from a Azure Event Hubs and create one execution per message."
 )
 @Slf4j
 @NoArgsConstructor
@@ -121,7 +121,24 @@ public class RealtimeTrigger extends AbstractTrigger implements EventHubConsumer
      **/
     @Override
     public Publisher<Execution> evaluate(ConditionContext conditionContext, TriggerContext context) throws Exception {
-        final Consume task = Consume.builder().build();
+        final Consume task = Consume
+            .builder()
+            .connectionString(connectionString)
+            .sharedKeyAccountName(sharedKeyAccountName)
+            .sharedKeyAccountAccessKey(sharedKeyAccountAccessKey)
+            .sasToken(sasToken)
+            .clientMaxRetries(clientMaxRetries)
+            .clientRetryDelay(clientRetryDelay)
+            .bodyDeserializer(bodyDeserializer)
+            .bodyDeserializerProperties(bodyDeserializerProperties)
+            .consumerGroup(consumerGroup)
+            .partitionStartingPosition(partitionStartingPosition)
+            .checkpointStoreProperties(checkpointStoreProperties)
+            .enqueueTime(enqueueTime)
+            .namespace(namespace)
+            .eventHubName(eventHubName)
+            .customEndpointAddress(customEndpointAddress)
+            .build();
         return Flux
             .from(publisher(task, conditionContext.getRunContext()))
             .map(event -> TriggerService.generateRealtimeExecution(this, context, event));
@@ -137,33 +154,30 @@ public class RealtimeTrigger extends AbstractTrigger implements EventHubConsumer
                 Logger contextLogger = runContext.logger();
                 try {
                     EventProcessorClient client = service.createEventProcessorClientBuilder(contextLogger)
-                        .processEvent(processEvent -> {
-                            try {
-                                final EventData eventData = processEvent.getEventData();
-                                if (eventData == null) return;
-
-                                final EventDataObject dataObject = converter.convertFromEventData(eventData);
-
-                                PartitionContext partitionContext = processEvent.getPartitionContext();
-                                if (contextLogger.isTraceEnabled()) {
-                                    contextLogger.trace(
-                                        "Received new event from eventHub {} and partitionId={} [offset={}, sequenceId={}]",
-                                        partitionContext.getEventHubName(),
-                                        partitionContext.getPartitionId(),
-                                        dataObject.offset(),
-                                        dataObject.sequenceNumber()
-                                    );
-                                }
-                                emitter.next(EventDataOutput.of(dataObject));
-                                processEvent.updateCheckpoint();
-                            } finally {
-                                // Check whether event processor is still active, otherwise complete
-                                if (!isActive.get()) {
-                                    emitter.complete();
-                                }
+                        .processEvent(eventContext -> {
+                            if (!isActive.get()) {
+                                return; // return immediately if the trigger is not active (checkpoint will not be updated)
                             }
 
-                        }, Duration.ofMillis(500)) // maxWaitTime is required to check the active flag.
+                            final EventData eventData = eventContext.getEventData();
+                            if (eventData == null) return;
+
+                            final EventDataObject dataObject = converter.convertFromEventData(eventData);
+
+                            PartitionContext partitionContext = eventContext.getPartitionContext();
+                            if (contextLogger.isTraceEnabled()) {
+                                contextLogger.trace(
+                                    "Received new event from eventHub {} and partitionId={} [offset={}, sequenceId={}]",
+                                    partitionContext.getEventHubName(),
+                                    partitionContext.getPartitionId(),
+                                    dataObject.offset(),
+                                    dataObject.sequenceNumber()
+                                );
+                            }
+                            emitter.next(EventDataOutput.of(dataObject));
+                            eventContext.updateCheckpoint();
+
+                        }, Duration.ofMillis(500))
                         .processError(context -> {
                             PartitionContext partitionContext = context.getPartitionContext();
                             contextLogger.error("Failed to process eventHub: {}, partitionId: {} with consumerGroup: {}",
@@ -176,20 +190,32 @@ public class RealtimeTrigger extends AbstractTrigger implements EventHubConsumer
                         })
                         .buildEventProcessorClient();
 
-                    client.start();
-
                     // handle dispose - invoked after complete/error.
                     emitter.onDispose(() -> {
                         try {
-                            client.stop();
+                            client.stop(); // cannot be invoked from EventProcessorClient thread.
                         } finally {
                             waitForTermination.countDown();
                         }
                     });
+                    client.start();
+                    busyWait();
+                    emitter.complete();
                 } catch (Exception throwable) {
                     emitter.error(throwable);
                 }
             });
+    }
+
+    private void busyWait() {
+        while (isActive.get()) {
+            try {
+                Thread.sleep(100);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                isActive.set(false); // proactively stop consuming
+            }
+        }
     }
 
     /**
@@ -215,7 +241,7 @@ public class RealtimeTrigger extends AbstractTrigger implements EventHubConsumer
 
         if (wait) {
             try {
-                this.waitForTermination.await();
+                waitForTermination.await();
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
             }

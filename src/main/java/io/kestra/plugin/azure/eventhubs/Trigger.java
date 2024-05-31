@@ -23,7 +23,7 @@ import java.util.Optional;
  */
 @Plugin(examples = {
     @Example(
-        title = "Trigger flow based on events received from Azure Event Hubs.",
+        title = "Trigger flow based on events received from Azure Event Hubs in batch.",
         full = true,
         code = {
             """
@@ -50,7 +50,8 @@ import java.util.Optional;
     )
 })
 @Schema(
-    title = "Consume messages periodically from Azure Event Hubs and create one execution per batch."
+    title = "Consume messages periodically from Azure Event Hubs and create one execution per batch.",
+    description = "If you would like to consume each message from Azure Event Hubs in real-time and create one execution per message, you can use the [io.kestra.plugin.azure.eventhubs.RealtimeTrigger](https://kestra.io/plugins/plugin-azure/triggers/io.kestra.plugin.azure.eventhubs.realtimetrigger) instead."
 )
 @Slf4j
 @NoArgsConstructor

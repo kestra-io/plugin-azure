@@ -34,7 +34,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
  */
 @Plugin(examples = {
     @Example(
-        title = "Trigger flow based on events received from Azure Event Hubs.",
+        title = "Trigger flow based on events received from Azure Event Hubs in real-time.",
         full = true,
         code = {
             """
@@ -60,7 +60,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
     )
 })
 @Schema(
-    title = "Consume a message in real-time from a Azure Event Hubs and create one execution per message."
+    title = "Consume a message in real-time from a Azure Event Hubs and create one execution per message.",
+    description = "If you would like to consume multiple messages processed within a given time frame and process them in batch, you can use the [io.kestra.plugin.azure.eventhubs.Trigger](https://kestra.io/plugins/plugin-azure/triggers/io.kestra.plugin.azure.eventhubs.trigger) instead."
 )
 @Slf4j
 @NoArgsConstructor

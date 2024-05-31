@@ -68,7 +68,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 @ToString
 @EqualsAndHashCode
 @Getter
-public class RealtimeTrigger extends AbstractTrigger implements EventHubConsumerInterface, RealtimeTriggerInterface, TriggerOutput<Consume.Output> {
+public class RealtimeTrigger extends AbstractTrigger implements EventHubConsumerInterface, RealtimeTriggerInterface, TriggerOutput<EventDataOutput> {
 
     // TASK'S PARAMETERS
     protected String connectionString;

@@ -9,7 +9,7 @@ import lombok.experimental.SuperBuilder;
 @NoArgsConstructor
 @SuperBuilder
 @Getter
-public class AbstractEventHubTask extends Task implements EventHubClientInterface {
+public abstract class AbstractEventHubTask extends Task implements EventHubClientInterface {
 
     private String connectionString;
 

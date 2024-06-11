@@ -99,8 +99,7 @@ import static io.kestra.core.utils.Rethrow.throwFunction;
                     - cp {{workingDir}}/data.txt {{workingDir}}/out.txt""",
             full = true
         )
-    },
-    beta = true
+    }
 )
 public class Batch extends TaskRunner implements AbstractBatchInterface, AbstractConnectionInterface, RemoteRunnerInterface {
     private String account;

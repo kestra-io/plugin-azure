@@ -9,8 +9,7 @@ import io.kestra.core.runners.FlowListeners;
 import io.kestra.core.runners.RunContextFactory;
 import io.kestra.core.runners.Worker;
 import io.kestra.core.schedulers.AbstractScheduler;
-import io.kestra.core.schedulers.DefaultScheduler;
-import io.kestra.core.schedulers.SchedulerTriggerStateInterface;
+import io.kestra.jdbc.runner.JdbcScheduler;
 import io.kestra.core.utils.TestsUtils;
 import io.kestra.plugin.azure.eventhubs.serdes.Serdes;
 import io.micronaut.context.ApplicationContext;
@@ -36,9 +35,6 @@ class RealtimeTriggerTest {
 
     @Inject
     private ApplicationContext applicationContext;
-
-    @Inject
-    private SchedulerTriggerStateInterface triggerState;
 
     @Inject
     private FlowListeners flowListenersService;
@@ -68,16 +64,15 @@ class RealtimeTriggerTest {
         // scheduler
         try (
             Worker worker = applicationContext.createBean(Worker.class, UUID.randomUUID().toString(), 8, null);
-            AbstractScheduler scheduler = new DefaultScheduler(
+            AbstractScheduler scheduler = new JdbcScheduler(
                 this.applicationContext,
-                this.flowListenersService,
-                this.triggerState
+                this.flowListenersService
             );
         ) {
             AtomicReference<Execution> last = new AtomicReference<>();
 
             // wait for execution
-            executionQueue.receive(RealtimeTriggerTest.class, execution -> {
+            executionQueue.receive(execution -> {
                 last.set(execution.getLeft());
 
                 queueCount.countDown();

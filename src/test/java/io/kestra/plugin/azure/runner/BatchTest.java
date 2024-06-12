@@ -4,12 +4,12 @@ import io.kestra.core.models.tasks.runners.AbstractTaskRunnerTest;
 import io.kestra.core.models.tasks.runners.TaskRunner;
 import io.kestra.plugin.azure.storage.blob.models.BlobStorageForBatch;
 import io.micronaut.context.annotation.Value;
-import io.micronaut.test.extensions.junit5.annotation.MicronautTest;
+import io.kestra.core.junit.annotations.KestraTest;
 import org.junit.jupiter.api.Disabled;
 
 import java.time.Duration;
 
-@MicronautTest
+@KestraTest
 @Disabled("Too costly to run on CI")
 public class BatchTest extends AbstractTaskRunnerTest {
     @Value("${kestra.variables.globals.azure.batch.accessKey}")

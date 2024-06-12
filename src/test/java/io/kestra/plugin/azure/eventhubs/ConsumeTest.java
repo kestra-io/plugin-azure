@@ -6,7 +6,7 @@ import io.kestra.core.runners.RunContextFactory;
 import io.kestra.core.utils.TestsUtils;
 import io.kestra.plugin.azure.eventhubs.serdes.Serdes;
 import io.micronaut.context.annotation.Value;
-import io.micronaut.test.extensions.junit5.annotation.MicronautTest;
+import io.kestra.core.junit.annotations.KestraTest;
 import jakarta.inject.Inject;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Disabled;
@@ -16,7 +16,7 @@ import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 
-@MicronautTest
+@KestraTest
 class ConsumeTest {
 
     @Inject

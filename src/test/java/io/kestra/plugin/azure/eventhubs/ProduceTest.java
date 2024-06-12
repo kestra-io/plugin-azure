@@ -12,7 +12,7 @@ import io.kestra.plugin.azure.eventhubs.serdes.StringSerde;
 import io.kestra.plugin.azure.eventhubs.service.EventDataObjectConverter;
 import io.kestra.plugin.azure.eventhubs.service.producer.EventDataBatchFactory;
 import io.kestra.plugin.azure.eventhubs.service.producer.EventHubProducerService;
-import io.micronaut.test.extensions.junit5.annotation.MicronautTest;
+import io.kestra.core.junit.annotations.KestraTest;
 import jakarta.inject.Inject;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -25,7 +25,7 @@ import reactor.core.publisher.Mono;
 
 import java.util.Map;
 
-@MicronautTest
+@KestraTest
 @ExtendWith(MockitoExtension.class)
 class ProduceTest {
 

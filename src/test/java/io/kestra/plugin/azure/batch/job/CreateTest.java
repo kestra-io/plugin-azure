@@ -5,6 +5,7 @@ import io.kestra.core.models.executions.LogEntry;
 import io.kestra.core.queues.QueueFactoryInterface;
 import io.kestra.core.queues.QueueInterface;
 import io.kestra.core.utils.IdUtils;
+import io.kestra.core.utils.TestsUtils;
 import io.kestra.plugin.azure.batch.models.*;
 import io.kestra.plugin.azure.storage.blob.SharedAccess;
 import io.kestra.plugin.azure.storage.blob.Upload;
@@ -13,12 +14,12 @@ import jakarta.inject.Named;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.slf4j.event.Level;
+import reactor.core.publisher.Flux;
 
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -86,8 +87,7 @@ class CreateTest extends AbstractTest {
     @Disabled("pool are not running !")
     @Test
     void run() throws Exception {
-        ArrayList<LogEntry> objects = new ArrayList<>();
-        logQueue.receive(l -> objects.add(l.getLeft()));
+        Flux<LogEntry> receive = TestsUtils.receive(logQueue);
 
         String random = IdUtils.create();
         SharedAccess.Output outputs = sas(this.container, null, SharedAccess.Permission.WRITE);
@@ -161,9 +161,10 @@ class CreateTest extends AbstractTest {
         Thread.sleep(100);
 
         assertThat(run.getVars().get("extract"), is(random));
-        assertThat(objects.stream().filter(logEntry -> logEntry.getMessage().equals("t1=first")).count(), is(1L));
-        assertThat(objects.stream().filter(logEntry -> logEntry.getMessage().equals("t2=second")).filter(logEntry -> logEntry.getLevel().equals(Level.WARN)).count(), is(1L));
-        assertThat(objects.stream().filter(logEntry -> logEntry.getMessage().equals("t3=5")).count(), is(1L));
+        List<LogEntry> logs = receive.collectList().block();
+        assertThat(logs.stream().filter(logEntry -> logEntry.getMessage().equals("t1=first")).count(), is(1L));
+        assertThat(logs.stream().filter(logEntry -> logEntry.getMessage().equals("t2=second")).filter(logEntry -> logEntry.getLevel().equals(Level.WARN)).count(), is(1L));
+        assertThat(logs.stream().filter(logEntry -> logEntry.getMessage().equals("t3=5")).count(), is(1L));
 
         InputStream get = storageInterface.get(null, run.getOutputFiles().get("outs/1.txt"));
         assertThat(CharStreams.toString(new InputStreamReader(get)), is("1\n"));
@@ -178,8 +179,7 @@ class CreateTest extends AbstractTest {
     @Disabled("pool are not running !")
     @Test
     void errors() throws Exception {
-        ArrayList<LogEntry> objects = new ArrayList<>();
-        logQueue.receive(l -> objects.add(l.getLeft()));
+        Flux<LogEntry> receive = TestsUtils.receive(logQueue);
 
         Exception exception = assertThrows(Exception.class, () -> create(
             List.of(
@@ -199,6 +199,6 @@ class CreateTest extends AbstractTest {
         Thread.sleep(100);
 
         assertThat(exception.getMessage(), containsString("1/2 task(s) failed"));
-        assertThat(objects.stream().filter(logEntry -> logEntry.getMessage().equals("ok")).count(), is(1L));
+        assertThat(receive.collectList().block().stream().filter(logEntry -> logEntry.getMessage().equals("ok")).count(), is(1L));
     }
 }

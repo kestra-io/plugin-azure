@@ -7,12 +7,14 @@ import io.kestra.core.repositories.LocalFlowRepositoryLoader;
 import io.kestra.core.runners.FlowListeners;
 import io.kestra.core.runners.Worker;
 import io.kestra.core.schedulers.AbstractScheduler;
+import io.kestra.core.utils.TestsUtils;
 import io.kestra.jdbc.runner.JdbcScheduler;
 import io.kestra.plugin.azure.storage.blob.models.Blob;
 import io.micronaut.context.ApplicationContext;
 import jakarta.inject.Inject;
 import jakarta.inject.Named;
 import org.junit.jupiter.api.Test;
+import reactor.core.publisher.Flux;
 
 import java.util.Objects;
 import java.util.UUID;
@@ -53,7 +55,7 @@ class TriggerTest extends AbstractTest {
             AtomicReference<Execution> last = new AtomicReference<>();
 
             // wait for execution
-            executionQueue.receive(executionWithError -> {
+            Flux<Execution> receive = TestsUtils.receive(executionQueue, executionWithError -> {
                 Execution execution = executionWithError.getLeft();
                 if (execution.getFlowId().equals("blob-storage-listen")) {
                     last.set(execution);
@@ -75,6 +77,7 @@ class TriggerTest extends AbstractTest {
                 assertThat(await, is(true));
             } finally {
                 worker.shutdown();
+                receive.blockLast();
             }
 
             @SuppressWarnings("unchecked")
@@ -108,7 +111,7 @@ class TriggerTest extends AbstractTest {
             AtomicReference<Execution> last = new AtomicReference<>();
 
             // wait for execution
-            executionQueue.receive(executionWithError -> {
+            Flux<Execution> receive = TestsUtils.receive(executionQueue, executionWithError -> {
                 Execution execution = executionWithError.getLeft();
                 if (execution.getFlowId().equals("blob-storage-listen-none-action")) {
                     last.set(execution);
@@ -129,6 +132,7 @@ class TriggerTest extends AbstractTest {
                 assertThat(await, is(true));
             } finally {
                 worker.shutdown();
+                receive.blockLast();
             }
 
             @SuppressWarnings("unchecked")

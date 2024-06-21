@@ -95,8 +95,8 @@ public class TaskService {
         Boolean copy
     ) throws IOException {
         File file = localFileName == null
-            ? runContext.tempFile().toFile()
-            : runContext.resolve(Path.of(localFileName)).toFile();
+            ? runContext.workingDir().createTempFile().toFile()
+            : runContext.workingDir().resolve(Path.of(localFileName)).toFile();
 
         FileUtils.createParentDirectories(file);
 

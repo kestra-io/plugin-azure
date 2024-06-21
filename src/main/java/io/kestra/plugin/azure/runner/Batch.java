@@ -158,7 +158,7 @@ public class Batch extends TaskRunner implements AbstractBatchInterface, Abstrac
             if (outputDirectoryEnabled) {
                 Path outputDirectory = (Path) additionalVars.get(ScriptService.VAR_OUTPUT_DIR);
                 String relativeOutputDirectoryMarkerPath = outputDirectory + "/.kestradirectory";
-                File outputDirectoryMarker = runContext.resolve(Path.of(relativeOutputDirectoryMarkerPath)).toFile();
+                File outputDirectoryMarker = runContext.workingDir().resolve(Path.of(relativeOutputDirectoryMarkerPath)).toFile();
                 outputDirectoryMarker.getParentFile().mkdirs();
                 outputDirectoryMarker.createNewFile();
                 filesToUploadWithOutputDir.add(relativeOutputDirectoryMarkerPath);
@@ -171,7 +171,7 @@ public class Batch extends TaskRunner implements AbstractBatchInterface, Abstrac
                 // Use path to eventually deduplicate leading '/'
                 String blobName = blobStorageWdir + Path.of("/" + file);
                 blobContainerClient.getBlobClient(blobName)
-                    .uploadFromFile(runContext.resolve(Path.of(file)).toString(), true);
+                    .uploadFromFile(runContext.workingDir().resolve(Path.of(file)).toString(), true);
 
                 SharedAccess task = SharedAccess.builder()
                     .id(SharedAccess.class.getSimpleName())

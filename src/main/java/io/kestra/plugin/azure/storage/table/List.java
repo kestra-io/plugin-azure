@@ -86,7 +86,7 @@ public class List extends AbstractTableStorage implements RunnableTask<List.Outp
             options.setTop(this.top);
         }
 
-        File tempFile = runContext.tempFile(".ion").toFile();
+        File tempFile = runContext.workingDir().createTempFile(".ion").toFile();
         try (BufferedOutputStream output = new BufferedOutputStream(new FileOutputStream(tempFile))) {
             for (TableEntity entity : tableClient.listEntities(options, null, null)) {
                 FileSerde.write(output, Entity.to(entity));

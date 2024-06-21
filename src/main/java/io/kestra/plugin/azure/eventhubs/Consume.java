@@ -131,7 +131,7 @@ public class Consume extends AbstractEventHubTask implements EventHubConsumerInt
         final EventHubConsumerService service = newEventHubConsumerService(runContext, task);
         final EventDataObjectConverter converter = newConverter(task);
 
-        File tempFile = runContext.tempFile(".ion").toFile();
+        File tempFile = runContext.workingDir().createTempFile(".ion").toFile();
         try (
             BufferedOutputStream output = new BufferedOutputStream(new FileOutputStream(tempFile))
         ) {

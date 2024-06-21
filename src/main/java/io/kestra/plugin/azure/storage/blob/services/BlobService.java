@@ -13,6 +13,7 @@ import com.azure.storage.blob.models.ListBlobsOptions;
 import io.kestra.core.exceptions.IllegalVariableEvaluationException;
 import io.kestra.core.models.executions.metrics.Counter;
 import io.kestra.core.runners.RunContext;
+import io.kestra.core.utils.FileUtils;
 import io.kestra.plugin.azure.AbstractConnectionInterface;
 import io.kestra.plugin.azure.AzureClientWithSasInterface;
 import io.kestra.plugin.azure.storage.blob.Copy;
@@ -33,7 +34,7 @@ import java.util.stream.Collectors;
 
 public class BlobService {
     public static Pair<BlobProperties, URI> download(RunContext runContext, BlobClient client) throws IOException {
-        File tempFile = runContext.tempFile(runContext.fileExtension(client.getBlobName())).toFile();
+        File tempFile = runContext.workingDir().createTempFile(FileUtils.getExtension(client.getBlobName())).toFile();
         BlobProperties blobProperties = client.downloadToFile(tempFile.getAbsolutePath(), true);
 
         runContext.metric(Counter.of("file.size", blobProperties.getBlobSize()));

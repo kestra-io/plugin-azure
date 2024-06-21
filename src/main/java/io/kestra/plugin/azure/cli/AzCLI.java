@@ -68,7 +68,7 @@ import java.util.Map;
             title = "List supported regions for the current Azure subscription.",
             code = """
             id: azureRegions
-            namespace: dev
+            namespace: company.team
             tasks:
               - id: list-locations
                 type: io.kestra.plugin.azure.cli.AzCLI

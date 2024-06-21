@@ -53,7 +53,7 @@ import static io.kestra.core.utils.Rethrow.throwFunction;
             title = "Execute a Shell command.",
             code = """
                 id: new-shell
-                namespace: myteam
+                namespace: company.team
                 
                 tasks:
                   - id: shell
@@ -72,7 +72,7 @@ import static io.kestra.core.utils.Rethrow.throwFunction;
             title = "Pass input files to the task, execute a Shell command, then retrieve output files.",
             code = """
                 id: new-shell-with-file
-                namespace: myteam
+                namespace: company.team
                 
                 inputs:
                   - id: file

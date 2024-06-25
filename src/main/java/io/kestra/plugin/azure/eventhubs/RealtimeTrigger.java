@@ -142,7 +142,7 @@ public class RealtimeTrigger extends AbstractTrigger implements EventHubConsumer
             .build();
         return Flux
             .from(publisher(task, conditionContext.getRunContext()))
-            .map(event -> TriggerService.generateRealtimeExecution(this, context, event));
+            .map(event -> TriggerService.generateRealtimeExecution(this, conditionContext, context, event));
     }
 
     public Publisher<EventDataOutput> publisher(final Consume task,

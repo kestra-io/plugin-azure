@@ -55,7 +55,7 @@ dependencies {
     compileOnly'org.slf4j:slf4j-api'
 
     // azure
-    api platform("com.azure:azure-sdk-bom:1.2.22")
+    api platform("com.azure:azure-sdk-bom:1.2.25")
     api group: 'com.azure', name: 'azure-identity'
     api group: 'com.azure', name: 'azure-storage-blob'
     api group: 'com.azure', name: 'azure-data-tables'

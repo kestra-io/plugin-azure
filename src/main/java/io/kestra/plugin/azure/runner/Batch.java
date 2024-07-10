@@ -18,6 +18,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotNull;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
+import org.slf4j.Logger;
 
 import java.io.File;
 import java.nio.file.Path;
@@ -136,12 +137,14 @@ public class Batch extends TaskRunner implements AbstractBatchInterface, Abstrac
     private final Duration completionCheckInterval = Duration.ofSeconds(5);
 
     @Override
-    public RunnerResult run(RunContext runContext, TaskCommands taskCommands, List<String> filesToUpload, List<String> filesToDownload) throws Exception {
+    public RunnerResult run(RunContext runContext, TaskCommands taskCommands, List<String> filesToDownload) throws Exception {
         boolean hasBlobStorage = blobStorage != null && blobStorage.valid();
 
-        boolean hasFilesToUpload = !ListUtils.isEmpty(filesToUpload);
+        Logger logger = runContext.logger();
+        List<Path> relativeWorkingDirectoryFilesPaths = taskCommands.relativeWorkingDirectoryFilesPaths();
+        boolean hasFilesToUpload = !ListUtils.isEmpty(relativeWorkingDirectoryFilesPaths);
         if (hasFilesToUpload && !hasBlobStorage) {
-            throw new IllegalArgumentException("You must provide a way to connect to a Blob Storage container to use `inputFiles` or `namespaceFiles`");
+            logger.warn("Working directory is not empty but no Blob Storage container connection are specified. You must provide a Blob Storage in order to use `inputFiles` or `namespaceFiles`. Skipping importing files to runner.");
         }
         boolean hasFilesToDownload = !ListUtils.isEmpty(filesToDownload);
         boolean outputDirectoryEnabled = taskCommands.outputDirectoryEnabled();
@@ -154,11 +157,11 @@ public class Batch extends TaskRunner implements AbstractBatchInterface, Abstrac
         String jobId = ScriptService.jobName(runContext);
         List<ResourceFile> resourceFiles = new ArrayList<>();
         if (hasFilesToUpload || outputDirectoryEnabled) {
-            List<String> filesToUploadWithOutputDir = new ArrayList<>(filesToUpload);
+            List<Path> filesToUploadWithOutputDir = new ArrayList<>(relativeWorkingDirectoryFilesPaths);
             if (outputDirectoryEnabled) {
                 Path outputDirectory = (Path) additionalVars.get(ScriptService.VAR_OUTPUT_DIR);
-                String relativeOutputDirectoryMarkerPath = outputDirectory + "/.kestradirectory";
-                File outputDirectoryMarker = runContext.workingDir().resolve(Path.of(relativeOutputDirectoryMarkerPath)).toFile();
+                Path relativeOutputDirectoryMarkerPath = outputDirectory.resolve(".kestradirectory");
+                File outputDirectoryMarker = runContext.workingDir().resolve(relativeOutputDirectoryMarkerPath).toFile();
                 outputDirectoryMarker.getParentFile().mkdirs();
                 outputDirectoryMarker.createNewFile();
                 filesToUploadWithOutputDir.add(relativeOutputDirectoryMarkerPath);
@@ -171,7 +174,7 @@ public class Batch extends TaskRunner implements AbstractBatchInterface, Abstrac
                 // Use path to eventually deduplicate leading '/'
                 String blobName = blobStorageWdir + Path.of("/" + file);
                 blobContainerClient.getBlobClient(blobName)
-                    .uploadFromFile(runContext.workingDir().resolve(Path.of(file)).toString(), true);
+                    .uploadFromFile(runContext.workingDir().resolve(file).toString(), true);
 
                 SharedAccess task = SharedAccess.builder()
                     .id(SharedAccess.class.getSimpleName())
@@ -189,7 +192,7 @@ public class Batch extends TaskRunner implements AbstractBatchInterface, Abstrac
                 SharedAccess.Output sas = task.run(runContext);
 
                 return ResourceFile.builder()
-                    .filePath(file.startsWith("/") ? file.substring(1) : file)
+                    .filePath(file.toString())
                     // Use path to eventually deduplicate leading '/'
                     .httpUrl(sas.getUri().toString())
                     .build();

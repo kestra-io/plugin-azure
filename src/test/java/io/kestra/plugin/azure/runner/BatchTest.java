@@ -12,7 +12,7 @@ import java.time.Duration;
 @KestraTest
 @Disabled("Too costly to run on CI")
 public class BatchTest extends AbstractTaskRunnerTest {
-    @Value("${kestra.variables.globals.azure.batch.accessKey}")
+    @Value("${kestra.variables.globals.azure.batch.access-key}")
     private String accessKey;
 
     @Value("${kestra.variables.globals.azure.batch.account}")
@@ -21,13 +21,13 @@ public class BatchTest extends AbstractTaskRunnerTest {
     @Value("${kestra.variables.globals.azure.batch.endpoint}")
     private String endpoint;
 
-    @Value("${kestra.variables.globals.azure.batch.poolId}")
+    @Value("${kestra.variables.globals.azure.batch.pool-id}")
     private String poolId;
 
     @Value("${kestra.variables.globals.azure.blobs.connection-string}")
     protected String connectionString;
 
-    @Value("${kestra.variables.globals.azure.batch.blobs.containerName}")
+    @Value("${kestra.variables.globals.azure.batch.blobs.container-name}")
     private String blobContainerName;
 
     @Override

@@ -50,6 +50,6 @@ public class BlobStorageForBatch implements AzureClientInterface, AbstractConnec
             this.sharedKeyAccountAccessKey,
             null,
             runContext
-        ).getBlobContainerClient(containerName);
+        ).getBlobContainerClient(runContext.render(containerName));
     }
 }

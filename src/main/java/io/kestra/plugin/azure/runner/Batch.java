@@ -155,6 +155,9 @@ public class Batch extends TaskRunner implements AbstractBatchInterface, Abstrac
         Map<String, Object> additionalVars = this.additionalVars(runContext, taskCommands);
 
         String jobId = ScriptService.jobName(runContext);
+        if (jobId.length() > 59) {
+            jobId = jobId.substring(0, 59);
+        }
         List<ResourceFile> resourceFiles = new ArrayList<>();
         if (hasFilesToUpload || outputDirectoryEnabled) {
             List<Path> filesToUploadWithOutputDir = new ArrayList<>(relativeWorkingDirectoryFilesPaths);

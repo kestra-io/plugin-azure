@@ -1,6 +1,7 @@
 package io.kestra.plugin.azure.runner;
 
 import com.azure.storage.blob.BlobContainerClient;
+import com.microsoft.azure.batch.BatchClient;
 import com.microsoft.azure.batch.protocol.models.ContainerWorkingDirectory;
 import io.kestra.core.models.annotations.Example;
 import io.kestra.core.models.annotations.Plugin;
@@ -10,6 +11,7 @@ import io.kestra.core.runners.RunContext;
 import io.kestra.core.utils.ListUtils;
 import io.kestra.plugin.azure.AbstractConnectionInterface;
 import io.kestra.plugin.azure.batch.AbstractBatchInterface;
+import io.kestra.plugin.azure.batch.BatchService;
 import io.kestra.plugin.azure.batch.job.Create;
 import io.kestra.plugin.azure.batch.models.*;
 import io.kestra.plugin.azure.storage.blob.SharedAccess;
@@ -46,7 +48,7 @@ import static io.kestra.core.utils.Rethrow.throwFunction;
         - `connectionString` and `containerName` properties
         - `containerName`, `endpoint`, `sharedKeyAccountName` and `sharedKeyAccountAccessKey` properties
         
-        Note that when the Kestra Worker running this task is terminated, the batch job will still run until completion."""
+        Note that when the Kestra Worker running this task is terminated, the batch job will still runs until completion, then after restarting, the Worker will resume processing on the existing job unless `resume` is set to false."""
 )
 @Plugin(
     examples = {
@@ -136,6 +138,22 @@ public class Batch extends TaskRunner implements AbstractBatchInterface, Abstrac
     @PluginProperty
     private final Duration completionCheckInterval = Duration.ofSeconds(5);
 
+    @Schema(
+        title = "Whether the job should be deleted upon completion."
+    )
+    @NotNull
+    @Builder.Default
+    @PluginProperty
+    private final Boolean delete = true;
+
+    @Schema(
+        title = "Whether to reconnect to the current job if it already exists."
+    )
+    @NotNull
+    @Builder.Default
+    @PluginProperty
+    private final Boolean resume = true;
+
     @Override
     public RunnerResult run(RunContext runContext, TaskCommands taskCommands, List<String> filesToDownload) throws Exception {
         boolean hasBlobStorage = blobStorage != null && blobStorage.valid();
@@ -158,49 +176,62 @@ public class Batch extends TaskRunner implements AbstractBatchInterface, Abstrac
         if (jobId.length() > 59) {
             jobId = jobId.substring(0, 59);
         }
-        List<ResourceFile> resourceFiles = new ArrayList<>();
-        if (hasFilesToUpload || outputDirectoryEnabled) {
-            List<Path> filesToUploadWithOutputDir = new ArrayList<>(relativeWorkingDirectoryFilesPaths);
-            if (outputDirectoryEnabled) {
-                Path outputDirectory = (Path) additionalVars.get(ScriptService.VAR_OUTPUT_DIR);
-                Path relativeOutputDirectoryMarkerPath = outputDirectory.resolve(".kestradirectory");
-                File outputDirectoryMarker = runContext.workingDir().resolve(relativeOutputDirectoryMarkerPath).toFile();
-                outputDirectoryMarker.getParentFile().mkdirs();
-                outputDirectoryMarker.createNewFile();
-                filesToUploadWithOutputDir.add(relativeOutputDirectoryMarkerPath);
-            }
 
-            BlobContainerClient blobContainerClient = blobStorage.blobContainerClient(runContext);
-
-            String blobStorageWdir = additionalVars.get(ScriptService.VAR_BUCKET_PATH).toString();
-            filesToUploadWithOutputDir.stream().map(throwFunction(file -> {
-                // Use path to eventually deduplicate leading '/'
-                String blobName = blobStorageWdir + Path.of("/" + file);
-                blobContainerClient.getBlobClient(blobName)
-                    .uploadFromFile(runContext.workingDir().resolve(file).toString(), true);
-
-                SharedAccess task = SharedAccess.builder()
-                    .id(SharedAccess.class.getSimpleName())
-                    .type(io.kestra.plugin.azure.storage.blob.List.class.getName())
-                    .endpoint(this.blobStorage.getEndpoint())
-                    .sharedKeyAccountName(this.blobStorage.getSharedKeyAccountName())
-                    .sharedKeyAccountAccessKey(this.blobStorage.getSharedKeyAccountAccessKey())
-                    .connectionString(this.blobStorage.getConnectionString())
-                    .container(this.blobStorage.getContainerName())
-                    .name(blobName)
-                    .expirationDate("{{ now() | dateAdd(1, 'DAYS')  }}")
-                    .permissions(Set.of(SharedAccess.Permission.READ))
-                    .build();
-
-                SharedAccess.Output sas = task.run(runContext);
-
-                return ResourceFile.builder()
-                    .filePath(file.toString())
-                    // Use path to eventually deduplicate leading '/'
-                    .httpUrl(sas.getUri().toString())
-                    .build();
-            })).forEach(resourceFiles::add);
+        boolean resumeExisting = false;
+        if (Boolean.TRUE.equals(this.resume)) {
+            BatchClient client = BatchService.client(this.endpoint, this.account, this.accessKey, runContext);
+            String baseJobName = jobId.substring(0, jobId.lastIndexOf('-') + 1);
+            var cloudJob = BatchService.getExistingJob(runContext, client, baseJobName);
+            resumeExisting = cloudJob.isPresent();
         }
+
+        List<ResourceFile> resourceFiles = new ArrayList<>();
+        if (!resumeExisting) {
+            // only upload files if we resume an existing job
+            if (hasFilesToUpload || outputDirectoryEnabled) {
+                List<Path> filesToUploadWithOutputDir = new ArrayList<>(relativeWorkingDirectoryFilesPaths);
+                if (outputDirectoryEnabled) {
+                    Path outputDirectory = (Path) additionalVars.get(ScriptService.VAR_OUTPUT_DIR);
+                    Path relativeOutputDirectoryMarkerPath = outputDirectory.resolve(".kestradirectory");
+                    File outputDirectoryMarker = runContext.workingDir().resolve(relativeOutputDirectoryMarkerPath).toFile();
+                    outputDirectoryMarker.getParentFile().mkdirs();
+                    outputDirectoryMarker.createNewFile();
+                    filesToUploadWithOutputDir.add(relativeOutputDirectoryMarkerPath);
+                }
+
+                BlobContainerClient blobContainerClient = blobStorage.blobContainerClient(runContext);
+
+                String blobStorageWdir = additionalVars.get(ScriptService.VAR_BUCKET_PATH).toString();
+                filesToUploadWithOutputDir.stream().map(throwFunction(file -> {
+                    // Use path to eventually deduplicate leading '/'
+                    String blobName = blobStorageWdir + Path.of("/" + file);
+                    blobContainerClient.getBlobClient(blobName)
+                        .uploadFromFile(runContext.workingDir().resolve(file).toString(), true);
+
+                    SharedAccess task = SharedAccess.builder()
+                        .id(SharedAccess.class.getSimpleName())
+                        .type(io.kestra.plugin.azure.storage.blob.List.class.getName())
+                        .endpoint(this.blobStorage.getEndpoint())
+                        .sharedKeyAccountName(this.blobStorage.getSharedKeyAccountName())
+                        .sharedKeyAccountAccessKey(this.blobStorage.getSharedKeyAccountAccessKey())
+                        .connectionString(this.blobStorage.getConnectionString())
+                        .container(this.blobStorage.getContainerName())
+                        .name(blobName)
+                        .expirationDate("{{ now() | dateAdd(1, 'DAYS')  }}")
+                        .permissions(Set.of(SharedAccess.Permission.READ))
+                        .build();
+
+                    SharedAccess.Output sas = task.run(runContext);
+
+                    return ResourceFile.builder()
+                        .filePath(file.toString())
+                        // Use path to eventually deduplicate leading '/'
+                        .httpUrl(sas.getUri().toString())
+                        .build();
+                })).forEach(resourceFiles::add);
+            }
+        }
+
 
         AbstractLogConsumer logConsumer = taskCommands.getLogConsumer();
 
@@ -241,6 +272,8 @@ public class Batch extends TaskRunner implements AbstractBatchInterface, Abstrac
             .poolId(this.poolId)
             .maxDuration(waitDuration)
             .completionCheckInterval(completionCheckInterval)
+            .delete(this.delete)
+            .resume(this.resume)
             .job(
                 Job.builder()
                     .id(jobId)

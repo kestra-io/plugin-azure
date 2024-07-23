@@ -47,7 +47,7 @@ public class Task {
     @Schema(
         title = "Interpreter to be used."
     )
-    @PluginProperty(dynamic = false)
+    @PluginProperty
     @NotNull
     @NotEmpty
     String interpreter = "/bin/sh";
@@ -56,7 +56,7 @@ public class Task {
     @Schema(
         title = "Interpreter args to be used."
     )
-    @PluginProperty(dynamic = false)
+    @PluginProperty
     String[] interpreterArgs = {"-c"};
 
     @Schema(
@@ -94,7 +94,7 @@ public class Task {
             "If you add a file with `[\"first\"]`, you can use the special variable `echo 1 >> {{ outputFiles.first }}`" +
             "on this task, and reference this file on others tasks using `{{ outputs.taskId.outputFiles.first }}`."
     )
-    @PluginProperty(dynamic = false)
+    @PluginProperty
     List<String> outputFiles;
 
     @Schema(
@@ -105,7 +105,7 @@ public class Task {
             "and `echo 2 >> {{ outputDirs.myDir }}/file2.txt`, and both files will be uploaded to the internal storage. " +
             "Then, you can use them on other tasks using `{{ outputs.taskId.files['myDir/file1.txt'] }}`"
     )
-    @PluginProperty(dynamic = false)
+    @PluginProperty
     List<String> outputDirs;
 
     @Schema(

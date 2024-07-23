@@ -45,7 +45,7 @@ public class Job {
         title = "The priority of the Job.",
         description = "Priority values can range from -1000 to 1000, with -1000 being the lowest priority and 1000 being the highest priority. The default value is 0."
     )
-    @PluginProperty(dynamic = false)
+    @PluginProperty
     private Integer priority;
 
     @Schema(
@@ -54,7 +54,7 @@ public class Job {
             "If not specified, the default value is -1, which means there's no limit to the number of tasks that " +
             "can be run at once. You can update a job's `maxParallelTasks` after it has been created using the update job API."
     )
-    @PluginProperty(dynamic = false)
+    @PluginProperty
     private Integer maxParallelTasks;
 
     @Schema(

@@ -13,6 +13,7 @@ import io.kestra.core.models.executions.metrics.Timer;
 import io.kestra.core.models.tasks.runners.AbstractLogConsumer;
 import io.kestra.core.models.tasks.runners.DefaultLogConsumer;
 import io.kestra.core.models.tasks.RunnableTask;
+import io.kestra.core.models.tasks.runners.ScriptService;
 import io.kestra.core.runners.RunContext;
 import io.kestra.plugin.azure.batch.AbstractBatch;
 import io.kestra.plugin.azure.batch.BatchService;
@@ -123,7 +124,7 @@ public class Create extends AbstractBatch implements RunnableTask<Create.Output>
     @Schema(
         title = "The list of tasks to be run."
     )
-    @PluginProperty(dynamic = false)
+    @PluginProperty
     @NotNull
     private List<Task> tasks;
 
@@ -131,7 +132,7 @@ public class Create extends AbstractBatch implements RunnableTask<Create.Output>
         title = "The maximum total wait duration.",
         description = "If null, there is no timeout and the task is delegated to Azure Batch."
     )
-    @PluginProperty(dynamic = false)
+    @PluginProperty
     private Duration maxDuration;
 
     @Schema(
@@ -140,6 +141,22 @@ public class Create extends AbstractBatch implements RunnableTask<Create.Output>
     @Builder.Default
     @PluginProperty
     private final Duration completionCheckInterval = Duration.ofSeconds(1);
+
+    @Schema(
+        title = "Whether the job should be deleted upon completion."
+    )
+    @NotNull
+    @Builder.Default
+    @PluginProperty
+    private final Boolean delete = true;
+
+    @Schema(
+        title = "Whether to reconnect to the current job if it already exists."
+    )
+    @NotNull
+    @Builder.Default
+    @PluginProperty
+    private final Boolean resume = true;
 
     @JsonIgnore
     private AbstractLogConsumer logConsumer;
@@ -167,38 +184,60 @@ public class Create extends AbstractBatch implements RunnableTask<Create.Output>
         Logger logger = runContext.logger();
         BatchClient client = BatchService.client(this.endpoint, this.account, this.accessKey, runContext);
 
+        Map<String, Integer> tasksMapping = new HashMap<>();
+        String jobId = null;
+        if (Boolean.TRUE.equals(resume)) {
+            String baseJobName = ScriptService.jobName(runContext);
+            baseJobName = baseJobName.substring(0, baseJobName.lastIndexOf('-') + 1);
+            var cloudJob = BatchService.getExistingJob(runContext, client, baseJobName);
+            if (cloudJob.isPresent()) {
+                jobId = cloudJob.get().id();
+                logger.info("Job is resumed from an already running job {} ", jobId);
+
+                // re-create the task mapping
+                int index = 0;
+                var existingTasks = client.taskOperations().listTasks(jobId).stream().toList();
+                for (CloudTask current : existingTasks) {
+                    tasksMapping.put(current.id(), index);
+                    index++;
+                }
+            }
+        }
 
         try {
-            // create job
-            PoolInformation poolInfo = new PoolInformation()
-                .withPoolId(runContext.render(poolId));
+            if (jobId == null) {
+                // create job
+                PoolInformation poolInfo = new PoolInformation()
+                    .withPoolId(runContext.render(poolId));
 
-            final JobAddParameter job = this.job.to(runContext, poolInfo);
-            final String jobId = job.id();
-            client.jobOperations().createJob(job);
+                final JobAddParameter job = this.job.to(runContext, poolInfo);
+                jobId = job.id();
+                client.jobOperations().createJob(job);
 
-            this.killable.set(() -> safelyKillJobTask(runContext, client, jobId));
-            logger.info("Job '{}' created on pool '{}'", jobId, poolInfo.poolId());
+                logger.info("Job '{}' created on pool '{}'", jobId, poolInfo.poolId());
 
-            // create tasks
-            List<TaskAddParameter> tasks = new ArrayList<>();
-            Map<String, Integer> tasksMapping = new HashMap<>();
-            int index = 0;
-            for (Task current : this.tasks) {
-                TaskAddParameter taskAddParameter = current.to(runContext);
+                // create tasks
+                List<TaskAddParameter> tasks = new ArrayList<>();
+                int index = 0;
+                for (Task current : this.tasks) {
+                    TaskAddParameter taskAddParameter = current.to(runContext);
 
-                tasksMapping.put(taskAddParameter.id(), index);
-                tasks.add(taskAddParameter);
+                    tasksMapping.put(taskAddParameter.id(), index);
+                    tasks.add(taskAddParameter);
 
-                index++;
+                    index++;
+                }
+
+                if (logger.isDebugEnabled()) {
+                    tasks
+                        .forEach(task -> logger.debug("Starting task '{}' with command: {}", task.id(), task.commandLine()));
+                }
+
+                client.taskOperations().createTasks(jobId, tasks);
             }
 
-            if (logger.isDebugEnabled()) {
-                tasks
-                    .forEach(task -> logger.debug("Starting task '{}' with command: {}", task.id(), task.commandLine()));
-            }
-
-            client.taskOperations().createTasks(jobId, tasks);
+            String finalJobId = jobId;
+            this.killable.set(() -> safelyKillJobTask(runContext, client, finalJobId));
 
             TaskService.waitForTasksToComplete(runContext, client, jobId, maxDuration, completionCheckInterval);
 
@@ -307,11 +346,13 @@ public class Create extends AbstractBatch implements RunnableTask<Create.Output>
     private void safelyKillJobTask(final RunContext runContext,
                                    final BatchClient client,
                                    final String jobId) {
-        try {
-            client.jobOperations().deleteJob(jobId);
-            runContext.logger().debug("Job deleted: {}", jobId);
-        } catch (IOException e) {
-            runContext.logger().warn("Failed to delete job: {}.", jobId, e);
+        if (Boolean.TRUE.equals(delete)) {
+            try {
+                client.jobOperations().deleteJob(jobId);
+                runContext.logger().debug("Job deleted: {}", jobId);
+            } catch (IOException e) {
+                runContext.logger().warn("Failed to delete job: {}.", jobId, e);
+            }
         }
     }
 

@@ -57,56 +57,61 @@ dependencies {
     // azure
     api platform("com.azure:azure-sdk-bom:1.2.22")
     api (group: 'com.azure', name: 'azure-identity') {
-        // excluded from the driver and included manually after to take the version from the platform
+        // exclude libraries already provided by Kestra
         exclude group: 'com.fasterxml.jackson.core'
-        exclude group: 'com.fasterxml.jackson.datatype'
-        exclude group: 'com.fasterxml.jackson.dataformat'
+        exclude group: 'com.fasterxml.jackson.dataformat', module: 'jackson-dataformat-xml'
+        exclude group: 'com.fasterxml.jackson.datatype', module: 'jackson-datatype-jdk8'
+        exclude group: 'com.fasterxml.jackson.datatype', module: 'jackson-datatype-jsr310'
+        exclude group: 'com.fasterxml.jackson.datatype', module: 'jackson-datatype-guava'
     }
     api (group: 'com.azure', name: 'azure-storage-blob') {
-        // excluded from the driver and included manually after to take the version from the platform
+        // exclude libraries already provided by Kestra
         exclude group: 'com.fasterxml.jackson.core'
-        exclude group: 'com.fasterxml.jackson.datatype'
-        exclude group: 'com.fasterxml.jackson.dataformat'
+        exclude group: 'com.fasterxml.jackson.dataformat', module: 'jackson-dataformat-xml'
+        exclude group: 'com.fasterxml.jackson.datatype', module: 'jackson-datatype-jdk8'
+        exclude group: 'com.fasterxml.jackson.datatype', module: 'jackson-datatype-jsr310'
+        exclude group: 'com.fasterxml.jackson.datatype', module: 'jackson-datatype-guava'
     }
     api (group: 'com.azure', name: 'azure-data-tables') {
-        // excluded from the driver and included manually after to take the version from the platform
+        // exclude libraries already provided by Kestra
         exclude group: 'com.fasterxml.jackson.core'
-        exclude group: 'com.fasterxml.jackson.datatype'
-        exclude group: 'com.fasterxml.jackson.dataformat'
+        exclude group: 'com.fasterxml.jackson.dataformat', module: 'jackson-dataformat-xml'
+        exclude group: 'com.fasterxml.jackson.datatype', module: 'jackson-datatype-jdk8'
+        exclude group: 'com.fasterxml.jackson.datatype', module: 'jackson-datatype-jsr310'
+        exclude group: 'com.fasterxml.jackson.datatype', module: 'jackson-datatype-guava'
     }
     api (group: 'com.microsoft.azure', name: 'azure-batch', version: '11.1.1') {
-        // excluded from the driver and included manually after to take the version from the platform
+        // exclude libraries already provided by Kestra
         exclude group: 'com.fasterxml.jackson.core'
-        exclude group: 'com.fasterxml.jackson.datatype'
-        exclude group: 'com.fasterxml.jackson.dataformat'
+        exclude group: 'com.fasterxml.jackson.dataformat', module: 'jackson-dataformat-xml'
+        exclude group: 'com.fasterxml.jackson.datatype', module: 'jackson-datatype-jdk8'
+        exclude group: 'com.fasterxml.jackson.datatype', module: 'jackson-datatype-jsr310'
+        exclude group: 'com.fasterxml.jackson.datatype', module: 'jackson-datatype-guava'
     }
     api (group: 'com.microsoft.azure', name: 'azure-storage', version: '8.6.6') {
-        // excluded from the driver and included manually after to take the version from the platform
+        // exclude libraries already provided by Kestra
         exclude group: 'com.fasterxml.jackson.core'
-        exclude group: 'com.fasterxml.jackson.datatype'
-        exclude group: 'com.fasterxml.jackson.dataformat'
+        exclude group: 'com.fasterxml.jackson.dataformat', module: 'jackson-dataformat-xml'
+        exclude group: 'com.fasterxml.jackson.datatype', module: 'jackson-datatype-jdk8'
+        exclude group: 'com.fasterxml.jackson.datatype', module: 'jackson-datatype-jsr310'
+        exclude group: 'com.fasterxml.jackson.datatype', module: 'jackson-datatype-guava'
     }
     api (group: 'com.azure', name: 'azure-messaging-eventhubs-checkpointstore-blob') {
-        // excluded from the driver and included manually after to take the version from the platform
+        // exclude libraries already provided by Kestra
         exclude group: 'com.fasterxml.jackson.core'
-        exclude group: 'com.fasterxml.jackson.datatype'
-        exclude group: 'com.fasterxml.jackson.dataformat'
+        exclude group: 'com.fasterxml.jackson.dataformat', module: 'jackson-dataformat-xml'
+        exclude group: 'com.fasterxml.jackson.datatype', module: 'jackson-datatype-jdk8'
+        exclude group: 'com.fasterxml.jackson.datatype', module: 'jackson-datatype-jsr310'
+        exclude group: 'com.fasterxml.jackson.datatype', module: 'jackson-datatype-guava'
     }
     api (group: 'com.azure', name: 'azure-messaging-eventhubs') {
-        // excluded from the driver and included manually after to take the version from the platform
+        // exclude libraries already provided by Kestra
         exclude group: 'com.fasterxml.jackson.core'
-        exclude group: 'com.fasterxml.jackson.datatype'
-        exclude group: 'com.fasterxml.jackson.dataformat'
+        exclude group: 'com.fasterxml.jackson.dataformat', module: 'jackson-dataformat-xml'
+        exclude group: 'com.fasterxml.jackson.datatype', module: 'jackson-datatype-jdk8'
+        exclude group: 'com.fasterxml.jackson.datatype', module: 'jackson-datatype-jsr310'
+        exclude group: 'com.fasterxml.jackson.datatype', module: 'jackson-datatype-guava'
     }
-    // this will enforce Jackson to the version defined in the Platform
-    api group: 'com.fasterxml.jackson.core', name: 'jackson-annotations'
-    api group: 'com.fasterxml.jackson.core', name: 'jackson-core'
-    api group: 'com.fasterxml.jackson.core', name: 'jackson-databind'
-    api group: 'com.fasterxml.jackson.dataformat', name: 'jackson-dataformat-xml'
-    api group: 'com.fasterxml.jackson.datatype', name: 'jackson-datatype-jdk8'
-    api group: 'com.fasterxml.jackson.datatype', name: 'jackson-datatype-jsr310'
-    api group: 'com.fasterxml.jackson.datatype', name: 'jackson-datatype-joda'
-    api group: 'com.fasterxml.jackson.datatype', name: 'jackson-datatype-guava'
 }
 
 

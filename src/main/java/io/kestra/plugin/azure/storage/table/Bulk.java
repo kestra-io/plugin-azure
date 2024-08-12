@@ -19,12 +19,12 @@ import lombok.experimental.SuperBuilder;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
+import java.io.Reader;
 import java.net.URI;
 import java.util.List;
 import java.util.Map;
 import jakarta.validation.constraints.NotNull;
 import reactor.core.publisher.Flux;
-import reactor.core.publisher.FluxSink;
 
 import static io.kestra.core.utils.Rethrow.throwFunction;
 
@@ -75,15 +75,14 @@ public class Bulk extends AbstractTableStorage implements RunnableTask<Bulk.Outp
     @Override
     public Bulk.Output run(RunContext runContext) throws Exception {
         TableClient tableClient = this.tableClient(runContext);
-        BufferedReader inputStream = null;
+        Reader reader = null;
 
         try {
             Flux<Object> flowable;
-
             if (this.from instanceof String) {
                 URI from = new URI(runContext.render((String) this.from));
-                inputStream = new BufferedReader(new InputStreamReader(runContext.storage().getFile(from)));
-                flowable = Flux.create(FileSerde.reader(inputStream), FluxSink.OverflowStrategy.BUFFER);
+                reader = new BufferedReader(new InputStreamReader(runContext.storage().getFile(from)), FileSerde.BUFFER_SIZE);
+                flowable = FileSerde.readAll(reader);
             } else if (this.from instanceof List) {
                 flowable = Flux.fromIterable(((List<Entity>) this.from));
             } else {
@@ -111,11 +110,10 @@ public class Bulk extends AbstractTableStorage implements RunnableTask<Bulk.Outp
                 .count(count)
                 .build();
         } finally {
-            if (inputStream != null) {
-                inputStream.close();
+            if (reader != null) {
+                reader.close();
             }
         }
-
     }
 
     @SuppressWarnings("unchecked")

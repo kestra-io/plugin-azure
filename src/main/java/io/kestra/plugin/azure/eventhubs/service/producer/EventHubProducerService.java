@@ -12,10 +12,10 @@ import io.kestra.plugin.azure.eventhubs.model.EventDataObject;
 import io.kestra.plugin.azure.eventhubs.service.EventDataObjectConverter;
 import org.slf4j.Logger;
 import reactor.core.publisher.Flux;
-import reactor.core.publisher.FluxSink;
 import reactor.core.publisher.Mono;
 
 import java.io.BufferedReader;
+import java.io.IOException;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -55,11 +55,8 @@ public class EventHubProducerService {
      * @param eventStream The stream of events to send.
      * @return The sender result.
      */
-    public Result sendEvents(BufferedReader eventStream, ProducerContext context) throws IllegalVariableEvaluationException {
-        Flux<EventDataObject> flowable = Flux.create(
-            FileSerde.reader(eventStream, EventDataObject.class),
-            FluxSink.OverflowStrategy.BUFFER
-        );
+    public Result sendEvents(BufferedReader eventStream, ProducerContext context) throws IllegalVariableEvaluationException, IOException {
+        Flux<EventDataObject> flowable = FileSerde.readAll(eventStream, EventDataObject.class);
         try (EventHubProducerAsyncClient producer = clientFactory.createAsyncProducerClient(config)) {
             return sendEvents(producer, adapter, flowable, context);
         }

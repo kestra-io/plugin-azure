@@ -55,7 +55,7 @@ dependencies {
     compileOnly'org.slf4j:slf4j-api'
 
     // azure
-    api platform("com.azure:azure-sdk-bom:1.2.22")
+    api platform("com.azure:azure-sdk-bom:1.2.26")
     api (group: 'com.azure', name: 'azure-identity') {
         // exclude libraries already provided by Kestra
         exclude group: 'com.fasterxml.jackson.core'

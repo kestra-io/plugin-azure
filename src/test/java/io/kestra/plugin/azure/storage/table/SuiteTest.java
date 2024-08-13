@@ -120,7 +120,7 @@ class SuiteTest {
         java.util.List<Map<String, Object>> result = new ArrayList<>();
         FileSerde.reader(inputStream, r -> result.add((Map<String, Object>) r));
 
-        assertThat(listOutput.getCount(), is(50));
+        assertThat(listOutput.getCount(), is(50L));
         assertThat(result.size(), is(50));
         assertThat(((Map<String, Object>) result.get(0).get("properties")).get("int32"), is(123456789));
 

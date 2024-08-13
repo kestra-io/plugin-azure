@@ -2,7 +2,6 @@ package io.kestra.plugin.azure.storage.table;
 
 import com.azure.data.tables.TableClient;
 import com.azure.data.tables.models.ListEntitiesOptions;
-import com.azure.data.tables.models.TableEntity;
 import io.kestra.core.models.annotations.Example;
 import io.kestra.core.models.annotations.Plugin;
 import io.kestra.core.models.annotations.PluginProperty;
@@ -18,10 +17,10 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.ToString;
 import lombok.experimental.SuperBuilder;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 
-import java.io.BufferedOutputStream;
-import java.io.File;
-import java.io.FileOutputStream;
+import java.io.*;
 import java.net.URI;
 
 @SuperBuilder
@@ -68,8 +67,6 @@ public class List extends AbstractTableStorage implements RunnableTask<List.Outp
 
     @Override
     public List.Output run(RunContext runContext) throws Exception {
-        Integer count = 0;
-
         TableClient tableClient = this.tableClient(runContext);
 
         ListEntitiesOptions options = new ListEntitiesOptions();
@@ -87,19 +84,18 @@ public class List extends AbstractTableStorage implements RunnableTask<List.Outp
         }
 
         File tempFile = runContext.workingDir().createTempFile(".ion").toFile();
-        try (BufferedOutputStream output = new BufferedOutputStream(new FileOutputStream(tempFile))) {
-            for (TableEntity entity : tableClient.listEntities(options, null, null)) {
-                FileSerde.write(output, Entity.to(entity));
-                count++;
-            }
+        try (var output = new BufferedWriter(new FileWriter(tempFile))) {
+            var flux = Flux.fromIterable(tableClient.listEntities(options, null, null)).map(entity -> Entity.to(entity));
+            Mono<Long> longMono = FileSerde.writeAll(output, flux);
+            Long count = longMono.block();
+
+            runContext.metric(Counter.of("records", count, "table", tableClient.getTableName()));
+
+            return Output.builder()
+                .count(count)
+                .uri(runContext.storage().putFile(tempFile))
+                .build();
         }
-
-        runContext.metric(Counter.of("records", count, "table", tableClient.getTableName()));
-
-        return Output.builder()
-            .count(count)
-            .uri(runContext.storage().putFile(tempFile))
-            .build();
     }
 
     @SuperBuilder
@@ -108,7 +104,7 @@ public class List extends AbstractTableStorage implements RunnableTask<List.Outp
         @Schema(
             title = "Number of listed entities."
         )
-        private final Integer count;
+        private final Long count;
 
         @Schema(
             title = "URI of the Kestra internal storage file containing the output."

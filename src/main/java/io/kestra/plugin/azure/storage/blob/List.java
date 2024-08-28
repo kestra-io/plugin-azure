@@ -24,13 +24,20 @@ import lombok.experimental.SuperBuilder;
 @Plugin(
     examples = {
         @Example(
-            code = {
-                "endpoint: \"https://yourblob.blob.core.windows.net\"",
-                "connectionString: \"DefaultEndpointsProtocol=...==\"",
-                "container: \"mydata\"",
-                "prefix: \"sub-dir\"",
-                "delimiter: \"/\""
-            }
+            full = true,
+            code = """
+                id: azure_storage_blob_list
+                namespace: company.name
+
+                tasks:
+                  - id: list
+                    type: io.kestra.plugin.azure.storage.blob.List
+                    endpoint: "https://yourblob.blob.core.windows.net"
+                    connectionString: "DefaultEndpointsProtocol=...=="
+                    container: "mydata"
+                    prefix: "sub-dir"
+                    delimiter: "/"
+                """
         )
     }
 )

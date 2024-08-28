@@ -49,23 +49,22 @@ import java.util.concurrent.atomic.AtomicReference;
     @Example(
         title = "Consume data events from Azure EventHubs.",
         full = true,
-        code = {
+        code = """
+            id: azure_eventhubs_consume_data_events
+            namespace: company.team
+            
+            tasks:
+              - id: consume_from_eventhub
+                type: io.kestra.plugin.azure.eventhubs.Consume
+                eventHubName: my_eventhub
+                namespace: my_eventhub_namespace
+                connectionString: "{{ secret('EVENTHUBS_CONNECTION') }}"
+                bodyDeserializer: JSON
+                consumerGroup: "$Default"
+                checkpointStoreProperties:
+                  containerName: kestra
+                  connectionString: "{{ secret('BLOB_CONNECTION') }}"
             """
-                id: ConsumeDataEventsFromAzureEventHubs
-                namespace: company.team
-                tasks:
-                - id: consumeFromEventHubs
-                  type: io.kestra.plugin.azure.eventhubs.Consume
-                  eventHubName: my-eventhub
-                  namespace: my-eventhub-namespace
-                  connectionString: "{{ secret('EVENTHUBS_CONNECTION') }}"
-                  bodyDeserializer: JSON
-                  consumerGroup: "$Default"
-                  checkpointStoreProperties:
-                    containerName: kestra
-                    connectionString: "{{ secret('BLOB_CONNECTION') }}"
-                """
-        }
     )
 })
 @Schema(

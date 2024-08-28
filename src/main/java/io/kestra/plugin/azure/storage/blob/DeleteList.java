@@ -38,13 +38,20 @@ import static io.kestra.core.utils.Rethrow.throwConsumer;
 @Plugin(
     examples = {
         @Example(
-            code = {
-                "endpoint: \"https://yourblob.blob.core.windows.net\"",
-                "connectionString: \"DefaultEndpointsProtocol=...==\"",
-                "container: \"mydata\"",
-                "prefix: \"sub-dir\"",
-                "delimiter: \"/\""
-            }
+            full = true,
+            code = """
+                id: azure_storage_blob_delete_list
+                namespace: company.name
+
+                tasks:
+                  - id: delete_list
+                    type: io.kestra.plugin.azure.storage.blob.DeleteList
+                    endpoint: "https://yourblob.blob.core.windows.net"
+                    connectionString: "DefaultEndpointsProtocol=...=="
+                    container: "mydata"
+                    prefix: "sub-dir"
+                    delimiter: "/"
+                """
         )
     }
 )

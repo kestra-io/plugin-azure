@@ -41,43 +41,45 @@ import java.util.Map;
     @Example(
         title = "Publish a file as events into Azure EventHubs.",
         full = true,
-        code = {
+        code = """
+            id: azure_eventhubs_send_events
+            namespace: company.team
+
+            inputs:
+              - id: file
+                type: FILE
+                description: a CSV file with columns id, username, tweet, and timestamp
+            
+            tasks:
+              - id: read_csv_file
+                type: io.kestra.plugin.serdes.csv.CsvToIon
+                from: "{{ inputs.file }}"
+            
+              - id: transform_row_to_json
+                type: io.kestra.plugin.scripts.nashorn.FileTransform
+                from: "{{ outputs.read_csv_file.uri }}"
+                script: |
+                  var result = {
+                    "body": {
+                      "username": row.username,
+                      "tweet": row.tweet
+                    }
+                  };
+                  row = result
+            
+              - id: send_to_eventhub
+                type: io.kestra.plugin.azure.eventhubs.Produce
+                from: "{{ outputs.transform_row_to_json.uri }}"
+                eventHubName: my_eventhub
+                namespace: my_event_hub_namespace
+                connectionString: "{{ secret('EVENTHUBS_CONNECTION') }}"
+                maxBatchSizeInBytes: 4096
+                maxEventsPerBatch: 100
+                bodySerializer: "JSON"
+                bodyContentType: application/json
+                eventProperties:
+                  source: kestra
             """
-                id: SendEventsIntoAzureEventHubs
-                namespace: company.team
-                inputs:
-                  - type: FILE
-                    id: file
-                    description: a CSV file with columns id, username, tweet, and timestamp
-                tasks:
-                  - id: readCsvFile
-                    type: io.kestra.plugin.serdes.csv.CsvToIon
-                    from: "{{ inputs.file }}"
-                  - id: transformRowToJson
-                    type: io.kestra.plugin.scripts.nashorn.FileTransform
-                    from: "{{ outputs.readCsvFile.uri }}"
-                    script: |
-                      var result = {
-                        "body": {
-                          "username": row.username,
-                          "tweet": row.tweet
-                        }
-                      };
-                      row = result
-                  - id: sendToEventHubs
-                    type: io.kestra.plugin.azure.eventhubs.Produce
-                    from: "{{ outputs.transformRowToJson.uri }}"
-                    eventHubName: my-eventhub
-                    namespace: my-event-hub-namespace
-                    connectionString: "{{ secret('EVENTHUBS_CONNECTION') }}"
-                    maxBatchSizeInBytes: 4096
-                    maxEventsPerBatch: 100
-                    bodySerializer: "JSON"
-                    bodyContentType: application/json
-                    eventProperties:
-                      source: kestra
-                """
-        }
     )
 })
 @Schema(

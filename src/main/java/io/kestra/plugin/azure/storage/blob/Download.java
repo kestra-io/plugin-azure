@@ -27,12 +27,19 @@ import java.net.URI;
 @Plugin(
     examples = {
         @Example(
-            code = {
-                "endpoint: \"https://yourblob.blob.core.windows.net\"",
-                "connectionString: \"DefaultEndpointsProtocol=...==\"",
-                "container: \"mydata\"",
-                "name: \"myblob\""
-            }
+            full = true,
+            code = """
+                id: azure_storage_blob_download
+                namespace: company.name
+
+                tasks:
+                  - id: download
+                    type: io.kestra.plugin.azure.storage.blob.Download
+                    endpoint: "https://yourblob.blob.core.windows.net"
+                    connectionString: "DefaultEndpointsProtocol=...=="
+                    container: "mydata"
+                    name: "myblob"
+                """
         )
     }
 )

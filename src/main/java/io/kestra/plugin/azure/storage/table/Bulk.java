@@ -36,17 +36,24 @@ import static io.kestra.core.utils.Rethrow.throwFunction;
 @Plugin(
     examples = {
         @Example(
-            code = {
-                "endpoint: \"https://yourstorageaccount.blob.core.windows.net\"",
-                "connectionString: \"DefaultEndpointsProtocol=...==\"",
-                "table: \"table_name\"",
-                "from:",
-                "  - partitionKey: \"color\"",
-                "    rowKey: \"green\"",
-                "    type: \"UPSERT_MERGE\"",
-                "    properties:",
-                "      \"code\": \"00FF00\""
-            }
+            full = true,
+            code = """
+                id: azure_storage_table_bulk
+                namespace: company.name
+
+                tasks:
+                  - id: bulk
+                    type: io.kestra.plugin.azure.storage.table.Bulk
+                    endpoint: "https://yourstorageaccount.blob.core.windows.net"
+                    connectionString: "DefaultEndpointsProtocol=...=="
+                    table: "table_name"
+                    from:
+                      - partitionKey: "color"
+                        rowKey: "green"
+                        type: "UPSERT_MERGE"
+                        properties:
+                          "code": "00FF00"
+                """
         )
     }
 )

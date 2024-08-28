@@ -34,13 +34,20 @@ import static io.kestra.core.utils.Rethrow.throwFunction;
 @Plugin(
     examples = {
         @Example(
-            code = {
-                "endpoint: \"https://yourblob.blob.core.windows.net\"",
-                "connectionString: \"DefaultEndpointsProtocol=...==\"",
-                "container: \"mydata\"",
-                "prefix: \"sub-dir\"",
-                "delimiter: \"/\""
-            }
+            full = true,
+            code = """
+                id: azure_storage_blob_downloads
+                namespace: company.name
+
+                tasks:
+                  - id: downloads
+                    type: io.kestra.plugin.azure.storage.blob.Downloads
+                    endpoint: "https://yourblob.blob.core.windows.net"
+                    connectionString: "DefaultEndpointsProtocol=...=="
+                    container: "mydata"
+                    prefix: "sub-dir"
+                    delimiter: "/"
+                """
         )
     }
 )

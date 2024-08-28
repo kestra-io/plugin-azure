@@ -46,59 +46,76 @@ import java.util.stream.Collectors;
 @Plugin(
     examples = {
         @Example(
-            code = {
-                "endpoint: https://***.francecentral.batch.azure.com",
-                "account: <batch-account>",
-                "accessKey: <access-key>",
-                "poolId: <pool-id>",
-                "job:",
-                "  id: <job-name>",
-                "tasks:",
-                "- id: env",
-                "  commands:",
-                "  - 'echo t1=$ENV_STRING'",
-                "  environments:",
-                "    ENV_STRING: \"{{ inputs.first }}\"",
-                "- id: echo",
-                "  commands:",
-                "  - 'echo t2={{ inputs.second }} 1>&2'",
-                "- id: for",
-                "  commands:",
-                "  -  'for i in $(seq 10); do echo t3=$i; done'",
-                "- id: vars",
-                "  commands:",
-                "  - echo '::{\"outputs\":{\"extract\":\"'$(cat files/in/in.txt)'\"}::'",
-                "  resourceFiles:",
-                "  - httpUrl: https://unittestkt.blob.core.windows.net/tasks/***?sv=***&se=***&sr=***&sp=***&sig=***",
-                "    filePath: files/in/in.txt",
-                "- id: output",
-                "  commands:",
-                "  - 'mkdir -p outs/child/sub'",
-                "  - 'echo 1 > outs/1.txt'",
-                "  - 'echo 2 > outs/child/2.txt'",
-                "  - 'echo 3 > outs/child/sub/3.txt'",
-                "  outputFiles:",
-                "  - outs/1.txt",
-                "  outputDirs:",
-                "  - outs/child",
-            }
+            full = true
+            code = """
+                id: azure_batch_job_create
+                namespace: company.team
+
+                tasks:
+                  - id: create
+                    type: io.kestra.plugin.azure.batch.job.Create
+                    endpoint: https://***.francecentral.batch.azure.com
+                    account: <batch-account>
+                    accessKey: <access-key>
+                    poolId: <pool-id>
+                    job:
+                      id: <job-name>
+                    tasks:
+                      - id: env
+                        commands:
+                          - 'echo t1=$ENV_STRING'
+                        environments:
+                          ENV_STRING: "{{ inputs.first }}"
+                    
+                      - id: echo
+                        commands:
+                          - 'echo t2={{ inputs.second }} 1>&2'
+                    
+                      - id: for
+                        commands:
+                          -  'for i in $(seq 10); do echo t3=$i; done'
+                    
+                      - id: vars
+                        commands:
+                          - echo '::{"outputs":{"extract":"'$(cat files/in/in.txt)'"}::'
+                        resourceFiles:
+                          - httpUrl: https://unittestkt.blob.core.windows.net/tasks/***?sv=***&se=***&sr=***&sp=***&sig=***
+                          filePath: files/in/in.txt
+                    
+                      - id: output
+                        commands:
+                          - 'mkdir -p outs/child/sub'
+                          - 'echo 1 > outs/1.txt'
+                          - 'echo 2 > outs/child/2.txt'
+                          - 'echo 3 > outs/child/sub/3.txt'
+                        outputFiles:
+                          - outs/1.txt
+                        outputDirs:
+                          - outs/child
+                """
         ),
         @Example(
             title = "Use a container to start the task, the pool must use a `microsoft-azure-batch` publisher.",
-            code = {
-                "endpoint: https://***.francecentral.batch.azure.com",
-                "account: <batch-account>",
-                "accessKey: <access-key>",
-                "poolId: <pool-id>",
-                "job:",
-                "  id: <job-name>",
-                "tasks:",
-                "- id: echo",
-                "  commands:",
-                "  - 'python --version'",
-                "  containerSettings:",
-                "    imageName: python",
-            }
+            code = """
+                id: azure_batch_job_create
+                namespace: company.team
+
+                tasks:
+                  - id: create
+                    type: io.kestra.plugin.azure.batch.job.Create
+                    endpoint: https://***.francecentral.batch.azure.com
+                    account: <batch-account>
+                    accessKey: <access-key>
+                    poolId: <pool-id>
+                    job:
+                      id: <job-name>
+                    tasks:
+                      - id: echo
+                        commands:
+                          - 'python --version'
+                        containerSettings:
+                          imageName: python
+                """
         )
     }
 )

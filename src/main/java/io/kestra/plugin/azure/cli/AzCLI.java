@@ -40,47 +40,69 @@ import java.util.Map;
     examples = {
         @Example(
             title = "List Azure Active Directory users for the currently authenticated tenant.",
-            code = {
-                "username: \"<appId>\"",
-                "password: \"{{ secret('AZURE_SERVICE_PRINCIPAL_PASSWORD') }}\"",
-                "tenant: \"{{ secret('AZURE_TENANT_ID') }}\"",
-                "commands:",
-                "  - az ad user list"
-            }
+            full = true,
+            code = """
+                id: azure_cli
+                namespace: company.name
+
+                tasks:
+                  - id: az_cli
+                    type: io.kestra.plugin.azure.cli.AzCLI
+                    username: "azure_app_id"
+                    password: "{{ secret('AZURE_SERVICE_PRINCIPAL_PASSWORD') }}"
+                    tenant: "{{ secret('AZURE_TENANT_ID') }}"
+                    commands:
+                      - az ad user list
+                """
         ),
         @Example(
             title = "List all successfully provisioned VMs using a Service Principal authentication.",
-            code = {
-                "username: \"<app-id>\"",
-                "password: \"{{ secret('AZURE_SERVICE_PRINCIPAL_PASSWORD') }}\"",
-                "tenant: \"<tenant-id>\"",
-                "servicePrincipal: true",
-                "commands:",
-                "  - az vm list --query \"[?provisioningState=='Succeeded']\""
-            }
+            full = true,
+            code = """
+                id: azure_cli
+                namespace: company.name
+
+                tasks:
+                  - id: az_cli
+                    type: io.kestra.plugin.azure.cli.AzCLI
+                    username: "azure_app_id"
+                    password: "{{ secret('AZURE_SERVICE_PRINCIPAL_PASSWORD') }}"
+                    tenant: "{{ secret('AZURE_TENANT_ID') }}"
+                    servicePrincipal: true
+                    commands:
+                      - az vm list --query "[?provisioningState=='Succeeded']"
+                """
         ),
         @Example(
             title = "Command without authentication.",
-            code = {
-                "commands:",
-                "  - az --help"
-            }
+            full = true,
+            code = """
+                id: azure_cli
+                namespace: company.name
+
+                tasks:
+                  - id: az_cli
+                    type: io.kestra.plugin.azure.cli.AzCLI
+                    commands:
+                      - az --help
+                """
         ),
         @Example(
             full = true,
             title = "List supported regions for the current Azure subscription.",
             code = """
-            id: azureRegions
-            namespace: company.team
-            tasks:
-              - id: list-locations
-                type: io.kestra.plugin.azure.cli.AzCLI
-                tenant: {{ secret('AZURE_TENANT_ID') }}
-                username: {{ secret('AZURE_SERVICE_PRINCIPAL_CLIENT_ID') }}
-                password: {{ secret('AZURE_SERVICE_PRINCIPAL_PASSWORD') }}
-                servicePrincipal: true
-                commands:
-                  - az account list-locations --query "[].{Region:name}" -o table"""
+                id: azure_cli
+                namespace: company.team
+
+                tasks:
+                  - id: list_locations
+                    type: io.kestra.plugin.azure.cli.AzCLI
+                    tenant: "{{ secret('AZURE_TENANT_ID') }}"
+                    username: "{{ secret('AZURE_SERVICE_PRINCIPAL_CLIENT_ID') }}"
+                    password: "{{ secret('AZURE_SERVICE_PRINCIPAL_PASSWORD') }}"
+                    servicePrincipal: true
+                    commands:
+                      - az account list-locations --query "[].{Region:name}" -o table"""
         )
     }
 )

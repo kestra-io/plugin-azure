@@ -31,11 +31,18 @@ import java.net.URI;
 @Plugin(
     examples = {
         @Example(
-            code = {
-                "endpoint: \"https://yourstorageaccount.table.core.windows.net\"",
-                "connectionString: \"DefaultEndpointsProtocol=...==\"",
-                "table: \"table_name\"",
-            }
+            full = true,
+            code = """
+                id: azure_storage_table_list
+                namespace: company.name
+
+                tasks:
+                  - id: list
+                    type: io.kestra.plugin.azure.storage.table.List
+                    endpoint: "https://yourstorageaccount.table.core.windows.net"
+                    connectionString: "DefaultEndpointsProtocol=...=="
+                    table: "table_name"
+                """
         )
     }
 )

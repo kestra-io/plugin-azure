@@ -188,9 +188,9 @@ public class Produce extends AbstractEventHubTask implements RunnableTask<Produc
         if (this.getFrom() instanceof String uri) {
             is = reader.get(runContext.render(uri));
         } else if (this.getFrom() instanceof Map data) {
-            is = reader.get(data);
+            is = reader.get(runContext.render(data));
         } else if (this.getFrom() instanceof List data) {
-            is = reader.get(data);
+            is = reader.get(runContext.render(data));
         } else {
             throw new IllegalArgumentException(
                 "Unsupported type for task-property `from`: " + this.getFrom().getClass().getSimpleName()

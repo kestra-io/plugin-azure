@@ -46,7 +46,7 @@ import java.util.stream.Collectors;
 @Plugin(
     examples = {
         @Example(
-            full = true
+            full = true,
             code = """
                 id: azure_batch_job_create
                 namespace: company.team
@@ -96,6 +96,7 @@ import java.util.stream.Collectors;
         ),
         @Example(
             title = "Use a container to start the task, the pool must use a `microsoft-azure-batch` publisher.",
+            full = true,
             code = """
                 id: azure_batch_job_create
                 namespace: company.team

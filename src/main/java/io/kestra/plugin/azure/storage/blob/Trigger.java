@@ -41,67 +41,67 @@ import static io.kestra.core.utils.Rethrow.throwFunction;
         @Example(
             title = "Wait for a list of files on Azure Blob Storage bucket, and then iterate through the files.",
             full = true,
-            code = {
-                "id: storage-listen",
-                "namespace: company.team",
-                "",
-                "tasks:",
-                "  - id: each",
-                "    type: io.kestra.plugin.core.flow.EachSequential",
-                "    tasks:",
-                "      - id: return",
-                "        type: io.kestra.plugin.core.debug.Return",
-                "        format: \"{{ taskrun.value }}\"",
-                "    value: \"{{ trigger.blobs | jq('.[].uri') }}\"",
-                "",
-                "triggers:",
-                "  - id: watch",
-                "    type: io.kestra.plugin.azure.storage.blob.Trigger",
-                "    interval: PT5M",
-                "    endpoint: \"https://yourblob.blob.core.windows.net\"",
-                "    connectionString: \"DefaultEndpointsProtocol=...==\"",
-                "    container: \"mydata\"",
-                "    prefix: \"trigger/storage-listen\"",
-                "    action: MOVE",
-                "    moveTo: ",
-                "      container: mydata",
-                "      name: archive",
-            }
+            code = """
+                id: storage_listen
+                namespace: company.team
+                
+                tasks:
+                  - id: each
+                    type: io.kestra.plugin.core.flow.EachSequential
+                    tasks:
+                      - id: return
+                        type: io.kestra.plugin.core.debug.Return
+                        format: "{{ taskrun.value }}"
+                    value: "{{ trigger.blobs | jq('.[].uri') }}"
+                
+                triggers:
+                  - id: watch
+                    type: io.kestra.plugin.azure.storage.blob.Trigger
+                    interval: PT5M
+                    endpoint: "https://yourblob.blob.core.windows.net"
+                    connectionString: "DefaultEndpointsProtocol=...=="
+                    container: "mydata"
+                    prefix: "trigger/storage-listen"
+                    action: MOVE
+                    moveTo:
+                      container: mydata
+                      name: archive
+                """
         ),
         @Example(
             title = "Wait for a list of file on a Azure Blob Storage bucket and iterate through the files. Delete files manually after processing to prevent infinite triggering.",
             full = true,
-            code = {
-                "id: storage-listen",
-                "namespace: company.team",
-                "",
-                "tasks:",
-                "  - id: each",
-                "    type: io.kestra.plugin.core.flow.EachSequential",
-                "    tasks:",
-                "      - id: return",
-                "        type: io.kestra.plugin.core.debug.Return",
-                "        format: \"{{taskrun.value}}\"",
-                "      - id: delete",
-                "        type: io.kestra.plugin.azure.storage.blob.Delete",
-                "        endpoint: \"https://yourblob.blob.core.windows.net\"",
-                "        connectionString: \"DefaultEndpointsProtocol=...==\"",
-                "        container: \"mydata\"",
-                "        name: \"{{ taskrun.value }}\"",
-                "    value: \"{{ trigger.blobs | jq('.[].name') }}\"",
-                "",
-                "triggers:",
-                "  - id: watch",
-                "    type: io.kestra.plugin.azure.storage.blob.Trigger",
-                "    endpoint: \"https://yourblob.blob.core.windows.net\"",
-                "    connectionString: \"DefaultEndpointsProtocol=...==\"",
-                "    container: \"mydata\"",
-                "    prefix: \"trigger/storage-listen\"",
-                "    action: MOVE",
-                "    moveTo: ",
-                "      container: mydata",
-                "      name: archive",
-            }
+            code = """
+                id: storage_listen
+                namespace: company.team
+                
+                tasks:
+                  - id: each
+                    type: io.kestra.plugin.core.flow.EachSequential
+                    tasks:
+                      - id: return
+                        type: io.kestra.plugin.core.debug.Return
+                        format: "{{ taskrun.value }}"
+                      - id: delete
+                        type: io.kestra.plugin.azure.storage.blob.Delete
+                        endpoint: "https://yourblob.blob.core.windows.net"
+                        connectionString: "DefaultEndpointsProtocol=...=="
+                        container: "mydata"
+                        name: "{{ taskrun.value }}"
+                    value: "{{ trigger.blobs | jq('.[].name') }}"
+                
+                triggers:
+                  - id: watch
+                    type: io.kestra.plugin.azure.storage.blob.Trigger
+                    endpoint: "https://yourblob.blob.core.windows.net"
+                    connectionString: "DefaultEndpointsProtocol=...=="
+                    container: "mydata"
+                    prefix: "trigger/storage_listen"
+                    action: MOVE
+                    moveTo:
+                      container: mydata
+                      name: archive
+                """
         )
     }
 )

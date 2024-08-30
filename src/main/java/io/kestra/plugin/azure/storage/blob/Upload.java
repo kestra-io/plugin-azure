@@ -39,7 +39,7 @@ import static io.kestra.core.utils.Rethrow.throwFunction;
                 namespace: company.name
 
                 inputs:
-                  - id: file
+                  - id: myfile
                     type: FILE
                 
                 tasks:

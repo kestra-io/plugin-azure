@@ -25,10 +25,17 @@ import jakarta.validation.constraints.NotNull;
 @Plugin(
     examples = {
         @Example(
-            code = {
-                "poolId: \"<your-pool-id>\"",
-                "targetDedicatedNodes: \"12\"",
-            }
+            full = true,
+            code = """
+                id: azure_batch_pool_resize
+                namespace: company.name
+
+                tasks:
+                  - id: resize
+                    type: io.kestra.plugin.azure.batch.pool.Resize
+                    poolId: "<your-pool-id>"
+                    targetDedicatedNodes: "12"
+                """
         )
     }
 )

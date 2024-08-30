@@ -25,28 +25,28 @@ import java.util.Optional;
     @Example(
         title = "Trigger flow based on events received from Azure Event Hubs in batch.",
         full = true,
-        code = {
+        code = """
+            id: azure_eventhubs_trigger
+            namespace: company.team
+
+            tasks:
+              - id: log
+                type: io.kestra.plugin.core.log.Log
+                message: Hello there! I received {{ trigger.eventsCount }} from Azure EventHubs!
+            
+            triggers:
+              - id: read_from_eventhub
+                type: io.kestra.plugin.azure.eventhubs.Trigger
+                interval: PT30S
+                eventHubName: my_eventhub
+                namespace: my_eventhub_namespace
+                connectionString: "{{ secret('EVENTHUBS_CONNECTION') }}"
+                bodyDeserializer: JSON
+                consumerGroup: "$Default"
+                checkpointStoreProperties:
+                  containerName: kestra
+                  connectionString: "{{ secret('BLOB_CONNECTION') }}"
             """
-                id: TriggerFromAzureEventHubs
-                namespace: company.team
-                tasks:
-                  - id: hello
-                    type: io.kestra.plugin.core.log.Log
-                    message: Hello there! I received {{ trigger.eventsCount }} from Azure EventHubs!
-                triggers:
-                  - id: readFromEventHubs
-                    type: "io.kestra.plugin.azure.eventhubs.Trigger"
-                    interval: PT30S
-                    eventHubName: my-eventhub
-                    namespace: my-eventhub-namespace
-                    connectionString: "{{ secret('EVENTHUBS_CONNECTION') }}"
-                    bodyDeserializer: JSON
-                    consumerGroup: "$Default"
-                    checkpointStoreProperties:
-                      containerName: kestra
-                      connectionString: "{{ secret('BLOB_CONNECTION') }}"
-                """
-        }
     )
 })
 @Schema(

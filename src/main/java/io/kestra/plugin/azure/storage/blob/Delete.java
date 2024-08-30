@@ -23,12 +23,19 @@ import lombok.experimental.SuperBuilder;
 @Plugin(
     examples = {
         @Example(
-            code = {
-                "endpoint: \"https://yourblob.blob.core.windows.net\"",
-                "connectionString: \"DefaultEndpointsProtocol=...==\"",
-                "container: \"mydata\"",
-                "name: \"myblob\""
-            }
+            full = true,
+            code = """
+                id: azure_storage_blob_delete
+                namespace: company.name
+
+                tasks:
+                  - id: delete
+                    type: io.kestra.plugin.azure.storage.blob.Delete
+                    endpoint: "https://yourblob.blob.core.windows.net"
+                    connectionString: "DefaultEndpointsProtocol=...=="
+                    container: "mydata"
+                    name: "myblob"
+                """
         )
     }
 )

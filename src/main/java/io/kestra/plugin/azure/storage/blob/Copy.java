@@ -27,14 +27,21 @@ import jakarta.validation.constraints.NotNull;
 @Plugin(
     examples = {
         @Example(
-            code = {
-                "from:",
-                "  container: \"my-bucket\"",
-                "  key: \"path/to/file\"",
-                "to:",
-                "  container: \"my-bucket2\"",
-                "  key: \"path/to/file2\"",
-            }
+            full = true,
+            code = """
+                id: azure_storage_blob_copy
+                namespace: company.name
+
+                tasks:
+                  - id: copy
+                    type: io.kestra.plugin.azure.storage.blob.Copy
+                    from:
+                      container: "my-bucket"
+                      key: "path/to/file"
+                    to:
+                      container: "my-bucket2"
+                      key: "path/to/file2"
+                """
         )
     }
 )

@@ -31,15 +31,22 @@ import jakarta.validation.constraints.NotNull;
 @Plugin(
     examples = {
         @Example(
-            code = {
-                "endpoint: \"https://yourblob.blob.core.windows.net\"",
-                "connectionString: \"DefaultEndpointsProtocol=...==\"",
-                "container: \"mydata\"",
-                "name: \"myblob\"",
-                "expirationDate: \"{{ now() | dateAdd(1, 'DAYS') }}\"",
-                "permissions:",
-                "  - r"
-            }
+            full = true,
+            code = """
+                id: azure_storage_blob_shared_access
+                namespace: company.name
+
+                tasks:
+                  - id: shared_access
+                    type: io.kestra.plugin.azure.storage.blob.SharedAccess
+                    endpoint: "https://yourblob.blob.core.windows.net"
+                    connectionString: "DefaultEndpointsProtocol=...=="
+                    container: "mydata"
+                    name: "myblob"
+                    expirationDate: "{{ now() | dateAdd(1, 'DAYS') }}"
+                    permissions:
+                      - r
+                """
         )
     }
 )

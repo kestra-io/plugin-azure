@@ -25,13 +25,20 @@ import jakarta.validation.constraints.NotNull;
 @Plugin(
     examples = {
         @Example(
-            code = {
-                "endpoint: \"https://yourstorageaccount.table.core.windows.net\"",
-                "connectionString: \"DefaultEndpointsProtocol=...==\"",
-                "table: \"table_name\"",
-                "partitionKey: \"color\"",
-                "rowKey: \"green\""
-            }
+            full = true,
+            code = """
+                id: azure_storage_table_delete
+                namespace: company.name
+
+                tasks:
+                  - id: delete
+                    type: io.kestra.plugin.azure.storage.table.Delete
+                    endpoint: "https://yourstorageaccount.table.core.windows.net"
+                    connectionString: "DefaultEndpointsProtocol=...=="
+                    table: "table_name"
+                    partitionKey: "color"
+                    rowKey: "green"
+                """
         )
     }
 )

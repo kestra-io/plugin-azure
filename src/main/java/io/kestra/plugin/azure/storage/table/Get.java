@@ -26,13 +26,20 @@ import jakarta.validation.constraints.NotNull;
 @Plugin(
     examples = {
         @Example(
-            code = {
-                "endpoint: \"https://yourstorageaccount.table.core.windows.net\"",
-                "connectionString: \"DefaultEndpointsProtocol=...==\"",
-                "table: \"table_name\"",
-                "partitionKey: \"color\"",
-                "rowKey: \"green\""
-            }
+            full = true,
+            code = """
+                id: azure_storage_table_get
+                namespace: company.name
+
+                tasks:
+                  - id: get
+                    type: io.kestra.plugin.azure.storage.table.Get
+                    endpoint: "https://yourstorageaccount.table.core.windows.net"
+                    connectionString: "DefaultEndpointsProtocol=...=="
+                    table: "table_name"
+                    partitionKey: "color"
+                    rowKey: "green"
+                """
         )
     }
 )

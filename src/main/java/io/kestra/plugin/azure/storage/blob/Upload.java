@@ -48,7 +48,7 @@ import static io.kestra.core.utils.Rethrow.throwFunction;
                     endpoint: "https://yourblob.blob.core.windows.net"
                     connectionString: "DefaultEndpointsProtocol=...=="
                     container: "mydata"
-                    from: "{{ inputs.file }}"
+                    from: "{{ inputs.myfile }}"
                     name: "myblob"
                 """
         )

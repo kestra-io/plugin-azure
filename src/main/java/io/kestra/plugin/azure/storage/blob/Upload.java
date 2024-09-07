@@ -36,7 +36,7 @@ import static io.kestra.core.utils.Rethrow.throwFunction;
             full = true,
             code = """
                 id: azure_storage_blob_upload
-                namespace: company.name
+                namespace: company.team
 
                 inputs:
                   - id: myfile

@@ -34,7 +34,7 @@ import java.net.URI;
             full = true,
             code = """
                 id: azure_storage_table_list
-                namespace: company.name
+                namespace: company.team
 
                 tasks:
                   - id: list

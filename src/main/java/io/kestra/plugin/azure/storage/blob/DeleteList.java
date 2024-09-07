@@ -41,7 +41,7 @@ import static io.kestra.core.utils.Rethrow.throwConsumer;
             full = true,
             code = """
                 id: azure_storage_blob_delete_list
-                namespace: company.name
+                namespace: company.team
 
                 tasks:
                   - id: delete_list

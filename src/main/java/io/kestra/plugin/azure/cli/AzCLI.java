@@ -43,7 +43,7 @@ import java.util.Map;
             full = true,
             code = """
                 id: azure_cli
-                namespace: company.name
+                namespace: company.team
 
                 tasks:
                   - id: az_cli
@@ -60,7 +60,7 @@ import java.util.Map;
             full = true,
             code = """
                 id: azure_cli
-                namespace: company.name
+                namespace: company.team
 
                 tasks:
                   - id: az_cli
@@ -78,7 +78,7 @@ import java.util.Map;
             full = true,
             code = """
                 id: azure_cli
-                namespace: company.name
+                namespace: company.team
 
                 tasks:
                   - id: az_cli

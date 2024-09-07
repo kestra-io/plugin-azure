@@ -26,7 +26,7 @@ import lombok.experimental.SuperBuilder;
             full = true,
             code = """
                 id: azure_storage_blob_delete
-                namespace: company.name
+                namespace: company.team
 
                 tasks:
                   - id: delete

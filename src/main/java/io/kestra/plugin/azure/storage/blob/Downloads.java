@@ -37,7 +37,7 @@ import static io.kestra.core.utils.Rethrow.throwFunction;
             full = true,
             code = """
                 id: azure_storage_blob_downloads
-                namespace: company.name
+                namespace: company.team
 
                 tasks:
                   - id: downloads

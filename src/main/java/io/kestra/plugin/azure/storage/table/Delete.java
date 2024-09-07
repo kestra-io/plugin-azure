@@ -28,7 +28,7 @@ import jakarta.validation.constraints.NotNull;
             full = true,
             code = """
                 id: azure_storage_table_delete
-                namespace: company.name
+                namespace: company.team
 
                 tasks:
                   - id: delete

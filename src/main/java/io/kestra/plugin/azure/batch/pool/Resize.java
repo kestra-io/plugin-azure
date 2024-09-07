@@ -28,7 +28,7 @@ import jakarta.validation.constraints.NotNull;
             full = true,
             code = """
                 id: azure_batch_pool_resize
-                namespace: company.name
+                namespace: company.team
 
                 tasks:
                   - id: resize

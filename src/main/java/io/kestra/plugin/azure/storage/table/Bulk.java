@@ -39,7 +39,7 @@ import static io.kestra.core.utils.Rethrow.throwFunction;
             full = true,
             code = """
                 id: azure_storage_table_bulk
-                namespace: company.name
+                namespace: company.team
 
                 tasks:
                   - id: bulk

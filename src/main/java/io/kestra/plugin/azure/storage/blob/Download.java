@@ -30,7 +30,7 @@ import java.net.URI;
             full = true,
             code = """
                 id: azure_storage_blob_download
-                namespace: company.name
+                namespace: company.team
 
                 tasks:
                   - id: download

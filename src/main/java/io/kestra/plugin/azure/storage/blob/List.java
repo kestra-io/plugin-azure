@@ -27,7 +27,7 @@ import lombok.experimental.SuperBuilder;
             full = true,
             code = """
                 id: azure_storage_blob_list
-                namespace: company.name
+                namespace: company.team
 
                 tasks:
                   - id: list

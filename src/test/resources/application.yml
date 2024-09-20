@@ -27,3 +27,7 @@ kestra:
           checkpointstore:
             connection-string: ""
             container-name: ""
+        datafactory:
+          tenantId: ""
+          subscriptionId: ""
+

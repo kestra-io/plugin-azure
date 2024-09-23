@@ -55,7 +55,7 @@ dependencies {
     compileOnly'org.slf4j:slf4j-api'
 
     // azure
-    api platform("com.azure:azure-sdk-bom:1.2.26")
+    api platform("com.azure:azure-sdk-bom:1.2.27")
     api (group: 'com.azure', name: 'azure-identity') {
         // exclude libraries already provided by Kestra
         exclude group: 'com.fasterxml.jackson.core'
@@ -80,7 +80,7 @@ dependencies {
         exclude group: 'com.fasterxml.jackson.datatype', module: 'jackson-datatype-jsr310'
         exclude group: 'com.fasterxml.jackson.datatype', module: 'jackson-datatype-guava'
     }
-    api (group: 'com.microsoft.azure', name: 'azure-batch', version: '11.1.1') {
+    api (group: 'com.microsoft.azure', name: 'azure-batch', version: '11.2.0') {
         // exclude libraries already provided by Kestra
         exclude group: 'com.fasterxml.jackson.core'
         exclude group: 'com.fasterxml.jackson.dataformat', module: 'jackson-dataformat-xml'

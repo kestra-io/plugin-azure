@@ -96,6 +96,13 @@ public class CreateRun extends AbstractDataFactoryConnection implements Runnable
     private Property<Map<String, Object>> parameters = Property.of(new HashMap<>());
 
     @Schema(
+            title = "Wait for the end of the run.",
+            description = "Allowing to capture job status & logs."
+    )
+    @Builder.Default
+    private Property<Boolean> wait = Property.of(Boolean.TRUE);
+
+    @Schema(
             title = "The maximum duration to wait for the job completion."
     )
     @Builder.Default
@@ -139,6 +146,13 @@ public class CreateRun extends AbstractDataFactoryConnection implements Runnable
 
         // Get running pipeline and wait until completion
         final String runId = pipelineRunResponse.getValue().runId();
+
+        if(!Boolean.TRUE.equals(this.wait.as(runContext, Boolean.class))) {
+            return Output.builder()
+                    .runId(runId)
+                    .build();
+        }
+
         final AtomicReference<PipelineRun> runningPipelineResponse = new AtomicReference<>();
         try {
             Await.until(() -> {
@@ -194,6 +208,7 @@ public class CreateRun extends AbstractDataFactoryConnection implements Runnable
             runContext.metric(Counter.of("activities", count));
 
             return Output.builder()
+                    .runId(runId)
                     .uri(runContext.storage().putFile(tempFile))
                     .build();
         }
@@ -202,6 +217,9 @@ public class CreateRun extends AbstractDataFactoryConnection implements Runnable
     @Builder
     @Getter
     public static class Output implements io.kestra.core.models.tasks.Output {
+        @Schema(title = "Run ID", description = "The ID of the pipeline run created in Azure Data Factory")
+        private String runId;
+
         @Schema(
                 title = "URI of a kestra internal storage file containing the activities and their inputs/outputs."
         )

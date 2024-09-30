@@ -16,6 +16,7 @@ import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import io.kestra.core.exceptions.IllegalVariableEvaluationException;
 import io.kestra.core.models.annotations.Example;
 import io.kestra.core.models.annotations.Plugin;
+import io.kestra.core.models.annotations.PluginProperty;
 import io.kestra.core.models.executions.metrics.Counter;
 import io.kestra.core.models.executions.metrics.Timer;
 import io.kestra.core.models.property.Property;
@@ -84,8 +85,6 @@ import java.util.concurrent.atomic.AtomicReference;
 public class CreateRun extends AbstractAzureIdentityConnection implements RunnableTask<CreateRun.Output> {
     private static final String PIPELINE_SUCCEEDED_STATUS = "Succeeded";
     private static final List<String> PIPELINE_FAILED_STATUS = List.of("Failed", "Canceling", "Cancelled");
-    private static final Duration WAIT_UNTIL_COMPLETION = Duration.ofHours(1);
-    private static final Duration COMPLETION_CHECK_INTERVAL = Duration.ofSeconds(5);
 
     @Schema(title = "Subscription ID")
     @NotNull
@@ -112,6 +111,22 @@ public class CreateRun extends AbstractAzureIdentityConnection implements Runnab
     )
     @Builder.Default
     private Property<Boolean> wait = Property.of(Boolean.TRUE);
+
+    @Schema(
+            title = "Wait until completion duration",
+            description = "Maximum duration to wait for the pipeline to resolve. After this time the task will time out"
+    )
+    @PluginProperty
+    @Builder.Default
+    private Duration waitUntilCompletion = Duration.ofHours(1L);
+
+    @Schema(
+            title = "Completion check interval",
+            description = "The frequency with which the task checks whether the pipeline has completed."
+    )
+    @Builder.Default
+    @PluginProperty
+    private final Duration completionCheckInterval = Duration.ofSeconds(5L);
 
     @Override
     public CreateRun.Output run(RunContext runContext) throws Exception {
@@ -163,7 +178,7 @@ public class CreateRun extends AbstractAzureIdentityConnection implements Runnab
                 }
 
                 return PIPELINE_SUCCEEDED_STATUS.equals(runStatus);
-            }, COMPLETION_CHECK_INTERVAL, WAIT_UNTIL_COMPLETION);
+            }, completionCheckInterval, waitUntilCompletion);
         } catch (TimeoutException | RuntimeException e) {
             logger.error("Pipeline '{}' with runId '{} finished with status '{}'", pipelineName, runId, runningPipelineResponse.get().status());
             throw new RuntimeException(runningPipelineResponse.get().message());

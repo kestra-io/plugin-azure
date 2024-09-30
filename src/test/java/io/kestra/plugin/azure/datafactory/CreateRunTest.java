@@ -19,6 +19,8 @@ import java.util.List;
 import java.util.Map;
 
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.notNullValue;
+import static org.hamcrest.Matchers.nullValue;
 import static org.hamcrest.core.Is.is;
 
 @KestraTest
@@ -113,5 +115,34 @@ class CreateRunTest {
         assertThat(outputActivity.get("name"), is("pikachu"));
         assertThat(outputActivity.get("weight"), is(60));
         assertThat(outputActivity.get("id"), is(25));
+    }
+
+    @Disabled
+    @Test
+    void testRunPipelineNoWait() throws Exception {
+        final var tenantId = Property.of(this.tenantId);
+        final var subscriptionId = Property.of(this.subscriptionId);
+        final var factoryName = Property.of("unit-test");
+        final var resourceGroupName = Property.of("unittest");
+        final var pipelineName = Property.of("http-test");
+
+        RunContext runContext = runContextFactory.of();
+
+        CreateRun createRun = CreateRun.builder()
+                .tenantId(tenantId)
+                .subscriptionId(subscriptionId)
+                .factoryName(factoryName)
+                .resourceGroupName(resourceGroupName)
+                .wait(Property.of(Boolean.FALSE))
+                .pipelineName(pipelineName)
+                .completionCheckInterval(Property.of(Duration.ofSeconds(5L)))
+                .waitUntilCompletion(Property.of(Duration.ofSeconds(30L)))
+                .build();
+
+        CreateRun.Output output = createRun.run(runContext);
+
+        //Get logs and outputs
+        assertThat(output.getUri(), nullValue());
+        assertThat(output.getRunId(), notNullValue());
     }
 }

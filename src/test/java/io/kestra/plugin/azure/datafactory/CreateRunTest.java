@@ -95,8 +95,6 @@ class CreateRunTest {
                 .resourceGroupName(resourceGroupName)
                 .pipelineName(pipelineName)
                 .parameters(parameters)
-                .completionCheckInterval(Property.of(Duration.ofSeconds(5L)))
-                .waitUntilCompletion(Property.of(Duration.ofSeconds(30L)))
                 .build();
 
         CreateRun.Output output = createRun.run(runContext);
@@ -135,8 +133,6 @@ class CreateRunTest {
                 .resourceGroupName(resourceGroupName)
                 .wait(Property.of(Boolean.FALSE))
                 .pipelineName(pipelineName)
-                .completionCheckInterval(Property.of(Duration.ofSeconds(5L)))
-                .waitUntilCompletion(Property.of(Duration.ofSeconds(30L)))
                 .build();
 
         CreateRun.Output output = createRun.run(runContext);

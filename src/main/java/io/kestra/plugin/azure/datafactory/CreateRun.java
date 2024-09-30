@@ -79,6 +79,8 @@ import java.util.concurrent.atomic.AtomicReference;
 public class CreateRun extends AbstractDataFactoryConnection implements RunnableTask<CreateRun.Output> {
     private static final String PIPELINE_SUCCEEDED_STATUS = "Succeeded";
     private static final List<String> PIPELINE_FAILED_STATUS = List.of("Failed", "Canceling", "Cancelled");
+    private static final Duration WAIT_UNTIL_COMPLETION = Duration.ofHours(1);
+    private static final Duration COMPLETION_CHECK_INTERVAL = Duration.ofSeconds(5);
 
     @Schema(title = "Factory name")
     private Property<String> factoryName;
@@ -101,18 +103,6 @@ public class CreateRun extends AbstractDataFactoryConnection implements Runnable
     )
     @Builder.Default
     private Property<Boolean> wait = Property.of(Boolean.TRUE);
-
-    @Schema(
-            title = "The maximum duration to wait for the job completion."
-    )
-    @Builder.Default
-    private Property<Duration> waitUntilCompletion = Property.of(Duration.ofHours(1));
-
-    @Schema(
-            title = "Determines how often Kestra should poll the container for completion. By default, the task runner checks every 5 seconds whether the job is completed. You can set this to a lower value (e.g. `PT0.1S` = every 100 milliseconds) for quick jobs and to a lower threshold (e.g. `PT1M` = every minute) for long-running jobs. Setting this property to a lower value will reduce the number of API calls Kestra makes to the remote service — keep that in mind in case you see API rate limit errors."
-    )
-    @Builder.Default
-    private final Property<Duration> completionCheckInterval = Property.of(Duration.ofSeconds(5));
 
     @Override
     public CreateRun.Output run(RunContext runContext) throws Exception {
@@ -164,7 +154,7 @@ public class CreateRun extends AbstractDataFactoryConnection implements Runnable
                 }
 
                 return PIPELINE_SUCCEEDED_STATUS.equals(runStatus);
-            }, completionCheckInterval.as(runContext, Duration.class), waitUntilCompletion.as(runContext, Duration.class));
+            }, COMPLETION_CHECK_INTERVAL, WAIT_UNTIL_COMPLETION);
         } catch (TimeoutException | RuntimeException e) {
             logger.error("Pipeline '{}' with runId '{} finished with status '{}'", pipelineName, runId, runningPipelineResponse.get().status());
             throw new RuntimeException(runningPipelineResponse.get().message());

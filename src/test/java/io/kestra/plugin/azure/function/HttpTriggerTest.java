@@ -82,5 +82,4 @@ class HttpTriggerTest {
         assertThat(objectResult.get("originalText").getAsString(), is("Hello, Kestra"));
         assertThat(objectResult.get("encodedText").getAsString(), is("SGVsbG8sIEtlc3RyYQ=="));
     }
-
 }

@@ -1,12 +1,12 @@
 package io.kestra.plugin.azure.function;
 
-import com.google.gson.JsonElement;
 import com.google.gson.JsonParser;
 import com.google.gson.JsonSyntaxException;
 import io.kestra.core.exceptions.IllegalVariableEvaluationException;
+import io.kestra.core.models.annotations.Example;
 import io.kestra.core.models.annotations.PluginProperty;
+import io.kestra.core.models.annotations.Plugin;
 import io.kestra.core.models.property.Property;
-import io.kestra.core.models.tasks.Output;
 import io.kestra.core.models.tasks.RunnableTask;
 import io.kestra.core.models.tasks.Task;
 import io.kestra.core.runners.DefaultRunContext;
@@ -21,7 +21,6 @@ import io.micronaut.http.client.exceptions.HttpClientResponseException;
 import io.micronaut.http.client.netty.DefaultHttpClient;
 import io.micronaut.http.client.netty.NettyHttpClientFactory;
 import io.micronaut.http.codec.MediaTypeCodecRegistry;
-import io.micronaut.http.uri.UriTemplate;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotNull;
 import lombok.*;
@@ -40,6 +39,26 @@ import java.util.Map;
 @EqualsAndHashCode
 @Getter
 @NoArgsConstructor
+@Schema(
+    title = "Trigger Azure Function.",
+    description = "Use this task to trigger an HttpTrigger Azure Function and collect the result"
+)
+@Plugin(examples = {
+    @Example(
+        full = true,
+        code = """
+            id: test_azure_function
+            namespace: com.company.test.azure
+            
+            tasks:
+              - id: encode_string
+                type: io.kestra.plugin.azure.function.HttpTrigger
+                httpMethod: POST
+                url: https://service.azurewebsites.net/api/Base64Encoder?code=${{secret('AZURE_FUNCTION_CODE')}}
+                httpBody: {"text": "Hello, Kestra"}
+            """
+    )
+})
 public class HttpTrigger extends Task implements RunnableTask<HttpTrigger.Output> {
     private static final Duration HTTP_READ_TIMEOUT = Duration.ofSeconds(60);
     private static final NettyHttpClientFactory FACTORY = new NettyHttpClientFactory();

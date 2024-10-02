@@ -45,6 +45,7 @@ dependencies {
 
     // Micronaut
     compileOnly "io.micronaut.reactor:micronaut-reactor"
+    compileOnly "io.micronaut:micronaut-http-client"
 
     // Kestra
     annotationProcessor group: "io.kestra", name: "processor"

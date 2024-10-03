@@ -1,7 +1,6 @@
 package io.kestra.plugin.azure.function;
 
-import com.google.gson.JsonParser;
-import com.google.gson.JsonSyntaxException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import io.kestra.core.exceptions.IllegalVariableEvaluationException;
 import io.kestra.core.models.annotations.Example;
 import io.kestra.core.models.annotations.PluginProperty;
@@ -41,7 +40,7 @@ import java.util.Map;
 @NoArgsConstructor
 @Schema(
     title = "Trigger Azure Function.",
-    description = "Use this task to trigger an HttpTrigger Azure Function and collect the result"
+    description = "Use this task to trigger an Azure Function and collect the result if any"
 )
 @Plugin(examples = {
     @Example(
@@ -59,11 +58,11 @@ import java.util.Map;
             """
     )
 })
-public class HttpTrigger extends Task implements RunnableTask<HttpTrigger.Output> {
+public class HttpFunction extends Task implements RunnableTask<HttpFunction.Output> {
     private static final Duration HTTP_READ_TIMEOUT = Duration.ofSeconds(60);
     private static final NettyHttpClientFactory FACTORY = new NettyHttpClientFactory();
 
-    @Schema(title = "Http method")
+    @Schema(title = "HTTP method")
     @NotNull
     protected Property<String> httpMethod;
 
@@ -72,7 +71,7 @@ public class HttpTrigger extends Task implements RunnableTask<HttpTrigger.Output
     protected Property<String> url;
 
     @Schema(
-            title = "Http body",
+            title = "HTTP body",
             description = "JSON body of the Azure function"
     )
     @Builder.Default
@@ -87,7 +86,7 @@ public class HttpTrigger extends Task implements RunnableTask<HttpTrigger.Output
     protected Duration maxDuration = Duration.ofMinutes(60);
 
     @Override
-    public HttpTrigger.Output run(RunContext runContext) throws Exception {
+    public HttpFunction.Output run(RunContext runContext) throws Exception {
         try (HttpClient client = this.client(runContext)) {
             Mono<HttpResponse> mono = Mono.from(client.exchange(HttpRequest
                     .create(
@@ -100,10 +99,11 @@ public class HttpTrigger extends Task implements RunnableTask<HttpTrigger.Output
             String body = result != null &&  result.getBody().isPresent() ? (String) result.getBody().get() : "";
 
             try {
+                ObjectMapper mapper = new ObjectMapper();
                 return Output.builder()
-                    .repsonseBody(new JsonParser().parse(body))
+                    .repsonseBody(mapper.readTree(body))
                     .build();
-            } catch (JsonSyntaxException e) {
+            } catch (Exception e) {
                 return Output.builder()
                     .repsonseBody(body)
                     .build();

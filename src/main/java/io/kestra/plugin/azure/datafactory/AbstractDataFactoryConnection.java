@@ -71,7 +71,7 @@ public abstract class AbstractDataFactoryConnection extends Task implements Abst
         return new DefaultAzureCredentialBuilder().tenantId(tenantId).build();
     }
 
-    private ClientCertificateCredential getClientCertificateCredential(String clientId, String tenantId, String pemCertificate) {
+    private ClientCertificateCredential getClientCertificateCredential(String tenantId, String clientId, String pemCertificate) {
         return new ClientCertificateCredentialBuilder()
                 .clientId(clientId)
                 .tenantId(tenantId)

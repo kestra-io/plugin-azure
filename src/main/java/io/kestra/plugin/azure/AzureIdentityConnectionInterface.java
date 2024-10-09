@@ -1,9 +1,9 @@
-package io.kestra.plugin.azure.datafactory;
+package io.kestra.plugin.azure;
 
 import io.kestra.core.models.property.Property;
 import io.swagger.v3.oas.annotations.media.Schema;
 
-public interface AbstractDataFactoryConnectionInterface {
+public interface AzureIdentityConnectionInterface {
     @Schema(
             title = "Client ID",
             description = """
@@ -33,7 +33,4 @@ public interface AbstractDataFactoryConnectionInterface {
 
     @Schema(title = "Tenant ID")
     Property<String> getTenantId();
-
-    @Schema(title = "Subscription ID")
-    Property<String> getSubscriptionId();
 }

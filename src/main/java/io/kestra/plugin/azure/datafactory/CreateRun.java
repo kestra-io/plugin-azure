@@ -1,5 +1,7 @@
 package io.kestra.plugin.azure.datafactory;
 
+import com.azure.core.management.AzureEnvironment;
+import com.azure.core.management.profile.AzureProfile;
 import com.azure.core.util.Context;
 import com.azure.resourcemanager.datafactory.DataFactoryManager;
 import com.azure.resourcemanager.datafactory.models.ActivityRun;
@@ -11,6 +13,7 @@ import com.fasterxml.jackson.annotation.PropertyAccessor;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import io.kestra.core.exceptions.IllegalVariableEvaluationException;
 import io.kestra.core.models.annotations.Example;
 import io.kestra.core.models.annotations.Plugin;
 import io.kestra.core.models.executions.metrics.Counter;
@@ -21,8 +24,10 @@ import io.kestra.core.runners.RunContext;
 import io.kestra.core.serializers.FileSerde;
 import io.kestra.core.serializers.JacksonMapper;
 import io.kestra.core.utils.Await;
+import io.kestra.plugin.azure.AbstractAzureIdentityConnection;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.NotNull;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
 import lombok.extern.slf4j.Slf4j;
@@ -76,11 +81,15 @@ import java.util.concurrent.atomic.AtomicReference;
         description = "Launch an Azure DataFactory pipeline from Kestra. " +
                 "Data Factory contains a series of interconnected systems that provide a complete end-to-end platform for data engineers."
 )
-public class CreateRun extends AbstractDataFactoryConnection implements RunnableTask<CreateRun.Output> {
+public class CreateRun extends AbstractAzureIdentityConnection implements RunnableTask<CreateRun.Output> {
     private static final String PIPELINE_SUCCEEDED_STATUS = "Succeeded";
     private static final List<String> PIPELINE_FAILED_STATUS = List.of("Failed", "Canceling", "Cancelled");
     private static final Duration WAIT_UNTIL_COMPLETION = Duration.ofHours(1);
     private static final Duration COMPLETION_CHECK_INTERVAL = Duration.ofSeconds(5);
+
+    @Schema(title = "Subscription ID")
+    @NotNull
+    protected Property<String> subscriptionId;
 
     @Schema(title = "Factory name")
     private Property<String> factoryName;
@@ -109,7 +118,7 @@ public class CreateRun extends AbstractDataFactoryConnection implements Runnable
         Logger logger = runContext.logger();
 
         //Authentication
-        DataFactoryManager manager = this.getDataFactoryManager(runContext);
+        DataFactoryManager manager = this.dataFactoryManager(runContext);
         logger.info("Successfully authenticate to Azure Data Factory");
 
         //Create running pipeline
@@ -146,7 +155,7 @@ public class CreateRun extends AbstractDataFactoryConnection implements Runnable
         final AtomicReference<PipelineRun> runningPipelineResponse = new AtomicReference<>();
         try {
             Await.until(() -> {
-                runningPipelineResponse.set(getRunningPipeline(resourceGroupName,factoryName, runId, manager));
+                runningPipelineResponse.set(runningPipeline(resourceGroupName,factoryName, runId, manager));
                 String runStatus = runningPipelineResponse.get().status();
 
                 if (PIPELINE_FAILED_STATUS.contains(runStatus)) {
@@ -192,7 +201,7 @@ public class CreateRun extends AbstractDataFactoryConnection implements Runnable
         File tempFile = runContext.workingDir().createTempFile(".ion").toFile();
         try (var output = new BufferedWriter(new FileWriter(tempFile))) {
             var flux = Flux.fromIterable(activities);
-            Mono<Long> longMono = FileSerde.writeAll(getIonMapper(), output, flux);
+            Mono<Long> longMono = FileSerde.writeAll(ionMapper(), output, flux);
             Long count = longMono.blockOptional().orElse(0L);
 
             runContext.metric(Counter.of("activities", count));
@@ -216,11 +225,27 @@ public class CreateRun extends AbstractDataFactoryConnection implements Runnable
         private URI uri;
     }
 
-    private PipelineRun getRunningPipeline(String resourceGroupName, String factoryName, String runId, DataFactoryManager manager) {
+    private DataFactoryManager dataFactoryManager(RunContext runContext) throws IllegalVariableEvaluationException {
+        runContext.logger().info("Authenticating to Azure Data Factory");
+        return DataFactoryManager.authenticate(credentials(runContext), profile(runContext));
+    }
+
+    public AzureProfile profile(RunContext runContext) throws IllegalVariableEvaluationException {
+        final String tenantId = this.tenantId.as(runContext, String.class);
+        final String subscriptionId = this.subscriptionId.as(runContext, String.class);
+
+        return  new AzureProfile(
+            tenantId,
+            subscriptionId,
+            AzureEnvironment.AZURE
+        );
+    }
+
+    private PipelineRun runningPipeline(String resourceGroupName, String factoryName, String runId, DataFactoryManager manager) {
         return manager.pipelineRuns().get(resourceGroupName, factoryName, runId);
     }
 
-    private static ObjectMapper getIonMapper() {
+    private static ObjectMapper ionMapper() {
         ObjectMapper ionMapper = new ObjectMapper(JacksonMapper.ofIon().getFactory());
         ionMapper.setSerializationInclusion(JsonInclude.Include.ALWAYS);
         ionMapper.setVisibility(PropertyAccessor.FIELD, JsonAutoDetect.Visibility.ANY);

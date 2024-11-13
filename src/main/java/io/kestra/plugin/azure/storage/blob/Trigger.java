@@ -29,30 +29,30 @@ import static io.kestra.core.utils.Rethrow.throwFunction;
 @Getter
 @NoArgsConstructor
 @Schema(
-    title = "Wait for files on the Azure Blob Storage.",
-    description = "This trigger will poll every `interval` on the Azure Blob Storage. " +
-        "You can search for all files in a container or directory in `from` or you can filter the files with a `regExp`." +
-        "The detection is atomic, internally we do a list and interact only with files listed.\n" +
-        "Once a file is detected, we download the file on internal storage and processed with declared `action` " +
-        "in order to move or delete the files from the container (to avoid double detection on new poll)"
+    title = "Run a flow as soon as files are uploaded to Azure Blob Storage",
+    description = "This trigger will poll the specified Azure Blob Storage bucket every `interval`. " +
+    "Using the `from` and `regExp` properties, you can define which files arrival will trigger the flow. " +
+    "Under the hood, we use the Azure Blob Storage API to list the files in a specified location and download them to the internal storage and process them with the declared `action`. " +
+    "You can use the `action` property to move or delete the files from the container after processing to avoid the trigger to be fired again for the same files during the next polling interval."
 )
 @Plugin(
     examples = {
         @Example(
-            title = "Wait for a list of files on Azure Blob Storage bucket, and then iterate through the files.",
+            title = "Run a flow if one or more files arrived in the specified Azure Blob Storage bucket location. Then, process all files in a for-loop either sequentially or concurrently, depending on the `concurrencyLimit` property.",
             full = true,
             code = """
-                id: storage_listen
+                id: react_to_files
                 namespace: company.team
                 
                 tasks:
                   - id: each
-                    type: io.kestra.plugin.core.flow.EachSequential
+                    type: io.kestra.plugin.core.flow.ForEach
+                    concurrencyLimit: 1
+                    values: "{{ trigger.blobs | jq('.[].uri') }}"
                     tasks:
                       - id: return
                         type: io.kestra.plugin.core.debug.Return
                         format: "{{ taskrun.value }}"
-                    value: "{{ trigger.blobs | jq('.[].uri') }}"
                 
                 triggers:
                   - id: watch
@@ -60,8 +60,8 @@ import static io.kestra.core.utils.Rethrow.throwFunction;
                     interval: PT5M
                     endpoint: "https://yourblob.blob.core.windows.net"
                     connectionString: "DefaultEndpointsProtocol=...=="
-                    container: "mydata"
-                    prefix: "trigger/storage-listen"
+                    container: myBlobContainer
+                    prefix: yourDirectory/subdirectory
                     action: MOVE
                     moveTo:
                       container: mydata
@@ -69,37 +69,38 @@ import static io.kestra.core.utils.Rethrow.throwFunction;
                 """
         ),
         @Example(
-            title = "Wait for a list of file on a Azure Blob Storage bucket and iterate through the files. Delete files manually after processing to prevent infinite triggering.",
+            title = "Run a flow whenever one or more files arrived in the specified Azure Blob Storage bucket location. Then, process files and delete processed files to avoid re-triggering the flow for the same Blob objects during the next polling interval.",
             full = true,
             code = """
-                id: storage_listen
+                id: process_and_delete_files
                 namespace: company.team
                 
                 tasks:
                   - id: each
-                    type: io.kestra.plugin.core.flow.EachSequential
+                    type: io.kestra.plugin.core.flow.ForEach
+                    values: "{{ trigger.blobs | jq('.[].name') }}"
                     tasks:
                       - id: return
                         type: io.kestra.plugin.core.debug.Return
                         format: "{{ taskrun.value }}"
+
                       - id: delete
                         type: io.kestra.plugin.azure.storage.blob.Delete
                         endpoint: "https://yourblob.blob.core.windows.net"
                         connectionString: "DefaultEndpointsProtocol=...=="
-                        container: "mydata"
+                        container: myBlobContainer
                         name: "{{ taskrun.value }}"
-                    value: "{{ trigger.blobs | jq('.[].name') }}"
                 
                 triggers:
                   - id: watch
                     type: io.kestra.plugin.azure.storage.blob.Trigger
                     endpoint: "https://yourblob.blob.core.windows.net"
                     connectionString: "DefaultEndpointsProtocol=...=="
-                    container: "mydata"
-                    prefix: "trigger/storage_listen"
-                    action: MOVE
+                    container: myBlobContainer
+                    prefix: yourDirectory/subdirectory
+                    action: NONE
                     moveTo:
-                      container: mydata
+                      container: myBlobContainer
                       name: archive
                 """
         )

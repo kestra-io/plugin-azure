@@ -78,6 +78,14 @@ dependencies {
         exclude group: 'com.fasterxml.jackson.datatype', module: 'jackson-datatype-jsr310'
         exclude group: 'com.fasterxml.jackson.datatype', module: 'jackson-datatype-guava'
     }
+    api (group: 'com.azure', name: 'azure-storage-file-datalake') {
+        // exclude libraries already provided by Kestra
+        exclude group: 'com.fasterxml.jackson.core'
+        exclude group: 'com.fasterxml.jackson.dataformat', module: 'jackson-dataformat-xml'
+        exclude group: 'com.fasterxml.jackson.datatype', module: 'jackson-datatype-jdk8'
+        exclude group: 'com.fasterxml.jackson.datatype', module: 'jackson-datatype-jsr310'
+        exclude group: 'com.fasterxml.jackson.datatype', module: 'jackson-datatype-guava'
+    }
     api (group: 'com.azure', name: 'azure-data-tables') {
         // exclude libraries already provided by Kestra
         exclude group: 'com.fasterxml.jackson.core'
@@ -110,7 +118,7 @@ dependencies {
         exclude group: 'com.fasterxml.jackson.datatype', module: 'jackson-datatype-jsr310'
         exclude group: 'com.fasterxml.jackson.datatype', module: 'jackson-datatype-guava'
     }
-    api (group: 'com.azure', name: 'azure-messaging-eventhubs') {
+    api (group: 'com.azure', name: 'azure-storage-file-datalake') {
         // exclude libraries already provided by Kestra
         exclude group: 'com.fasterxml.jackson.core'
         exclude group: 'com.fasterxml.jackson.dataformat', module: 'jackson-dataformat-xml'

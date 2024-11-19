@@ -32,6 +32,8 @@ public abstract class BaseTest {
     @Value("${kestra.variables.globals.azure.blobs.endpoint}")
     protected String storageEndpoint;
 
+    @Value("${kestra.variables.globals.azure.adls.endpoint}")
+    protected String adlsEndpoint;
 
     @Value("${kestra.variables.globals.azure.blobs.connection-string}")
     protected String connectionString;
@@ -39,10 +41,13 @@ public abstract class BaseTest {
     @Value("${kestra.variables.globals.azure.blobs.container}")
     protected String container;
 
+    @Value("${kestra.variables.globals.azure.adls.file-system}")
+    protected String fileSystem;
+
     @Inject
-    protected static File file() throws URISyntaxException {
+    protected static File file(String testFilePath) throws URISyntaxException {
         return new File(Objects.requireNonNull(BaseTest.class.getClassLoader()
-                .getResource("application.yml"))
+                .getResource(testFilePath))
             .toURI());
     }
 
@@ -51,7 +56,16 @@ public abstract class BaseTest {
             null,
             null,
             new URI("/" + IdUtils.create() + ".yml"),
-            new FileInputStream(file())
+            new FileInputStream(file("application.yml"))
+        );
+    }
+
+    protected URI uploadStringFile() throws URISyntaxException, IOException {
+        return storageInterface.put(
+            null,
+            null,
+            new URI("/" + IdUtils.create() + ".txt"),
+            new FileInputStream(file("testFiles/appendTest.txt"))
         );
     }
 

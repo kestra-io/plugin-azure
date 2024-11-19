@@ -1,4 +1,4 @@
-package io.kestra.plugin.azure.storage.blob;
+package io.kestra.plugin.azure.storage.adls;
 
 import io.kestra.core.utils.IdUtils;
 import org.apache.commons.io.IOUtils;
@@ -15,17 +15,18 @@ import static org.hamcrest.Matchers.notNullValue;
 class SharedAccessTest extends AbstractTest {
     @Test
     void run() throws Exception {
-        String prefix = IdUtils.create();
+        final String prefix = IdUtils.create();
+        final String path = "adls/azure/tasks/" + prefix + "/" + IdUtils.create() + "/sub";
 
-        Upload.Output upload = upload("/tasks/" + prefix + "/" + IdUtils.create() + "/sub");
+        Upload.Output upload = upload(path);
 
         SharedAccess task = SharedAccess.builder()
-            .id(CopyTest.class.getSimpleName())
+            .id(SharedAccess.class.getSimpleName())
             .type(List.class.getName())
-            .endpoint(this.storageEndpoint)
+            .endpoint(this.adlsEndpoint)
             .connectionString(this.connectionString)
-            .container(upload.getBlob().getContainer())
-            .name(upload.getBlob().getName())
+            .fileSystem(this.fileSystem)
+            .fileName(upload.getFile().getName())
             .expirationDate("{{ now() | dateAdd(1, 'DAYS')  }}")
             .permissions(Set.of(SharedAccess.Permission.READ))
             .build();

@@ -59,7 +59,7 @@ class CreateRunTest {
         CreateRun.Output output = createRun.run(runContext);
 
         //Get logs and outputs
-        BufferedReader searchInputStream = new BufferedReader(new InputStreamReader(storageInterface.get(null, output.getUri())));
+        BufferedReader searchInputStream = new BufferedReader(new InputStreamReader(storageInterface.get(null, null, output.getUri())));
         List<Map<String, Object>> results = new ArrayList<>();
         FileSerde.reader(searchInputStream, r -> results.add((Map<String, Object>) r));
 
@@ -99,7 +99,7 @@ class CreateRunTest {
         CreateRun.Output output = createRun.run(runContext);
 
         //Get logs and outputs
-        BufferedReader searchInputStream = new BufferedReader(new InputStreamReader(storageInterface.get(null, output.getUri())));
+        BufferedReader searchInputStream = new BufferedReader(new InputStreamReader(storageInterface.get(null, null, output.getUri())));
         List<Map<String, Object>> results = new ArrayList<>();
         FileSerde.reader(searchInputStream, r -> results.add((Map<String, Object>) r));
 

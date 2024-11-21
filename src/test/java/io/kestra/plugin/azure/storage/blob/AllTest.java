@@ -45,7 +45,7 @@ class AllTest extends AbstractTest {
             .build();
         Download.Output run = download.run(runContext(download));
 
-        InputStream get = storageInterface.get(null, run.getBlob().getUri());
+        InputStream get = storageInterface.get(null, null, run.getBlob().getUri());
         assertThat(
             CharStreams.toString(new InputStreamReader(get)),
             is(CharStreams.toString(new InputStreamReader(new FileInputStream(file()))))

@@ -166,13 +166,13 @@ class CreateTest extends AbstractTest {
         assertThat(logs.stream().filter(logEntry -> logEntry.getMessage().equals("t2=second")).filter(logEntry -> logEntry.getLevel().equals(Level.WARN)).count(), is(1L));
         assertThat(logs.stream().filter(logEntry -> logEntry.getMessage().equals("t3=5")).count(), is(1L));
 
-        InputStream get = storageInterface.get(null, run.getOutputFiles().get("outs/1.txt"));
+        InputStream get = storageInterface.get(null, null, run.getOutputFiles().get("outs/1.txt"));
         assertThat(CharStreams.toString(new InputStreamReader(get)), is("1\n"));
 
-        get = storageInterface.get(null, run.getOutputFiles().get("outs/child/2.txt"));
+        get = storageInterface.get(null, null, run.getOutputFiles().get("outs/child/2.txt"));
         assertThat(CharStreams.toString(new InputStreamReader(get)), is("2\n"));
 
-        get = storageInterface.get(null, run.getOutputFiles().get("outs/child/sub/3.txt"));
+        get = storageInterface.get(null, null, run.getOutputFiles().get("outs/child/sub/3.txt"));
         assertThat(CharStreams.toString(new InputStreamReader(get)), is("3\n"));
     }
 

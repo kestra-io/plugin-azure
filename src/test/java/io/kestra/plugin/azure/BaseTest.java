@@ -49,6 +49,7 @@ public abstract class BaseTest {
     protected URI upload() throws URISyntaxException, IOException {
         return storageInterface.put(
             null,
+            null,
             new URI("/" + IdUtils.create() + ".yml"),
             new FileInputStream(file())
         );
@@ -56,6 +57,7 @@ public abstract class BaseTest {
 
     protected URI upload(byte[] content) throws URISyntaxException, IOException {
         return storageInterface.put(
+            null,
             null,
             new URI("/" + IdUtils.create() + ".yml"),
             new ByteArrayInputStream(content)

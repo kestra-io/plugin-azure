@@ -48,7 +48,7 @@ class AllTest extends AbstractTest {
         InputStream get = storageInterface.get(null, null, run.getBlob().getUri());
         assertThat(
             CharStreams.toString(new InputStreamReader(get)),
-            is(CharStreams.toString(new InputStreamReader(new FileInputStream(file()))))
+            is(CharStreams.toString(new InputStreamReader(new FileInputStream(file("application.yml")))))
         );
 
         // delete

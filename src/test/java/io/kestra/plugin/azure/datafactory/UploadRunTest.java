@@ -23,7 +23,7 @@ import static org.hamcrest.Matchers.nullValue;
 import static org.hamcrest.core.Is.is;
 
 @KestraTest
-class CreateRunTest {
+class UploadRunTest {
     @Inject
     private RunContextFactory runContextFactory;
 

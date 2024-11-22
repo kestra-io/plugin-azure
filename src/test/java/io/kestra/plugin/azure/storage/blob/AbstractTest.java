@@ -1,11 +1,18 @@
 package io.kestra.plugin.azure.storage.blob;
 
+import com.azure.storage.file.datalake.DataLakeDirectoryClient;
+import com.azure.storage.file.datalake.DataLakeServiceClient;
 import io.kestra.core.utils.IdUtils;
 import io.kestra.plugin.azure.BaseTest;
+import io.kestra.plugin.azure.storage.adls.services.DataLakeService;
+import org.junit.jupiter.api.AfterEach;
 
 import java.net.URI;
+import java.util.ArrayList;
 
 abstract class AbstractTest extends BaseTest {
+    private java.util.List<String> directoryToClean = new ArrayList<>();
+
     protected Upload.Output upload(String dir) throws Exception {
         URI source = upload();
 
@@ -20,6 +27,8 @@ abstract class AbstractTest extends BaseTest {
             .from(source.toString())
             .name(dir + "/" + out + ".yml")
             .build();
+
+        directoryToClean.add(dir);
 
         return upload.run(runContext(upload));
     }
@@ -41,5 +50,12 @@ abstract class AbstractTest extends BaseTest {
             .connectionString(this.connectionString)
             .container(this.container)
             .prefix(dir);
+    }
+
+    @AfterEach
+    void cleanup() throws Exception {
+        for (String dirName : directoryToClean) {
+            deleteDir(dirName);
+        }
     }
 }

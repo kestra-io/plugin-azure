@@ -16,6 +16,9 @@ kestra:
         tables:
           endpoint: "https://unittestkt.table.core.windows.net"
           table: tasks
+        adls:
+          endpoint: "https://unittestkt.blob.core.windows.net/tasks"
+          file-system: tasks
         batch:
           endpoint: "https://batchunitest.francecentral.batch.azure.com"
           account: batchunitest

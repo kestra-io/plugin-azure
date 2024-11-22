@@ -1,4 +1,4 @@
-package io.kestra.plugin.azure.storage.blob;
+package io.kestra.plugin.azure.storage.blob.models;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Getter;

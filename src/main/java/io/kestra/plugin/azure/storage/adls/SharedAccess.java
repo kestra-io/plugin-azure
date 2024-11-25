@@ -32,20 +32,42 @@ import java.util.stream.Collectors;
     examples = {
         @Example(
             full = true,
+            title = "Upload a file to Azure Data Lake Storage, then create a link to access this file which expires in one day from now.",
             code = """
                 id: azure_storage_adls_shared_access
                 namespace: company.team
 
+                pluginDefaults:
+                  - type: io.kestra.plugin.azure.storage.adls
+                    values:
+                      connectionString: "{{ secret('AZURE_CONNECTION_STRING') }}"
+                      fileSystem: "tasks"
+                      endpoint: "https://yourblob.blob.core.windows.net"
+
                 tasks:
-                  - id: shared_access
-                    type: io.kestra.plugin.azure.storage.adls.SharedAccess
-                    endpoint: "https://yourblob.blob.core.windows.net"
-                    connectionString: "DefaultEndpointsProtocol=...=="
-                    fileSystem: "mydata"
-                    fileName: "path/to/my/file.txt"
-                    expirationDate: "{{ now() | dateAdd(1, 'DAYS') }}"
-                    permissions:
-                      - r
+                    - id: download_request
+                      type: io.kestra.plugin.core.http.Download
+                      uri: https://pokeapi.co/api/v2/pokemon/pikachu
+
+                    - id: to_ion
+                      type: io.kestra.plugin.serdes.json.JsonToIon
+                      from: "{{ outputs.download_request.uri }}"
+
+                    - id: upload_file
+                      type: io.kestra.plugin.azure.storage.adls.Upload
+                      fileName: "adls/pokemon/pikachu.json"
+                      from: "{{ outputs.to_ion.uri }}"
+
+                    - id: shared_access
+                      type: io.kestra.plugin.azure.storage.adls.SharedAccess
+                      fileName: "adls/pokemon/pikachu.json"
+                      expirationDate: "{{ now() | dateAdd(1, 'DAYS') }}"
+                      permissions:
+                        - READ
+
+                    - id: download_file_with_token
+                      type: io.kestra.plugin.core.http.Download
+                      uri: "{{ outputs.shared_access.uri }}"
                 """
         )
     }
@@ -68,20 +90,6 @@ public class SharedAccess extends AbstractDataLakeWithFileName implements Runnab
     @PluginProperty(dynamic = true)
     @NotNull
     private Set<Permission> permissions;
-
-    @Schema(
-        title = " The services to be set for the Shared Access."
-    )
-    @PluginProperty(dynamic = true)
-    @NotNull
-    private Set<Service> services;
-
-    @Schema(
-        title = " The resource types to be set for the Shared Access."
-    )
-    @PluginProperty(dynamic = true)
-    @NotNull
-    private Set<ResourceType> resourceTypes;
 
     @Override
     public Output run(RunContext runContext) throws Exception {
@@ -119,41 +127,6 @@ public class SharedAccess extends AbstractDataLakeWithFileName implements Runnab
         private final String value;
 
         Permission(String value) {
-            this.value = value;
-        }
-
-        @Override
-        public String toString() {
-            return this.value;
-        }
-    }
-
-    public enum Service {
-        BLOB("b"),
-        FILE("f"),
-        QUEUE("q"),
-        TABLE("t");
-
-        private final String value;
-
-        Service(String value) {
-            this.value = value;
-        }
-
-        @Override
-        public String toString() {
-            return this.value;
-        }
-    }
-
-    public enum ResourceType {
-        SERVICE("s"),
-        CONTAINER("c"),
-        OBJECT("o");
-
-        private final String value;
-
-        ResourceType(String value) {
             this.value = value;
         }
 

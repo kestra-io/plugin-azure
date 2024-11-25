@@ -30,13 +30,22 @@ import java.net.URI;
                 id: azure_storage_datalake_read
                 namespace: company.team
 
+                pluginDefaults:
+                  - type: io.kestra.plugin.azure.storage.adls
+                    values:
+                      connectionString: "{{ secret('AZURE_CONNECTION_STRING') }}"
+                      fileSystem: "tasks"
+                      endpoint: "https://yourblob.blob.core.windows.net"
+
                 tasks:
                   - id: read_file
                     type: io.kestra.plugin.azure.storage.adls.Read
-                    endpoint: "https://yourblob.blob.core.windows.net"
-                    sasToken: "{{ secret('SAS_TOKEN') }}"
-                    fileSystem: "mydata"
-                    fileName: "path/to/myfile"
+                    filePath: "full/path/to/file.txt"
+
+                  - id: log_size
+                    type: io.kestra.plugin.core.debug.Echo
+                    level: INFO
+                    format: " {{ outputs.read_file.file.size }}"
                 """
         )
     }

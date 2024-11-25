@@ -85,7 +85,7 @@ class TriggerTest extends AbstractTest {
             assertThat(trigger.size(), is(2));
 
             List listTask = list()
-                .directoryName("adls/azure/trigger/adls-listen")
+                .directoryPath("adls/azure/trigger/adls-listen")
                 .build();
             int remainingFilesOnBucket = listTask.run(runContext(listTask))
                 .getFiles()

@@ -22,7 +22,7 @@ class ReadsTest extends AbstractTest {
             .endpoint(this.adlsEndpoint)
             .connectionString(this.connectionString)
             .fileSystem(this.fileSystem)
-            .directoryName("adls/azure/" + prefix + "/")
+            .directoryPath("adls/azure/" + prefix + "/")
             .build();
 
         Reads.Output run = task.run(runContext(task));

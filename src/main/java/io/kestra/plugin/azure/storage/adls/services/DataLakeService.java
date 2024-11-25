@@ -25,7 +25,7 @@ import java.util.List;
 
 public class DataLakeService {
     public static URI read(RunContext runContext, DataLakeFileClient client) throws IOException {
-        File tempFile = runContext.workingDir().createTempFile(FileUtils.getExtension(client.getFileSystemName())).toFile();
+        File tempFile = runContext.workingDir().createTempFile(FileUtils.getExtension(client.getFileName())).toFile();
         PathProperties pathProperties = client.readToFile(tempFile.getAbsolutePath(), true);
 
         runContext.metric(Counter.of("file.size", pathProperties.getFileSize()));
@@ -33,9 +33,9 @@ public class DataLakeService {
         return runContext.storage().putFile(tempFile);
     }
 
-    public static List<AdlsFile> list(RunContext runContext, DataLakeFileSystemClient fileSystemClient, String directoryName) throws IllegalVariableEvaluationException {
+    public static List<AdlsFile> list(RunContext runContext, DataLakeFileSystemClient fileSystemClient, String directoryPath) throws IllegalVariableEvaluationException {
         ListPathsOptions options = new ListPathsOptions();
-        options.setPath(runContext.render(directoryName));
+        options.setPath(runContext.render(directoryPath));
 
         PagedIterable<PathItem> pagedIterable = fileSystemClient.listPaths(options, Duration.ofSeconds(30L));
 

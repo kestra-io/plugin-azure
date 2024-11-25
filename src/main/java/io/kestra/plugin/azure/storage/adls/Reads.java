@@ -34,16 +34,20 @@ import static io.kestra.core.utils.Rethrow.throwFunction;
         @Example(
             full = true,
             code = """
-                id: azure_storage_datalake_read
+                id: azure_storage_datalake_readq
                 namespace: company.team
+
+                pluginDefaults:
+                  - type: io.kestra.plugin.azure.storage.adls
+                    values:
+                      connectionString: "{{ secret('AZURE_CONNECTION_STRING') }}"
+                      fileSystem: "tasks"
+                      endpoint: "https://yourblob.blob.core.windows.net"
 
                 tasks:
                   - id: read_file
-                    type: io.kestra.plugin.azure.storage.adls.Read
-                    endpoint: "https://yourfile.file.core.windows.net"
-                    sasToken: "{{ secret('SAS_TOKEN') }}"
-                    fileSystem: "mydata"
-                    directoryName: "mydirectory"
+                    type: io.kestra.plugin.azure.storage.adls.Reads
+                    directoryPath: "path/to/my/directory/"
                 """
         )
     }
@@ -55,7 +59,7 @@ public class Reads extends AbstractDataLakeConnection implements RunnableTask<Re
     @Schema(title = "Directory Name")
     @PluginProperty(dynamic = true)
     @NotNull
-    protected String directoryName;
+    protected String directoryPath;
 
     protected String fileSystem;
 
@@ -66,7 +70,7 @@ public class Reads extends AbstractDataLakeConnection implements RunnableTask<Re
             .type(io.kestra.plugin.azure.storage.adls.List.class.getName())
             .endpoint(this.endpoint)
             .fileSystem(this.fileSystem)
-            .directoryName(this.directoryName)
+            .directoryPath(this.directoryPath)
             .sasToken(this.sasToken)
             .connectionString(this.connectionString)
             .sharedKeyAccountName(this.sharedKeyAccountName)

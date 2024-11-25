@@ -30,16 +30,16 @@ import java.time.Duration;
         @Example(
             full = true,
             code = """
-                id: azure_storage_datalake_read
+                id: azure_storage_datalake_lease
                 namespace: company.team
 
                 tasks:
-                  - id: read_file
-                    type: io.kestra.plugin.azure.storage.adls.Read
+                  - id: lease_file
+                    type: io.kestra.plugin.azure.storage.adls.Lease
                     endpoint: "https://yourblob.blob.core.windows.net"
                     sasToken: "{{ secret('SAS_TOKEN') }}"
                     fileSystem: "mydata"
-                    fileName: "path/to/myfile"
+                    filePath: "path/to/myfile"
                     leaseDuration: 20
                     action: ACQUIRE
                 """
@@ -47,7 +47,7 @@ import java.time.Duration;
     }
 )
 @Schema(
-    title = "Read a file from Azure Data Lake Storage."
+    title = "Lease a file from Azure Data Lake Storage."
 )
 public class Lease extends AbstractDataLakeWithFileName implements RunnableTask<Lease.Output> {
 

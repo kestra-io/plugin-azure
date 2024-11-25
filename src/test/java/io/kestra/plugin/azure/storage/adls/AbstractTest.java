@@ -5,7 +5,6 @@ import com.azure.storage.file.datalake.DataLakeServiceClient;
 import io.kestra.core.utils.IdUtils;
 import io.kestra.plugin.azure.BaseTest;
 import io.kestra.plugin.azure.storage.adls.services.DataLakeService;
-import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 
 import java.net.URI;
@@ -26,7 +25,7 @@ abstract class AbstractTest extends BaseTest {
             .connectionString(connectionString)
             .fileSystem(this.fileSystem)
             .from(source.toString())
-            .fileName(dir + "/" + out + ".yml")
+            .filePath(dir + "/" + out + ".yml")
             .build();
 
         directoryToClean.add(dir);
@@ -46,7 +45,7 @@ abstract class AbstractTest extends BaseTest {
             .connectionString(connectionString)
             .fileSystem(this.fileSystem)
             .from(source.toString())
-            .fileName(dir + "/" + out + ".txt")
+            .filePath(dir + "/" + out + ".txt")
             .build();
 
         directoryToClean.add(dir);
@@ -70,7 +69,7 @@ abstract class AbstractTest extends BaseTest {
             .endpoint(this.adlsEndpoint)
             .connectionString(connectionString)
             .fileSystem(this.fileSystem)
-            .directoryName(dir);
+            .directoryPath(dir);
     }
 
     @AfterEach

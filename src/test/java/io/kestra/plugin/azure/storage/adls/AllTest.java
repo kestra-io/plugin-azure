@@ -29,7 +29,7 @@ class AllTest extends AbstractTest {
             .endpoint(this.adlsEndpoint)
             .connectionString(connectionString)
             .fileSystem(this.fileSystem)
-            .directoryName("adls/azure/" + prefix  + "/")
+            .directoryPath("adls/azure/" + prefix  + "/")
             .build();
 
         List.Output listOutput = list.run(runContext(list));
@@ -43,7 +43,7 @@ class AllTest extends AbstractTest {
             .endpoint(this.adlsEndpoint)
             .connectionString(connectionString)
             .fileSystem(this.fileSystem)
-            .fileName(upload.getFile().getName())
+            .filePath(upload.getFile().getName())
             .build();
 
         Read.Output run = download.run(runContext(download));
@@ -62,7 +62,7 @@ class AllTest extends AbstractTest {
             .endpoint(this.adlsEndpoint)
             .connectionString(connectionString)
             .fileSystem(this.fileSystem)
-            .fileName(upload.getFile().getName())
+            .filePath(upload.getFile().getName())
             .build();
 
         Delete.Output deleteOutput = delete.run(runContext(delete));

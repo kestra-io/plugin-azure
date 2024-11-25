@@ -28,17 +28,31 @@ import lombok.experimental.SuperBuilder;
     examples = {
         @Example(
             full = true,
+            title = "List all files and directories in a specific Azure Data Lake Storage directory and log each file data output.",
             code = """
-                id: azure_storage_datalake_list
+                id: azure_data_lake_storage_list
                 namespace: company.team
 
+                pluginDefaults:
+                  - type: io.kestra.plugin.azure.storage.adls
+                    values:
+                      connectionString: "{{ secret('AZURE_CONNECTION_STRING') }}"
+                      fileSystem: "tasks"
+                      endpoint: "https://yourblob.blob.core.windows.net"
+
                 tasks:
-                  - id: read_file
+                  - id: list_files_in_dir
                     type: io.kestra.plugin.azure.storage.adls.List
-                    endpoint: "https://yourblob.blob.core.windows.net"
-                    sasToken: "{{ secret('SAS_TOKEN') }}"
-                    fileSystem: "mydata"
-                    directoryName: "myDirectory"
+                    directoryPath: "path/to/my/directory/"
+
+                  - id: for_each_file
+                      type: io.kestra.plugin.core.flow.EachParallel
+                      value: "{{ outputs.list_files_in_dir.files }}"
+                      tasks:
+                        - id: log_file_name
+                          type: io.kestra.plugin.core.debug.Echo
+                          level: DEBUG
+                          format: "{{ taskrun.value }}"
                 """
         )
     }
@@ -47,10 +61,10 @@ import lombok.experimental.SuperBuilder;
     title = "Upload a file to the Azure Data Lake Storage."
 )
 public class List extends AbstractDataLakeConnection implements RunnableTask<List.Output>, AbstractDataLakeStorageInterface {
-    @Schema(title = "Directory Name")
+    @Schema(title = "Directory path", description = "Full path to the directory")
     @PluginProperty(dynamic = true)
     @NotNull
-    protected String directoryName;
+    protected String directoryPath;
 
     protected String fileSystem;
 
@@ -59,7 +73,7 @@ public class List extends AbstractDataLakeConnection implements RunnableTask<Lis
         DataLakeServiceClient dataLakeServiceClient = this.dataLakeServiceClient(runContext);
         DataLakeFileSystemClient fileSystemClient = dataLakeServiceClient.getFileSystemClient(runContext.render(fileSystem));
 
-        java.util.List<AdlsFile> fileList = DataLakeService.list(runContext, fileSystemClient, directoryName);
+        java.util.List<AdlsFile> fileList = DataLakeService.list(runContext, fileSystemClient, directoryPath);
 
         return Output.builder()
             .files(fileList)

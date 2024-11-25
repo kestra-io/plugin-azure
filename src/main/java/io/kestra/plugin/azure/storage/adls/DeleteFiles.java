@@ -38,17 +38,40 @@ import static io.kestra.core.utils.Rethrow.throwConsumer;
     examples = {
         @Example(
             full = true,
+            title = "Download files from a remote server, upload them to Azure Data Lake Storage, finally delete them all at one",
             code = """
                 id: azure_storage_blob_delete_list
                 namespace: company.team
 
+                pluginDefaults:
+                  - type: io.kestra.plugin.azure.storage.adls
+                    values:
+                      connectionString: "{{ secret('AZURE_CONNECTION_STRING') }}"
+                      fileSystem: "tasks"
+                      endpoint: "https://yourblob.blob.core.windows.net"
+
                 tasks:
-                  - id: delete_list
-                    type: io.kestra.plugin.azure.storage.blob.DeleteList
-                    endpoint: "https://yourblob.blob.core.windows.net"
-                    sasToken: "{{ secret('SAS_TOKEN') }}"
-                    fileSystem: "fileSystem"
-                    directoryName: "path/to/mydirectory"
+                  - id: for_each
+                    type: io.kestra.plugin.core.flow.EachSequential
+                    value: ["pikachu", "charmander"]
+                    tasks:
+                      - id: download_request
+                        type: io.kestra.plugin.core.http.Download
+                        uri: https://pokeapi.co/api/v2/pokemon/{{ taskrun.value }}
+
+                      - id: to_ion
+                        type: io.kestra.plugin.serdes.json.JsonToIon
+                        from: "{{ currentEachOutput(outputs.download_request).uri }}"
+
+                      - id: upload_file
+                        type: io.kestra.plugin.azure.storage.adls.Upload
+                        fileName: "adls/pokemon/{{ taskrun.value }}.json"
+                        from: "{{ currentEachOutput(outputs.to_ion).uri }}"
+
+                  - id: delete_file
+                    type: io.kestra.plugin.azure.storage.adls.DeleteFiles
+                    concurrent: 2
+                    directoryPath: "adls/pokemon/"
                 """
         )
     }
@@ -62,7 +85,7 @@ public class DeleteFiles extends AbstractDataLakeConnection implements RunnableT
     @Schema(title = "Directory Name")
     @PluginProperty(dynamic = true)
     @NotNull
-    protected String directoryName;
+    protected String directoryPath;
 
     @Min(2)
     @Schema(
@@ -88,7 +111,7 @@ public class DeleteFiles extends AbstractDataLakeConnection implements RunnableT
         Flux<AdlsFile> flowable = Flux
             .create(throwConsumer(emitter -> {
                 DataLakeService
-                    .list(runContext, fileSystemClient, directoryName)
+                    .list(runContext, fileSystemClient, directoryPath)
                         .forEach(emitter::next);
 
                 emitter.complete();
@@ -118,7 +141,7 @@ public class DeleteFiles extends AbstractDataLakeConnection implements RunnableT
         if (Boolean.TRUE.equals(errorOnEmpty) && finalResult.getLeft() == 0) {
             throw new NoSuchElementException("Unable to find any files to delete on " +
                 runContext.render(this.fileSystem) + " " +
-                "with directoryName='" + runContext.render(this.directoryName)
+                "with directoryPath='" + runContext.render(this.directoryPath)
             );
         }
 
@@ -133,7 +156,7 @@ public class DeleteFiles extends AbstractDataLakeConnection implements RunnableT
 
     private static Function<AdlsFile, Long> delete(Logger logger, DataLakeFileSystemClient fileSystemClient) {
         return o -> {
-            logger.debug("Deleting '{}'", o.getName());
+            logger.info("Deleting '{}'", o.getName());
 
             DataLakeFileClient fileClient = fileSystemClient.getFileClient(o.getName());
             long fileSize = fileClient.getProperties().getFileSize();

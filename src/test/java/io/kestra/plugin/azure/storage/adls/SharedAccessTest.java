@@ -26,7 +26,7 @@ class SharedAccessTest extends AbstractTest {
             .endpoint(this.adlsEndpoint)
             .connectionString(this.connectionString)
             .fileSystem(this.fileSystem)
-            .fileName(upload.getFile().getName())
+            .filePath(upload.getFile().getName())
             .expirationDate("{{ now() | dateAdd(1, 'DAYS')  }}")
             .permissions(Set.of(SharedAccess.Permission.READ))
             .build();

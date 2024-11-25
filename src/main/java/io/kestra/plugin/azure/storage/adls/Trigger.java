@@ -15,7 +15,6 @@ import lombok.experimental.SuperBuilder;
 
 import java.time.Duration;
 import java.util.Optional;
-import java.util.stream.Collectors;
 
 import static io.kestra.core.utils.Rethrow.throwFunction;
 
@@ -57,7 +56,7 @@ import static io.kestra.core.utils.Rethrow.throwFunction;
                     endpoint: "https://yourblob.blob.core.windows.net"
                     connectionString: "DefaultEndpointsProtocol=...=="
                     fileSystem: myFileSystem
-                    directoryName: yourDirectory/subdirectory
+                    directoryPath: yourDirectory/subdirectory
                 """
         )
     }
@@ -79,7 +78,7 @@ public class Trigger extends AbstractTrigger implements PollingTriggerInterface,
 
     private String fileSystem;
 
-    private String directoryName;
+    private String directoryPath;
 
     @Override
     public Optional<Execution> evaluate(ConditionContext conditionContext, TriggerContext context) throws Exception {
@@ -94,7 +93,7 @@ public class Trigger extends AbstractTrigger implements PollingTriggerInterface,
             .sharedKeyAccountAccessKey(this.sharedKeyAccountAccessKey)
             .sasToken(this.sasToken)
             .fileSystem(this.fileSystem)
-            .directoryName(this.directoryName)
+            .directoryPath(this.directoryPath)
             .build();
         List.Output run = task.run(runContext);
 
@@ -115,7 +114,7 @@ public class Trigger extends AbstractTrigger implements PollingTriggerInterface,
                     .sharedKeyAccountAccessKey(this.sharedKeyAccountAccessKey)
                     .sasToken(this.sasToken)
                     .fileSystem(this.fileSystem)
-                    .fileName(object.getName())
+                    .filePath(object.getName())
                     .build();
                 Read.Output downloadOutput = download.run(runContext);
 

@@ -1,7 +1,6 @@
 package io.kestra.plugin.azure.storage.adls;
 
 import io.kestra.core.utils.IdUtils;
-import io.kestra.plugin.azure.storage.blob.DeleteList;
 import io.kestra.plugin.azure.storage.blob.List;
 import org.junit.jupiter.api.Test;
 
@@ -25,7 +24,7 @@ class DeleteFilesTest extends AbstractTest {
             .endpoint(this.adlsEndpoint)
             .connectionString(this.connectionString)
             .fileSystem(this.fileSystem)
-            .directoryName("adls/azure/" + prefix + "/")
+            .directoryPath("adls/azure/" + prefix + "/")
             .concurrent(5)
             .build();
 

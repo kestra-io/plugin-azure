@@ -32,16 +32,16 @@ import java.net.URI;
         @Example(
             full = true,
             code = """
-                id: azure_storage_datalake_read
+                id: azure_storage_datalake_append
                 namespace: company.team
 
                 tasks:
                   - id: read_file
-                    type: io.kestra.plugin.azure.storage.adls.Read
+                    type: io.kestra.plugin.azure.storage.adls.Append
                     endpoint: "https://yourblob.blob.core.windows.net"
                     sasToken: "{{ secret('SAS_TOKEN') }}"
                     fileSystem: "mydata"
-                    fileName: "path/to/myfile"
+                    filePath: "path/to/myfile"
                     data: "Text to append"
                 """
         )

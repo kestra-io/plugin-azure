@@ -23,17 +23,22 @@ import lombok.experimental.SuperBuilder;
     examples = {
         @Example(
             full = true,
+            title = "Delete an existing file in Azure Data Lake Storage.",
             code = """
                 id: azure_storage_datalake_delete
                 namespace: company.team
 
+                pluginDefaults:
+                  - type: io.kestra.plugin.azure.storage.adls
+                    values:
+                      connectionString: "{{ secret('AZURE_CONNECTION_STRING') }}"
+                      fileSystem: "tasks"
+                      endpoint: "https://yourblob.blob.core.windows.net"
+
                 tasks:
-                  - id: read_file
+                  - id: delete_file
                     type: io.kestra.plugin.azure.storage.adls.Delete
-                    endpoint: "https://yourblob.blob.core.windows.net"
-                    sasToken: "{{ secret('SAS_TOKEN') }}"
-                    fileSystem: "mydata"
-                    fileName: "path/to/myfile"
+                    filePath: "full/path/to/file.txt"
                 """
         )
     }

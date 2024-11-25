@@ -28,7 +28,7 @@ class AppendTest extends AbstractTest {
             .endpoint(this.adlsEndpoint)
             .connectionString(connectionString)
             .fileSystem(this.fileSystem)
-            .fileName(upload.getFile().getName())
+            .filePath(upload.getFile().getName())
             .data(Property.of(dataToAdd))
             .build();
 
@@ -41,7 +41,7 @@ class AppendTest extends AbstractTest {
             .endpoint(this.adlsEndpoint)
             .connectionString(connectionString)
             .fileSystem(this.fileSystem)
-            .fileName(upload.getFile().getName())
+            .filePath(upload.getFile().getName())
             .build();
 
         Read.Output run = download.run(runContext(download));

@@ -2,7 +2,6 @@ package io.kestra.plugin.azure.storage.adls;
 
 import io.kestra.core.models.property.Property;
 import io.kestra.core.utils.IdUtils;
-import io.kestra.plugin.azure.storage.blob.List;
 import org.junit.jupiter.api.Test;
 
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -22,7 +21,7 @@ class LeaseTest extends AbstractTest {
             .endpoint(this.adlsEndpoint)
             .connectionString(this.connectionString)
             .fileSystem(this.fileSystem)
-            .fileName(upload.getFile().getName())
+            .filePath(upload.getFile().getName())
             .action(Property.of(Lease.LeaseAction.ACQUIRE))
             .leaseDuration(Property.of(30))
             .build();
@@ -38,7 +37,7 @@ class LeaseTest extends AbstractTest {
             .endpoint(this.adlsEndpoint)
             .connectionString(this.connectionString)
             .fileSystem(this.fileSystem)
-            .fileName(upload.getFile().getName())
+            .filePath(upload.getFile().getName())
             .action(Property.of(Lease.LeaseAction.RELEASE))
             .leaseId(Property.of(acquire.getId()))
             .build();

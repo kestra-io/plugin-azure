@@ -8,7 +8,7 @@ triggers:
     endpoint: "{{ globals.azure.adls['endpoint'] }}"
     fileSystem: "{{ globals.azure.adls['file-system'] }}"
     connectionString: "{{ globals.azure.blobs['connection-string'] }}"
-    directoryName: "adls/azure/trigger/adls-listen"
+    directoryPath: "adls/azure/trigger/adls-listen"
 
 tasks:
   - id: end

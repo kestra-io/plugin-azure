@@ -27,18 +27,14 @@ import lombok.experimental.SuperBuilder;
             code = """
                 id: azure_storage_datalake_delete
                 namespace: company.team
-
-                pluginDefaults:
-                  - type: io.kestra.plugin.azure.storage.adls
-                    values:
-                      connectionString: "{{ secret('AZURE_CONNECTION_STRING') }}"
-                      fileSystem: "tasks"
-                      endpoint: "https://yourblob.blob.core.windows.net"
-
+                      
                 tasks:
                   - id: delete_file
                     type: io.kestra.plugin.azure.storage.adls.Delete
                     filePath: "full/path/to/file.txt"
+                    fileSystem: "tasks"
+                    endpoint: "https://yourblob.blob.core.windows.net"
+                    connectionString: "{{ secret('AZURE_CONNECTION_STRING') }}"
                 """
         )
     }

@@ -47,7 +47,7 @@ import java.util.stream.Collectors;
                 tasks:
                     - id: download_request
                       type: io.kestra.plugin.core.http.Download
-                      uri: https://pokeapi.co/api/v2/pokemon/pikachu
+                      uri: https://dummyjson.com/products
 
                     - id: to_ion
                       type: io.kestra.plugin.serdes.json.JsonToIon
@@ -55,12 +55,12 @@ import java.util.stream.Collectors;
 
                     - id: upload_file
                       type: io.kestra.plugin.azure.storage.adls.Upload
-                      fileName: "adls/pokemon/pikachu.json"
+                      fileName: "adls/product_data/product.json"
                       from: "{{ outputs.to_ion.uri }}"
 
                     - id: shared_access
                       type: io.kestra.plugin.azure.storage.adls.SharedAccess
-                      fileName: "adls/pokemon/pikachu.json"
+                      fileName: "adls/product_data/product.json"
                       expirationDate: "{{ now() | dateAdd(1, 'DAYS') }}"
                       permissions:
                         - READ

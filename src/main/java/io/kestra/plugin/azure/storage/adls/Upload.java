@@ -37,11 +37,11 @@ import java.net.URI;
                 tasks:
                   - id: download_request
                     type: io.kestra.plugin.core.http.Download
-                    uri: https://pokeapi.co/api/v2/pokemon/pikachu
+                    uri: adls/product_data/product.json
                 
                   - id: upload_file
                     type: io.kestra.plugin.azure.storage.adls.Upload
-                    filePath: "path/to/file/pikachu.json"
+                    filePath: "path/to/file/product.json"
                     from: "{{ outputs.download_request.uri }}"
                     connectionString: "{{ secret('AZURE_CONNECTION_STRING') }}"
                     fileSystem: "tasks"

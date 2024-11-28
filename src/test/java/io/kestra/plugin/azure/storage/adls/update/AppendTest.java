@@ -1,8 +1,11 @@
-package io.kestra.plugin.azure.storage.adls;
+package io.kestra.plugin.azure.storage.adls.update;
 
 import com.google.common.io.CharStreams;
 import io.kestra.core.models.property.Property;
 import io.kestra.core.utils.IdUtils;
+import io.kestra.plugin.azure.storage.adls.AbstractTest;
+import io.kestra.plugin.azure.storage.adls.Read;
+import io.kestra.plugin.azure.storage.adls.Upload;
 import org.junit.jupiter.api.Test;
 
 import java.io.FileInputStream;

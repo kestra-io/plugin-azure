@@ -8,7 +8,7 @@ import io.kestra.core.models.annotations.Plugin;
 import io.kestra.core.models.annotations.PluginProperty;
 import io.kestra.core.models.tasks.RunnableTask;
 import io.kestra.core.runners.RunContext;
-import io.kestra.plugin.azure.storage.adls.abstracts.AbstractDataLakeWithFileName;
+import io.kestra.plugin.azure.storage.adls.abstracts.AbstractDataLakeWithFile;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotNull;
 import lombok.EqualsAndHashCode;
@@ -75,7 +75,7 @@ import java.util.stream.Collectors;
 @Schema(
     title = "Shared Access on the Azure Data Lake Storage."
 )
-public class SharedAccess extends AbstractDataLakeWithFileName implements RunnableTask<SharedAccess.Output> {
+public class SharedAccess extends AbstractDataLakeWithFile implements RunnableTask<SharedAccess.Output> {
 
     @Schema(
         title = " The time after which the SAS will no longer work."

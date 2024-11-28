@@ -10,7 +10,7 @@ import org.junit.jupiter.api.AfterEach;
 import java.net.URI;
 import java.util.ArrayList;
 
-abstract class AbstractTest extends BaseTest {
+public class AbstractTest extends BaseTest {
     public java.util.List<String> directoryToClean = new ArrayList<>();
 
     protected Upload.Output upload(String dir) throws Exception {

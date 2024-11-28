@@ -1,24 +1,18 @@
-package io.kestra.plugin.azure.storage.adls;
+package io.kestra.plugin.azure.storage.adls.update;
 
 import com.azure.storage.file.datalake.DataLakeFileClient;
 import com.azure.storage.file.datalake.specialized.DataLakeLeaseClient;
 import com.azure.storage.file.datalake.specialized.DataLakeLeaseClientBuilder;
 import io.kestra.core.models.annotations.Example;
 import io.kestra.core.models.annotations.Plugin;
-import io.kestra.core.models.annotations.PluginProperty;
 import io.kestra.core.models.property.Property;
 import io.kestra.core.models.tasks.RunnableTask;
 import io.kestra.core.runners.RunContext;
-import io.kestra.plugin.azure.storage.adls.abstracts.AbstractDataLakeWithFileName;
-import io.kestra.plugin.azure.storage.adls.models.AdlsFile;
-import io.kestra.plugin.azure.storage.adls.services.DataLakeService;
+import io.kestra.plugin.azure.storage.adls.abstracts.AbstractDataLakeWithFile;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotNull;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
-
-import java.net.URI;
-import java.time.Duration;
 
 @SuperBuilder
 @ToString
@@ -49,7 +43,7 @@ import java.time.Duration;
 @Schema(
     title = "Lease a file from Azure Data Lake Storage."
 )
-public class Lease extends AbstractDataLakeWithFileName implements RunnableTask<Lease.Output> {
+public class Lease extends AbstractDataLakeWithFile implements RunnableTask<Lease.Output> {
 
     @Schema(
         title = "Lease duration in seconds",

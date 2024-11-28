@@ -8,7 +8,7 @@ import io.kestra.core.models.annotations.PluginProperty;
 import io.kestra.core.models.executions.metrics.Counter;
 import io.kestra.core.models.tasks.RunnableTask;
 import io.kestra.core.runners.RunContext;
-import io.kestra.plugin.azure.storage.adls.abstracts.AbstractDataLakeWithFileName;
+import io.kestra.plugin.azure.storage.adls.abstracts.AbstractDataLakeWithFile;
 import io.kestra.plugin.azure.storage.adls.models.AdlsFile;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.EqualsAndHashCode;
@@ -53,7 +53,7 @@ import java.net.URI;
 @Schema(
     title = "Upload a file to the Azure Data Lake Storage."
 )
-public class Upload extends AbstractDataLakeWithFileName implements RunnableTask<Upload.Output> {
+public class Upload extends AbstractDataLakeWithFile implements RunnableTask<Upload.Output> {
     @Schema(
         title = "The file from the internal storage to upload to the Azure Data Lake Storage."
     )

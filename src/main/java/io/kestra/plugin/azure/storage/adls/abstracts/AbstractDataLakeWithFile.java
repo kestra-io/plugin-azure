@@ -18,7 +18,7 @@ import lombok.experimental.SuperBuilder;
 @EqualsAndHashCode
 @Getter
 @NoArgsConstructor
-public abstract class AbstractDataLakeWithFileName extends AbstractDataLakeConnection implements AbstractDataLakeStorageInterface {
+public abstract class AbstractDataLakeWithFile extends AbstractDataLakeConnection implements AbstractDataLakeStorageInterface {
 
     @Schema(title = "File path", description = "Full path of the file in its file system")
     @PluginProperty(dynamic = true)

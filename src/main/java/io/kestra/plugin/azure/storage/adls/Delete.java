@@ -5,7 +5,7 @@ import io.kestra.core.models.annotations.Example;
 import io.kestra.core.models.annotations.Plugin;
 import io.kestra.core.models.tasks.RunnableTask;
 import io.kestra.core.runners.RunContext;
-import io.kestra.plugin.azure.storage.adls.abstracts.AbstractDataLakeWithFileName;
+import io.kestra.plugin.azure.storage.adls.abstracts.AbstractDataLakeWithFile;
 import io.kestra.plugin.azure.storage.adls.models.AdlsFile;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.EqualsAndHashCode;
@@ -42,7 +42,7 @@ import lombok.experimental.SuperBuilder;
 @Schema(
     title = "Delete a file from Azure Data Lake Storage."
 )
-public class Delete extends AbstractDataLakeWithFileName implements RunnableTask<Delete.Output> {
+public class Delete extends AbstractDataLakeWithFile implements RunnableTask<Delete.Output> {
 
     @Override
     public Delete.Output run(RunContext runContext) throws Exception {

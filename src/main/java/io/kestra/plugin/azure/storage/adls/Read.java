@@ -5,7 +5,7 @@ import io.kestra.core.models.annotations.Example;
 import io.kestra.core.models.annotations.Plugin;
 import io.kestra.core.models.tasks.RunnableTask;
 import io.kestra.core.runners.RunContext;
-import io.kestra.plugin.azure.storage.adls.abstracts.AbstractDataLakeWithFileName;
+import io.kestra.plugin.azure.storage.adls.abstracts.AbstractDataLakeWithFile;
 import io.kestra.plugin.azure.storage.adls.models.AdlsFile;
 import io.kestra.plugin.azure.storage.adls.services.DataLakeService;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -49,7 +49,7 @@ import java.net.URI;
 @Schema(
     title = "Read a file from Azure Data Lake Storage."
 )
-public class Read extends AbstractDataLakeWithFileName implements RunnableTask<Read.Output> {
+public class Read extends AbstractDataLakeWithFile implements RunnableTask<Read.Output> {
     @Override
     public Output run(RunContext runContext) throws Exception {
         DataLakeFileClient client = this.dataLakeFileClient(runContext);

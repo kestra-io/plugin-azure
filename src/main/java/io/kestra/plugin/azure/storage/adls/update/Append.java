@@ -1,4 +1,4 @@
-package io.kestra.plugin.azure.storage.adls;
+package io.kestra.plugin.azure.storage.adls.update;
 
 import com.azure.core.util.BinaryData;
 import com.azure.storage.file.datalake.DataLakeFileClient;
@@ -9,9 +9,7 @@ import io.kestra.core.models.property.Property;
 import io.kestra.core.models.tasks.RunnableTask;
 import io.kestra.core.models.tasks.VoidOutput;
 import io.kestra.core.runners.RunContext;
-import io.kestra.plugin.azure.storage.adls.abstracts.AbstractDataLakeWithFileName;
-import io.kestra.plugin.azure.storage.adls.models.AdlsFile;
-import io.kestra.plugin.azure.storage.adls.services.DataLakeService;
+import io.kestra.plugin.azure.storage.adls.abstracts.AbstractDataLakeWithFile;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotNull;
 import lombok.EqualsAndHashCode;
@@ -19,8 +17,6 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.ToString;
 import lombok.experimental.SuperBuilder;
-
-import java.net.URI;
 
 @SuperBuilder
 @ToString
@@ -50,7 +46,7 @@ import java.net.URI;
 @Schema(
     title = "Append data to an existing file from Azure Data Lake Storage."
 )
-public class Append extends AbstractDataLakeWithFileName implements RunnableTask<VoidOutput> {
+public class Append extends AbstractDataLakeWithFile implements RunnableTask<VoidOutput> {
     @Schema(title = "Data")
     @NotNull
     protected Property<String> data;

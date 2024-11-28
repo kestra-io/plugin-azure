@@ -37,16 +37,12 @@ import static io.kestra.core.utils.Rethrow.throwFunction;
                 id: azure_storage_datalake_readq
                 namespace: company.team
 
-                pluginDefaults:
-                  - type: io.kestra.plugin.azure.storage.adls
-                    values:
-                      connectionString: "{{ secret('AZURE_CONNECTION_STRING') }}"
-                      fileSystem: "tasks"
-                      endpoint: "https://yourblob.blob.core.windows.net"
-
                 tasks:
                   - id: read_file
                     type: io.kestra.plugin.azure.storage.adls.Reads
+                    connectionString: "{{ secret('AZURE_CONNECTION_STRING') }}"
+                    fileSystem: "tasks"
+                    endpoint: "https://yourblob.blob.core.windows.net"
                     directoryPath: "path/to/my/directory/"
                 """
         )

@@ -29,31 +29,23 @@ import java.net.URI;
     examples = {
         @Example(
             full = true,
-            title = "Download a json file, convert it to ion format, finally upload it to Azure Data Lake Storage.",
+            title = "Download a json file and upload it to Azure Data Lake Storage.",
             code = """
                 id: azure_data_lake_storage_upload
                 namespace: company.team
 
-                pluginDefaults:
-                  - type: io.kestra.plugin.azure.storage.adls
-                    values:
-                      connectionString: "{{ secret('AZURE_CONNECTION_STRING') }}"
-                      fileSystem: "tasks"
-                      endpoint: "https://yourblob.blob.core.windows.net"
-
                 tasks:
                   - id: download_request
                     type: io.kestra.plugin.core.http.Download
-                    uri: https://pokeapi.co/api/v2/pokemon/pikachu
-
-                  - id: to_ion
-                    type: io.kestra.plugin.serdes.json.JsonToIon
-                    from: "{{ outputs.download_request.uri }}"
-
+                    uri: adls/product_data/product.json
+                
                   - id: upload_file
                     type: io.kestra.plugin.azure.storage.adls.Upload
-                    filePath: "path/to/file/pikachu.json"
-                    from: "{{ outputs.to_ion.uri }}"
+                    filePath: "path/to/file/product.json"
+                    from: "{{ outputs.download_request.uri }}"
+                    connectionString: "{{ secret('AZURE_CONNECTION_STRING') }}"
+                    fileSystem: "tasks"
+                    endpoint: "https://yourblob.blob.core.windows.net"
                 """
         )
     }

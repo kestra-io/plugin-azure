@@ -33,16 +33,12 @@ import lombok.experimental.SuperBuilder;
                 id: azure_data_lake_storage_list
                 namespace: company.team
 
-                pluginDefaults:
-                  - type: io.kestra.plugin.azure.storage.adls
-                    values:
-                      connectionString: "{{ secret('AZURE_CONNECTION_STRING') }}"
-                      fileSystem: "tasks"
-                      endpoint: "https://yourblob.blob.core.windows.net"
-
                 tasks:
                   - id: list_files_in_dir
                     type: io.kestra.plugin.azure.storage.adls.List
+                    connectionString: "{{ secret('AZURE_CONNECTION_STRING') }}"
+                    fileSystem: "tasks"
+                    endpoint: "https://yourblob.blob.core.windows.net"
                     directoryPath: "path/to/my/directory/"
 
                   - id: for_each_file

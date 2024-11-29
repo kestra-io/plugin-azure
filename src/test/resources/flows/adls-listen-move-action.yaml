@@ -1,0 +1,20 @@
+id: adls-listen-move-action
+namespace: io.kestra.tests
+
+triggers:
+  - id: watch
+    type: io.kestra.plugin.azure.storage.adls.Trigger
+    interval: PT10S
+    endpoint: "{{ globals.azure.adls['endpoint'] }}"
+    fileSystem: "{{ globals.azure.adls['file-system'] }}"
+    connectionString: "{{ globals.azure.blobs['connection-string'] }}"
+    directoryPath: "adls/azure/trigger/adls-listen-move-action"
+    action: MOVE
+    moveTo:
+      fileSystem: "{{ globals.azure.adls['file-system'] }}"
+      directoryPath: "adls/azure/trigger/adls-listen-move-action-direction"
+
+tasks:
+  - id: end
+    type: io.kestra.plugin.core.debug.Return
+    format: "{{task.id}} > {{taskrun.startDate}}"

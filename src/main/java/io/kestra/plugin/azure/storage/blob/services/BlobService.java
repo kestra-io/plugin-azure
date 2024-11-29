@@ -122,8 +122,8 @@ public class BlobService {
         return (regExp == null || object.getName().matches(regExp)) &&
             (
                 (filter == ListInterface.Filter.BOTH) ||
-                (filter == ListInterface.Filter.DIRECTORY && object.getProperties().getContentType() == null) ||
-                (filter == ListInterface.Filter.FILES && object.getProperties().getContentType() != null)
+                (filter == ListInterface.Filter.DIRECTORY && object.getProperties() != null && object.getProperties().getContentType() == null) ||
+                (filter == ListInterface.Filter.FILES && object.getProperties() != null && object.getProperties().getContentType() != null)
             );
     }
 

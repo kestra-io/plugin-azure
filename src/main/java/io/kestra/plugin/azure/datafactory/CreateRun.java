@@ -113,6 +113,20 @@ public class CreateRun extends AbstractAzureIdentityConnection implements Runnab
     @Builder.Default
     private Property<Boolean> wait = Property.of(Boolean.TRUE);
 
+    @Schema(
+            title = "Wait until completion duration",
+            description = "Maximum duration to wait for the pipeline to resolve. After this time the task will time out"
+    )
+    @Builder.Default
+    private Property<Duration> waitUntilCompletion = Property.of(Duration.ofHours(1L));
+
+    @Schema(
+            title = "Completion check interval",
+            description = "The frequency with which the task checks whether the pipeline has completed."
+    )
+    @Builder.Default
+    private final Property<Duration> completionCheckInterval = Property.of(Duration.ofSeconds(5L));
+
     @Override
     public CreateRun.Output run(RunContext runContext) throws Exception {
         Logger logger = runContext.logger();
@@ -151,6 +165,8 @@ public class CreateRun extends AbstractAzureIdentityConnection implements Runnab
                     .runId(runId)
                     .build();
         }
+        final Duration completionCheckIntervalRendered = runContext.render(completionCheckInterval, Duration.class);
+        final Duration waitUntilCompletionRendered = runContext.render(waitUntilCompletion, Duration.class);
 
         final AtomicReference<PipelineRun> runningPipelineResponse = new AtomicReference<>();
         try {
@@ -163,7 +179,7 @@ public class CreateRun extends AbstractAzureIdentityConnection implements Runnab
                 }
 
                 return PIPELINE_SUCCEEDED_STATUS.equals(runStatus);
-            }, COMPLETION_CHECK_INTERVAL, WAIT_UNTIL_COMPLETION);
+            }, completionCheckIntervalRendered, waitUntilCompletionRendered);
         } catch (TimeoutException | RuntimeException e) {
             logger.error("Pipeline '{}' with runId '{} finished with status '{}'", pipelineName, runId, runningPipelineResponse.get().status());
             throw new RuntimeException(runningPipelineResponse.get().message());

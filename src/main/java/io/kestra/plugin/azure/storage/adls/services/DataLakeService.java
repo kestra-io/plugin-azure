@@ -45,7 +45,7 @@ public class DataLakeService {
 
         while (iterator.hasNext()) {
             PathItem item = iterator.next();
-            fileList.add(AdlsFile.of(fileSystemClient.getFileSystemName(), item));
+            fileList.add(AdlsFile.of(fileSystemClient.getFileClient(item.getName())));
         }
         return fileList;
     }

@@ -60,8 +60,7 @@ dependencies {
     // Logs
     compileOnly'org.slf4j:slf4j-api'
 
-    // azure
-    api platform("com.azure:azure-sdk-bom:1.2.29")
+    // Azure libraries are managed by the the Kestra Platform so they are aligned on all plugins
     api (group: 'com.azure', name: 'azure-identity') {
         // exclude libraries already provided by Kestra
         exclude group: 'com.fasterxml.jackson.core'

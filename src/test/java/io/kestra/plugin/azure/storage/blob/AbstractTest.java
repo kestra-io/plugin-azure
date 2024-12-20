@@ -2,6 +2,7 @@ package io.kestra.plugin.azure.storage.blob;
 
 import com.azure.storage.file.datalake.DataLakeDirectoryClient;
 import com.azure.storage.file.datalake.DataLakeServiceClient;
+import io.kestra.core.models.property.Property;
 import io.kestra.core.utils.IdUtils;
 import io.kestra.plugin.azure.BaseTest;
 import io.kestra.plugin.azure.storage.adls.services.DataLakeService;
@@ -21,11 +22,11 @@ abstract class AbstractTest extends BaseTest {
         Upload upload = Upload.builder()
             .id(AllTest.class.getSimpleName())
             .type(Upload.class.getName())
-            .endpoint(this.storageEndpoint)
-            .connectionString(this.connectionString)
-            .container(this.container)
-            .from(source.toString())
-            .name(dir + "/" + out + ".yml")
+            .endpoint(Property.of(this.storageEndpoint))
+            .connectionString(Property.of(connectionString))
+            .container(Property.of(this.container))
+            .from(Property.of(source.toString()))
+            .name(Property.of(dir + "/" + out + ".yml"))
             .build();
 
         directoryToClean.add(dir);
@@ -37,19 +38,19 @@ abstract class AbstractTest extends BaseTest {
         return List.builder()
             .id(AbstractTest.class.getSimpleName())
             .type(List.class.getName())
-            .endpoint(this.storageEndpoint)
-            .connectionString(this.connectionString)
-            .container(this.container);
+            .endpoint(Property.of(this.storageEndpoint))
+            .connectionString(Property.of(connectionString))
+            .container(Property.of(this.container));
     }
 
     protected DeleteList.DeleteListBuilder<?, ?> deleteDir(String dir) {
         return DeleteList.builder()
             .id(AbstractTest.class.getSimpleName())
             .type(DeleteList.class.getName())
-            .endpoint(this.storageEndpoint)
-            .connectionString(this.connectionString)
-            .container(this.container)
-            .prefix(dir);
+            .endpoint(Property.of(this.storageEndpoint))
+            .connectionString(Property.of(connectionString))
+            .container(Property.of(this.container))
+            .prefix(Property.of(dir));
     }
 
     @AfterEach

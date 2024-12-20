@@ -31,6 +31,7 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.time.Duration;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.Map;
 
 @SuperBuilder
@@ -48,7 +49,7 @@ import java.util.Map;
         code = """
             id: test_azure_function
             namespace: com.company.test.azure
-            
+
             tasks:
               - id: encode_string
                 type: io.kestra.plugin.azure.function.HttpTrigger
@@ -75,7 +76,7 @@ public class HttpFunction extends Task implements RunnableTask<HttpFunction.Outp
             description = "JSON body of the Azure function"
     )
     @Builder.Default
-    protected Property<Map<String, Object>> httpBody = Property.of(Collections.emptyMap());
+    protected Property<Map<String, Object>> httpBody = Property.of(new HashMap<>());
 
     @Schema(
             title = "Max duration",
@@ -83,19 +84,19 @@ public class HttpFunction extends Task implements RunnableTask<HttpFunction.Outp
     )
     @Builder.Default
     @PluginProperty(dynamic = true)
-    protected Duration maxDuration = Duration.ofMinutes(60);
+    protected Property<Duration> maxDuration = Property.of(Duration.ofMinutes(60));
 
     @Override
     public HttpFunction.Output run(RunContext runContext) throws Exception {
         try (HttpClient client = this.client(runContext)) {
             Mono<HttpResponse> mono = Mono.from(client.exchange(HttpRequest
                     .create(
-                            HttpMethod.valueOf(httpMethod.as(runContext, String.class)),
-                            url.as(runContext, String.class)
-                    ).body(httpBody.asMap(runContext, String.class, Object.class)),
+                            HttpMethod.valueOf(runContext.render(httpMethod).as(String.class).orElseThrow()),
+                            runContext.render(url).as(String.class).orElseThrow()
+                    ).body(runContext.render(httpBody).asMap(String.class, Object.class)),
                 Argument.of(String.class))
             );
-            HttpResponse result =  maxDuration != null ? mono.block(maxDuration) : mono.block();
+            HttpResponse result =  maxDuration != null ? mono.block(runContext.render(maxDuration).as(Duration.class).orElseThrow()) : mono.block();
             String body = result != null &&  result.getBody().isPresent() ? (String) result.getBody().get() : "";
 
             try {
@@ -133,7 +134,7 @@ public class HttpFunction extends Task implements RunnableTask<HttpFunction.Outp
         httpConfig.setMaxContentLength(Integer.MAX_VALUE);
         httpConfig.setReadTimeout(HTTP_READ_TIMEOUT);
 
-        DefaultHttpClient client = (DefaultHttpClient) FACTORY.createClient(URI.create(url.as(runContext, String.class)).toURL(), httpConfig);
+        DefaultHttpClient client = (DefaultHttpClient) FACTORY.createClient(URI.create(runContext.render(this.url).as(String.class).orElseThrow()).toURL(), httpConfig);
         client.setMediaTypeCodecRegistry(mediaTypeCodecRegistry);
 
         return client;

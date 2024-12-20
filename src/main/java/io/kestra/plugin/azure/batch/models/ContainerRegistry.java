@@ -2,6 +2,7 @@ package io.kestra.plugin.azure.batch.models;
 
 import io.kestra.core.exceptions.IllegalVariableEvaluationException;
 import io.kestra.core.models.annotations.PluginProperty;
+import io.kestra.core.models.property.Property;
 import io.kestra.core.runners.RunContext;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Builder;
@@ -14,20 +15,17 @@ public class ContainerRegistry {
         title = "The registry server URL.",
         description = "If omitted, the default is \"docker.io\"."
     )
-    @PluginProperty(dynamic = true)
-    String registryServer;
+    Property<String> registryServer;
 
     @Schema(
         title = "The user name to log into the registry server."
     )
-    @PluginProperty(dynamic = true)
-    String userName;
+    Property<String> userName;
 
     @Schema(
         title = "The password to log into the registry server."
     )
-    @PluginProperty(dynamic = true)
-    String password;
+    Property<String> password;
 
     @Schema(
         title = "The reference to the user assigned identity to use to access the Azure Container Registry instead of username and password."
@@ -37,9 +35,9 @@ public class ContainerRegistry {
 
     public com.microsoft.azure.batch.protocol.models.ContainerRegistry to(RunContext runContext) throws IllegalVariableEvaluationException {
         return new com.microsoft.azure.batch.protocol.models.ContainerRegistry()
-            .withRegistryServer(runContext.render(this.registryServer))
-            .withUserName(runContext.render(this.userName))
-            .withPassword(runContext.render(this.password))
+            .withRegistryServer(runContext.render(this.registryServer).as(String.class).orElse(null))
+            .withUserName(runContext.render(this.userName).as(String.class).orElse(null))
+            .withPassword(runContext.render(this.password).as(String.class).orElse(null))
             .withIdentityReference(this.identityReference == null ? null : this.identityReference.to(runContext));
     }
 }

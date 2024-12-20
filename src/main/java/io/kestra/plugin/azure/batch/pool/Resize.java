@@ -6,6 +6,7 @@ import com.microsoft.azure.batch.protocol.models.PoolState;
 import io.kestra.core.models.annotations.Example;
 import io.kestra.core.models.annotations.Plugin;
 import io.kestra.core.models.annotations.PluginProperty;
+import io.kestra.core.models.property.Property;
 import io.kestra.core.models.tasks.RunnableTask;
 import io.kestra.core.runners.RunContext;
 import io.kestra.plugin.azure.batch.AbstractBatch;
@@ -46,31 +47,28 @@ public class Resize extends AbstractBatch implements RunnableTask<Resize.Output>
     @Schema(
         title = "The ID of the pool."
     )
-    @PluginProperty(dynamic = true)
     @NotNull
-    private String poolId;
+    private Property<String> poolId;
 
     @Schema(
         title = "The desired number of dedicated compute nodes in the pool."
     )
-    @PluginProperty(dynamic = true)
     @NotNull
     @Builder.Default
-    private Integer targetDedicatedNodes = 0;
+    private Property<Integer> targetDedicatedNodes = Property.of(0);
 
     @Schema(
         title = "The desired number of low-priority compute nodes in the pool."
     )
-    @PluginProperty(dynamic = true)
     @NotNull
     @Builder.Default
-    private Integer targetLowPriorityNodes = 0;
+    private Property<Integer> targetLowPriorityNodes = Property.of(0);
 
     @Override
     public Output run(RunContext runContext) throws Exception {
         BatchClient client = BatchService.client(this.endpoint, this.account, this.accessKey, runContext);
 
-        String poolId = runContext.render(this.poolId);
+        String poolId = runContext.render(this.poolId).as(String.class).orElseThrow();
 
         if (!client.poolOperations().existsPool(poolId)) {
             throw new IllegalArgumentException("Pool '" + poolId + "' doesn't exists");
@@ -84,7 +82,11 @@ public class Resize extends AbstractBatch implements RunnableTask<Resize.Output>
 
         client
             .poolOperations()
-            .resizePool(poolId, this.targetDedicatedNodes, this.targetLowPriorityNodes);
+            .resizePool(
+                poolId,
+                runContext.render(this.targetDedicatedNodes).as(Integer.class).orElseThrow(),
+                runContext.render(this.targetLowPriorityNodes).as(Integer.class).orElseThrow()
+            );
 
         CloudPool cloudPool = PoolService.waitForReady(runContext, client, pool);
 

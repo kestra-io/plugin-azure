@@ -33,9 +33,9 @@ public class DataLakeService {
         return runContext.storage().putFile(tempFile);
     }
 
-    public static List<AdlsFile> list(RunContext runContext, DataLakeFileSystemClient fileSystemClient, String directoryPath) throws IllegalVariableEvaluationException {
+    public static List<AdlsFile> list(DataLakeFileSystemClient fileSystemClient, String directoryPath) {
         ListPathsOptions options = new ListPathsOptions();
-        options.setPath(runContext.render(directoryPath));
+        options.setPath(directoryPath);
 
         PagedIterable<PathItem> pagedIterable = fileSystemClient.listPaths(options, Duration.ofSeconds(30L));
 
@@ -61,18 +61,18 @@ public class DataLakeService {
         DataLakeServiceClientBuilder builder = new DataLakeServiceClientBuilder();
 
         if (endpoint != null) {
-            builder.endpoint(runContext.render(endpoint));
+            builder.endpoint(endpoint);
         }
 
         if (connectionString != null) {
-            builder.connectionString(runContext.render(connectionString));
+            builder.connectionString(connectionString);
         } else if (sharedKeyAccountName != null && sharedKeyAccountAccessKey != null) {
             builder.credential(new AzureNamedKeyCredential(
-                runContext.render(sharedKeyAccountName),
-                runContext.render(sharedKeyAccountAccessKey)
+                sharedKeyAccountName,
+                sharedKeyAccountAccessKey
             ));
         } else if (sasToken != null ) {
-            builder.sasToken(runContext.render(sasToken));
+            builder.sasToken(sasToken);
         } else {
             builder.credential(new DefaultAzureCredentialBuilder().build());
         }

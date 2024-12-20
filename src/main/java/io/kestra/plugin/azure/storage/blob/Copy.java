@@ -8,6 +8,7 @@ import com.azure.storage.blob.sas.BlobServiceSasSignatureValues;
 import io.kestra.core.models.annotations.Example;
 import io.kestra.core.models.annotations.Plugin;
 import io.kestra.core.models.annotations.PluginProperty;
+import io.kestra.core.models.property.Property;
 import io.kestra.core.models.tasks.RunnableTask;
 import io.kestra.core.runners.RunContext;
 import io.kestra.plugin.azure.storage.blob.abstracts.AbstractBlobStorageWithSas;
@@ -59,25 +60,24 @@ public class Copy extends AbstractBlobStorageWithSas implements RunnableTask<Cop
     @Schema(
         title = "The destination to copy the file to."
     )
-    @PluginProperty(dynamic = false)
+    @PluginProperty(dynamic = true)
     @NotNull
     private CopyObject to;
 
     @Schema(
         title = "Whether to delete the source file after copy."
     )
-    @PluginProperty(dynamic = false)
     @Builder.Default
-    private Boolean delete = false;
+    private Property<Boolean> delete = Property.of(false);
     @Override
     public Output run(RunContext runContext) throws Exception {
         BlobServiceClient client = this.client(runContext);
 
-        BlobContainerClient fromContainerClient = client.getBlobContainerClient(runContext.render(this.from.container));
-        BlobClient fromBlobClient = fromContainerClient.getBlobClient(runContext.render(this.from.name));
+        BlobContainerClient fromContainerClient = client.getBlobContainerClient(runContext.render(this.from.container).as(String.class).orElse(null));
+        BlobClient fromBlobClient = fromContainerClient.getBlobClient(runContext.render(this.from.name).as(String.class).orElseThrow());
 
-        BlobContainerClient toContainerClient = client.getBlobContainerClient(runContext.render(this.to.container));
-        BlobClient toBlobClient = toContainerClient.getBlobClient(runContext.render(this.to.name));
+        BlobContainerClient toContainerClient = client.getBlobContainerClient(runContext.render(this.to.container).as(String.class).orElse(null));
+        BlobClient toBlobClient = toContainerClient.getBlobClient(runContext.render(this.to.name).as(String.class).orElseThrow());
 
         OffsetDateTime expiryTime = OffsetDateTime.now().plusMinutes(15);
         BlobSasPermission permission = new BlobSasPermission().setReadPermission(true);
@@ -87,7 +87,7 @@ public class Copy extends AbstractBlobStorageWithSas implements RunnableTask<Cop
 
         toBlobClient.copyFromUrl(fromBlobClient.getBlobUrl() + "?" + fromBlobClient.generateSas(values));
 
-        if (this.delete) {
+        if (runContext.render(this.delete).as(Boolean.class).orElseThrow()) {
             Delete.builder()
                 .id(this.id)
                 .type(Delete.class.getName())
@@ -116,16 +116,14 @@ public class Copy extends AbstractBlobStorageWithSas implements RunnableTask<Cop
         @Schema(
             title = "The blob container."
         )
-        @PluginProperty(dynamic = true)
         @NotNull
-        String container;
+        Property<String> container;
 
         @Schema(
             title = "The full blob path on the container."
         )
-        @PluginProperty(dynamic = true)
         @NotNull
-        String name;
+        Property<String> name;
     }
     @SuperBuilder
     @Getter

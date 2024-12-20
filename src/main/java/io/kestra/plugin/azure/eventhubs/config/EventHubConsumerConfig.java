@@ -24,15 +24,15 @@ public final class EventHubConsumerConfig extends EventHubClientConfig<EventHubC
     }
 
     public String consumerGroup() throws IllegalVariableEvaluationException {
-        return runContext.render(plugin.getConsumerGroup());
+        return runContext.render(plugin.getConsumerGroup()).as(String.class).orElse(null);
     }
 
-    public EventPosition partitionStartingPosition() {
-        StartingPosition partitionStartingPosition = plugin.getPartitionStartingPosition();
+    public EventPosition partitionStartingPosition() throws IllegalVariableEvaluationException {
+        StartingPosition partitionStartingPosition = runContext.render(plugin.getPartitionStartingPosition()).as(StartingPosition.class).orElse(null);
         return switch (partitionStartingPosition) {
             case EARLIEST -> new EventPositionStrategy.Earliest().get();
             case LATEST -> new EventPositionStrategy.Latest().get();
-            case INSTANT -> new EventPositionStrategy.EnqueuedTime(plugin.getEnqueueTime()).get();
+            case INSTANT -> new EventPositionStrategy.EnqueuedTime(runContext.render(plugin.getEnqueueTime()).as(String.class).orElse(null)).get();
         };
     }
 }

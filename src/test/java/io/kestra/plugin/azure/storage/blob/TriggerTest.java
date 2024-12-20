@@ -1,6 +1,7 @@
 package io.kestra.plugin.azure.storage.blob;
 
 import io.kestra.core.models.executions.Execution;
+import io.kestra.core.models.property.Property;
 import io.kestra.core.queues.QueueFactoryInterface;
 import io.kestra.core.queues.QueueInterface;
 import io.kestra.core.repositories.LocalFlowRepositoryLoader;
@@ -86,7 +87,7 @@ class TriggerTest extends AbstractTest {
             assertThat(trigger.size(), is(2));
 
             List listTask = list()
-                .prefix(toUploadDir)
+                .prefix(Property.of(toUploadDir))
                 .build();
             int remainingFilesOnBucket = listTask.run(runContext(listTask))
                 .getBlobs()
@@ -141,7 +142,7 @@ class TriggerTest extends AbstractTest {
             assertThat(trigger.size(), is(2));
 
             List listTask = list()
-                .prefix("trigger/none-action-storage-listen")
+                .prefix(Property.of("trigger/none-action-storage-listen"))
                 .build();
             int remainingFilesOnBucket = listTask.run(runContext(listTask))
                 .getBlobs()

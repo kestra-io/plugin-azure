@@ -7,6 +7,7 @@ import io.kestra.core.models.annotations.Example;
 import io.kestra.core.models.annotations.Plugin;
 import io.kestra.core.models.annotations.PluginProperty;
 import io.kestra.core.models.executions.metrics.Counter;
+import io.kestra.core.models.property.Property;
 import io.kestra.core.models.tasks.RunnableTask;
 import io.kestra.core.runners.RunContext;
 import io.kestra.plugin.azure.storage.blob.abstracts.AbstractBlobStorageWithSas;
@@ -59,16 +60,16 @@ import static io.kestra.core.utils.Rethrow.throwConsumer;
     title = "Delete a list of keys from the Azure Blob Storage."
 )
 public class DeleteList extends AbstractBlobStorageWithSas implements RunnableTask<DeleteList.Output>, ListInterface, AbstractBlobStorageContainerInterface {
-    private String container;
+    private Property<String> container;
 
-    private String prefix;
+    private Property<String> prefix;
 
-    protected String regexp;
+    protected Property<String> regexp;
 
-    protected String delimiter;
+    protected Property<String> delimiter;
 
     @Builder.Default
-    private Filter filter = Filter.FILES;
+    private Property<Filter> filter = Property.of(Filter.FILES);
 
     @Min(2)
     @Schema(
@@ -80,16 +81,15 @@ public class DeleteList extends AbstractBlobStorageWithSas implements RunnableTa
     @Schema(
         title = "Whether to raise an error if the file is not found."
     )
-    @PluginProperty(dynamic = true)
     @Builder.Default
-    private final Boolean errorOnEmpty = false;
+    private final Property<Boolean> errorOnEmpty = Property.of(false);
 
     @Override
     public Output run(RunContext runContext) throws Exception {
         Logger logger = runContext.logger();
 
         BlobServiceClient client = this.client(runContext);
-        BlobContainerClient containerClient = client.getBlobContainerClient(runContext.render(this.container));
+        BlobContainerClient containerClient = client.getBlobContainerClient(runContext.render(this.container).as(String.class).orElse(null));
 
         Flux<Blob> flowable = Flux
             .create(throwConsumer(emitter -> {
@@ -120,11 +120,11 @@ public class DeleteList extends AbstractBlobStorageWithSas implements RunnableTa
         runContext.metric(Counter.of("count", finalResult.getLeft()));
         runContext.metric(Counter.of("size", finalResult.getRight()));
 
-        if (errorOnEmpty && finalResult.getLeft() == 0) {
+        if (runContext.render(errorOnEmpty).as(Boolean.class).orElseThrow() && finalResult.getLeft() == 0) {
             throw new NoSuchElementException("Unable to find any files to delete on " +
-                runContext.render(this.container) + " " +
-                "with regexp='" + runContext.render(this.regexp) + "', " +
-                "prefix='" + runContext.render(this.prefix) + "'"
+                runContext.render(this.container).as(String.class).orElse(null) + " " +
+                "with regexp='" + runContext.render(this.regexp).as(String.class).orElse(null) + "', " +
+                "prefix='" + runContext.render(this.prefix).as(String.class).orElse(null) + "'"
             );
         }
 

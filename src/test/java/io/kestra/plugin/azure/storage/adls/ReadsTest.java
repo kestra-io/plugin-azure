@@ -1,5 +1,6 @@
 package io.kestra.plugin.azure.storage.adls;
 
+import io.kestra.core.models.property.Property;
 import io.kestra.core.utils.IdUtils;
 import io.kestra.plugin.azure.storage.blob.List;
 import org.junit.jupiter.api.Test;
@@ -19,10 +20,10 @@ class ReadsTest extends AbstractTest {
         Reads task = Reads.builder()
             .id(ReadsTest.class.getSimpleName())
             .type(List.class.getName())
-            .endpoint(this.adlsEndpoint)
-            .connectionString(this.connectionString)
-            .fileSystem(this.fileSystem)
-            .directoryPath("adls/azure/" + prefix + "/")
+            .endpoint(Property.of(this.adlsEndpoint))
+            .connectionString(Property.of(connectionString))
+            .fileSystem(Property.of(this.fileSystem))
+            .directoryPath(Property.of("adls/azure/" + prefix + "/"))
             .build();
 
         Reads.Output run = task.run(runContext(task));

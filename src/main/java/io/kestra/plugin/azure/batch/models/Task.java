@@ -4,6 +4,7 @@ import com.microsoft.azure.batch.protocol.models.EnvironmentSetting;
 import com.microsoft.azure.batch.protocol.models.TaskAddParameter;
 import io.kestra.core.exceptions.IllegalVariableEvaluationException;
 import io.kestra.core.models.annotations.PluginProperty;
+import io.kestra.core.models.property.Property;
 import io.kestra.core.runners.RunContext;
 import io.kestra.core.utils.IdUtils;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -70,9 +71,8 @@ public class Task {
             "use the Batch provided [environment variable](https://docs.microsoft.com/en-us/azure/batch/batch-compute-node-environment-variables).\n\n" +
             "Command will be passed as `/bin/sh -c \"command\"` by default."
     )
-    @PluginProperty(dynamic = true)
     @NotNull
-    List<String> commands;
+    Property<List<String>> commands;
 
     @Schema(
         title = "The settings for the container under which the Task runs.",
@@ -94,8 +94,7 @@ public class Task {
             "If you add a file with `[\"first\"]`, you can use the special variable `echo 1 >> {{ outputFiles.first }}`" +
             "on this task, and reference this file on others tasks using `{{ outputs.taskId.outputFiles.first }}`."
     )
-    @PluginProperty
-    List<String> outputFiles;
+    Property<List<String>> outputFiles;
 
     @Schema(
         title = "Output directories list that will be uploaded to the internal storage.",
@@ -105,8 +104,7 @@ public class Task {
             "and `echo 2 >> {{ outputDirs.myDir }}/file2.txt`, and both files will be uploaded to the internal storage. " +
             "Then, you can use them on other tasks using `{{ outputs.taskId.files['myDir/file1.txt'] }}`"
     )
-    @PluginProperty
-    List<String> outputDirs;
+    Property<List<String>> outputDirs;
 
     @Schema(
         title = "A list of files that the Batch service will download to the Compute Node before running the command line.",
@@ -129,13 +127,12 @@ public class Task {
     @Schema(
         title = "A list of environment variable settings for the Task."
     )
-    @PluginProperty(dynamic = true)
-    Map<String, String> environments;
+    Property<Map<String, String>> environments;
 
     @Schema(
         title = "The execution constraints that apply to this Task."
     )
-    @PluginProperty(dynamic = false)
+    @PluginProperty(dynamic = true)
     TaskConstraints constraints;
 
     @Schema(
@@ -143,8 +140,7 @@ public class Task {
         description = "The default is 1. A Task can only be scheduled to run on a compute node if the node has enough " +
             "free scheduling slots available. For multi-instance Tasks, this must be 1."
     )
-    @PluginProperty(dynamic = false)
-    Integer requiredSlots;
+    Property<Integer> requiredSlots;
 
     public TaskAddParameter to(RunContext runContext) throws IllegalVariableEvaluationException {
         return new TaskAddParameter()
@@ -152,7 +148,7 @@ public class Task {
             .withDisplayName(runContext.render(this.displayName))
             .withCommandLine(runContext.render(this.commandLine(runContext)))
             .withContainerSettings(this.containerSettings == null ? null : this.containerSettings.to(runContext))
-            .withEnvironmentSettings(this.environments == null ? null : this.environments
+            .withEnvironmentSettings(this.environments == null ? null : runContext.render(this.environments).asMap(String.class, String.class)
                 .entrySet()
                 .stream()
                 .map(throwFunction(e -> new EnvironmentSetting()
@@ -171,7 +167,7 @@ public class Task {
                 .map(throwFunction(s -> s.to(runContext)))
                 .collect(Collectors.toList()))
             .withConstraints(this.constraints == null ? null : this.constraints.to(runContext))
-            .withRequiredSlots(this.requiredSlots)
+            .withRequiredSlots(runContext.render(this.requiredSlots).as(Integer.class).orElse(null))
         ;
     }
 
@@ -180,7 +176,7 @@ public class Task {
         List<String> renderer = new ArrayList<>();
 
 
-        for (String command : this.commands) {
+        for (String command : runContext.render(this.commands).asList(String.class)) {
             renderer.add(runContext
                 .render(command)
                 .replace("\\", "\\\\")

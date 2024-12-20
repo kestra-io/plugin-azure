@@ -1,5 +1,6 @@
 package io.kestra.plugin.azure.cli;
 
+import io.kestra.core.models.property.Property;
 import io.kestra.core.runners.RunContext;
 import io.kestra.core.runners.RunContextFactory;
 import io.kestra.core.utils.IdUtils;
@@ -37,7 +38,7 @@ public class AzCLITest {
         AzCLI execute = AzCLI.builder()
             .id(IdUtils.create())
             .type(AzCLI.class.getName())
-            .env(Map.of("{{ inputs.envKey }}", "{{ inputs.envValue }}"))
+            .env(Property.of(Map.of(envKey, envValue)))
             .commands(List.of(
                 "echo \"::{\\\"outputs\\\":{\\\"{{ inputs.outputName }}\\\":\\\"$" + envKey + "\\\"}}::\""
             ))
@@ -58,10 +59,10 @@ public class AzCLITest {
         execute = AzCLI.builder()
             .id(IdUtils.create())
             .type(AzCLI.class.getName())
-            .username("{{ inputs.myUser }}")
-            .password("{{ inputs.myPassword }}")
-            .tenant("{{ inputs.myTenant }}")
-            .servicePrincipal(true)
+            .username(new Property<>("{{ inputs.myUser }}"))
+            .password(new Property<>("{{ inputs.myPassword }}"))
+            .tenant(new Property<>("{{ inputs.myTenant }}"))
+            .servicePrincipal(Property.of(true))
             .commands(List.of("az keyvault list"))
             .build();
 

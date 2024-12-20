@@ -1,5 +1,6 @@
 package io.kestra.plugin.azure.storage.blob;
 
+import io.kestra.core.models.property.Property;
 import io.kestra.core.utils.IdUtils;
 import io.kestra.plugin.azure.storage.blob.abstracts.ActionInterface;
 import org.junit.jupiter.api.Test;
@@ -19,11 +20,11 @@ class DownloadsTest extends AbstractTest {
         Downloads task = Downloads.builder()
             .id(DownloadsTest.class.getSimpleName())
             .type(Downloads.class.getName())
-            .endpoint(this.storageEndpoint)
-            .connectionString(this.connectionString)
-            .container(this.container)
-            .prefix("/tasks/" + prefix + "/abs/")
-            .action(ActionInterface.Action.DELETE)
+            .endpoint(Property.of(this.storageEndpoint))
+            .connectionString(Property.of(connectionString))
+            .container(Property.of(this.container))
+            .prefix(Property.of("/tasks/" + prefix + "/abs/"))
+            .action(Property.of(ActionInterface.Action.DELETE))
             .build();
 
         Downloads.Output run = task.run(runContext(task));
@@ -32,7 +33,7 @@ class DownloadsTest extends AbstractTest {
         assertThat(run.getBlobs().get(0).getUri().toString(), endsWith(".yml"));
         assertThat(run.getOutputFiles().size(), is(2));
 
-        List list = list().prefix("/tasks/" + prefix + "/abs/").build();
+        List list = list().prefix(Property.of("/tasks/" + prefix + "/abs/")).build();
         List.Output listOutput = list.run(runContext(list));
         assertThat(listOutput.getBlobs().size(), is(0));
     }
@@ -47,14 +48,14 @@ class DownloadsTest extends AbstractTest {
         Downloads task = Downloads.builder()
             .id(DownloadsTest.class.getSimpleName())
             .type(Downloads.class.getName())
-            .endpoint(this.storageEndpoint)
-            .connectionString(this.connectionString)
-            .container(this.container)
-            .prefix("/tasks/" + prefix + "/abs-from/")
-            .action(ActionInterface.Action.MOVE)
+            .endpoint(Property.of(this.storageEndpoint))
+            .connectionString(Property.of(connectionString))
+            .container(Property.of(this.container))
+            .prefix(Property.of("/tasks/" + prefix + "/abs-from/"))
+            .action(Property.of(ActionInterface.Action.MOVE))
             .moveTo(Copy.CopyObject.builder()
-                .container(this.container)
-                .name("/tasks/" + prefix + "/blobs-move")
+                .container(Property.of(this.container))
+                .name(Property.of("/tasks/" + prefix + "/blobs-move"))
                 .build()
             )
             .build();
@@ -64,11 +65,11 @@ class DownloadsTest extends AbstractTest {
         assertThat(run.getBlobs().size(), is(2));
         assertThat(run.getOutputFiles().size(), is(2));
 
-        List list = list().prefix("/tasks/" + prefix + "/blobs-from/").build();
+        List list = list().prefix(Property.of("/tasks/" + prefix + "/blobs-from/")).build();
         List.Output listOutput = list.run(runContext(list));
         assertThat(listOutput.getBlobs().size(), is(0));
 
-        list = list().prefix("/tasks/" + prefix + "/blobs-move").build();
+        list = list().prefix(Property.of("/tasks/" + prefix + "/blobs-move")).build();
         listOutput = list.run(runContext(list));
         assertThat(listOutput.getBlobs().size(), is(2));
     }

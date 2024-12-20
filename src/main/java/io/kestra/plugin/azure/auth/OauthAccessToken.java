@@ -53,7 +53,7 @@ public class OauthAccessToken extends AbstractAzureIdentityConnection implements
         TokenCredential credential = this.credentials(runContext);
 
         TokenRequestContext requestContext = new TokenRequestContext();
-        requestContext.setScopes(scopes.asList(runContext, String.class));
+        requestContext.setScopes(runContext.render(scopes).asList(String.class));
 
         runContext.logger().info("Retrieve access token.");
         AccessToken accessToken = credential.getTokenSync(requestContext);

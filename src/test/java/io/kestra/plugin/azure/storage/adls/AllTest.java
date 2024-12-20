@@ -2,6 +2,7 @@ package io.kestra.plugin.azure.storage.adls;
 
 import com.azure.storage.file.datalake.models.DataLakeStorageException;
 import com.google.common.io.CharStreams;
+import io.kestra.core.models.property.Property;
 import io.kestra.core.utils.IdUtils;
 import org.junit.jupiter.api.Test;
 
@@ -26,10 +27,10 @@ class AllTest extends AbstractTest {
         List list = List.builder()
             .id(AllTest.class.getSimpleName())
             .type(io.kestra.plugin.azure.storage.blob.Upload.class.getName())
-            .endpoint(this.adlsEndpoint)
-            .connectionString(connectionString)
-            .fileSystem(this.fileSystem)
-            .directoryPath("adls/azure/" + prefix  + "/")
+            .endpoint(Property.of(this.adlsEndpoint))
+            .connectionString(Property.of(connectionString))
+            .fileSystem(Property.of(this.fileSystem))
+            .directoryPath(Property.of("adls/azure/" + prefix  + "/"))
             .build();
 
         List.Output listOutput = list.run(runContext(list));
@@ -40,10 +41,10 @@ class AllTest extends AbstractTest {
         Read download = Read.builder()
             .id(AllTest.class.getSimpleName())
             .type(Read.class.getName())
-            .endpoint(this.adlsEndpoint)
-            .connectionString(connectionString)
-            .fileSystem(this.fileSystem)
-            .filePath(upload.getFile().getName())
+            .endpoint(Property.of(this.adlsEndpoint))
+            .connectionString(Property.of(connectionString))
+            .fileSystem(Property.of(this.fileSystem))
+            .filePath(Property.of(upload.getFile().getName()))
             .build();
 
         Read.Output run = download.run(runContext(download));
@@ -59,10 +60,10 @@ class AllTest extends AbstractTest {
         Delete delete = Delete.builder()
             .id(AllTest.class.getSimpleName())
             .type(Delete.class.getName())
-            .endpoint(this.adlsEndpoint)
-            .connectionString(connectionString)
-            .fileSystem(this.fileSystem)
-            .filePath(upload.getFile().getName())
+            .endpoint(Property.of(this.adlsEndpoint))
+            .connectionString(Property.of(connectionString))
+            .fileSystem(Property.of(this.fileSystem))
+            .filePath(Property.of(upload.getFile().getName()))
             .build();
 
         Delete.Output deleteOutput = delete.run(runContext(delete));

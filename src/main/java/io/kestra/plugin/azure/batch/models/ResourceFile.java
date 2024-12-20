@@ -2,6 +2,7 @@ package io.kestra.plugin.azure.batch.models;
 
 import io.kestra.core.exceptions.IllegalVariableEvaluationException;
 import io.kestra.core.models.annotations.PluginProperty;
+import io.kestra.core.models.property.Property;
 import io.kestra.core.runners.RunContext;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Builder;
@@ -15,8 +16,7 @@ public class ResourceFile {
         description = "The `autoStorageContainerName`, `storageContainerUrl` and `httpUrl` properties are mutually exclusive, " +
             "and one of them must be specified."
     )
-    @PluginProperty(dynamic = true)
-    String autoStorageContainerName;
+    Property<String> autoStorageContainerName;
 
     @Schema(
         title = "The URL of the blob container within Azure Blob Storage.",
@@ -26,8 +26,7 @@ public class ResourceFile {
             "granting read and list permissions on the container, use a managed identity with read and list " +
             "permissions, or set the ACL for the container to allow public access."
     )
-    @PluginProperty(dynamic = true)
-    String storageContainerUrl;
+    Property<String> storageContainerUrl;
 
     @Schema(
         title = "The URL of the file to download.",
@@ -37,8 +36,7 @@ public class ResourceFile {
             "Signature (SAS) granting read permissions on the blob, use a managed identity with read permission, or " +
             "set the ACL for the blob or its container to allow public access."
     )
-    @PluginProperty(dynamic = true)
-    String httpUrl;
+    Property<String> httpUrl;
 
     @Schema(
         title = "The blob prefix to use when downloading blobs from the Azure Storage container.",
@@ -46,8 +44,7 @@ public class ResourceFile {
             "valid only when `autoStorageContainerName` or `storageContainerUrl` is used. This prefix can be a partial " +
             "file name or a subdirectory. If a prefix is not specified, all the files in the container will be downloaded."
     )
-    @PluginProperty(dynamic = true)
-    String blobPrefix;
+    Property<String> blobPrefix;
 
     @Schema(
         title = "The location on the Compute Node to which to download the file(s), relative to the Task's working directory.",
@@ -58,8 +55,7 @@ public class ResourceFile {
             "input data will be retained in full and appended to the specified `filePath` directory. The specified " +
             "relative path cannot break out of the Task's working directory (for example by using `..`)."
     )
-    @PluginProperty(dynamic = true)
-    String filePath;
+    Property<String> filePath;
 
     @Schema(
         title = "The file permission mode attribute in octal format.",
@@ -67,8 +63,7 @@ public class ResourceFile {
             "if it is specified for a `resourceFile` which will be downloaded to a Windows Compute Node. If this property " +
             "is not specified for a Linux Compute Node, then a default value of `0770` is applied to the file."
     )
-    @PluginProperty(dynamic = true)
-    String fileMode;
+    Property<String> fileMode;
 
     @Schema(
         title = "The reference to the user assigned identity to use to access Azure Blob Storage specified by `storageContainerUrl` or `httpUrl`."
@@ -78,12 +73,12 @@ public class ResourceFile {
 
     public com.microsoft.azure.batch.protocol.models.ResourceFile to(RunContext runContext) throws IllegalVariableEvaluationException {
         return new com.microsoft.azure.batch.protocol.models.ResourceFile()
-            .withAutoStorageContainerName(runContext.render(this.autoStorageContainerName))
-            .withStorageContainerUrl(runContext.render(this.storageContainerUrl))
-            .withHttpUrl(runContext.render(this.httpUrl))
-            .withBlobPrefix(runContext.render(this.blobPrefix))
-            .withFilePath(runContext.render(this.filePath))
-            .withFileMode(runContext.render(this.fileMode))
+            .withAutoStorageContainerName(runContext.render(this.autoStorageContainerName).as(String.class).orElse(null))
+            .withStorageContainerUrl(runContext.render(this.storageContainerUrl).as(String.class).orElse(null))
+            .withHttpUrl(runContext.render(this.httpUrl).as(String.class).orElse(null))
+            .withBlobPrefix(runContext.render(this.blobPrefix).as(String.class).orElse(null))
+            .withFilePath(runContext.render(this.filePath).as(String.class).orElse(null))
+            .withFileMode(runContext.render(this.fileMode).as(String.class).orElse(null))
             .withIdentityReference(identityReference == null ? null : identityReference.to(runContext));
     }
 }

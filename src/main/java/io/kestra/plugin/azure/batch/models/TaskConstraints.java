@@ -1,6 +1,8 @@
 package io.kestra.plugin.azure.batch.models;
 
+import io.kestra.core.exceptions.IllegalVariableEvaluationException;
 import io.kestra.core.models.annotations.PluginProperty;
+import io.kestra.core.models.property.Property;
 import io.kestra.core.runners.RunContext;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Builder;
@@ -17,8 +19,7 @@ public class TaskConstraints {
         description = "If the Task does not complete within the time limit, the Batch service terminates it. " +
             "If this is not specified, there is no time limit on how long the Task may run."
     )
-    @PluginProperty(dynamic = false)
-    Duration maxWallClockTime;
+    Property<Duration> maxWallClockTime;
 
     @Schema(
         title = "The minimum time to retain the Task directory on the Compute Node where it ran, from the time it completes execution.",
@@ -26,8 +27,7 @@ public class TaskConstraints {
             "The default is 7 days, i.e. the Task directory will be retained for 7 days unless " +
             "the Compute Node is removed or the Job is deleted."
     )
-    @PluginProperty(dynamic = false)
-    Duration retentionTime;
+    Property<Duration> retentionTime;
 
     @Schema(
         title = "The maximum number of times the Task may be retried.",
@@ -38,13 +38,12 @@ public class TaskConstraints {
             " Batch service does not retry the Task after the first attempt. If the maximum retry count is -1, " +
             "the Batch service retries the Task without limit."
     )
-    @PluginProperty(dynamic = false)
-    Integer maxTaskRetryCount;
+    Property<Integer> maxTaskRetryCount;
 
-    public com.microsoft.azure.batch.protocol.models.TaskConstraints to(RunContext runContext) {
+    public com.microsoft.azure.batch.protocol.models.TaskConstraints to(RunContext runContext) throws IllegalVariableEvaluationException {
         return new com.microsoft.azure.batch.protocol.models.TaskConstraints()
-            .withMaxWallClockTime(this.maxWallClockTime == null ? null : Period.parse(this.maxWallClockTime.toString()))
-            .withRetentionTime(this.retentionTime == null ? null : Period.parse(this.retentionTime.toString()))
-            .withMaxTaskRetryCount(this.maxTaskRetryCount);
+            .withMaxWallClockTime(this.maxWallClockTime == null ? null : Period.parse(runContext.render(this.maxWallClockTime).as(Duration.class).orElseThrow().toString()))
+            .withRetentionTime(this.retentionTime == null ? null : Period.parse(runContext.render(this.retentionTime).as(Duration.class).orElseThrow().toString()))
+            .withMaxTaskRetryCount(runContext.render(this.maxTaskRetryCount).as(Integer.class).orElse(null));
     }
 }

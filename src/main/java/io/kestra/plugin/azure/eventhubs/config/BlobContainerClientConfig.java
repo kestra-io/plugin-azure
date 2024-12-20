@@ -22,6 +22,6 @@ public class BlobContainerClientConfig extends AzureClientConfig<BlobContainerCl
     }
 
     public String containerName() throws IllegalVariableEvaluationException {
-        return runContext.render(plugin.getContainerName());
+        return runContext.render(plugin.getContainerName()).as(String.class).orElse(null);
     }
 }

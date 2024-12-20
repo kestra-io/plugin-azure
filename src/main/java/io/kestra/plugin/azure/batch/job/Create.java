@@ -5,11 +5,13 @@ import com.microsoft.azure.PagedList;
 import com.microsoft.azure.batch.BatchClient;
 import com.microsoft.azure.batch.DetailLevel;
 import com.microsoft.azure.batch.protocol.models.*;
+import io.kestra.core.exceptions.IllegalVariableEvaluationException;
 import io.kestra.core.models.annotations.Example;
 import io.kestra.core.models.annotations.Plugin;
 import io.kestra.core.models.annotations.PluginProperty;
 import io.kestra.core.models.executions.metrics.Counter;
 import io.kestra.core.models.executions.metrics.Timer;
+import io.kestra.core.models.property.Property;
 import io.kestra.core.models.tasks.runners.AbstractLogConsumer;
 import io.kestra.core.models.tasks.runners.DefaultLogConsumer;
 import io.kestra.core.models.tasks.RunnableTask;
@@ -37,6 +39,8 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
+
+import static io.kestra.core.utils.Rethrow.*;
 
 @SuperBuilder
 @ToString
@@ -66,22 +70,22 @@ import java.util.stream.Collectors;
                           - 'echo t1=$ENV_STRING'
                         environments:
                           ENV_STRING: "{{ inputs.first }}"
-                    
+
                       - id: echo
                         commands:
                           - 'echo t2={{ inputs.second }} 1>&2'
-                    
+
                       - id: for
                         commands:
                           -  'for i in $(seq 10); do echo t3=$i; done'
-                    
+
                       - id: vars
                         commands:
                           - echo '::{"outputs":{"extract":"'$(cat files/in/in.txt)'"}::'
                         resourceFiles:
                           - httpUrl: https://unittestkt.blob.core.windows.net/tasks/***?sv=***&se=***&sr=***&sp=***&sig=***
                           filePath: files/in/in.txt
-                    
+
                       - id: output
                         commands:
                           - 'mkdir -p outs/child/sub'
@@ -128,9 +132,8 @@ public class Create extends AbstractBatch implements RunnableTask<Create.Output>
     @Schema(
         title = "The ID of the pool."
     )
-    @PluginProperty(dynamic = true)
     @NotNull
-    private String poolId;
+    private Property<String> poolId;
 
     @Schema(
         title = "The job to create."
@@ -150,31 +153,26 @@ public class Create extends AbstractBatch implements RunnableTask<Create.Output>
         title = "The maximum total wait duration.",
         description = "If null, there is no timeout and the task is delegated to Azure Batch."
     )
-    @PluginProperty
-    private Duration maxDuration;
+    private Property<Duration> maxDuration;
 
     @Schema(
         title = "The frequency with which the task checks whether the job is completed."
     )
     @Builder.Default
-    @PluginProperty
-    private final Duration completionCheckInterval = Duration.ofSeconds(1);
+    private final Property<Duration> completionCheckInterval = Property.of(Duration.ofSeconds(1));
 
     @Schema(
         title = "Whether the job should be deleted upon completion."
     )
     @NotNull
     @Builder.Default
-    @PluginProperty
-    private final Boolean delete = true;
+    private final Property<Boolean> delete = Property.of(true);
 
     @Schema(
         title = "Whether to reconnect to the current job if it already exists."
     )
     @NotNull
-    @Builder.Default
-    @PluginProperty
-    private final Boolean resume = true;
+    private final Property<Boolean> resume = Property.of(true);
 
     @JsonIgnore
     private AbstractLogConsumer logConsumer;
@@ -204,7 +202,7 @@ public class Create extends AbstractBatch implements RunnableTask<Create.Output>
 
         Map<String, Integer> tasksMapping = new HashMap<>();
         String jobId = null;
-        if (Boolean.TRUE.equals(resume)) {
+        if (Boolean.TRUE.equals(runContext.render(resume).as(Boolean.class).orElseThrow())) {
             String baseJobName = ScriptService.jobName(runContext);
             baseJobName = baseJobName.substring(0, baseJobName.lastIndexOf('-') + 1);
             var cloudJob = BatchService.getExistingJob(runContext, client, baseJobName);
@@ -226,7 +224,7 @@ public class Create extends AbstractBatch implements RunnableTask<Create.Output>
             if (jobId == null) {
                 // create job
                 PoolInformation poolInfo = new PoolInformation()
-                    .withPoolId(runContext.render(poolId));
+                    .withPoolId(runContext.render(poolId).as(String.class).orElseThrow());
 
                 final JobAddParameter job = this.job.to(runContext, poolInfo);
                 jobId = job.id();
@@ -255,9 +253,21 @@ public class Create extends AbstractBatch implements RunnableTask<Create.Output>
             }
 
             String finalJobId = jobId;
-            this.killable.set(() -> safelyKillJobTask(runContext, client, finalJobId));
+            this.killable.set(() -> {
+                try {
+                    safelyKillJobTask(runContext, client, finalJobId);
+                } catch (IllegalVariableEvaluationException e) {
+                    throw new RuntimeException(e);
+                }
+            });
 
-            TaskService.waitForTasksToComplete(runContext, client, jobId, maxDuration, completionCheckInterval);
+            TaskService.waitForTasksToComplete(
+                runContext,
+                client,
+                jobId,
+                runContext.render(maxDuration).as(Duration.class).orElseThrow(),
+                runContext.render(completionCheckInterval).as(Duration.class).orElseThrow()
+            );
 
             // get tasks result
             List<CloudTask> results = client.taskOperations().listTasks(jobId);
@@ -308,7 +318,7 @@ public class Create extends AbstractBatch implements RunnableTask<Create.Output>
                 Task currentTask = this.tasks.get(tasksMapping.get(task.id()));
                 String remoteWorkingDir = "wd/";
                 if (currentTask.getOutputFiles() != null) {
-                    for (String s : currentTask.getOutputFiles()) {
+                    for (String s : runContext.render(currentTask.getOutputFiles()).asList(String.class)) {
                         File file = TaskService.readRemoteFile(runContext, client, jobId, task, remoteWorkingDir + s, s, true);
 
                         // As this task is used in the task runner, this processing is already done by the CommandsWrapper so we need some guard
@@ -322,7 +332,7 @@ public class Create extends AbstractBatch implements RunnableTask<Create.Output>
                     PagedList<NodeFile> nodeFiles = client.fileOperations()
                         .listFilesFromTask(jobId, task.id(), true, new DetailLevel.Builder().build());
 
-                    for (String s : currentTask.getOutputDirs()) {
+                    for (String s : runContext.render(currentTask.getOutputDirs()).asList(String.class)) {
                         for (NodeFile nodeFile : nodeFiles) {
                             if (nodeFile.name().startsWith(remoteWorkingDir + s) && !nodeFile.isDirectory() && !nodeFile.name().endsWith("/" + DIRECTORY_MARKER)) {
                                 String relativeFileName = nodeFile.name().substring(remoteWorkingDir.length());
@@ -363,8 +373,8 @@ public class Create extends AbstractBatch implements RunnableTask<Create.Output>
 
     private void safelyKillJobTask(final RunContext runContext,
                                    final BatchClient client,
-                                   final String jobId) {
-        if (Boolean.TRUE.equals(delete)) {
+                                   final String jobId) throws IllegalVariableEvaluationException {
+        if (Boolean.TRUE.equals(runContext.render(delete).as(Boolean.class).orElseThrow())) {
             try {
                 client.jobOperations().deleteJob(jobId);
                 runContext.logger().debug("Job deleted: {}", jobId);

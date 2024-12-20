@@ -8,6 +8,7 @@ import io.kestra.core.exceptions.IllegalVariableEvaluationException;
 import io.kestra.core.models.annotations.Example;
 import io.kestra.core.models.annotations.Plugin;
 import io.kestra.core.models.executions.metrics.Counter;
+import io.kestra.core.models.property.Property;
 import io.kestra.core.models.tasks.RunnableTask;
 import io.kestra.core.runners.RunContext;
 import io.kestra.core.serializers.FileSerde;
@@ -38,7 +39,7 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.net.URI;
 import java.time.Duration;
-import java.util.Collections;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -52,7 +53,7 @@ import java.util.concurrent.atomic.AtomicReference;
         code = """
             id: azure_eventhubs_consume_data_events
             namespace: company.team
-            
+
             tasks:
               - id: consume_from_eventhub
                 type: io.kestra.plugin.azure.eventhubs.Consume
@@ -79,30 +80,30 @@ import java.util.concurrent.atomic.AtomicReference;
 public class Consume extends AbstractEventHubTask implements EventHubConsumerInterface, EventHubBatchConsumerInterface, RunnableTask<Consume.Output> {
     // TASK'S PARAMETERS
     @Builder.Default
-    private Serdes bodyDeserializer = Serdes.STRING;
+    private Property<Serdes> bodyDeserializer = Property.of(Serdes.STRING);
 
     @Builder.Default
-    private Map<String, Object> bodyDeserializerProperties = Collections.emptyMap();
+    private Property<Map<String, Object>> bodyDeserializerProperties = Property.of(new HashMap<>());
 
     @Builder.Default
-    private String consumerGroup = "$Default";
+    private Property<String> consumerGroup = Property.of("$Default");
 
     @Builder.Default
-    private StartingPosition partitionStartingPosition = StartingPosition.EARLIEST;
+    private Property<StartingPosition> partitionStartingPosition = Property.of(StartingPosition.EARLIEST);
 
-    private String enqueueTime;
-
-    @Builder.Default
-    private Integer maxBatchSizePerPartition = 50;
+    private Property<String> enqueueTime;
 
     @Builder.Default
-    private Duration maxWaitTimePerPartition = Duration.ofSeconds(5);
+    private Property<Integer> maxBatchSizePerPartition = Property.of(50);
 
     @Builder.Default
-    private Duration maxDuration = Duration.ofSeconds(10);
+    private Property<Duration> maxWaitTimePerPartition = Property.of(Duration.ofSeconds(5));
 
     @Builder.Default
-    private Map<String, String> checkpointStoreProperties = Collections.emptyMap();
+    private Property<Duration> maxDuration = Property.of(Duration.ofSeconds(10));
+
+    @Builder.Default
+    private Property<Map<String, String>> checkpointStoreProperties = Property.of(new HashMap<>());
 
     // SERVICES
     @Getter(AccessLevel.NONE)
@@ -128,7 +129,7 @@ public class Consume extends AbstractEventHubTask implements EventHubConsumerInt
     <T extends EventHubConsumerInterface & EventHubBatchConsumerInterface> Output run(RunContext runContext, T task) throws Exception {
 
         final EventHubConsumerService service = newEventHubConsumerService(runContext, task);
-        final EventDataObjectConverter converter = newConverter(task);
+        final EventDataObjectConverter converter = newConverter(task, runContext);
 
         File tempFile = runContext.workingDir().createTempFile(".ion").toFile();
         try (
@@ -140,9 +141,9 @@ public class Consume extends AbstractEventHubTask implements EventHubConsumerInt
             Logger contextLogger = runContext.logger();
 
             final ConsumerContext consumerContext = new ConsumerContext(
-                task.getMaxBatchSizePerPartition(),
-                task.getMaxWaitTimePerPartition(),
-                task.getMaxDuration(),
+                runContext.render(task.getMaxBatchSizePerPartition()).as(Integer.class).orElseThrow(),
+                runContext.render(task.getMaxWaitTimePerPartition()).as(Duration.class).orElse(null),
+                runContext.render(task.getMaxDuration()).as(Duration.class).orElse(null),
                 converter,
                 contextLogger
             );
@@ -195,9 +196,9 @@ public class Consume extends AbstractEventHubTask implements EventHubConsumerInt
         }
     }
 
-    public EventDataObjectConverter newConverter(final EventHubConsumerInterface task) {
-        Serdes serdes = task.getBodyDeserializer();
-        Serde serde = serdes.create(task.getBodyDeserializerProperties());
+    public EventDataObjectConverter newConverter(final EventHubConsumerInterface task, RunContext runContext) throws IllegalVariableEvaluationException {
+        Serdes serdes = runContext.render(task.getBodyDeserializer()).as(Serdes.class).orElse(null);
+        Serde serde = serdes.create(runContext.render(task.getBodyDeserializerProperties()).asMap(String.class, Object.class));
         return new EventDataObjectConverter(serde);
     }
 
@@ -213,11 +214,12 @@ public class Consume extends AbstractEventHubTask implements EventHubConsumerInt
     private CheckpointStore getBlobCheckpointStore(final RunContext runContext,
                                                    final EventHubConsumerInterface pluginConfig,
                                                    final EventHubClientFactory factory) throws IllegalVariableEvaluationException {
+        var renderedMap = runContext.render(pluginConfig.getCheckpointStoreProperties()).asMap(String.class, String.class);
         BlobContainerClientInterface config = BlobContainerClientInterface.builder()
-            .containerName(pluginConfig.getCheckpointStoreProperties().get("containerName"))
-            .connectionString(pluginConfig.getCheckpointStoreProperties().get("connectionString"))
-            .sharedKeyAccountAccessKey(pluginConfig.getCheckpointStoreProperties().get("sharedKeyAccountAccessKey"))
-            .sharedKeyAccountName(pluginConfig.getCheckpointStoreProperties().get("sharedKeyAccountName"))
+            .containerName(Property.of(renderedMap.get("containerName")))
+            .connectionString(Property.of(renderedMap.get("connectionString")))
+            .sharedKeyAccountAccessKey(Property.of(renderedMap.get("sharedKeyAccountAccessKey")))
+            .sharedKeyAccountName(Property.of(renderedMap.get("sharedKeyAccountName")))
             .build();
         BlobContainerAsyncClient client = factory.createBlobContainerAsyncClient(
             new BlobContainerClientConfig(runContext, config)

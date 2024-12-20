@@ -8,6 +8,7 @@ import io.kestra.core.models.annotations.Example;
 import io.kestra.core.models.annotations.Plugin;
 import io.kestra.core.models.annotations.PluginProperty;
 import io.kestra.core.models.executions.metrics.Counter;
+import io.kestra.core.models.property.Property;
 import io.kestra.core.models.tasks.RunnableTask;
 import io.kestra.core.runners.RunContext;
 import io.kestra.core.serializers.FileSerde;
@@ -74,9 +75,8 @@ public class Bulk extends AbstractTableStorage implements RunnableTask<Bulk.Outp
         title = "The default operation type to be applied to the entity."
     )
     @NotNull
-    @PluginProperty(dynamic = true)
     @Builder.Default
-    private TableTransactionActionType defaultType = TableTransactionActionType.UPSERT_REPLACE;
+    private Property<TableTransactionActionType> defaultType = Property.of(TableTransactionActionType.UPSERT_REPLACE);
 
     @SuppressWarnings("unchecked")
     @Override
@@ -100,7 +100,7 @@ public class Bulk extends AbstractTableStorage implements RunnableTask<Bulk.Outp
                 .map(throwFunction(row -> {
                     Entity entity = this.createEntity(runContext, row);
 
-                    return new TableTransactionAction(entity.getType() != null ? entity.getType() : defaultType, entity.to());
+                    return new TableTransactionAction(entity.getType() != null ? entity.getType() : runContext.render(defaultType).as(TableTransactionActionType.class).orElseThrow(), entity.to());
                 }))
                 .buffer(100, 100)
                 .map(o -> {

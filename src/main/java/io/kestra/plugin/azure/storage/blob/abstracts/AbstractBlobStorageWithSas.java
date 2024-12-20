@@ -18,6 +18,12 @@ import lombok.experimental.SuperBuilder;
 @NoArgsConstructor
 public abstract class AbstractBlobStorageWithSas extends AbstractStorageWithSas {
     public BlobServiceClient client(RunContext runContext) throws IllegalVariableEvaluationException {
-        return BlobService.client(this.endpoint, this.connectionString, this.sharedKeyAccountName, this.sharedKeyAccountAccessKey, this.sasToken, runContext);
+        return BlobService.client(
+            runContext.render(this.endpoint).as(String.class).orElse(null),
+            runContext.render(this.connectionString).as(String.class).orElse(null),
+            runContext.render(this.sharedKeyAccountName).as(String.class).orElse(null),
+            runContext.render(this.sharedKeyAccountAccessKey).as(String.class).orElse(null),
+            runContext.render(this.sasToken).as(String.class).orElse(null)
+        );
     }
 }

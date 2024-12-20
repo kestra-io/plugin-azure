@@ -1,5 +1,6 @@
 package io.kestra.plugin.azure.storage.blob;
 
+import io.kestra.core.models.property.Property;
 import io.kestra.core.utils.IdUtils;
 import org.junit.jupiter.api.Test;
 
@@ -17,32 +18,32 @@ class CopyTest extends AbstractTest {
         Copy task = Copy.builder()
             .id(CopyTest.class.getSimpleName())
             .type(List.class.getName())
-            .endpoint(this.storageEndpoint)
-            .connectionString(this.connectionString)
+            .endpoint(Property.of(this.storageEndpoint))
+            .connectionString(Property.of(connectionString))
             .from(Copy.CopyObject.builder()
-                .container(this.container)
-                .name(upload.getBlob().getName())
+                .container(Property.of(this.container))
+                .name(Property.of(upload.getBlob().getName()))
                 .build()
             )
             .to(Copy.CopyObject.builder()
-                .container(this.container)
-                .name(move.getBlob().getName())
+                .container(Property.of(this.container))
+                .name(Property.of(move.getBlob().getName()))
                 .build()
             )
-            .delete(delete)
+            .delete(Property.of(delete))
             .build();
 
         Copy.Output run = task.run(runContext(task));
         assertThat(run.getBlob().getName(), is(move.getBlob().getName()));
 
         // list
-        List list = list().prefix(move.getBlob().getName()).build();
+        List list = list().prefix(Property.of(move.getBlob().getName())).build();
 
         List.Output listOutput = list.run(runContext(list));
         assertThat(listOutput.getBlobs().size(), is(1));
 
         // original is here
-        list = list().prefix(upload.getBlob().getName()).build();
+        list = list().prefix(Property.of(upload.getBlob().getName())).build();
 
         listOutput = list.run(runContext(list));
         assertThat(listOutput.getBlobs().size(), is(delete ? 0 : 1));

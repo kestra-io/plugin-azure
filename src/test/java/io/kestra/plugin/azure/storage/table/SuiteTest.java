@@ -3,6 +3,7 @@ package io.kestra.plugin.azure.storage.table;
 import com.azure.data.tables.models.TableErrorCode;
 import com.azure.data.tables.models.TableServiceException;
 import com.google.common.collect.ImmutableMap;
+import io.kestra.core.models.property.Property;
 import io.kestra.core.runners.RunContext;
 import io.kestra.core.runners.RunContextFactory;
 import io.kestra.core.serializers.FileSerde;
@@ -78,9 +79,9 @@ class SuiteTest {
 
         // create
         Bulk bulk = Bulk.builder()
-            .endpoint(this.endpoint)
-            .connectionString(this.connectionString)
-            .table(this.table)
+            .endpoint(Property.of(this.endpoint))
+            .connectionString(Property.of(connectionString))
+            .table(Property.of(this.table))
             .from(uri.toString())
             .build();
 
@@ -89,11 +90,11 @@ class SuiteTest {
 
         // get
         Get get = Get.builder()
-            .endpoint(this.endpoint)
-            .connectionString(this.connectionString)
-            .table(this.table)
-            .partitionKey(partitionKey)
-            .rowKey(rowKey)
+            .endpoint(Property.of(this.endpoint))
+            .connectionString(Property.of(connectionString))
+            .table(Property.of(this.table))
+            .partitionKey(Property.of(partitionKey))
+            .rowKey(Property.of(rowKey))
             .build();
 
         Get.Output getOutput = get.run(runContext);
@@ -108,10 +109,10 @@ class SuiteTest {
 
         // list
         List list = List.builder()
-            .endpoint(this.endpoint)
-            .connectionString(this.connectionString)
-            .table(this.table)
-            .filter("PartitionKey eq '" + partitionKey + "'")
+            .endpoint(Property.of(this.endpoint))
+            .connectionString(Property.of(connectionString))
+            .table(Property.of(this.table))
+            .filter(Property.of("PartitionKey eq '" + partitionKey + "'"))
             .build();
 
         List.Output listOutput = list.run(runContext);
@@ -126,11 +127,11 @@ class SuiteTest {
 
         // delete
         Delete delete = Delete.builder()
-            .endpoint(this.endpoint)
-            .connectionString(this.connectionString)
-            .table(this.table)
-            .partitionKey(partitionKey)
-            .rowKey(rowKey)
+            .endpoint(Property.of(this.endpoint))
+            .connectionString(Property.of(connectionString))
+            .table(Property.of(this.table))
+            .partitionKey(Property.of(partitionKey))
+            .rowKey(Property.of(rowKey))
             .build();
 
         delete.run(runContext);

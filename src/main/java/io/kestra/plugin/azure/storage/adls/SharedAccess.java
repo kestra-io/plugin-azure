@@ -6,6 +6,7 @@ import com.azure.storage.file.datalake.sas.PathSasPermission;
 import io.kestra.core.models.annotations.Example;
 import io.kestra.core.models.annotations.Plugin;
 import io.kestra.core.models.annotations.PluginProperty;
+import io.kestra.core.models.property.Property;
 import io.kestra.core.models.tasks.RunnableTask;
 import io.kestra.core.runners.RunContext;
 import io.kestra.plugin.azure.storage.adls.abstracts.AbstractDataLakeWithFile;
@@ -80,9 +81,8 @@ public class SharedAccess extends AbstractDataLakeWithFile implements RunnableTa
     @Schema(
         title = " The time after which the SAS will no longer work."
     )
-    @PluginProperty(dynamic = true)
     @NotNull
-    private String expirationDate;
+    private Property<String> expirationDate;
 
     @Schema(
         title = " The permissions to be set for the Shared Access."
@@ -95,7 +95,7 @@ public class SharedAccess extends AbstractDataLakeWithFile implements RunnableTa
     public Output run(RunContext runContext) throws Exception {
         DataLakeFileClient dataLakeServiceClient = this.dataLakeFileClient(runContext);
 
-        OffsetDateTime offsetDateTime = ZonedDateTime.parse(runContext.render(this.expirationDate)).toOffsetDateTime();
+        OffsetDateTime offsetDateTime = ZonedDateTime.parse(runContext.render(this.expirationDate).as(String.class).orElseThrow()).toOffsetDateTime();
 
         DataLakeServiceSasSignatureValues signatureValues = new DataLakeServiceSasSignatureValues(offsetDateTime,
             PathSasPermission.parse(this.permissions

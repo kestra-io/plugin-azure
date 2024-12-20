@@ -1,6 +1,7 @@
 package io.kestra.plugin.azure.client;
 
 import io.kestra.core.exceptions.IllegalVariableEvaluationException;
+import io.kestra.core.models.property.Property;
 import io.kestra.core.runners.RunContext;
 import io.kestra.plugin.azure.AzureClientWithSasInterface;
 
@@ -45,8 +46,7 @@ public class AzureClientConfig<T extends AzureClientWithSasInterface> {
         return getOptionalConfig(plugin::getSasToken);
     }
 
-    protected Optional<String> getOptionalConfig(final Supplier<String> supplier) throws IllegalVariableEvaluationException {
-        return Optional.ofNullable(supplier.get()).map(throwFunction(runContext::render));
+    protected Optional<String> getOptionalConfig(final Supplier<Property<String>> supplier) throws IllegalVariableEvaluationException {
+        return runContext.render(supplier.get()).as(String.class);
     }
-
 }

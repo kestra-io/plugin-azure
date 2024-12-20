@@ -1,6 +1,8 @@
 package io.kestra.plugin.azure.batch;
 
+import io.kestra.core.models.property.Property;
 import io.kestra.plugin.azure.AbstractConnection;
+import jakarta.validation.constraints.NotNull;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -13,6 +15,9 @@ import lombok.experimental.SuperBuilder;
 @Getter
 @NoArgsConstructor
 public abstract class AbstractBatch extends AbstractConnection {
-    protected String account;
-    protected String accessKey;
+    @NotNull
+    protected Property<String> account;
+
+    @NotNull
+    protected Property<String> accessKey;
 }

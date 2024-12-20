@@ -4,6 +4,7 @@ import io.kestra.core.models.annotations.Example;
 import io.kestra.core.models.annotations.Plugin;
 import io.kestra.core.models.conditions.ConditionContext;
 import io.kestra.core.models.executions.Execution;
+import io.kestra.core.models.property.Property;
 import io.kestra.core.models.triggers.*;
 import io.kestra.core.runners.RunContext;
 import io.kestra.plugin.azure.eventhubs.serdes.Serdes;
@@ -15,6 +16,7 @@ import lombok.extern.slf4j.Slf4j;
 
 import java.time.Duration;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 
@@ -33,7 +35,7 @@ import java.util.Optional;
               - id: log
                 type: io.kestra.plugin.core.log.Log
                 message: Hello there! I received {{ trigger.eventsCount }} from Azure EventHubs!
-            
+
             triggers:
               - id: read_from_eventhub
                 type: io.kestra.plugin.azure.eventhubs.Trigger
@@ -66,51 +68,51 @@ public class Trigger extends AbstractTrigger implements EventHubConsumerInterfac
     private Duration interval = Duration.ofSeconds(60);
 
     // TASK'S PARAMETERS
-    protected String connectionString;
+    protected Property<String> connectionString;
 
-    protected String sharedKeyAccountName;
+    protected Property<String> sharedKeyAccountName;
 
-    protected String sharedKeyAccountAccessKey;
+    protected Property<String> sharedKeyAccountAccessKey;
 
-    protected String sasToken;
-
-    @Builder.Default
-    protected Integer clientMaxRetries = 5;
+    protected Property<String> sasToken;
 
     @Builder.Default
-    protected Long clientRetryDelay = 500L;
+    protected Property<Integer> clientMaxRetries = Property.of(5);
 
     @Builder.Default
-    private Serdes bodyDeserializer = Serdes.STRING;
+    protected Property<Long> clientRetryDelay = Property.of(500L);
 
     @Builder.Default
-    private Map<String, Object> bodyDeserializerProperties = Collections.emptyMap();
+    private Property<Serdes> bodyDeserializer = Property.of(Serdes.STRING);
 
     @Builder.Default
-    private String consumerGroup = "$Default";
+    private Property<Map<String, Object>> bodyDeserializerProperties = Property.of(new HashMap<>());
 
     @Builder.Default
-    private StartingPosition partitionStartingPosition = StartingPosition.EARLIEST;
-
-    private String enqueueTime;
+    private Property<String> consumerGroup = Property.of("$Default");
 
     @Builder.Default
-    private Integer maxBatchSizePerPartition = 50;
+    private Property<StartingPosition> partitionStartingPosition = Property.of(StartingPosition.EARLIEST);
+
+    private Property<String> enqueueTime;
 
     @Builder.Default
-    private Duration maxWaitTimePerPartition = Duration.ofSeconds(5);
+    private Property<Integer> maxBatchSizePerPartition = Property.of(50);
 
     @Builder.Default
-    private Duration maxDuration = Duration.ofSeconds(10);
+    private Property<Duration> maxWaitTimePerPartition = Property.of(Duration.ofSeconds(5));
 
     @Builder.Default
-    private Map<String, String> checkpointStoreProperties = Collections.emptyMap();
+    private Property<Duration> maxDuration = Property.of(Duration.ofSeconds(10));
 
-    private String namespace;
+    @Builder.Default
+    private Property<Map<String, String>> checkpointStoreProperties = Property.of(new HashMap<>());
 
-    private String eventHubName;
+    private Property<String> namespace;
 
-    private String customEndpointAddress;
+    private Property<String> eventHubName;
+
+    private Property<String> customEndpointAddress;
 
     /**
      * {@inheritDoc}

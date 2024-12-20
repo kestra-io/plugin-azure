@@ -6,6 +6,7 @@ import com.azure.storage.blob.BlobServiceClient;
 import com.azure.storage.blob.models.BlobProperties;
 import io.kestra.core.models.annotations.Example;
 import io.kestra.core.models.annotations.Plugin;
+import io.kestra.core.models.property.Property;
 import io.kestra.core.models.tasks.RunnableTask;
 import io.kestra.core.runners.RunContext;
 import io.kestra.plugin.azure.storage.blob.abstracts.AbstractBlobStorageWithSas;
@@ -55,20 +56,20 @@ import static io.kestra.core.utils.Rethrow.throwFunction;
     title = "Downloads files from the Azure Blob Storage."
 )
 public class Downloads extends AbstractBlobStorageWithSas implements RunnableTask<Downloads.Output>, ListInterface, ActionInterface, AbstractBlobStorageContainerInterface {
-    private String container;
+    private Property<String> container;
 
-    private String prefix;
+    private Property<String> prefix;
 
-    protected String regexp;
+    protected Property<String> regexp;
 
-    protected String delimiter;
+    protected Property<String> delimiter;
 
-    private ActionInterface.Action action;
+    private Property<ActionInterface.Action> action;
 
     private Copy.CopyObject moveTo;
 
     @Builder.Default
-    private Filter filter = Filter.FILES;
+    private Property<Filter> filter = Property.of(Filter.FILES);
 
     @Override
     public Output run(RunContext runContext) throws Exception {
@@ -89,7 +90,7 @@ public class Downloads extends AbstractBlobStorageWithSas implements RunnableTas
         List.Output run = task.run(runContext);
 
         BlobServiceClient client = this.client(runContext);
-        BlobContainerClient containerClient = client.getBlobContainerClient(runContext.render(this.container));
+        BlobContainerClient containerClient = client.getBlobContainerClient(runContext.render(this.container).as(String.class).orElse(null));
 
         java.util.List<Blob> list = run
             .getBlobs()
@@ -111,7 +112,7 @@ public class Downloads extends AbstractBlobStorageWithSas implements RunnableTas
 
         BlobService.archive(
             run.getBlobs(),
-            this.action,
+            runContext.render(this.action).as(ActionInterface.Action.class).orElseThrow(),
             this.moveTo,
             runContext,
             this,

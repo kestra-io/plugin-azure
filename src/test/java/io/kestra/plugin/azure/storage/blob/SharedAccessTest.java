@@ -1,5 +1,6 @@
 package io.kestra.plugin.azure.storage.blob;
 
+import io.kestra.core.models.property.Property;
 import io.kestra.core.utils.IdUtils;
 import org.apache.commons.io.IOUtils;
 import org.junit.jupiter.api.Test;
@@ -22,11 +23,11 @@ class SharedAccessTest extends AbstractTest {
         SharedAccess task = SharedAccess.builder()
             .id(CopyTest.class.getSimpleName())
             .type(List.class.getName())
-            .endpoint(this.storageEndpoint)
-            .connectionString(this.connectionString)
-            .container(upload.getBlob().getContainer())
-            .name(upload.getBlob().getName())
-            .expirationDate("{{ now() | dateAdd(1, 'DAYS')  }}")
+            .endpoint(Property.of(this.storageEndpoint))
+            .connectionString(Property.of(connectionString))
+            .container(Property.of(upload.getBlob().getContainer()))
+            .name(Property.of(upload.getBlob().getName()))
+            .expirationDate(new Property<>("{{ now() | dateAdd(1, 'DAYS')  }}"))
             .permissions(Set.of(SharedAccess.Permission.READ))
             .build();
         SharedAccess.Output run = task.run(runContext(task));

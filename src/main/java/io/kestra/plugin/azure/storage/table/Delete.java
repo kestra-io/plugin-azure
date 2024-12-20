@@ -4,6 +4,7 @@ import com.azure.data.tables.TableClient;
 import io.kestra.core.models.annotations.Example;
 import io.kestra.core.models.annotations.Plugin;
 import io.kestra.core.models.annotations.PluginProperty;
+import io.kestra.core.models.property.Property;
 import io.kestra.core.models.tasks.RunnableTask;
 import io.kestra.core.models.tasks.VoidOutput;
 import io.kestra.core.runners.RunContext;
@@ -50,22 +51,21 @@ public class Delete extends AbstractTableStorage implements RunnableTask<VoidOut
         title = "The partition key of the entity."
     )
     @NotNull
-    @PluginProperty(dynamic = true)
-    private String partitionKey;
+    private Property<String> partitionKey;
 
     @Schema(
         title = "The row key of the entity."
     )
-    @PluginProperty(dynamic = true)
-    private String rowKey;
+    @NotNull
+    private Property<String> rowKey;
 
     @Override
     public VoidOutput run(RunContext runContext) throws Exception {
         TableClient tableClient = this.tableClient(runContext);
 
         tableClient.deleteEntity(
-            runContext.render(this.partitionKey),
-            runContext.render(this.rowKey)
+            runContext.render(this.partitionKey).as(String.class).orElseThrow(),
+            runContext.render(this.rowKey).as(String.class).orElseThrow()
         );
 
         return null;

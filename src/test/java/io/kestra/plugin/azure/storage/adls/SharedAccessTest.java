@@ -1,5 +1,6 @@
 package io.kestra.plugin.azure.storage.adls;
 
+import io.kestra.core.models.property.Property;
 import io.kestra.core.utils.IdUtils;
 import org.apache.commons.io.IOUtils;
 import org.junit.jupiter.api.Test;
@@ -23,11 +24,11 @@ class SharedAccessTest extends AbstractTest {
         SharedAccess task = SharedAccess.builder()
             .id(SharedAccess.class.getSimpleName())
             .type(List.class.getName())
-            .endpoint(this.adlsEndpoint)
-            .connectionString(this.connectionString)
-            .fileSystem(this.fileSystem)
-            .filePath(upload.getFile().getName())
-            .expirationDate("{{ now() | dateAdd(1, 'DAYS')  }}")
+            .endpoint(Property.of(this.adlsEndpoint))
+            .connectionString(Property.of(connectionString))
+            .fileSystem(Property.of(this.fileSystem))
+            .filePath(Property.of(upload.getFile().getName()))
+            .expirationDate(new Property<>("{{ now() | dateAdd(1, 'DAYS')  }}"))
             .permissions(Set.of(SharedAccess.Permission.READ))
             .build();
         SharedAccess.Output run = task.run(runContext(task));

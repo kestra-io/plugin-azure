@@ -5,6 +5,7 @@ import com.azure.data.tables.models.TableEntity;
 import io.kestra.core.models.annotations.Example;
 import io.kestra.core.models.annotations.Plugin;
 import io.kestra.core.models.annotations.PluginProperty;
+import io.kestra.core.models.property.Property;
 import io.kestra.core.models.tasks.RunnableTask;
 import io.kestra.core.runners.RunContext;
 import io.kestra.plugin.azure.storage.table.abstracts.AbstractTableStorage;
@@ -51,22 +52,20 @@ public class Get extends AbstractTableStorage implements RunnableTask<Get.Output
         title = "The partition key of the entity."
     )
     @NotNull
-    @PluginProperty(dynamic = true)
-    private String partitionKey;
+    private Property<String> partitionKey;
 
     @Schema(
         title = "The row key of the entity."
     )
-    @PluginProperty(dynamic = true)
-    private String rowKey;
+    private Property<String> rowKey;
 
     @Override
     public Get.Output run(RunContext runContext) throws Exception {
         TableClient tableClient = this.tableClient(runContext);
 
         TableEntity entity = tableClient.getEntity(
-            runContext.render(this.partitionKey),
-            runContext.render(this.rowKey)
+            runContext.render(this.partitionKey).as(String.class).orElseThrow(),
+            runContext.render(this.rowKey).as(String.class).orElseThrow()
         );
 
         return Output.builder()

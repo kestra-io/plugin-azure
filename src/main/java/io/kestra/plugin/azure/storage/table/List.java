@@ -6,6 +6,7 @@ import io.kestra.core.models.annotations.Example;
 import io.kestra.core.models.annotations.Plugin;
 import io.kestra.core.models.annotations.PluginProperty;
 import io.kestra.core.models.executions.metrics.Counter;
+import io.kestra.core.models.property.Property;
 import io.kestra.core.models.tasks.RunnableTask;
 import io.kestra.core.runners.RunContext;
 import io.kestra.core.serializers.FileSerde;
@@ -57,20 +58,17 @@ public class List extends AbstractTableStorage implements RunnableTask<List.Outp
         title = "Returns only tables or entities that satisfy the specified filter.",
         description = "You can specify the filter using [Filter Strings](https://docs.microsoft.com/en-us/visualstudio/azure/vs-azure-tools-table-designer-construct-filter-strings?view=vs-2022)."
     )
-    @PluginProperty(dynamic = true)
-    private String filter;
+    private Property<String> filter;
 
     @Schema(
         title = "The desired properties of an entity from the Azure Storage Table."
     )
-    @PluginProperty(dynamic = true)
-    private java.util.List<String> select;
+    private Property<java.util.List<String>> select;
 
     @Schema(
         title = "List the top `n` tables or entities from the Azure Storage Table."
     )
-    @PluginProperty(dynamic = true)
-    private Integer top;
+    private Property<Integer> top;
 
     @Override
     public List.Output run(RunContext runContext) throws Exception {
@@ -79,20 +77,21 @@ public class List extends AbstractTableStorage implements RunnableTask<List.Outp
         ListEntitiesOptions options = new ListEntitiesOptions();
 
         if (this.filter != null) {
-            options.setFilter(runContext.render(this.filter));
+            options.setFilter(runContext.render(this.filter).as(String.class).orElseThrow());
         }
 
-        if (this.select != null) {
-            options.setSelect(runContext.render(this.select));
+        var renderedSelect= runContext.render(this.select).asList(String.class);
+        if (!renderedSelect.isEmpty()) {
+            options.setSelect(renderedSelect);
         }
 
         if (this.top != null) {
-            options.setTop(this.top);
+            options.setTop(runContext.render(this.top).as(Integer.class).orElseThrow());
         }
 
         File tempFile = runContext.workingDir().createTempFile(".ion").toFile();
         try (var output = new BufferedWriter(new FileWriter(tempFile))) {
-            var flux = Flux.fromIterable(tableClient.listEntities(options, null, null)).map(entity -> Entity.to(entity));
+            var flux = Flux.fromIterable(tableClient.listEntities(options, null, null)).map(Entity::to);
             Mono<Long> longMono = FileSerde.writeAll(output, flux);
             Long count = longMono.block();
 

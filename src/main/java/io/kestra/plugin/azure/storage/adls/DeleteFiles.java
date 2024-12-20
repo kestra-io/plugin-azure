@@ -7,6 +7,7 @@ import io.kestra.core.models.annotations.Example;
 import io.kestra.core.models.annotations.Plugin;
 import io.kestra.core.models.annotations.PluginProperty;
 import io.kestra.core.models.executions.metrics.Counter;
+import io.kestra.core.models.property.Property;
 import io.kestra.core.models.tasks.RunnableTask;
 import io.kestra.core.runners.RunContext;
 import io.kestra.plugin.azure.storage.adls.abstracts.AbstractDataLakeConnection;
@@ -80,12 +81,11 @@ import static io.kestra.core.utils.Rethrow.throwConsumer;
     title = "Delete a list of keys from the Azure Data Lake Storage."
 )
 public class DeleteFiles extends AbstractDataLakeConnection implements RunnableTask<DeleteFiles.Output>, AbstractDataLakeStorageInterface {
-    protected String fileSystem;
+    protected Property<String> fileSystem;
 
     @Schema(title = "Directory Name")
-    @PluginProperty(dynamic = true)
     @NotNull
-    protected String directoryPath;
+    protected Property<String> directoryPath;
 
     @Min(2)
     @Schema(
@@ -97,21 +97,20 @@ public class DeleteFiles extends AbstractDataLakeConnection implements RunnableT
     @Schema(
         title = "Whether to raise an error if the file is not found."
     )
-    @PluginProperty(dynamic = true)
     @Builder.Default
-    private final Boolean errorOnEmpty = false;
+    private final Property<Boolean> errorOnEmpty = Property.of(false);
 
     @Override
     public Output run(RunContext runContext) throws Exception {
         Logger logger = runContext.logger();
 
         DataLakeServiceClient client = this.dataLakeServiceClient(runContext);
-        DataLakeFileSystemClient fileSystemClient = client.getFileSystemClient(runContext.render(this.fileSystem));
+        DataLakeFileSystemClient fileSystemClient = client.getFileSystemClient(runContext.render(this.fileSystem).as(String.class).orElse(null));
 
         Flux<AdlsFile> flowable = Flux
             .create(throwConsumer(emitter -> {
                 DataLakeService
-                    .list(runContext, fileSystemClient, directoryPath)
+                    .list(fileSystemClient, runContext.render(directoryPath).as(String.class).orElseThrow())
                         .forEach(emitter::next);
 
                 emitter.complete();
@@ -138,10 +137,10 @@ public class DeleteFiles extends AbstractDataLakeConnection implements RunnableT
         runContext.metric(Counter.of("count", finalResult.getLeft()));
         runContext.metric(Counter.of("size", finalResult.getRight()));
 
-        if (Boolean.TRUE.equals(errorOnEmpty) && finalResult.getLeft() == 0) {
+        if (Boolean.TRUE.equals(runContext.render(errorOnEmpty).as(Boolean.class).orElseThrow()) && finalResult.getLeft() == 0) {
             throw new NoSuchElementException("Unable to find any files to delete on " +
-                runContext.render(this.fileSystem) + " " +
-                "with directoryPath='" + runContext.render(this.directoryPath)
+                runContext.render(this.fileSystem).as(String.class).orElse(null) + " " +
+                "with directoryPath='" + runContext.render(this.directoryPath).as(String.class).orElseThrow()
             );
         }
 

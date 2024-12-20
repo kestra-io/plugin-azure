@@ -4,7 +4,7 @@ import com.azure.storage.file.datalake.DataLakeFileSystemClient;
 import com.azure.storage.file.datalake.DataLakeServiceClient;
 import io.kestra.core.models.annotations.Example;
 import io.kestra.core.models.annotations.Plugin;
-import io.kestra.core.models.annotations.PluginProperty;
+import io.kestra.core.models.property.Property;
 import io.kestra.core.models.tasks.RunnableTask;
 import io.kestra.core.runners.RunContext;
 import io.kestra.plugin.azure.storage.adls.abstracts.AbstractDataLakeConnection;
@@ -58,18 +58,17 @@ import lombok.experimental.SuperBuilder;
 )
 public class List extends AbstractDataLakeConnection implements RunnableTask<List.Output>, AbstractDataLakeStorageInterface {
     @Schema(title = "Directory path", description = "Full path to the directory")
-    @PluginProperty(dynamic = true)
     @NotNull
-    protected String directoryPath;
+    protected Property<String> directoryPath;
 
-    protected String fileSystem;
+    protected Property<String> fileSystem;
 
     @Override
     public List.Output run(RunContext runContext) throws Exception {
         DataLakeServiceClient dataLakeServiceClient = this.dataLakeServiceClient(runContext);
-        DataLakeFileSystemClient fileSystemClient = dataLakeServiceClient.getFileSystemClient(runContext.render(fileSystem));
+        DataLakeFileSystemClient fileSystemClient = dataLakeServiceClient.getFileSystemClient(runContext.render(fileSystem).as(String.class).orElseThrow());
 
-        java.util.List<AdlsFile> fileList = DataLakeService.list(runContext, fileSystemClient, directoryPath);
+        java.util.List<AdlsFile> fileList = DataLakeService.list(fileSystemClient, runContext.render(directoryPath).as(String.class).orElseThrow());
 
         return Output.builder()
             .files(fileList)

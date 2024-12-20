@@ -26,29 +26,25 @@ import java.nio.charset.StandardCharsets;
 @NoArgsConstructor
 public abstract class AbstractAzureIdentityConnection extends Task implements AzureIdentityConnectionInterface {
     @NotNull
-    @Builder.Default
-    protected Property<String> tenantId = Property.of("");
+    protected Property<String> tenantId;
 
-    @Builder.Default
-    protected Property<String> clientId = Property.of("");
-    @Builder.Default
-    protected Property<String> clientSecret = Property.of("");
-    @Builder.Default
-    protected Property<String> pemCertificate = Property.of("");
+    protected Property<String> clientId;
+    protected Property<String> clientSecret;
+    protected Property<String> pemCertificate;
 
     public TokenCredential credentials(RunContext runContext) throws IllegalVariableEvaluationException {
-        final String tenantId = this.tenantId.as(runContext, String.class);
-        final String clientId = this.clientId.as(runContext, String.class);
+        final String tenantId = runContext.render(this.tenantId).as(String.class).orElse(null);
+        final String clientId = runContext.render(this.clientId).as(String.class).orElse(null);
 
         //Create client/secret credentials
-        final String clientSecret = this.clientSecret.as(runContext, String.class);
+        final String clientSecret = runContext.render(this.clientSecret).as(String.class).orElse(null);
         if(StringUtils.isNotBlank(clientSecret)) {
             runContext.logger().info("Authentication is using Client Secret Credentials");
             return getClientSecretCredential(tenantId, clientId, clientSecret);
         }
 
         //Create client/certificate credentials
-        final String pemCertificate = this.pemCertificate.as(runContext, String.class);
+        final String pemCertificate = runContext.render(this.pemCertificate).as(String.class).orElse(null);
         if(StringUtils.isNotBlank(pemCertificate)) {
             runContext.logger().info("Authentication is using Client Certificate Credentials");
             return getClientCertificateCredential(tenantId, clientId, pemCertificate);

@@ -5,6 +5,7 @@ import io.kestra.core.models.annotations.Example;
 import io.kestra.core.models.annotations.Plugin;
 import io.kestra.core.models.annotations.PluginProperty;
 import io.kestra.core.models.executions.metrics.Counter;
+import io.kestra.core.models.property.Property;
 import io.kestra.core.models.tasks.RunnableTask;
 import io.kestra.core.runners.RunContext;
 import io.kestra.plugin.azure.storage.blob.abstracts.AbstractBlobStorageWithSasObject;
@@ -41,7 +42,7 @@ import static io.kestra.core.utils.Rethrow.throwFunction;
                 inputs:
                   - id: myfile
                     type: FILE
-                
+
                 tasks:
                   - id: upload
                     type: io.kestra.plugin.azure.storage.blob.Upload
@@ -61,20 +62,17 @@ public class Upload extends AbstractBlobStorageWithSasObject implements Runnable
     @Schema(
         title = "The file from the internal storage to upload to the Azure Blob Storage."
     )
-    @PluginProperty(dynamic = true)
-    private String from;
+    private Property<String> from;
 
     @Schema(
         title = "Metadata for the blob."
     )
-    @PluginProperty(dynamic = true)
-    private Map<String, String> metadata;
+    private Property<Map<String, String>> metadata;
 
     @Schema(
         title = "User defined tags."
     )
-    @PluginProperty(dynamic = true)
-    private Map<String, String> tags;
+    private Property<Map<String, String>> tags;
 
     @Schema(
         title = "The access tier of the uploaded blob.",
@@ -83,27 +81,26 @@ public class Upload extends AbstractBlobStorageWithSasObject implements Runnable
             "of the blob. A block blob's tier determines the Hot/Cool/Archive storage type. " +
             "This does not update the blob's etag."
     )
-    @PluginProperty(dynamic = false)
-    private AccessTier accessTier;
+    private Property<AccessTier> accessTier;
 
     @Schema(
         title = "Sets a legal hold on the blob.",
         description = "NOTE: Blob Versioning must be enabled on your storage account and the blob must be in a container" +
             " with immutable storage with versioning enabled to call this API."
     )
-    @PluginProperty(dynamic = false)
-    private Boolean legalHold;
+    private Property<Boolean> legalHold;
 
     private BlobImmutabilityPolicy immutabilityPolicy;
 
     @Override
     public Upload.Output run(RunContext runContext) throws Exception {
-        URI from = new URI(runContext.render(this.from));
+        URI from = new URI(runContext.render(this.from).as(String.class).orElseThrow());
 
         BlobClient blobClient = this.blobClient(runContext);
 
         if (this.metadata != null) {
-            blobClient.setMetadata(this.metadata.entrySet()
+            blobClient.setMetadata(runContext.render(this.metadata).asMap(String.class, String.class)
+                .entrySet()
                 .stream()
                 .map(throwFunction(flow -> new AbstractMap.SimpleEntry<>(
                     runContext.render(flow.getKey()),
@@ -114,7 +111,8 @@ public class Upload extends AbstractBlobStorageWithSasObject implements Runnable
         }
 
         if (this.tags != null) {
-            blobClient.setTags(this.tags.entrySet()
+            blobClient.setTags(runContext.render(this.tags).asMap(String.class, String.class)
+                .entrySet()
                 .stream()
                 .map(throwFunction(flow -> new AbstractMap.SimpleEntry<>(
                     runContext.render(flow.getKey()),
@@ -125,11 +123,11 @@ public class Upload extends AbstractBlobStorageWithSasObject implements Runnable
         }
 
         if (this.accessTier != null) {
-            blobClient.setAccessTier(com.azure.storage.blob.models.AccessTier.fromString(this.accessTier.name()));
+            blobClient.setAccessTier(com.azure.storage.blob.models.AccessTier.fromString(runContext.render(this.accessTier).as(AccessTier.class).orElseThrow().name()));
         }
 
         if (this.accessTier != null) {
-            blobClient.setLegalHold(this.legalHold);
+            blobClient.setLegalHold(runContext.render(this.legalHold).as(Boolean.class).orElseThrow());
         }
 
         if (this.immutabilityPolicy != null) {

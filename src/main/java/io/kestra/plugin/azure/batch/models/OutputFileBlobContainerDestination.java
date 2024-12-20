@@ -2,6 +2,7 @@ package io.kestra.plugin.azure.batch.models;
 
 import io.kestra.core.exceptions.IllegalVariableEvaluationException;
 import io.kestra.core.models.annotations.PluginProperty;
+import io.kestra.core.models.property.Property;
 import io.kestra.core.runners.RunContext;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Builder;
@@ -20,8 +21,7 @@ public class OutputFileBlobContainerDestination {
             "blob name) to which to upload the file(s). If omitted, file(s) are uploaded to the root of the container " +
             "with a blob name matching their file name."
     )
-    @PluginProperty(dynamic = true)
-    String path;
+    Property<String> path;
 
     @Schema(
         title = "The URL of the container within Azure Blob Storage to which to upload the file(s).",
@@ -29,7 +29,7 @@ public class OutputFileBlobContainerDestination {
             "granting write permissions to the container."
     )
     @NotNull
-    String containerUrl;
+    Property<String> containerUrl;
 
     @Schema(
         title = "The reference to the user assigned identity to use to access Azure Blob Storage specified by `containerUrl`.",
@@ -39,8 +39,8 @@ public class OutputFileBlobContainerDestination {
 
     public com.microsoft.azure.batch.protocol.models.OutputFileBlobContainerDestination to(RunContext runContext) throws IllegalVariableEvaluationException {
         return new com.microsoft.azure.batch.protocol.models.OutputFileBlobContainerDestination()
-            .withPath(runContext.render(path))
-            .withContainerUrl(runContext.render(this.containerUrl))
+            .withPath(runContext.render(path).as(String.class).orElse(null))
+            .withContainerUrl(runContext.render(this.containerUrl).as(String.class).orElse(null))
             .withIdentityReference(this.identityReference == null ? null : this.identityReference.to(runContext));
     }
 }

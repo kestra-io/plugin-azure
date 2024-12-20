@@ -2,6 +2,7 @@ package io.kestra.plugin.azure.eventhubs;
 
 import com.google.common.collect.ImmutableMap;
 import io.kestra.core.models.executions.Execution;
+import io.kestra.core.models.property.Property;
 import io.kestra.core.queues.QueueFactoryInterface;
 import io.kestra.core.queues.QueueInterface;
 import io.kestra.core.repositories.LocalFlowRepositoryLoader;
@@ -96,9 +97,9 @@ class TriggerTest {
         Produce task = Produce.builder()
             .id(ConsumeTest.class.getSimpleName())
             .type(Produce.class.getName())
-            .bodySerializer(Serdes.STRING)
-            .eventHubName(eventHubName)
-            .connectionString(connectionString)
+            .bodySerializer(Property.of(Serdes.STRING))
+            .eventHubName(Property.of(eventHubName))
+            .connectionString(Property.of(connectionString))
             .from(List.of(
                 ImmutableMap.builder()
                     .put("body", "event-1")

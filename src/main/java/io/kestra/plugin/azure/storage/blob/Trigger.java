@@ -4,6 +4,7 @@ import io.kestra.core.models.annotations.Example;
 import io.kestra.core.models.annotations.Plugin;
 import io.kestra.core.models.conditions.ConditionContext;
 import io.kestra.core.models.executions.Execution;
+import io.kestra.core.models.property.Property;
 import io.kestra.core.models.triggers.*;
 import io.kestra.core.runners.RunContext;
 import io.kestra.plugin.azure.AbstractConnectionInterface;
@@ -43,7 +44,7 @@ import static io.kestra.core.utils.Rethrow.throwFunction;
             code = """
                 id: react_to_files
                 namespace: company.team
-                
+
                 tasks:
                   - id: each
                     type: io.kestra.plugin.core.flow.ForEach
@@ -53,7 +54,7 @@ import static io.kestra.core.utils.Rethrow.throwFunction;
                       - id: return
                         type: io.kestra.plugin.core.debug.Return
                         format: "{{ taskrun.value }}"
-                
+
                 triggers:
                   - id: watch
                     type: io.kestra.plugin.azure.storage.blob.Trigger
@@ -74,7 +75,7 @@ import static io.kestra.core.utils.Rethrow.throwFunction;
             code = """
                 id: process_and_delete_files
                 namespace: company.team
-                
+
                 tasks:
                   - id: each
                     type: io.kestra.plugin.core.flow.ForEach
@@ -90,7 +91,7 @@ import static io.kestra.core.utils.Rethrow.throwFunction;
                         connectionString: "DefaultEndpointsProtocol=...=="
                         container: myBlobContainer
                         name: "{{ taskrun.value }}"
-                
+
                 triggers:
                   - id: watch
                     type: io.kestra.plugin.azure.storage.blob.Trigger
@@ -111,30 +112,30 @@ public class Trigger extends AbstractTrigger implements PollingTriggerInterface,
     @Builder.Default
     private final Duration interval = Duration.ofSeconds(60);
 
-    protected String endpoint;
+    protected Property<String> endpoint;
 
-    protected String connectionString;
+    protected Property<String> connectionString;
 
-    protected String sharedKeyAccountName;
+    protected Property<String> sharedKeyAccountName;
 
-    protected String sharedKeyAccountAccessKey;
+    protected Property<String> sharedKeyAccountAccessKey;
 
-    protected String sasToken;
+    protected Property<String> sasToken;
 
-    private String container;
+    private Property<String> container;
 
-    private String prefix;
+    private Property<String> prefix;
 
-    protected String regexp;
+    protected Property<String> regexp;
 
-    protected String delimiter;
+    protected Property<String> delimiter;
 
-    private ActionInterface.Action action;
+    private Property<ActionInterface.Action> action;
 
     private Copy.CopyObject moveTo;
 
     @Builder.Default
-    private ListInterface.Filter filter = Filter.FILES;
+    private Property<ListInterface.Filter> filter = Property.of(Filter.FILES);
 
     @Override
     public Optional<Execution> evaluate(ConditionContext conditionContext, TriggerContext context) throws Exception {
@@ -173,7 +174,7 @@ public class Trigger extends AbstractTrigger implements PollingTriggerInterface,
                     .sharedKeyAccountAccessKey(this.sharedKeyAccountAccessKey)
                     .sasToken(this.sasToken)
                     .container(this.container)
-                    .name(object.getName())
+                    .name(Property.of(object.getName()))
                     .build();
                 Download.Output downloadOutput = download.run(runContext);
 
@@ -184,7 +185,7 @@ public class Trigger extends AbstractTrigger implements PollingTriggerInterface,
 
         BlobService.archive(
             run.getBlobs(),
-            this.action,
+            runContext.render(this.action).as(ActionInterface.Action.class).orElse(null),
             this.moveTo,
             runContext,
             this,

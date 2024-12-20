@@ -2,6 +2,7 @@ package io.kestra.plugin.azure.batch.models;
 
 import io.kestra.core.exceptions.IllegalVariableEvaluationException;
 import io.kestra.core.models.annotations.PluginProperty;
+import io.kestra.core.models.property.Property;
 import io.kestra.core.runners.RunContext;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Builder;
@@ -27,8 +28,7 @@ public class OutputFile {
             "are treated as directory separators on Windows, but only `/` is on Linux." +
             "Environment variables (`%var%` on Windows or `$var` on Linux) are expanded prior to the pattern being applied."
     )
-    @PluginProperty(dynamic = true)
-    String filePattern;
+    Property<String> filePattern;
 
     @Schema(
         title = "The destination for the output file(s)."
@@ -47,7 +47,7 @@ public class OutputFile {
 
     public com.microsoft.azure.batch.protocol.models.OutputFile to(RunContext runContext) throws IllegalVariableEvaluationException {
         return new com.microsoft.azure.batch.protocol.models.OutputFile()
-            .withFilePattern(runContext.render(this.filePattern))
+            .withFilePattern(runContext.render(this.filePattern).as(String.class).orElse(null))
             .withDestination(this.destination == null ? null : this.destination.to(runContext))
             .withUploadOptions(this.uploadOptions == null ? null : this.uploadOptions.to(runContext));
     }

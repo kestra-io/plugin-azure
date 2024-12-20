@@ -1,5 +1,6 @@
 package io.kestra.plugin.azure.eventhubs;
 
+import io.kestra.core.models.property.Property;
 import io.kestra.core.models.tasks.Task;
 import lombok.Builder;
 import lombok.Getter;
@@ -11,23 +12,23 @@ import lombok.experimental.SuperBuilder;
 @Getter
 public abstract class AbstractEventHubTask extends Task implements EventHubClientInterface {
 
-    private String connectionString;
+    private Property<String> connectionString;
 
-    private String sharedKeyAccountName;
+    private Property<String> sharedKeyAccountName;
 
-    private String sharedKeyAccountAccessKey;
+    private Property<String> sharedKeyAccountAccessKey;
 
-    private String sasToken;
-
-    @Builder.Default
-    private Integer clientMaxRetries = 5;
+    private Property<String> sasToken;
 
     @Builder.Default
-    private Long clientRetryDelay = 500L;
+    private Property<Integer> clientMaxRetries = Property.of(5);
 
-    private String namespace;
+    @Builder.Default
+    private Property<Long> clientRetryDelay = Property.of(500L);
 
-    private String eventHubName;
+    private Property<String> namespace;
 
-    private String customEndpointAddress;
+    private Property<String> eventHubName;
+
+    private Property<String> customEndpointAddress;
 }

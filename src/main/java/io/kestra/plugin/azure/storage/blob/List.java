@@ -5,6 +5,7 @@ import com.azure.storage.blob.BlobServiceClient;
 import io.kestra.core.models.annotations.Example;
 import io.kestra.core.models.annotations.Plugin;
 import io.kestra.core.models.executions.metrics.Counter;
+import io.kestra.core.models.property.Property;
 import io.kestra.core.models.tasks.RunnableTask;
 import io.kestra.core.runners.RunContext;
 import io.kestra.plugin.azure.storage.blob.abstracts.AbstractBlobStorageWithSas;
@@ -45,21 +46,21 @@ import lombok.experimental.SuperBuilder;
     title = "List blobs on the Azure Blob Storage."
 )
 public class List extends AbstractBlobStorageWithSas implements RunnableTask<List.Output>, ListInterface, AbstractBlobStorageContainerInterface {
-    private String container;
+    private Property<String> container;
 
-    private String prefix;
+    private Property<String> prefix;
 
-    protected String regexp;
+    protected Property<String> regexp;
 
-    protected String delimiter;
+    protected Property<String> delimiter;
 
     @Builder.Default
-    private Filter filter = Filter.FILES;
+    private Property<Filter> filter = Property.of(Filter.FILES);
 
     @Override
     public Output run(RunContext runContext) throws Exception {
         BlobServiceClient client = this.client(runContext);
-        BlobContainerClient containerClient = client.getBlobContainerClient(runContext.render(this.container));
+        BlobContainerClient containerClient = client.getBlobContainerClient(runContext.render(this.container).as(String.class).orElse(null));
 
         java.util.List<Blob> list = BlobService.list(runContext, containerClient, this);
 
@@ -69,8 +70,8 @@ public class List extends AbstractBlobStorageWithSas implements RunnableTask<Lis
             "Found '{}' keys on {} with regexp='{}', prefix={}",
             list.size(),
             runContext.render(containerClient.getBlobContainerName()),
-            runContext.render(regexp),
-            runContext.render(prefix)
+            runContext.render(regexp).as(String.class).orElse(null),
+            runContext.render(prefix).as(String.class).orElse(null)
         );
 
         return Output.builder()

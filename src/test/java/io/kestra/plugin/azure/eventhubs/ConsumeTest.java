@@ -1,6 +1,7 @@
 package io.kestra.plugin.azure.eventhubs;
 
 import com.google.common.collect.ImmutableMap;
+import io.kestra.core.models.property.Property;
 import io.kestra.core.runners.RunContext;
 import io.kestra.core.runners.RunContextFactory;
 import io.kestra.core.utils.TestsUtils;
@@ -41,18 +42,18 @@ class ConsumeTest {
         RunContext runContext = runContextFactory.of();
 
         Consume task = Consume.builder()
-            .bodyDeserializer(Serdes.STRING)
-            .eventHubName(eventHubName)
-            .connectionString(connectionString)
-            .checkpointStoreProperties(Map.of(
+            .bodyDeserializer(Property.of(Serdes.STRING))
+            .eventHubName(Property.of(eventHubName))
+            .connectionString(Property.of(connectionString))
+            .checkpointStoreProperties(Property.of(Map.of(
                     "connectionString", checkPointStoreConnectionString,
                     "containerName", checkPointStoreContainerName
                 )
-            )
-            .consumerGroup("$Default")
-            .maxBatchSizePerPartition(10)
-            .maxWaitTimePerPartition(Duration.ofSeconds(5))
-            .maxDuration(Duration.ofSeconds(10))
+            ))
+            .consumerGroup(Property.of("$Default"))
+            .maxBatchSizePerPartition(Property.of(10))
+            .maxWaitTimePerPartition(Property.of(Duration.ofSeconds(5)))
+            .maxDuration(Property.of(Duration.ofSeconds(10)))
             .build();
 
         // When
@@ -67,9 +68,9 @@ class ConsumeTest {
         Produce task = Produce.builder()
             .id(ConsumeTest.class.getSimpleName())
             .type(Produce.class.getName())
-            .bodySerializer(Serdes.STRING)
-            .eventHubName(eventHubName)
-            .connectionString(connectionString)
+            .bodySerializer(Property.of(Serdes.STRING))
+            .eventHubName(Property.of(eventHubName))
+            .connectionString(Property.of(connectionString))
             .from(List.of(
                 ImmutableMap.builder()
                     .put("body", "event-1")

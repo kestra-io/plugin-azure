@@ -1,5 +1,6 @@
 package io.kestra.plugin.azure;
 
+import io.kestra.core.models.property.Property;
 import io.kestra.core.models.tasks.Task;
 import jakarta.validation.constraints.NotNull;
 import lombok.EqualsAndHashCode;
@@ -15,5 +16,5 @@ import lombok.experimental.SuperBuilder;
 @NoArgsConstructor
 public abstract class AbstractConnection extends Task implements AbstractConnectionInterface {
     @NotNull
-    protected String endpoint;
+    protected Property<String> endpoint;
 }

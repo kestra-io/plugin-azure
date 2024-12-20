@@ -6,6 +6,7 @@ import io.kestra.core.models.annotations.Example;
 import io.kestra.core.models.annotations.Plugin;
 import io.kestra.core.models.annotations.PluginProperty;
 import io.kestra.core.models.executions.metrics.Counter;
+import io.kestra.core.models.property.Property;
 import io.kestra.core.models.tasks.RunnableTask;
 import io.kestra.core.runners.RunContext;
 import io.kestra.plugin.azure.eventhubs.client.EventHubClientFactory;
@@ -30,7 +31,7 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -49,12 +50,12 @@ import java.util.Map;
               - id: file
                 type: FILE
                 description: a CSV file with columns id, username, tweet, and timestamp
-            
+
             tasks:
               - id: read_csv_file
                 type: io.kestra.plugin.serdes.csv.CsvToIon
                 from: "{{ inputs.file }}"
-            
+
               - id: transform_row_to_json
                 type: io.kestra.plugin.scripts.nashorn.FileTransform
                 from: "{{ outputs.read_csv_file.uri }}"
@@ -66,7 +67,7 @@ import java.util.Map;
                     }
                   };
                   row = result
-            
+
               - id: send_to_eventhub
                 type: io.kestra.plugin.azure.eventhubs.Produce
                 from: "{{ outputs.transform_row_to_json.uri }}"
@@ -101,9 +102,8 @@ public class Produce extends AbstractEventHubTask implements RunnableTask<Produc
         description = "The event properties which may be used for passing metadata associated with the event" +
             " body during Event Hubs operations."
     )
-    @PluginProperty
     @Builder.Default
-    private Map<String, String> eventProperties = Collections.emptyMap();
+    private Property<Map<String, String>> eventProperties = Property.of(new HashMap<>());
 
     @Schema(
         title = "The content of the message to be sent to EventHub",
@@ -120,44 +120,38 @@ public class Produce extends AbstractEventHubTask implements RunnableTask<Produc
         description = "Events with the same `partitionKey` are hashed and sent to the same partition. The provided " +
             "`partitionKey` will be used for all the events sent by the `Produce` task."
     )
-    @PluginProperty
-    private String partitionKey;
+    private Property<String> partitionKey;
 
     @Schema(
         title = "The maximum size for batches of events, in bytes."
     )
-    @PluginProperty
-    private Integer maxBatchSizeInBytes;
+    private Property<Integer> maxBatchSizeInBytes;
 
     @Schema(
         title = "The maximum number of events per batches."
     )
-    @PluginProperty
     @Builder.Default
-    private Integer maxEventsPerBatch = 1000;
+    private Property<Integer> maxEventsPerBatch = Property.of(1000);
 
     @Schema(
         title = "The MIME type describing the event data",
         description = "The MIME type describing the data contained in event body allowing consumers to make informed" +
             " decisions for inspecting and processing the event."
     )
-    @PluginProperty
-    private String bodyContentType;
+    private Property<String> bodyContentType;
 
     @Schema(
         title = "The Serializer to be used for serializing the event value."
     )
-    @PluginProperty
     @Builder.Default
-    private Serdes bodySerializer = Serdes.STRING;
+    private Property<Serdes> bodySerializer = Property.of(Serdes.STRING);
 
     @Schema(
         title = "The config properties to be passed to the Serializer.",
         description = "Configs in key/value pairs."
     )
-    @PluginProperty
     @Builder.Default
-    private Map<String, Object> bodySerializerProperties = Collections.emptyMap();
+    private Property<Map<String, Object>> bodySerializerProperties = Property.of(new HashMap<>());
 
     // SERVICES
     @Getter(AccessLevel.NONE)
@@ -172,8 +166,10 @@ public class Produce extends AbstractEventHubTask implements RunnableTask<Produc
         EventHubProducerService service = new EventHubProducerService(
             clientFactory,
             new EventHubClientConfig<>(runContext, this),
-            new EventDataObjectConverter(getBodySerializer().create(getBodySerializerProperties())),
-            new EventDataBatchFactory.Default(getCreateBatchOptions())
+            new EventDataObjectConverter(runContext.render(getBodySerializer()).as(Serdes.class).orElseThrow()
+                .create(runContext.render(getBodySerializerProperties()).asMap(String.class, Object.class))
+            ),
+            new EventDataBatchFactory.Default(getCreateBatchOptions(runContext))
         );
 
         return run(runContext, service);
@@ -207,9 +203,9 @@ public class Produce extends AbstractEventHubTask implements RunnableTask<Produc
         try (BufferedReader reader = new BufferedReader(new InputStreamReader(is))) {
             // Sends
             ProducerContext options = new ProducerContext(
-                getBodyContentType(),
-                getEventProperties(),
-                getMaxEventsPerBatch(),
+                runContext.render(getBodyContentType()).as(String.class).orElse(null),
+                runContext.render(getEventProperties()).asMap(String.class, String.class),
+                runContext.render(getMaxEventsPerBatch()).as(Integer.class).orElse(null),
                 runContext.logger()
             );
             EventHubProducerService.Result result = service.sendEvents(
@@ -230,14 +226,14 @@ public class Produce extends AbstractEventHubTask implements RunnableTask<Produc
         }
     }
 
-    private CreateBatchOptions getCreateBatchOptions() {
+    private CreateBatchOptions getCreateBatchOptions(RunContext runContext) throws IllegalVariableEvaluationException {
         CreateBatchOptions options = new CreateBatchOptions();
         if (getMaxBatchSizeInBytes() != null) {
-            options.setMaximumSizeInBytes(getMaxBatchSizeInBytes());
+            options.setMaximumSizeInBytes(runContext.render(getMaxBatchSizeInBytes()).as(Integer.class).orElseThrow());
         }
 
         if (getPartitionKey() != null) {
-            options.setPartitionKey(getPartitionKey());
+            options.setPartitionKey(runContext.render(getPartitionKey()).as(String.class).orElseThrow());
         }
         return options;
     }

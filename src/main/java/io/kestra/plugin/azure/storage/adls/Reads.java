@@ -6,6 +6,7 @@ import com.azure.storage.file.datalake.DataLakeServiceClient;
 import io.kestra.core.models.annotations.Example;
 import io.kestra.core.models.annotations.Plugin;
 import io.kestra.core.models.annotations.PluginProperty;
+import io.kestra.core.models.property.Property;
 import io.kestra.core.models.tasks.RunnableTask;
 import io.kestra.core.runners.RunContext;
 import io.kestra.plugin.azure.storage.adls.abstracts.AbstractDataLakeConnection;
@@ -53,11 +54,10 @@ import static io.kestra.core.utils.Rethrow.throwFunction;
 )
 public class Reads extends AbstractDataLakeConnection implements RunnableTask<Reads.Output>, AbstractDataLakeStorageInterface {
     @Schema(title = "Directory Name")
-    @PluginProperty(dynamic = true)
     @NotNull
-    protected String directoryPath;
+    protected Property<String> directoryPath;
 
-    protected String fileSystem;
+    protected Property<String> fileSystem;
 
     @Override
     public Reads.Output run(RunContext runContext) throws Exception {
@@ -75,7 +75,7 @@ public class Reads extends AbstractDataLakeConnection implements RunnableTask<Re
         List.Output run = task.run(runContext);
 
         DataLakeServiceClient client = this.dataLakeServiceClient(runContext);
-        DataLakeFileSystemClient fileSystemClient = client.getFileSystemClient(runContext.render(this.fileSystem));
+        DataLakeFileSystemClient fileSystemClient = client.getFileSystemClient(runContext.render(this.fileSystem).as(String.class).orElseThrow());
 
         java.util.List<AdlsFile> list = run
             .getFiles()

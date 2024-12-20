@@ -24,15 +24,15 @@ public class EventHubClientConfig<T extends EventHubClientInterface> extends Azu
     }
 
     public String eventHubName() throws IllegalVariableEvaluationException {
-        return runContext.render(plugin.getEventHubName());
+        return runContext.render(plugin.getEventHubName()).as(String.class).orElse(null);
     }
 
-    public Optional<Integer> clientMaxRetries() {
-        return Optional.ofNullable(plugin.getClientMaxRetries());
+    public Optional<Integer> clientMaxRetries() throws IllegalVariableEvaluationException {
+        return runContext.render(plugin.getClientMaxRetries()).as(Integer.class);
     }
 
-    public Optional<Long> clientRetryDelay() {
-        return Optional.ofNullable(plugin.getClientRetryDelay());
+    public Optional<Long> clientRetryDelay() throws IllegalVariableEvaluationException {
+        return runContext.render(plugin.getClientRetryDelay()).as(Long.class);
     }
 
     public Optional<String> namespace() throws IllegalVariableEvaluationException {

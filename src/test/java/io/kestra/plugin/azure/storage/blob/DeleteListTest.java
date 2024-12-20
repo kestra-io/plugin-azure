@@ -1,5 +1,6 @@
 package io.kestra.plugin.azure.storage.blob;
 
+import io.kestra.core.models.property.Property;
 import io.kestra.core.utils.IdUtils;
 import org.junit.jupiter.api.Test;
 
@@ -20,10 +21,10 @@ class DeleteListTest extends AbstractTest {
         DeleteList task = DeleteList.builder()
             .id(DeleteListTest.class.getSimpleName())
             .type(List.class.getName())
-            .endpoint(this.storageEndpoint)
-            .connectionString(this.connectionString)
-            .container(this.container)
-            .prefix("/tasks/" + prefix + "/")
+            .endpoint(Property.of(this.storageEndpoint))
+            .connectionString(Property.of(connectionString))
+            .container(Property.of(this.container))
+            .prefix(Property.of("/tasks/" + prefix + "/"))
             .concurrent(5)
             .build();
 

@@ -2,6 +2,7 @@ package io.kestra.plugin.azure.storage.blob;
 
 import com.azure.storage.blob.models.BlobStorageException;
 import com.google.common.io.CharStreams;
+import io.kestra.core.models.property.Property;
 import io.kestra.core.utils.IdUtils;
 import org.junit.jupiter.api.Test;
 
@@ -25,10 +26,10 @@ class AllTest extends AbstractTest {
         List list = List.builder()
             .id(AllTest.class.getSimpleName())
             .type(Upload.class.getName())
-            .endpoint(this.storageEndpoint)
-            .connectionString(this.connectionString)
-            .container(this.container)
-            .prefix("tasks/azure/" + prefix  + "/")
+            .endpoint(Property.of(this.storageEndpoint))
+            .connectionString(Property.of(connectionString))
+            .container(Property.of(this.container))
+            .prefix(Property.of("tasks/azure/" + prefix  + "/"))
             .build();
 
         List.Output listOutput = list.run(runContext(list));
@@ -38,10 +39,10 @@ class AllTest extends AbstractTest {
         Download download = Download.builder()
             .id(AllTest.class.getSimpleName())
             .type(Download.class.getName())
-            .endpoint(this.storageEndpoint)
-            .connectionString(this.connectionString)
-            .container(this.container)
-            .name(upload.getBlob().getName())
+            .endpoint(Property.of(this.storageEndpoint))
+            .connectionString(Property.of(connectionString))
+            .container(Property.of(this.container))
+            .name(Property.of(upload.getBlob().getName()))
             .build();
         Download.Output run = download.run(runContext(download));
 
@@ -55,10 +56,10 @@ class AllTest extends AbstractTest {
         Delete delete = Delete.builder()
             .id(AllTest.class.getSimpleName())
             .type(Delete.class.getName())
-            .endpoint(this.storageEndpoint)
-            .connectionString(this.connectionString)
-            .container(this.container)
-            .name(upload.getBlob().getName())
+            .endpoint(Property.of(this.storageEndpoint))
+            .connectionString(Property.of(connectionString))
+            .container(Property.of(this.container))
+            .name(Property.of(upload.getBlob().getName()))
             .build();
         Delete.Output deleteOutput = delete.run(runContext(delete));
         assertThat(deleteOutput.getBlob(), is(notNullValue()));

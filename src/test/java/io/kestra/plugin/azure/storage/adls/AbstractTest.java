@@ -2,6 +2,7 @@ package io.kestra.plugin.azure.storage.adls;
 
 import com.azure.storage.file.datalake.DataLakeDirectoryClient;
 import com.azure.storage.file.datalake.DataLakeServiceClient;
+import io.kestra.core.models.property.Property;
 import io.kestra.core.utils.IdUtils;
 import io.kestra.plugin.azure.BaseTest;
 import io.kestra.plugin.azure.storage.adls.services.DataLakeService;
@@ -21,11 +22,11 @@ public class AbstractTest extends BaseTest {
         Upload upload = Upload.builder()
             .id(AllTest.class.getSimpleName())
             .type(io.kestra.plugin.azure.storage.blob.Upload.class.getName())
-            .endpoint(this.adlsEndpoint)
-            .connectionString(connectionString)
-            .fileSystem(this.fileSystem)
-            .from(source.toString())
-            .filePath(dir + "/" + out + ".yml")
+            .endpoint(Property.of(this.adlsEndpoint))
+            .connectionString(Property.of(connectionString))
+            .fileSystem(Property.of(this.fileSystem))
+            .from(Property.of(source.toString()))
+            .filePath(Property.of(dir + "/" + out + ".yml"))
             .build();
 
         directoryToClean.add(dir);
@@ -41,11 +42,11 @@ public class AbstractTest extends BaseTest {
         Upload upload = Upload.builder()
             .id(AllTest.class.getSimpleName())
             .type(io.kestra.plugin.azure.storage.blob.Upload.class.getName())
-            .endpoint(this.adlsEndpoint)
-            .connectionString(connectionString)
-            .fileSystem(this.fileSystem)
-            .from(source.toString())
-            .filePath(dir + "/" + out + ".txt")
+            .endpoint(Property.of(this.adlsEndpoint))
+            .connectionString(Property.of(connectionString))
+            .fileSystem(Property.of(this.fileSystem))
+            .from(Property.of(source.toString()))
+            .filePath(Property.of(dir + "/" + out + ".txt"))
             .build();
 
         directoryToClean.add(dir);
@@ -57,19 +58,19 @@ public class AbstractTest extends BaseTest {
         return List.builder()
             .id(AbstractTest.class.getSimpleName())
             .type(List.class.getName())
-            .endpoint(this.adlsEndpoint)
-            .connectionString(connectionString)
-            .fileSystem(this.fileSystem);
+            .endpoint(Property.of(this.adlsEndpoint))
+            .connectionString(Property.of(connectionString))
+            .fileSystem(Property.of(this.fileSystem));
     }
 
     protected DeleteFiles.DeleteFilesBuilder<?, ?> deleteDir(String dir) {
         return DeleteFiles.builder()
             .id(AbstractTest.class.getSimpleName())
             .type(DeleteFiles.class.getName())
-            .endpoint(this.adlsEndpoint)
-            .connectionString(connectionString)
-            .fileSystem(this.fileSystem)
-            .directoryPath(dir);
+            .endpoint(Property.of(this.adlsEndpoint))
+            .connectionString(Property.of(connectionString))
+            .fileSystem(Property.of(this.fileSystem))
+            .directoryPath(Property.of(dir));
     }
 
     @AfterEach

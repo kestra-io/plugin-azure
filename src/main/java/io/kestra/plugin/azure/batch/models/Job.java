@@ -5,6 +5,7 @@ import com.microsoft.azure.batch.protocol.models.MetadataItem;
 import com.microsoft.azure.batch.protocol.models.PoolInformation;
 import io.kestra.core.exceptions.IllegalVariableEvaluationException;
 import io.kestra.core.models.annotations.PluginProperty;
+import io.kestra.core.models.property.Property;
 import io.kestra.core.runners.RunContext;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Builder;
@@ -45,8 +46,7 @@ public class Job {
         title = "The priority of the Job.",
         description = "Priority values can range from -1000 to 1000, with -1000 being the lowest priority and 1000 being the highest priority. The default value is 0."
     )
-    @PluginProperty
-    private Integer priority;
+    private Property<Integer> priority;
 
     @Schema(
         title = "The maximum number of tasks that can be executed in parallel for the Job.",
@@ -54,29 +54,25 @@ public class Job {
             "If not specified, the default value is -1, which means there's no limit to the number of tasks that " +
             "can be run at once. You can update a job's `maxParallelTasks` after it has been created using the update job API."
     )
-    @PluginProperty
-    private Integer maxParallelTasks;
+    private Property<Integer> maxParallelTasks;
 
     @Schema(
         title = "Labels to attach to the created job."
     )
-    @PluginProperty(dynamic = true)
-    private Map<String, String> labels;
+    private Property<Map<String, String>> labels;
 
 
     public JobAddParameter to(RunContext runContext, PoolInformation poolInformation) throws IllegalVariableEvaluationException {
         return new JobAddParameter()
             .withId(runContext.render(this.id))
             .withDisplayName(runContext.render(this.displayName))
-            .withPriority(this.priority)
-            .withMaxParallelTasks(this.maxParallelTasks)
+            .withPriority(runContext.render(this.priority).as(Integer.class).orElse(null))
+            .withMaxParallelTasks(runContext.render(this.maxParallelTasks).as(Integer.class).orElse(null))
             .withPoolInfo(poolInformation)
             .withMetadata(
-                Optional.ofNullable(labels)
+                runContext.render(this.labels).asMap(String.class, String.class)
+                    .entrySet()
                     .stream()
-                    .map(throwFunction(runContext::renderMap))
-                    .map(throwFunction(Map::entrySet))
-                    .flatMap(Collection::stream)
                     .map(e -> new MetadataItem().withName(e.getKey()).withValue(e.getValue()))
                     .toList()
             );

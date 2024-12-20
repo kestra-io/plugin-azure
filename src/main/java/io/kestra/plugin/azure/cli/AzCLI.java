@@ -4,6 +4,7 @@ import io.kestra.core.exceptions.IllegalVariableEvaluationException;
 import io.kestra.core.models.annotations.Example;
 import io.kestra.core.models.annotations.Plugin;
 import io.kestra.core.models.annotations.PluginProperty;
+import io.kestra.core.models.property.Property;
 import io.kestra.core.models.tasks.runners.ScriptService;
 import io.kestra.core.models.tasks.*;
 import io.kestra.core.models.tasks.runners.TaskRunner;
@@ -120,35 +121,27 @@ public class AzCLI extends Task implements RunnableTask<ScriptOutput>, Namespace
     @Schema(
         title = "Account username. If set, it will use `az login` before running the commands."
     )
-    @PluginProperty(dynamic = true)
-    private String username;
+    private Property<String> username;
 
     @Schema(
         title = "Account password."
     )
-    @PluginProperty(dynamic = true)
-    private String password;
+    private Property<String> password;
 
     @Schema(
         title = "Tenant ID to use."
     )
-    @PluginProperty(dynamic = true)
-    private String tenant;
+    private Property<String> tenant;
 
     @Schema(
         title = "Is the account a service principal?"
     )
-    @PluginProperty
-    private boolean servicePrincipal;
+    private Property<Boolean> servicePrincipal;
 
     @Schema(
         title = "Additional environment variables for the current process."
     )
-    @PluginProperty(
-            additionalProperties = String.class,
-            dynamic = true
-    )
-    protected Map<String, String> env;
+    protected Property<Map<String, String>> env;
 
     @Schema(
         title = "Deprecated, use 'taskRunner' instead"
@@ -167,9 +160,8 @@ public class AzCLI extends Task implements RunnableTask<ScriptOutput>, Namespace
     protected TaskRunner taskRunner = Docker.instance();
 
     @Schema(title = "The task runner container image, only used if the task runner is container-based.")
-    @PluginProperty(dynamic = true)
     @Builder.Default
-    protected String containerImage = DEFAULT_IMAGE;
+    protected Property<String> containerImage = Property.of(DEFAULT_IMAGE);
 
     private NamespaceFiles namespaceFiles;
 
@@ -181,18 +173,20 @@ public class AzCLI extends Task implements RunnableTask<ScriptOutput>, Namespace
     public ScriptOutput run(RunContext runContext) throws Exception {
         List<String> loginCommands = this.getLoginCommands(runContext);
 
+        var renderedEnv = runContext.render(this.env).asMap(String.class, String.class);
+
         CommandsWrapper commands = new CommandsWrapper(runContext)
             .withWarningOnStdErr(true)
             .withDockerOptions(injectDefaults(getDocker()))
             .withTaskRunner(this.taskRunner)
-            .withContainerImage(this.containerImage)
+            .withContainerImage(runContext.render(this.containerImage).as(String.class).orElseThrow())
             .withCommands(
                 ScriptService.scriptCommands(
                     List.of("/bin/sh", "-c"),
                     loginCommands,
                     this.commands)
             )
-            .withEnv(this.env)
+            .withEnv(renderedEnv.isEmpty() ? null : renderedEnv)
             .withNamespaceFiles(namespaceFiles)
             .withInputFiles(inputFiles)
             .withOutputFiles(outputFiles);
@@ -216,15 +210,15 @@ public class AzCLI extends Task implements RunnableTask<ScriptOutput>, Namespace
     List<String> getLoginCommands(RunContext runContext) throws IllegalVariableEvaluationException {
         List<String> loginCommands = new ArrayList<>();
         if (this.username != null) {
-            StringBuilder loginCommand = new StringBuilder("az login -u ").append(runContext.render(this.username));
+            StringBuilder loginCommand = new StringBuilder("az login -u ").append(runContext.render(this.username).as(String.class).orElseThrow());
 
             if (this.password != null) {
-                loginCommand.append(" -p ").append(runContext.render(this.password));
+                loginCommand.append(" -p ").append(runContext.render(this.password).as(String.class).orElseThrow());
             }
             if (this.tenant != null) {
-                loginCommand.append(" --tenant ").append(runContext.render(this.tenant));
+                loginCommand.append(" --tenant ").append(runContext.render(this.tenant).as(String.class).orElseThrow());
             }
-            if (this.isServicePrincipal()) {
+            if (runContext.render(this.getServicePrincipal()).as(Boolean.class).orElseThrow()) {
                 loginCommand.append(" --service-principal");
             }
 

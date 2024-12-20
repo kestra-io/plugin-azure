@@ -6,6 +6,7 @@ import com.microsoft.azure.batch.auth.BatchSharedKeyCredentials;
 import com.microsoft.azure.batch.protocol.models.CloudJob;
 import com.microsoft.azure.batch.protocol.models.MetadataItem;
 import io.kestra.core.exceptions.IllegalVariableEvaluationException;
+import io.kestra.core.models.property.Property;
 import io.kestra.core.models.tasks.runners.ScriptService;
 import io.kestra.core.runners.RunContext;
 
@@ -15,11 +16,11 @@ import java.util.Map;
 import java.util.Optional;
 
 public class BatchService {
-    public static BatchClient client(String endpoint, String account, String accessKey, RunContext runContext) throws IllegalVariableEvaluationException {
+    public static BatchClient client(Property<String> endpoint, Property<String> account, Property<String> accessKey, RunContext runContext) throws IllegalVariableEvaluationException {
         return BatchClient.open(new BatchSharedKeyCredentials(
-            runContext.render(endpoint),
-            runContext.render(account),
-            runContext.render(accessKey)
+            runContext.render(endpoint).as(String.class).orElseThrow(),
+            runContext.render(account).as(String.class).orElseThrow(),
+            runContext.render(accessKey).as(String.class).orElseThrow()
         ));
     }
 

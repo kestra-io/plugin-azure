@@ -4,6 +4,7 @@ import com.azure.storage.blob.BlobClient;
 import com.azure.storage.blob.BlobContainerClient;
 import com.azure.storage.blob.BlobServiceClient;
 import io.kestra.core.exceptions.IllegalVariableEvaluationException;
+import io.kestra.core.models.property.Property;
 import io.kestra.core.runners.RunContext;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
@@ -17,14 +18,14 @@ import lombok.experimental.SuperBuilder;
 @Getter
 @NoArgsConstructor
 public abstract class AbstractBlobStorageWithSasObject extends AbstractBlobStorageWithSas implements AbstractBlobStorageObjectInterface, AbstractBlobStorageContainerInterface {
-    protected String container;
+    protected Property<String> container;
 
-    protected String name;
+    protected Property<String> name;
 
     protected BlobClient blobClient(RunContext runContext) throws IllegalVariableEvaluationException {
         BlobServiceClient client = this.client(runContext);
-        BlobContainerClient containerClient = client.getBlobContainerClient(runContext.render(this.container));
+        BlobContainerClient containerClient = client.getBlobContainerClient(runContext.render(this.container).as(String.class).orElse(null));
 
-        return containerClient.getBlobClient(runContext.render(this.name));
+        return containerClient.getBlobClient(runContext.render(this.name).as(String.class).orElseThrow());
     }
 }

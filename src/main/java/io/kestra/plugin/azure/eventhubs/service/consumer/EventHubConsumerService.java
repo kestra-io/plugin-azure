@@ -29,6 +29,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
+import static io.kestra.core.utils.Rethrow.throwFunction;
+
 @Slf4j
 public final class EventHubConsumerService {
 
@@ -57,7 +59,7 @@ public final class EventHubConsumerService {
             .consumerGroup(config.consumerGroup())
             .checkpointStore(checkpointStore)
             // Set the offset reset strategy
-            .initialPartitionEventPosition(partition -> {
+            .initialPartitionEventPosition(throwFunction(partition -> {
                 EventPosition position = config.partitionStartingPosition();
                 if (logger.isInfoEnabled()) {
                     logger.info("Initializing partitionId {} with offset={}, sequenceNumber={}, enqueuedDateTime={} if no checkpoint exist.",
@@ -68,7 +70,7 @@ public final class EventHubConsumerService {
                     );
                 }
                 return position;
-            });
+            }));
     }
 
     public Map<EventHubNamePartition, Integer> poll(final ConsumerContext consumerContext,

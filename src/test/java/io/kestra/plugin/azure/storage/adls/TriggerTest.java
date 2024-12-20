@@ -1,6 +1,7 @@
 package io.kestra.plugin.azure.storage.adls;
 
 import io.kestra.core.models.executions.Execution;
+import io.kestra.core.models.property.Property;
 import io.kestra.core.queues.QueueFactoryInterface;
 import io.kestra.core.queues.QueueInterface;
 import io.kestra.core.repositories.LocalFlowRepositoryLoader;
@@ -88,7 +89,7 @@ class TriggerTest extends AbstractTest {
             assertThat(trigger.size(), is(2));
 
             List listTask = list()
-                .directoryPath("adls/azure/trigger/adls-listen")
+                .directoryPath(Property.of("adls/azure/trigger/adls-listen"))
                 .build();
             int remainingFilesOnBucket = listTask.run(runContext(listTask))
                 .getFiles()
@@ -146,7 +147,7 @@ class TriggerTest extends AbstractTest {
             assertThat(trigger.size(), is(2));
 
             List listTask = list()
-                .directoryPath("adls/azure/trigger/adls-listen-delete-action")
+                .directoryPath(Property.of("adls/azure/trigger/adls-listen-delete-action"))
                 .build();
 
             int remainingFilesOnBucket = listTask.run(runContext(listTask))
@@ -203,7 +204,7 @@ class TriggerTest extends AbstractTest {
 
             //Moved files
             List listTask = list()
-                .directoryPath("adls/azure/trigger/adls-listen-move-action-direction")
+                .directoryPath(Property.of("adls/azure/trigger/adls-listen-move-action-direction"))
                 .build();
 
             int movedFilesOnBucket = listTask.run(runContext(listTask))
@@ -213,7 +214,7 @@ class TriggerTest extends AbstractTest {
 
             //Initial files
             List remainingFiles = list()
-                .directoryPath("adls/azure/trigger/adls-listen-move-action")
+                .directoryPath(Property.of("adls/azure/trigger/adls-listen-move-action"))
                 .build();
 
             int remainingFilesOnBucket = remainingFiles.run(runContext(listTask))

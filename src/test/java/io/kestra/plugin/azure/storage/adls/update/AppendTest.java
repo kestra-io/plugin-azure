@@ -28,10 +28,10 @@ class AppendTest extends AbstractTest {
         Append append = Append.builder()
             .id(AppendTest.class.getSimpleName())
             .type(Append.class.getName())
-            .endpoint(this.adlsEndpoint)
-            .connectionString(connectionString)
-            .fileSystem(this.fileSystem)
-            .filePath(upload.getFile().getName())
+            .endpoint(Property.of(this.adlsEndpoint))
+            .connectionString(Property.of(connectionString))
+            .fileSystem(Property.of(this.fileSystem))
+            .filePath(Property.of(upload.getFile().getName()))
             .data(Property.of(dataToAdd))
             .build();
 
@@ -41,10 +41,10 @@ class AppendTest extends AbstractTest {
         Read download = Read.builder()
             .id(AppendTest.class.getSimpleName())
             .type(Read.class.getName())
-            .endpoint(this.adlsEndpoint)
-            .connectionString(connectionString)
-            .fileSystem(this.fileSystem)
-            .filePath(upload.getFile().getName())
+            .endpoint(Property.of(this.adlsEndpoint))
+            .connectionString(Property.of(connectionString))
+            .fileSystem(Property.of(this.fileSystem))
+            .filePath(Property.of(upload.getFile().getName()))
             .build();
 
         Read.Output run = download.run(runContext(download));

@@ -4,6 +4,7 @@ import com.azure.messaging.eventhubs.EventDataBatch;
 import com.azure.messaging.eventhubs.EventHubProducerAsyncClient;
 import com.azure.messaging.eventhubs.models.CreateBatchOptions;
 import io.kestra.core.exceptions.IllegalVariableEvaluationException;
+import io.kestra.core.models.property.Property;
 import io.kestra.core.runners.RunContext;
 import io.kestra.core.runners.RunContextFactory;
 import io.kestra.plugin.azure.eventhubs.client.EventHubClientFactory;
@@ -54,7 +55,7 @@ class ProduceTest {
 
         Produce task = Produce.builder()
             .from(Map.of("body", "msg"))
-            .eventHubName("test")
+            .eventHubName(Property.of("test"))
             .build();
         // create mocks
         EventDataBatch batch = Mockito.mock(EventDataBatch.class);
@@ -83,7 +84,7 @@ class ProduceTest {
 
         Produce task = Produce.builder()
             .from(Map.of("body", "msg"))
-            .eventHubName("test")
+            .eventHubName(Property.of("test"))
             .build();
         // create mocks
         EventDataBatch batch = Mockito.mock(EventDataBatch.class);

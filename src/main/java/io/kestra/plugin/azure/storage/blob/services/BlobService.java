@@ -12,6 +12,7 @@ import com.azure.storage.blob.models.BlobProperties;
 import com.azure.storage.blob.models.ListBlobsOptions;
 import io.kestra.core.exceptions.IllegalVariableEvaluationException;
 import io.kestra.core.models.executions.metrics.Counter;
+import io.kestra.core.models.property.Property;
 import io.kestra.core.runners.RunContext;
 import io.kestra.core.utils.FileUtils;
 import io.kestra.plugin.azure.AbstractConnectionInterface;
@@ -60,8 +61,8 @@ public class BlobService {
                     .sharedKeyAccountName(blobStorageInterface.getSharedKeyAccountName())
                     .sharedKeyAccountAccessKey(blobStorageInterface.getSharedKeyAccountAccessKey())
                     .sasToken(blobStorageInterface.getSasToken())
-                    .container(object.getContainer())
-                    .name(object.getName())
+                    .container(Property.of(object.getContainer()))
+                    .name(Property.of(object.getName()))
                     .build();
                 delete.run(runContext);
             }
@@ -76,18 +77,18 @@ public class BlobService {
                     .sharedKeyAccountAccessKey(blobStorageInterface.getSharedKeyAccountAccessKey())
                     .sasToken(blobStorageInterface.getSasToken())
                     .from(Copy.CopyObject.builder()
-                        .container(object.getContainer())
-                        .name(object.getName())
+                        .container(Property.of(object.getContainer()))
+                        .name(Property.of(object.getName()))
                         .build()
                     )
                     .to(moveTo.toBuilder()
-                        .container(object.getContainer())
-                        .name(StringUtils.stripEnd(moveTo.getName() + "/", "/")
+                        .container(Property.of(object.getContainer()))
+                        .name(Property.of(StringUtils.stripEnd(runContext.render(moveTo.getName()).as(String.class).orElseThrow() + "/", "/")
                             + "/" + FilenameUtils.getName(object.getName())
-                        )
+                        ))
                         .build()
                     )
-                    .delete(true)
+                    .delete(Property.of(true))
                     .build();
                 copy.run(runContext);
             }
@@ -98,22 +99,28 @@ public class BlobService {
         ListBlobsOptions listBlobsOptions = new ListBlobsOptions();
 
         if (list.getPrefix() != null) {
-            listBlobsOptions.setPrefix(runContext.render(list.getPrefix()));
+            listBlobsOptions.setPrefix(runContext.render(list.getPrefix()).as(String.class).orElseThrow());
         }
 
-        String regExp = runContext.render(list.getRegexp());
+        String regExp = runContext.render(list.getRegexp()).as(String.class).orElse(null);
 
 
         PagedIterable<BlobItem> blobItems;
         if (list.getDelimiter() != null) {
-            blobItems = client.listBlobsByHierarchy(runContext.render(list.getDelimiter()), listBlobsOptions, Duration.ofSeconds(30));
+            blobItems = client.listBlobsByHierarchy(
+                runContext.render(
+                    list.getDelimiter()).as(String.class).orElseThrow(),
+                    listBlobsOptions,
+                    Duration.ofSeconds(30)
+            );
         } else {
             blobItems = client.listBlobs(listBlobsOptions, Duration.ofSeconds(30));
         }
 
+        var filter = runContext.render(list.getFilter()).as(ListInterface.Filter.class).orElseThrow();
         return blobItems
             .stream()
-            .filter(blob -> BlobService.filter(blob, regExp, list.getFilter()))
+            .filter(blob -> BlobService.filter(blob, regExp, filter))
             .map(blob -> Blob.of(client.getBlobContainerName(), blob))
             .collect(Collectors.toList());
     }
@@ -132,24 +139,23 @@ public class BlobService {
         String connectionString,
         String sharedKeyAccountName,
         String sharedKeyAccountAccessKey,
-        String sasToken,
-        RunContext runContext
-    ) throws IllegalVariableEvaluationException {
+        String sasToken
+    ) {
         BlobServiceClientBuilder builder = new BlobServiceClientBuilder();
 
         if (endpoint != null) {
-            builder.endpoint(runContext.render(endpoint));
+            builder.endpoint(endpoint);
         }
 
         if (connectionString != null) {
-            builder.connectionString(runContext.render(connectionString));
+            builder.connectionString(connectionString);
         } else if (sharedKeyAccountName != null && sharedKeyAccountAccessKey != null) {
             builder.credential(new AzureNamedKeyCredential(
-                runContext.render(sharedKeyAccountName),
-                runContext.render(sharedKeyAccountAccessKey)
+                sharedKeyAccountName,
+                sharedKeyAccountAccessKey
             ));
         } else if (sasToken != null ) {
-            builder.sasToken(runContext.render(sasToken));
+            builder.sasToken(sasToken);
         } else {
             builder.credential(new DefaultAzureCredentialBuilder().build());
         }

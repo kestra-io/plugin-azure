@@ -1,6 +1,7 @@
 package io.kestra.plugin.azure;
 
 import io.kestra.core.models.annotations.PluginProperty;
+import io.kestra.core.models.property.Property;
 import io.swagger.v3.oas.annotations.media.Schema;
 
 /**
@@ -11,18 +12,15 @@ public interface AzureClientInterface {
     @Schema(
         title = "Connection string of the Storage Account."
     )
-    @PluginProperty(dynamic = true)
-    String getConnectionString();
+    Property<String> getConnectionString();
 
     @Schema(
         title = "Shared Key account name for authenticating requests."
     )
-    @PluginProperty(dynamic = true)
-    String getSharedKeyAccountName();
+    Property<String> getSharedKeyAccountName();
 
     @Schema(
         title = "Shared Key access key for authenticating requests."
     )
-    @PluginProperty(dynamic = true)
-    String getSharedKeyAccountAccessKey();
+    Property<String> getSharedKeyAccountAccessKey();
 }

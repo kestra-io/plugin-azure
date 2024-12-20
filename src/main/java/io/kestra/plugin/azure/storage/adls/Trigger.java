@@ -76,27 +76,26 @@ public class Trigger extends AbstractTrigger implements PollingTriggerInterface,
     @Builder.Default
     private final Duration interval = Duration.ofSeconds(60);
 
-    protected String endpoint;
+    protected Property<String> endpoint;
 
-    protected String connectionString;
+    protected Property<String> connectionString;
 
-    protected String sharedKeyAccountName;
+    protected Property<String> sharedKeyAccountName;
 
-    protected String sharedKeyAccountAccessKey;
+    protected Property<String> sharedKeyAccountAccessKey;
 
-    protected String sasToken;
+    protected Property<String> sasToken;
 
-    private String fileSystem;
+    private Property<String> fileSystem;
 
-    private String directoryPath;
+    private Property<String> directoryPath;
 
     @Schema(
         title = "The action to perform on the retrieved files. If using `NONE`, make sure to handle the files inside your flow to avoid infinite triggering."
     )
     @Builder.Default
-    @PluginProperty(dynamic = true)
     @NotNull
-    private Action action = Action.NONE;
+    private Property<Action> action = Property.of(Action.NONE);
 
     @Schema(
         title = "The destination container and key."
@@ -138,7 +137,7 @@ public class Trigger extends AbstractTrigger implements PollingTriggerInterface,
                     .sharedKeyAccountAccessKey(this.sharedKeyAccountAccessKey)
                     .sasToken(this.sasToken)
                     .fileSystem(this.fileSystem)
-                    .filePath(object.getName())
+                    .filePath(Property.of(object.getName()))
                     .build();
                 Read.Output downloadOutput = download.run(runContext);
 
@@ -147,23 +146,23 @@ public class Trigger extends AbstractTrigger implements PollingTriggerInterface,
             .toList();
 
         DataLakeServiceClient client = DataLakeService.client(
-            endpoint,
-            connectionString,
-            sharedKeyAccountName,
-            sharedKeyAccountAccessKey,
-            sasToken,
+            runContext.render(endpoint).as(String.class).orElse(null),
+            runContext.render(connectionString).as(String.class).orElse(null),
+            runContext.render(sharedKeyAccountName).as(String.class).orElse(null),
+            runContext.render(sharedKeyAccountAccessKey).as(String.class).orElse(null),
+            runContext.render(sasToken).as(String.class).orElse(null),
             runContext);
 
         //Create the target directory in the target fileSystem for MOVE action
-        if (Action.MOVE.equals(this.action)) {
-            final String toDirPath = runContext.render(this.moveTo.getDirectoryPath());
-            client.getFileSystemClient(runContext.render(this.moveTo.getFileSystem()))
+        if (Action.MOVE.equals(runContext.render(this.action).as(Action.class).orElseThrow())) {
+            final String toDirPath = runContext.render(this.moveTo.getDirectoryPath()).as(String.class).orElseThrow();
+            client.getFileSystemClient(runContext.render(this.moveTo.getFileSystem()).as(String.class).orElseThrow())
                 .createDirectoryIfNotExists(toDirPath);
 
         }
 
         for (AdlsFile file : list) {
-            switch (this.action) {
+            switch (runContext.render(this.action).as(Action.class).orElseThrow()) {
                 case DELETE -> {
                     Delete delete = Delete.builder()
                         .id(this.id)
@@ -174,16 +173,16 @@ public class Trigger extends AbstractTrigger implements PollingTriggerInterface,
                         .sharedKeyAccountAccessKey(this.sharedKeyAccountAccessKey)
                         .sasToken(this.sasToken)
                         .fileSystem(this.fileSystem)
-                        .filePath(file.getName())
+                        .filePath(Property.of(file.getName()))
                         .build();
                     delete.run(runContext);
                 }
                 case MOVE -> {
-                    DataLakeFileClient fileClient = client.getFileSystemClient(runContext.render(this.fileSystem))
+                    DataLakeFileClient fileClient = client.getFileSystemClient(runContext.render(this.fileSystem).as(String.class).orElseThrow())
                         .getFileClient(file.getName());
 
                     fileClient.rename(
-                        runContext.render(this.moveTo.getFileSystem()),
+                        runContext.render(this.moveTo.getFileSystem()).as(String.class).orElseThrow(),
                         runContext.render(this.moveTo.getDirectoryPath() + "/" + fileClient.getFileName())
                     );
                 }
@@ -214,15 +213,13 @@ public class Trigger extends AbstractTrigger implements PollingTriggerInterface,
         @Schema(
             title = "The destination file system."
         )
-        @PluginProperty(dynamic = true)
         @NotNull
-        String fileSystem;
+        Property<String> fileSystem;
 
         @Schema(
             title = "The full destination directory path on the file system."
         )
-        @PluginProperty(dynamic = true)
         @NotNull
-        String directoryPath;
+        Property<String> directoryPath;
     }
 }

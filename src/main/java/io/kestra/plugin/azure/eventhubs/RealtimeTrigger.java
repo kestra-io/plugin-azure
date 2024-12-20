@@ -7,6 +7,7 @@ import io.kestra.core.models.annotations.Example;
 import io.kestra.core.models.annotations.Plugin;
 import io.kestra.core.models.conditions.ConditionContext;
 import io.kestra.core.models.executions.Execution;
+import io.kestra.core.models.property.Property;
 import io.kestra.core.models.triggers.*;
 import io.kestra.core.runners.RunContext;
 import io.kestra.plugin.azure.eventhubs.model.EventDataObject;
@@ -25,6 +26,7 @@ import reactor.core.publisher.Flux;
 
 import java.time.Duration;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -44,7 +46,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
               - id: log
                 type: io.kestra.plugin.core.log.Log
                 message: Hello there! I received {{ trigger.body }} from Azure EventHubs!
-            
+
             triggers:
               - id: read_from_eventhub
                 type: io.kestra.plugin.azure.eventhubs.RealtimeTrigger
@@ -72,42 +74,42 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public class RealtimeTrigger extends AbstractTrigger implements EventHubConsumerInterface, RealtimeTriggerInterface, TriggerOutput<EventDataOutput> {
 
     // TASK'S PARAMETERS
-    protected String connectionString;
+    protected Property<String> connectionString;
 
-    protected String sharedKeyAccountName;
+    protected Property<String> sharedKeyAccountName;
 
-    protected String sharedKeyAccountAccessKey;
+    protected Property<String> sharedKeyAccountAccessKey;
 
-    protected String sasToken;
-
-    @Builder.Default
-    protected Integer clientMaxRetries = 5;
+    protected Property<String> sasToken;
 
     @Builder.Default
-    protected Long clientRetryDelay = 500L;
+    protected Property<Integer> clientMaxRetries = Property.of(5);
 
     @Builder.Default
-    private Serdes bodyDeserializer = Serdes.STRING;
+    protected Property<Long> clientRetryDelay = Property.of(500L);
 
     @Builder.Default
-    private Map<String, Object> bodyDeserializerProperties = Collections.emptyMap();
+    private Property<Serdes> bodyDeserializer = Property.of(Serdes.STRING);
 
     @Builder.Default
-    private String consumerGroup = "$Default";
+    private Property<Map<String, Object>> bodyDeserializerProperties = Property.of(new HashMap<>());
 
     @Builder.Default
-    private StartingPosition partitionStartingPosition = StartingPosition.EARLIEST;
-
-    private String enqueueTime;
+    private Property<String> consumerGroup = Property.of("$Default");
 
     @Builder.Default
-    private Map<String, String> checkpointStoreProperties = Collections.emptyMap();
+    private Property<StartingPosition> partitionStartingPosition = Property.of(StartingPosition.EARLIEST);
 
-    private String namespace;
+    private Property<String> enqueueTime;
 
-    private String eventHubName;
+    @Builder.Default
+    private Property<Map<String, String>> checkpointStoreProperties = Property.of(new HashMap<>());
 
-    private String customEndpointAddress;
+    private Property<String> namespace;
+
+    private Property<String> eventHubName;
+
+    private Property<String> customEndpointAddress;
 
     @Builder.Default
     @Getter(AccessLevel.NONE)
@@ -149,7 +151,7 @@ public class RealtimeTrigger extends AbstractTrigger implements EventHubConsumer
                                                 final RunContext runContext) throws Exception {
 
         final EventHubConsumerService service = task.newEventHubConsumerService(runContext, task);
-        final EventDataObjectConverter converter = task.newConverter(task);
+        final EventDataObjectConverter converter = task.newConverter(task, runContext);
 
         return Flux.create(emitter -> {
                 Logger contextLogger = runContext.logger();

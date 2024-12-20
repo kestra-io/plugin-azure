@@ -6,6 +6,7 @@ import io.kestra.core.models.annotations.Example;
 import io.kestra.core.models.annotations.Plugin;
 import io.kestra.core.models.annotations.PluginProperty;
 import io.kestra.core.models.executions.metrics.Counter;
+import io.kestra.core.models.property.Property;
 import io.kestra.core.models.tasks.RunnableTask;
 import io.kestra.core.runners.RunContext;
 import io.kestra.plugin.azure.storage.adls.abstracts.AbstractDataLakeWithFile;
@@ -38,7 +39,7 @@ import java.net.URI;
                   - id: download_request
                     type: io.kestra.plugin.core.http.Download
                     uri: adls/product_data/product.json
-                
+
                   - id: upload_file
                     type: io.kestra.plugin.azure.storage.adls.Upload
                     filePath: "path/to/file/product.json"
@@ -57,13 +58,12 @@ public class Upload extends AbstractDataLakeWithFile implements RunnableTask<Upl
     @Schema(
         title = "The file from the internal storage to upload to the Azure Data Lake Storage."
     )
-    @PluginProperty(dynamic = true)
-    private String from;
+    private Property<String> from;
 
 
     @Override
     public Upload.Output run(RunContext runContext) throws Exception {
-        URI fromUri = new URI(runContext.render(this.from));
+        URI fromUri = new URI(runContext.render(this.from).as(String.class).orElseThrow());
 
         try (InputStream is = runContext.storage().getFile(fromUri)) {
             DataLakeFileClient fileClient = this.dataLakeFileClient(runContext);

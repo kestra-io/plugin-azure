@@ -122,9 +122,9 @@ public class CreateRun extends AbstractAzureIdentityConnection implements Runnab
         logger.info("Successfully authenticate to Azure Data Factory");
 
         //Create running pipeline
-        final String resourceGroupName = this.resourceGroupName.as(runContext, String.class);
-        final String factoryName = this.factoryName.as(runContext, String.class);
-        final String pipelineName = this.pipelineName.as(runContext, String.class);
+        final String resourceGroupName = runContext.render(this.resourceGroupName).as(String.class).orElse(null);
+        final String factoryName = runContext.render(this.factoryName).as(String.class).orElse(null);
+        final String pipelineName = runContext.render(this.pipelineName).as(String.class).orElse(null);
 
         final var pipelineRunResponse = manager.pipelines()
                 .createRunWithResponse(resourceGroupName,
@@ -134,7 +134,7 @@ public class CreateRun extends AbstractAzureIdentityConnection implements Runnab
                         null,
                         null,
                         null,
-                        parameters.asMap(runContext, String.class, Object.class),
+                        runContext.render(this.parameters).asMap(String.class, Object.class),
                         Context.NONE
                 );
 
@@ -146,7 +146,7 @@ public class CreateRun extends AbstractAzureIdentityConnection implements Runnab
         // Get running pipeline and wait until completion
         final String runId = pipelineRunResponse.getValue().runId();
 
-        if(!Boolean.TRUE.equals(this.wait.as(runContext, Boolean.class))) {
+        if(!Boolean.TRUE.equals(runContext.render(this.wait).as(Boolean.class).orElseThrow())) {
             return Output.builder()
                     .runId(runId)
                     .build();
@@ -231,8 +231,8 @@ public class CreateRun extends AbstractAzureIdentityConnection implements Runnab
     }
 
     public AzureProfile profile(RunContext runContext) throws IllegalVariableEvaluationException {
-        final String tenantId = this.tenantId.as(runContext, String.class);
-        final String subscriptionId = this.subscriptionId.as(runContext, String.class);
+        final String tenantId = runContext.render(this.tenantId).as(String.class).orElse(null);
+        final String subscriptionId = runContext.render(this.subscriptionId).as(String.class).orElse(null);
 
         return  new AzureProfile(
             tenantId,

@@ -167,13 +167,14 @@ public class AzCLI extends Task implements RunnableTask<ScriptOutput>, Namespace
 
     private Object inputFiles;
 
-    private List<String> outputFiles;
+    private Property<List<String>> outputFiles;
 
     @Override
     public ScriptOutput run(RunContext runContext) throws Exception {
         List<String> loginCommands = this.getLoginCommands(runContext);
 
         var renderedEnv = runContext.render(this.env).asMap(String.class, String.class);
+        var renderedOutputFiles = runContext.render(this.outputFiles).asList(String.class);
 
         CommandsWrapper commands = new CommandsWrapper(runContext)
             .withWarningOnStdErr(true)
@@ -189,7 +190,7 @@ public class AzCLI extends Task implements RunnableTask<ScriptOutput>, Namespace
             .withEnv(renderedEnv.isEmpty() ? null : renderedEnv)
             .withNamespaceFiles(namespaceFiles)
             .withInputFiles(inputFiles)
-            .withOutputFiles(outputFiles);
+            .withOutputFiles(renderedOutputFiles.isEmpty() ? null : renderedOutputFiles);
 
         return commands.run();
     }

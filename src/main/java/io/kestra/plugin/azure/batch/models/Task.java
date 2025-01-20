@@ -50,8 +50,7 @@ public class Task {
     )
     @PluginProperty
     @NotNull
-    @NotEmpty
-    String interpreter = "/bin/sh";
+    Property<String> interpreter = Property.of("/bin/sh");
 
     @Builder.Default
     @Schema(
@@ -190,7 +189,7 @@ public class Task {
         String commandAsString = "\"" + String.join("\n", renderer) + "\"";
 
         // interpreter
-        List<String> commandsWithInterpreter = new ArrayList<>(Collections.singletonList(interpreter));
+        List<String> commandsWithInterpreter = new ArrayList<>(Collections.singletonList(runContext.render(interpreter).as(String.class).orElseThrow()));
         commandsWithInterpreter.addAll(Arrays.asList(interpreterArgs));
         commandsWithInterpreter.add(commandAsString);
 

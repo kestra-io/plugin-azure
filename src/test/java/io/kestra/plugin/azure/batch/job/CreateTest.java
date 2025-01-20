@@ -97,20 +97,20 @@ class CreateTest extends AbstractTest {
             List.of(
                 Task.builder()
                     .id("env")
-                    .interpreter("/bin/bash")
+                    .interpreter(Property.of("/bin/bash"))
                     .commands(Property.of(List.of("echo t1=$ENV_STRING | awk '{ print $1 }'")))
                     .environments(Property.of(Map.of("ENV_STRING", "{{ inputs.first }}")))
                     .containerSettings(TaskContainerSettings.builder().imageName(Property.of("ubuntu")).build())
                     .build(),
                 Task.builder()
                     .id("echo")
-                    .interpreter("/bin/bash")
+                    .interpreter(Property.of("/bin/bash"))
                     .commands(Property.of(List.of("echo t2=`echo {{ inputs.second }}` 1>&2")))
                     .containerSettings(TaskContainerSettings.builder().imageName(Property.of("ubuntu")).build())
                     .build(),
                 Task.builder()
                     .id("for")
-                    .interpreter("/bin/bash")
+                    .interpreter(Property.of("/bin/bash"))
                     .commands(Property.of(List.of(("for i in $(seq 10); do echo t3=$i; done"))))
                     .containerSettings(TaskContainerSettings.builder().imageName(Property.of("ubuntu")).build())
                     .build(),
@@ -134,7 +134,7 @@ class CreateTest extends AbstractTest {
                             )
                             .build()
                     ))
-                    .interpreter("/bin/bash")
+                    .interpreter(Property.of("/bin/bash"))
                     .commands(Property.of(List.of("echo '::{\"outputs\": {\"extract\":\"'$(cat files/in/in.txt)'\"}}::' | tee files/in/tee.txt")))
                     .containerSettings(TaskContainerSettings.builder().imageName(Property.of("ubuntu")).build())
                     .build(),
@@ -146,7 +146,7 @@ class CreateTest extends AbstractTest {
                     .outputDirs(Property.of(List.of(
                         "outs/child"
                     )))
-                    .interpreter("/bin/bash")
+                    .interpreter(Property.of("/bin/bash"))
                     .commands(Property.of(List.of(
                         "mkdir -p outs/child/sub",
                         "echo 1 > outs/1.txt",

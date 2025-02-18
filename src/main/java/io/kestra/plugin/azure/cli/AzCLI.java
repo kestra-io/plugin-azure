@@ -112,10 +112,8 @@ public class AzCLI extends Task implements RunnableTask<ScriptOutput>, Namespace
     @Schema(
         title = "The commands to run."
     )
-    @PluginProperty(dynamic = true)
     @NotNull
-    @NotEmpty
-    private List<String> commands;
+    private Property<List<String>> commands;
 
     @Schema(
         title = "Account username. If set, it will use `az login` before running the commands."
@@ -180,12 +178,9 @@ public class AzCLI extends Task implements RunnableTask<ScriptOutput>, Namespace
             .withDockerOptions(injectDefaults(getDocker()))
             .withTaskRunner(this.taskRunner)
             .withContainerImage(runContext.render(this.containerImage).as(String.class).orElseThrow())
-            .withCommands(
-                ScriptService.scriptCommands(
-                    List.of("/bin/sh", "-c"),
-                    loginCommands,
-                    this.commands)
-            )
+            .withBeforeCommands(Property.of(loginCommands))
+            .withInterpreter(Property.of(List.of("/bin/sh", "-c")))
+            .withCommands(this.commands)
             .withEnv(renderedEnv.isEmpty() ? null : renderedEnv)
             .withNamespaceFiles(namespaceFiles)
             .withInputFiles(inputFiles)

@@ -39,9 +39,9 @@ public class AzCLITest {
             .id(IdUtils.create())
             .type(AzCLI.class.getName())
             .env(Property.of(Map.of(envKey, envValue)))
-            .commands(List.of(
+            .commands(TestsUtils.propertyFromList(List.of(
                 "echo \"::{\\\"outputs\\\":{\\\"{{ inputs.outputName }}\\\":\\\"$" + envKey + "\\\"}}::\""
-            ))
+            )))
             .build();
 
         RunContext runContext = TestsUtils.mockRunContext(runContextFactory, execute, Map.of(
@@ -63,7 +63,7 @@ public class AzCLITest {
             .password(new Property<>("{{ inputs.myPassword }}"))
             .tenant(new Property<>("{{ inputs.myTenant }}"))
             .servicePrincipal(Property.of(true))
-            .commands(List.of("az keyvault list"))
+            .commands(Property.of(List.of("az keyvault list")))
             .build();
 
         runContext = TestsUtils.mockRunContext(runContextFactory, execute, Map.of(

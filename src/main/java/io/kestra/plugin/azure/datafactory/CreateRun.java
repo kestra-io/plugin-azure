@@ -16,6 +16,7 @@ import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import io.kestra.core.exceptions.IllegalVariableEvaluationException;
 import io.kestra.core.models.annotations.Example;
 import io.kestra.core.models.annotations.Plugin;
+import io.kestra.core.models.annotations.PluginProperty;
 import io.kestra.core.models.executions.metrics.Counter;
 import io.kestra.core.models.executions.metrics.Timer;
 import io.kestra.core.models.property.Property;
@@ -84,8 +85,6 @@ import java.util.concurrent.atomic.AtomicReference;
 public class CreateRun extends AbstractAzureIdentityConnection implements RunnableTask<CreateRun.Output> {
     private static final String PIPELINE_SUCCEEDED_STATUS = "Succeeded";
     private static final List<String> PIPELINE_FAILED_STATUS = List.of("Failed", "Canceling", "Cancelled");
-    private static final Duration WAIT_UNTIL_COMPLETION = Duration.ofHours(1);
-    private static final Duration COMPLETION_CHECK_INTERVAL = Duration.ofSeconds(5);
 
     @Schema(title = "Subscription ID")
     @NotNull
@@ -112,6 +111,11 @@ public class CreateRun extends AbstractAzureIdentityConnection implements Runnab
     )
     @Builder.Default
     private Property<Boolean> wait = Property.of(Boolean.TRUE);
+
+    @Schema(title = "Check the frequency configuration.")
+    @PluginProperty
+    @Builder.Default
+    private CheckFrequency checkFrequency = CheckFrequency.builder().build();
 
     @Override
     public CreateRun.Output run(RunContext runContext) throws Exception {
@@ -152,6 +156,8 @@ public class CreateRun extends AbstractAzureIdentityConnection implements Runnab
                     .build();
         }
 
+        final Duration checkInterval = runContext.render(this.checkFrequency.getInterval()).as(Duration.class).orElseThrow();
+        final Duration maxDuration = runContext.render(this.checkFrequency.getMaxDuration()).as(Duration.class).orElseThrow();
         final AtomicReference<PipelineRun> runningPipelineResponse = new AtomicReference<>();
         try {
             Await.until(() -> {
@@ -163,7 +169,7 @@ public class CreateRun extends AbstractAzureIdentityConnection implements Runnab
                 }
 
                 return PIPELINE_SUCCEEDED_STATUS.equals(runStatus);
-            }, COMPLETION_CHECK_INTERVAL, WAIT_UNTIL_COMPLETION);
+            }, checkInterval, maxDuration);
         } catch (TimeoutException | RuntimeException e) {
             logger.error("Pipeline '{}' with runId '{} finished with status '{}'", pipelineName, runId, runningPipelineResponse.get().status());
             throw new RuntimeException(runningPipelineResponse.get().message());
@@ -223,6 +229,22 @@ public class CreateRun extends AbstractAzureIdentityConnection implements Runnab
                 title = "URI of a kestra internal storage file containing the activities and their inputs/outputs."
         )
         private URI uri;
+    }
+
+    @Builder
+    @Getter
+    public static class CheckFrequency {
+        @Schema(
+            title = "Maximum duration of the task until timing out the task."
+        )
+        @Builder.Default
+        private Property<Duration> maxDuration = Property.of(Duration.ofHours(1));
+
+        @Schema(
+            title = "Frequency at which Kestra checks if the pipeline has finished."
+        )
+        @Builder.Default
+        private Property<Duration> interval = Property.of(Duration.ofSeconds(5));
     }
 
     private DataFactoryManager dataFactoryManager(RunContext runContext) throws IllegalVariableEvaluationException {

@@ -10,9 +10,12 @@ import io.micronaut.context.annotation.Value;
 import jakarta.inject.Inject;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -38,23 +41,32 @@ class UploadRunTest {
 
 
     @Disabled
-    @Test
-    void testRunPipeline() throws Exception {
+    @ParameterizedTest
+    @ValueSource(booleans = {true, false})
+    void testRunPipeline(boolean useCustomDuration) throws Exception {
         final var tenantId = Property.of(this.tenantId);
         final var subscriptionId = Property.of(this.subscriptionId);
         final var factoryName = Property.of("unit-test");
-        final var resourceGroupName = Property.of("unittest");
+        final var resourceGroupName = Property.of("unit-test");
         final var pipelineName = Property.of("http-test");
 
         RunContext runContext = runContextFactory.of();
 
-        CreateRun createRun = CreateRun.builder()
-                .tenantId(tenantId)
-                .subscriptionId(subscriptionId)
-                .factoryName(factoryName)
-                .resourceGroupName(resourceGroupName)
-                .pipelineName(pipelineName)
-                .build();
+        CreateRun.CreateRunBuilder createRunBuilder = CreateRun.builder()
+            .tenantId(tenantId)
+            .subscriptionId(subscriptionId)
+            .factoryName(factoryName)
+            .resourceGroupName(resourceGroupName)
+            .pipelineName(pipelineName);
+
+        if (useCustomDuration) {
+            createRunBuilder.checkFrequency(CreateRun.CheckFrequency.builder()
+                .maxDuration(Property.of(Duration.ofMinutes(1)))
+                .interval(Property.of(Duration.ofSeconds(30)))
+                .build());
+        }
+
+        CreateRun createRun = createRunBuilder.build();
 
         CreateRun.Output output = createRun.run(runContext);
 
@@ -81,7 +93,7 @@ class UploadRunTest {
         final var tenantId = Property.of(this.tenantId);
         final var subscriptionId = Property.of(this.subscriptionId);
         final var factoryName = Property.of("unit-test");
-        final var resourceGroupName = Property.of("unittest");
+        final var resourceGroupName = Property.of("unit-test");
         final var pipelineName = Property.of("http-test-with-parameter");
         final var parameters = Property.of(Map.of("pokemonName", (Object) "pikachu"));
 

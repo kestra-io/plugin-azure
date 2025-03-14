@@ -35,6 +35,7 @@ import static io.kestra.core.utils.Rethrow.throwFunction;
     examples = {
         @Example(
             full = true,
+            title = "Upload an input file to Azure Blob Storage",
             code = """
                 id: azure_storage_blob_upload
                 namespace: company.team
@@ -46,12 +47,33 @@ import static io.kestra.core.utils.Rethrow.throwFunction;
                 tasks:
                   - id: upload
                     type: io.kestra.plugin.azure.storage.blob.Upload
-                    endpoint: "https://yourblob.blob.core.windows.net"
-                    connectionString: "DefaultEndpointsProtocol=...=="
-                    container: "mydata"
+                    endpoint: https://kestra.blob.core.windows.net
+                    connectionString: "{{ secret('AZURE_CONNECTION_STRING') }}"
+                    container: kestra
                     from: "{{ inputs.myfile }}"
                     name: "myblob"
                 """
+        ),
+        @Example(
+            full = true,
+            title = "Extract data via an HTTP API call and upload it as a file to Azure Blob Storage",
+            code = """
+                id: azure_blob_upload
+                namespace: company.team
+                
+                tasks:
+                  - id: extract
+                    type: io.kestra.plugin.core.http.Download
+                    uri: https://huggingface.co/datasets/kestra/datasets/raw/main/csv/salaries.csv
+                
+                  - id: load
+                    type: io.kestra.plugin.azure.storage.blob.Upload
+                    endpoint: https://kestra.blob.core.windows.net
+                    connectionString: "{{ secret('AZURE_CONNECTION_STRING') }}"
+                    container: kestra
+                    from: "{{ outputs.extract.uri }}"
+                    name: data.csv
+            """
         )
     }
 )

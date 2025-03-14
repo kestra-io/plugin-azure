@@ -36,8 +36,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
  */
 @Plugin(examples = {
     @Example(
-        title = "Trigger flow based on events received from Azure Event Hubs in real-time.",
         full = true,
+        title = "Trigger flow based on events received from Azure Event Hubs in real-time.",
         code = """
             id: azure_eventhubs_realtime_trigger
             namespace: company.team
@@ -59,7 +59,44 @@ import java.util.concurrent.atomic.AtomicBoolean;
                   containerName: kestra
                   connectionString: "{{ secret('BLOB_CONNECTION') }}"
             """
-    )
+    ),
+    @Example(
+        full = true,
+        title = "Use Azure Eventhubs Realtime Trigger to push events into StorageTable",
+        code = """
+            id: eventhubs_realtime_trigger
+            namespace: company.team
+            
+            tasks:
+              - id: insert_into_storagetable
+                type: io.kestra.plugin.azure.storage.table.Bulk
+                endpoint: https://yourstorageaccount.blob.core.windows.net
+                connectionString: "{{ secret('STORAGETABLE_CONNECTION') }}"
+                table: orders
+                from:
+                  - partitionKey: order_id
+                    rowKey: "{{ trigger.body | jq('.order_id') | first }}"
+                    properties:
+                      customer_name: "{{ trigger.body | jq('.customer_name') | first }}"
+                      customer_email: "{{ trigger.body | jq('.customer_email') | first }}"
+                      product_id: "{{ trigger.body | jq('.product_id') | first }}"
+                      price: "{{ trigger.body | jq('.price') | first }}"
+                      quantity: "{{ trigger.body | jq('.quantity') | first }}"
+                      total: "{{ trigger.body | jq('.total') | first }}"
+            
+            triggers:
+              - id: realtime_trigger
+                type: io.kestra.plugin.azure.eventhubs.RealtimeTrigger
+                eventHubName: orders
+                namespace: kestra
+                connectionString: "{{ secret('EVENTHUBS_CONNECTION') }}"
+                bodyDeserializer: JSON
+                consumerGroup: $Default
+                checkpointStoreProperties:
+                  containerName: kestra
+                  connectionString: "{{ secret('BLOB_CONNECTION') }}"
+        """
+    )   
 })
 @Schema(
     title = "Consume a message in real-time from a Azure Event Hubs and create one execution per message.",

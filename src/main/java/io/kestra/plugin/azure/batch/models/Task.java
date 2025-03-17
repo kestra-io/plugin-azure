@@ -2,6 +2,11 @@ package io.kestra.plugin.azure.batch.models;
 
 import com.microsoft.azure.batch.protocol.models.EnvironmentSetting;
 import com.microsoft.azure.batch.protocol.models.TaskAddParameter;
+import com.microsoft.azure.batch.protocol.models.AutoUserScope;
+import com.microsoft.azure.batch.protocol.models.AutoUserSpecification;
+import com.microsoft.azure.batch.protocol.models.UserIdentity;
+import com.microsoft.azure.batch.protocol.models.ElevationLevel;
+
 import io.kestra.core.exceptions.IllegalVariableEvaluationException;
 import io.kestra.core.models.annotations.PluginProperty;
 import io.kestra.core.models.property.Property;
@@ -144,6 +149,14 @@ public class Task {
     public TaskAddParameter to(RunContext runContext) throws IllegalVariableEvaluationException {
         return new TaskAddParameter()
             .withId(this.id == null ? IdUtils.create() : runContext.render(this.id))
+            .withUserIdentity(
+                new UserIdentity()
+                    .withAutoUser(
+                        new AutoUserSpecification()
+                            .withElevationLevel(ElevationLevel.NON_ADMIN)
+                            .withScope(AutoUserScope.TASK)
+                    )
+            )
             .withDisplayName(runContext.render(this.displayName))
             .withCommandLine(runContext.render(this.commandLine(runContext)))
             .withContainerSettings(this.containerSettings == null ? null : this.containerSettings.to(runContext))

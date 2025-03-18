@@ -58,6 +58,7 @@ public class Upload extends AbstractDataLakeWithFile implements RunnableTask<Upl
     @Schema(
         title = "The file from the internal storage to upload to the Azure Data Lake Storage."
     )
+    @PluginProperty(internalStorageURI = true)
     private Property<String> from;
 
 

@@ -60,12 +60,12 @@ import static io.kestra.core.utils.Rethrow.throwFunction;
             code = """
                 id: azure_blob_upload
                 namespace: company.team
-                
+
                 tasks:
                   - id: extract
                     type: io.kestra.plugin.core.http.Download
                     uri: https://huggingface.co/datasets/kestra/datasets/raw/main/csv/salaries.csv
-                
+
                   - id: load
                     type: io.kestra.plugin.azure.storage.blob.Upload
                     endpoint: https://kestra.blob.core.windows.net
@@ -84,6 +84,7 @@ public class Upload extends AbstractBlobStorageWithSasObject implements Runnable
     @Schema(
         title = "The file from the internal storage to upload to the Azure Blob Storage."
     )
+    @PluginProperty(internalStorageURI = true)
     private Property<String> from;
 
     @Schema(

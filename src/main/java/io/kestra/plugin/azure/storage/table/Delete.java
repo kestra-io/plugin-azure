@@ -44,7 +44,7 @@ import jakarta.validation.constraints.NotNull;
     }
 )
 @Schema(
-    title = "Delete an entity on the Azure Storage Table."
+    title = "Delete an entity in an Azure Storage Table."
 )
 public class Delete extends AbstractTableStorage implements RunnableTask<VoidOutput> {
     @Schema(

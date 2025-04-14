@@ -78,7 +78,7 @@ import static io.kestra.core.utils.Rethrow.throwConsumer;
     }
 )
 @Schema(
-    title = "Delete a list of keys from the Azure Data Lake Storage."
+    title = "Delete a list of objects from Azure Data Lake Storage."
 )
 public class DeleteFiles extends AbstractDataLakeConnection implements RunnableTask<DeleteFiles.Output>, AbstractDataLakeStorageInterface {
     protected Property<String> fileSystem;

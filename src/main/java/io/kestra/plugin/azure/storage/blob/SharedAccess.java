@@ -52,7 +52,7 @@ import jakarta.validation.constraints.NotNull;
     }
 )
 @Schema(
-    title = "Shared Access on the Azure Blob Storage."
+    title = "Create a shared access link on Azure Blob Storage."
 )
 public class SharedAccess extends AbstractBlobStorageObject implements RunnableTask<SharedAccess.Output> {
     @Schema(

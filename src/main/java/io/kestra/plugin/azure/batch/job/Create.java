@@ -125,7 +125,7 @@ import static io.kestra.core.utils.Rethrow.*;
     }
 )
 @Schema(
-    title = "Create a Azure Batch job with tasks."
+    title = "Create an Azure Batch job with tasks."
 )
 public class Create extends AbstractBatch implements RunnableTask<Create.Output> {
     public static final String DIRECTORY_MARKER = ".kestradirectory";

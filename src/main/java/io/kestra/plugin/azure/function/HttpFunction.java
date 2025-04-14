@@ -40,8 +40,8 @@ import java.util.Map;
 @Getter
 @NoArgsConstructor
 @Schema(
-    title = "Trigger Azure Function.",
-    description = "Use this task to trigger an Azure Function and collect the result if any"
+    title = "Trigger an Azure Function.",
+    description = "Use this task to trigger an Azure Function and collect the result."
 )
 @Plugin(examples = {
     @Example(

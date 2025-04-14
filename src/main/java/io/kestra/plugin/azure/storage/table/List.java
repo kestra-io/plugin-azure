@@ -48,7 +48,7 @@ import java.net.URI;
     }
 )
 @Schema(
-    title = "Lists entities from the Azure Storage Table using the parameters in the provided options.",
+    title = "List entities from an Azure Storage Table.",
     description = "If the `filter` parameter in the options is set, only entities matching the filter will be returned.\n" +
         "If the `select` parameter is set, only the properties included in the select parameter will be returned for each entity.\n" +
         "If the `top` parameter is set, the maximum number of returned entities per page will be limited to that value."

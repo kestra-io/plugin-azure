@@ -40,7 +40,7 @@ import lombok.experimental.SuperBuilder;
     }
 )
 @Schema(
-    title = "Delete a file from the Azure Blob Storage."
+    title = "Delete a file from Azure Blob Storage."
 )
 public class Delete extends AbstractBlobStorageWithSasObject implements RunnableTask<Delete.Output> {
     @Override

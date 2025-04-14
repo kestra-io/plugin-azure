@@ -57,7 +57,7 @@ import static io.kestra.core.utils.Rethrow.throwConsumer;
     }
 )
 @Schema(
-    title = "Delete a list of keys from the Azure Blob Storage."
+    title = "Delete a list of objects from Azure Blob Storage."
 )
 public class DeleteList extends AbstractBlobStorageWithSas implements RunnableTask<DeleteList.Output>, ListInterface, AbstractBlobStorageContainerInterface {
     private Property<String> container;

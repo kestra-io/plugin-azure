@@ -54,7 +54,7 @@ import lombok.experimental.SuperBuilder;
     }
 )
 @Schema(
-    title = "Upload a file to the Azure Data Lake Storage."
+    title = "Upload a file to Azure Data Lake Storage."
 )
 public class List extends AbstractDataLakeConnection implements RunnableTask<List.Output>, AbstractDataLakeStorageInterface {
     @Schema(title = "Directory path", description = "Full path to the directory")

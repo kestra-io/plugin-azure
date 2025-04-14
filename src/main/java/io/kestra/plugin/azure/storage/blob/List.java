@@ -43,7 +43,7 @@ import lombok.experimental.SuperBuilder;
     }
 )
 @Schema(
-    title = "List blobs on the Azure Blob Storage."
+    title = "List blob objects in an Azure Blob Storage container."
 )
 public class List extends AbstractBlobStorageWithSas implements RunnableTask<List.Output>, ListInterface, AbstractBlobStorageContainerInterface {
     private Property<String> container;

@@ -44,7 +44,7 @@ import lombok.experimental.SuperBuilder;
     }
 )
 @Schema(
-    title = "Append data to an existing file from Azure Data Lake Storage."
+    title = "Append data to an existing file in Azure Data Lake Storage."
 )
 public class Append extends AbstractDataLakeWithFile implements RunnableTask<VoidOutput> {
     @Schema(title = "Data")

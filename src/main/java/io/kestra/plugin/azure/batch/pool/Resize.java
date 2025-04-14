@@ -41,7 +41,7 @@ import jakarta.validation.constraints.NotNull;
     }
 )
 @Schema(
-    title = "Resize a Azure Batch pool."
+    title = "Resize an Azure Batch pool."
 )
 public class Resize extends AbstractBatch implements RunnableTask<Resize.Output> {
     @Schema(

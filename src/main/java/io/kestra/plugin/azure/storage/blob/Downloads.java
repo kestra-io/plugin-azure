@@ -53,7 +53,7 @@ import static io.kestra.core.utils.Rethrow.throwFunction;
     }
 )
 @Schema(
-    title = "Downloads files from the Azure Blob Storage."
+    title = "Download files from Azure Blob Storage."
 )
 public class Downloads extends AbstractBlobStorageWithSas implements RunnableTask<Downloads.Output>, ListInterface, ActionInterface, AbstractBlobStorageContainerInterface {
     private Property<String> container;

@@ -78,7 +78,7 @@ import static io.kestra.core.utils.Rethrow.throwFunction;
     }
 )
 @Schema(
-    title = "Upload a file to the Azure Blob Storage."
+    title = "Upload a file to Azure Blob Storage container."
 )
 public class Upload extends AbstractBlobStorageWithSasObject implements RunnableTask<Upload.Output> {
     @Schema(

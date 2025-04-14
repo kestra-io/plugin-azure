@@ -37,15 +37,15 @@ public class TaskContainerSettings {
 
     @Schema(
         title = "The location of the container Task working directory.",
-        description = "The default is `taskWorkingDirectory`. Possible values include: `taskWorkingDirectory`, `containerImageDefault`."
+        description = "The default is `TASK_WORKING_DIRECTORY`. Possible values include: `TASK_WORKING_DIRECTORY`, `CONTAINER_IMAGE_DEFAULT`."
     )
     Property<ContainerWorkingDirectory> workingDirectory;
 
     public com.microsoft.azure.batch.protocol.models.TaskContainerSettings to(RunContext runContext) throws IllegalVariableEvaluationException {
         return new com.microsoft.azure.batch.protocol.models.TaskContainerSettings()
             .withContainerRunOptions(runContext.render(this.containerRunOptions).as(String.class).orElse(null))
-            .withImageName(runContext.render(this.imageName).as(String.class).orElse(null))
+            .withImageName(runContext.render(this.imageName).as(String.class).orElseThrow())
             .withRegistry(this.registry != null ? this.registry.to(runContext) : null)
-            .withWorkingDirectory(runContext.render(this.workingDirectory).as(ContainerWorkingDirectory.class).orElseThrow());
+            .withWorkingDirectory(runContext.render(this.workingDirectory).as(ContainerWorkingDirectory.class).orElse(null));
     }
 }

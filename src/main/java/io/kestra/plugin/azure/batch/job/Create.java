@@ -265,7 +265,7 @@ public class Create extends AbstractBatch implements RunnableTask<Create.Output>
                 runContext,
                 client,
                 jobId,
-                runContext.render(maxDuration).as(Duration.class).orElseThrow(),
+                runContext.render(maxDuration).as(Duration.class).orElse(null),
                 runContext.render(completionCheckInterval).as(Duration.class).orElseThrow()
             );
 

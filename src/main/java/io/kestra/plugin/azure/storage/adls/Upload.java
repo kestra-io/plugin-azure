@@ -52,7 +52,7 @@ import java.net.URI;
     }
 )
 @Schema(
-    title = "Upload a file to the Azure Data Lake Storage."
+    title = "Upload a file to Azure Data Lake Storage."
 )
 public class Upload extends AbstractDataLakeWithFile implements RunnableTask<Upload.Output> {
     @Schema(

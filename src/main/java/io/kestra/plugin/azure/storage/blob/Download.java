@@ -44,7 +44,7 @@ import java.net.URI;
     }
 )
 @Schema(
-    title = "Download a file from the Azure Blob Storage."
+    title = "Download a file from Azure Blob Storage."
 )
 public class Download extends AbstractBlobStorageWithSasObject implements RunnableTask<Download.Output> {
     @Override

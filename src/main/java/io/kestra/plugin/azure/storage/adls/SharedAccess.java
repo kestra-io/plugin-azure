@@ -74,7 +74,7 @@ import java.util.stream.Collectors;
     }
 )
 @Schema(
-    title = "Shared Access on the Azure Data Lake Storage."
+    title = "Create a Shared Access link for Azure Data Lake Storage."
 )
 public class SharedAccess extends AbstractDataLakeWithFile implements RunnableTask<SharedAccess.Output> {
 

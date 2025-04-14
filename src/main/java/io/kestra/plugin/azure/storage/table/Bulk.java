@@ -59,7 +59,8 @@ import static io.kestra.core.utils.Rethrow.throwFunction;
     }
 )
 @Schema(
-    title = "Inserts or updates entities into the Azure Storage Table. Make sure to pass either a list of entities or a file with a list of entities."
+    title = "Insert or update entities in an Azure Storage Table.", 
+    description = "Make sure to pass either a list of entities or a file with a list of entities."
 )
 public class Bulk extends AbstractTableStorage implements RunnableTask<Bulk.Output> {
     @Schema(

@@ -47,7 +47,7 @@ import jakarta.validation.constraints.NotNull;
     }
 )
 @Schema(
-    title = "Copy a file between Azure Blob Storage."
+    title = "Copy a file within Azure Blob Storage."
 )
 public class Copy extends AbstractBlobStorageWithSas implements RunnableTask<Copy.Output> {
     @Schema(

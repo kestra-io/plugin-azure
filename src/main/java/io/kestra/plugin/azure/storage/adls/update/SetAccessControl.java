@@ -51,7 +51,7 @@ import java.util.List;
     }
 )
 @Schema(
-    title = "Set access controls to a file from Azure Data Lake Storage."
+    title = "Set access controls to a file in Azure Data Lake Storage."
 )
 public class SetAccessControl extends AbstractDataLakeWithFile implements RunnableTask<VoidOutput> {
     @Schema(

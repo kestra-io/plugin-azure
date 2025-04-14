@@ -41,7 +41,7 @@ import java.util.List;
     }
 )
 @Schema(
-    title = "Fetch an OAuth access token."
+    title = "Fetch an Azure OAuth access token."
 )
 public class OauthAccessToken extends AbstractAzureIdentityConnection implements RunnableTask<OauthAccessToken.Output> {
     @Schema(title = "The Azure scopes to be used")

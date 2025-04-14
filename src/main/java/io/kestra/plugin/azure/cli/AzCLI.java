@@ -30,7 +30,8 @@ import java.util.Map;
 @Getter
 @NoArgsConstructor
 @Schema(
-    title = "Execute one or more `az` commands from a Command Line Interface. We recommend using a Service Principal and a Client Secret for authentication. " +
+    title = "Execute a command with the Azure CLI.", 
+    description = "We recommend using a Service Principal and a Client Secret for authentication. " +
         "To create a Service Principal and Client Secret, you can use the following " +
         "[documentation](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/guides/service_principal_client_secret). " +
         "Then, use the generated `appId` as the `username` and the generated `password` as the `password` in the Kestra task configuration. " +

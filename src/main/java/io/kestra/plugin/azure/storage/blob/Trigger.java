@@ -30,8 +30,8 @@ import static io.kestra.core.utils.Rethrow.throwFunction;
 @Getter
 @NoArgsConstructor
 @Schema(
-    title = "Run a flow as soon as files are uploaded to Azure Blob Storage",
-    description = "This trigger will poll the specified Azure Blob Storage bucket every `interval`. " +
+    title = "Trigger a flow on a new file arrival in an Azure Blob Storage container.",
+    description = "This trigger will poll the specified Azure Blob Storage container every `interval`. " +
     "Using the `from` and `regExp` properties, you can define which files arrival will trigger the flow. " +
     "Under the hood, we use the Azure Blob Storage API to list the files in a specified location and download them to the internal storage and process them with the declared `action`. " +
     "You can use the `action` property to move or delete the files from the container after processing to avoid the trigger to be fired again for the same files during the next polling interval."

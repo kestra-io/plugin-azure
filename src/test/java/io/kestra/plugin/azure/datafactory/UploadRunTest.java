@@ -6,6 +6,7 @@ import io.kestra.core.runners.RunContext;
 import io.kestra.core.runners.RunContextFactory;
 import io.kestra.core.serializers.FileSerde;
 import io.kestra.core.storages.StorageInterface;
+import io.kestra.core.tenant.TenantService;
 import io.micronaut.context.annotation.Value;
 import jakarta.inject.Inject;
 import org.junit.jupiter.api.Disabled;
@@ -71,7 +72,7 @@ class UploadRunTest {
         CreateRun.Output output = createRun.run(runContext);
 
         //Get logs and outputs
-        BufferedReader searchInputStream = new BufferedReader(new InputStreamReader(storageInterface.get(null, null, output.getUri())));
+        BufferedReader searchInputStream = new BufferedReader(new InputStreamReader(storageInterface.get(TenantService.MAIN_TENANT, null, output.getUri())));
         List<Map<String, Object>> results = new ArrayList<>();
         FileSerde.reader(searchInputStream, r -> results.add((Map<String, Object>) r));
 
@@ -111,7 +112,7 @@ class UploadRunTest {
         CreateRun.Output output = createRun.run(runContext);
 
         //Get logs and outputs
-        BufferedReader searchInputStream = new BufferedReader(new InputStreamReader(storageInterface.get(null, null, output.getUri())));
+        BufferedReader searchInputStream = new BufferedReader(new InputStreamReader(storageInterface.get(TenantService.MAIN_TENANT, null, output.getUri())));
         List<Map<String, Object>> results = new ArrayList<>();
         FileSerde.reader(searchInputStream, r -> results.add((Map<String, Object>) r));
 

@@ -2,6 +2,7 @@ package io.kestra.plugin.azure.storage.adls.update;
 
 import com.google.common.io.CharStreams;
 import io.kestra.core.models.property.Property;
+import io.kestra.core.tenant.TenantService;
 import io.kestra.core.utils.IdUtils;
 import io.kestra.plugin.azure.storage.adls.AbstractTest;
 import io.kestra.plugin.azure.storage.adls.Read;
@@ -49,7 +50,7 @@ class AppendTest extends AbstractTest {
 
         Read.Output run = download.run(runContext(download));
 
-        InputStream get = storageInterface.get(null, null, run.getFile().getUri());
+        InputStream get = storageInterface.get(TenantService.MAIN_TENANT, null, run.getFile().getUri());
 
         assertThat(
             CharStreams.toString(new InputStreamReader(get)),

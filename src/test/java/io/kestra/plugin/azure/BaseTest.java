@@ -4,6 +4,7 @@ import io.kestra.core.models.tasks.Task;
 import io.kestra.core.runners.RunContext;
 import io.kestra.core.runners.RunContextFactory;
 import io.kestra.core.storages.StorageInterface;
+import io.kestra.core.tenant.TenantService;
 import io.kestra.core.utils.IdUtils;
 import io.kestra.core.utils.TestsUtils;
 import io.micronaut.context.annotation.Value;
@@ -53,7 +54,7 @@ public abstract class BaseTest {
 
     protected URI upload() throws URISyntaxException, IOException {
         return storageInterface.put(
-            null,
+            TenantService.MAIN_TENANT,
             null,
             new URI("/" + IdUtils.create() + ".yml"),
             new FileInputStream(file("application.yml"))
@@ -62,7 +63,7 @@ public abstract class BaseTest {
 
     protected URI uploadStringFile() throws URISyntaxException, IOException {
         return storageInterface.put(
-            null,
+            TenantService.MAIN_TENANT,
             null,
             new URI("/" + IdUtils.create() + ".txt"),
             new FileInputStream(file("testFiles/appendTest.txt"))
@@ -71,7 +72,7 @@ public abstract class BaseTest {
 
     protected URI upload(byte[] content) throws URISyntaxException, IOException {
         return storageInterface.put(
-            null,
+            TenantService.MAIN_TENANT,
             null,
             new URI("/" + IdUtils.create() + ".yml"),
             new ByteArrayInputStream(content)

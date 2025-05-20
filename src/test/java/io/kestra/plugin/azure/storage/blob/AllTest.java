@@ -3,6 +3,7 @@ package io.kestra.plugin.azure.storage.blob;
 import com.azure.storage.blob.models.BlobStorageException;
 import com.google.common.io.CharStreams;
 import io.kestra.core.models.property.Property;
+import io.kestra.core.tenant.TenantService;
 import io.kestra.core.utils.IdUtils;
 import org.junit.jupiter.api.Test;
 
@@ -46,7 +47,7 @@ class AllTest extends AbstractTest {
             .build();
         Download.Output run = download.run(runContext(download));
 
-        InputStream get = storageInterface.get(null, null, run.getBlob().getUri());
+        InputStream get = storageInterface.get(TenantService.MAIN_TENANT, null, run.getBlob().getUri());
         assertThat(
             CharStreams.toString(new InputStreamReader(get)),
             is(CharStreams.toString(new InputStreamReader(new FileInputStream(file("application.yml")))))

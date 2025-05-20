@@ -5,6 +5,7 @@ import io.kestra.core.models.executions.LogEntry;
 import io.kestra.core.models.property.Property;
 import io.kestra.core.queues.QueueFactoryInterface;
 import io.kestra.core.queues.QueueInterface;
+import io.kestra.core.tenant.TenantService;
 import io.kestra.core.utils.IdUtils;
 import io.kestra.core.utils.TestsUtils;
 import io.kestra.plugin.azure.batch.models.*;
@@ -167,13 +168,13 @@ class CreateTest extends AbstractTest {
         assertThat(logs.stream().filter(logEntry -> logEntry.getMessage().equals("t2=second")).filter(logEntry -> logEntry.getLevel().equals(Level.WARN)).count(), is(1L));
         assertThat(logs.stream().filter(logEntry -> logEntry.getMessage().equals("t3=5")).count(), is(1L));
 
-        InputStream get = storageInterface.get(null, null, run.getOutputFiles().get("outs/1.txt"));
+        InputStream get = storageInterface.get(TenantService.MAIN_TENANT, null, run.getOutputFiles().get("outs/1.txt"));
         assertThat(CharStreams.toString(new InputStreamReader(get)), is("1\n"));
 
-        get = storageInterface.get(null, null, run.getOutputFiles().get("outs/child/2.txt"));
+        get = storageInterface.get(TenantService.MAIN_TENANT, null, run.getOutputFiles().get("outs/child/2.txt"));
         assertThat(CharStreams.toString(new InputStreamReader(get)), is("2\n"));
 
-        get = storageInterface.get(null, null, run.getOutputFiles().get("outs/child/sub/3.txt"));
+        get = storageInterface.get(TenantService.MAIN_TENANT, null, run.getOutputFiles().get("outs/child/sub/3.txt"));
         assertThat(CharStreams.toString(new InputStreamReader(get)), is("3\n"));
     }
 

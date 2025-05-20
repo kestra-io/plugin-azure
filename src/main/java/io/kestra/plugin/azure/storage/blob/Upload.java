@@ -13,6 +13,7 @@ import io.kestra.plugin.azure.storage.blob.models.AccessTier;
 import io.kestra.plugin.azure.storage.blob.models.Blob;
 import io.kestra.plugin.azure.storage.blob.models.BlobImmutabilityPolicy;
 import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.NotNull;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -85,6 +86,7 @@ public class Upload extends AbstractBlobStorageWithSasObject implements Runnable
         title = "The file from the internal storage to upload to the Azure Blob Storage."
     )
     @PluginProperty(internalStorageURI = true)
+    @NotNull
     private Property<String> from;
 
     @Schema(

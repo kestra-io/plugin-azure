@@ -1,7 +1,10 @@
 package io.kestra.plugin.azure.storage.adls;
 
 import com.azure.core.util.BinaryData;
+import com.azure.core.util.FluxUtil;
+import com.azure.storage.common.implementation.Constants;
 import com.azure.storage.file.datalake.DataLakeFileClient;
+import com.microsoft.azure.storage.blob.BlobInputStream;
 import io.kestra.core.models.annotations.Example;
 import io.kestra.core.models.annotations.Plugin;
 import io.kestra.core.models.annotations.PluginProperty;
@@ -12,11 +15,13 @@ import io.kestra.core.runners.RunContext;
 import io.kestra.plugin.azure.storage.adls.abstracts.AbstractDataLakeWithFile;
 import io.kestra.plugin.azure.storage.adls.models.AdlsFile;
 import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.NotNull;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.ToString;
 import lombok.experimental.SuperBuilder;
+import reactor.core.scheduler.Schedulers;
 
 import java.io.InputStream;
 import java.net.URI;
@@ -59,6 +64,7 @@ public class Upload extends AbstractDataLakeWithFile implements RunnableTask<Upl
         title = "The file from the internal storage to upload to the Azure Data Lake Storage."
     )
     @PluginProperty(internalStorageURI = true)
+    @NotNull
     private Property<String> from;
 
 

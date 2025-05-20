@@ -4,7 +4,6 @@ import com.azure.core.util.BinaryData;
 import com.azure.core.util.FluxUtil;
 import com.azure.storage.common.implementation.Constants;
 import com.azure.storage.file.datalake.DataLakeFileClient;
-import com.microsoft.azure.storage.blob.BlobInputStream;
 import io.kestra.core.models.annotations.Example;
 import io.kestra.core.models.annotations.Plugin;
 import io.kestra.core.models.annotations.PluginProperty;
@@ -74,7 +73,13 @@ public class Upload extends AbstractDataLakeWithFile implements RunnableTask<Upl
 
         try (InputStream is = runContext.storage().getFile(fromUri)) {
             DataLakeFileClient fileClient = this.dataLakeFileClient(runContext);
-            fileClient.upload(BinaryData.fromStream(is), true);
+            // The fromFlux is necessary in case of using a BlobInputStream as the upload method is relying on Reactor which doesn't allow blocking to be done
+            // Related to https://github.com/Azure/azure-sdk-for-java/issues/42268#issuecomment-2891995269
+            BinaryData binaryData = BinaryData.fromFlux(
+                FluxUtil.toFluxByteBuffer(is, Constants.MAX_INPUT_STREAM_CONVERTER_BUFFER_LENGTH)
+                    .subscribeOn(Schedulers.boundedElastic())
+            ).block();
+            fileClient.upload(binaryData, true);
 
             runContext.metric(Counter.of("file.size", fileClient.getProperties().getFileSize()));
 

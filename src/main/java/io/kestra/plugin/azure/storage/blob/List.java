@@ -55,7 +55,7 @@ public class List extends AbstractBlobStorageWithSas implements RunnableTask<Lis
     protected Property<String> delimiter;
 
     @Builder.Default
-    private Property<Filter> filter = Property.of(Filter.FILES);
+    private Property<Filter> filter = Property.ofValue(Filter.FILES);
 
     @Override
     public Output run(RunContext runContext) throws Exception {

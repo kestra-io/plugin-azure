@@ -21,7 +21,7 @@ public class OutputFileUploadOptions {
     )
     @NotNull
     @Builder.Default
-    Property<OutputFileUploadCondition> uploadCondition = Property.of(OutputFileUploadCondition.TASK_COMPLETION);
+    Property<OutputFileUploadCondition> uploadCondition = Property.ofValue(OutputFileUploadCondition.TASK_COMPLETION);
 
     public com.microsoft.azure.batch.protocol.models.OutputFileUploadOptions to(RunContext runContext) throws IllegalVariableEvaluationException {
         return new com.microsoft.azure.batch.protocol.models.OutputFileUploadOptions()

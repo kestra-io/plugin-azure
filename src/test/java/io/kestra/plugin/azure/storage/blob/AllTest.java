@@ -27,10 +27,10 @@ class AllTest extends AbstractTest {
         List list = List.builder()
             .id(AllTest.class.getSimpleName())
             .type(Upload.class.getName())
-            .endpoint(Property.of(this.storageEndpoint))
-            .connectionString(Property.of(connectionString))
-            .container(Property.of(this.container))
-            .prefix(Property.of("tasks/azure/" + prefix  + "/"))
+            .endpoint(Property.ofValue(this.storageEndpoint))
+            .connectionString(Property.ofValue(connectionString))
+            .container(Property.ofValue(this.container))
+            .prefix(Property.ofValue("tasks/azure/" + prefix  + "/"))
             .build();
 
         List.Output listOutput = list.run(runContext(list));
@@ -40,10 +40,10 @@ class AllTest extends AbstractTest {
         Download download = Download.builder()
             .id(AllTest.class.getSimpleName())
             .type(Download.class.getName())
-            .endpoint(Property.of(this.storageEndpoint))
-            .connectionString(Property.of(connectionString))
-            .container(Property.of(this.container))
-            .name(Property.of(upload.getBlob().getName()))
+            .endpoint(Property.ofValue(this.storageEndpoint))
+            .connectionString(Property.ofValue(connectionString))
+            .container(Property.ofValue(this.container))
+            .name(Property.ofValue(upload.getBlob().getName()))
             .build();
         Download.Output run = download.run(runContext(download));
 
@@ -57,10 +57,10 @@ class AllTest extends AbstractTest {
         Delete delete = Delete.builder()
             .id(AllTest.class.getSimpleName())
             .type(Delete.class.getName())
-            .endpoint(Property.of(this.storageEndpoint))
-            .connectionString(Property.of(connectionString))
-            .container(Property.of(this.container))
-            .name(Property.of(upload.getBlob().getName()))
+            .endpoint(Property.ofValue(this.storageEndpoint))
+            .connectionString(Property.ofValue(connectionString))
+            .container(Property.ofValue(this.container))
+            .name(Property.ofValue(upload.getBlob().getName()))
             .build();
         Delete.Output deleteOutput = delete.run(runContext(delete));
         assertThat(deleteOutput.getBlob(), is(notNullValue()));

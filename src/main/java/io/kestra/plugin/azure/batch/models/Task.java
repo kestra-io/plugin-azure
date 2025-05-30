@@ -50,7 +50,7 @@ public class Task {
     )
     @PluginProperty
     @NotNull
-    Property<String> interpreter = Property.of("/bin/sh");
+    Property<String> interpreter = Property.ofValue("/bin/sh");
 
     @Builder.Default
     @Schema(

@@ -55,7 +55,7 @@ class ProduceTest {
 
         Produce task = Produce.builder()
             .from(Map.of("body", "msg"))
-            .eventHubName(Property.of("test"))
+            .eventHubName(Property.ofValue("test"))
             .build();
         // create mocks
         EventDataBatch batch = Mockito.mock(EventDataBatch.class);
@@ -84,7 +84,7 @@ class ProduceTest {
 
         Produce task = Produce.builder()
             .from(Map.of("body", "msg"))
-            .eventHubName(Property.of("test"))
+            .eventHubName(Property.ofValue("test"))
             .build();
         // create mocks
         EventDataBatch batch = Mockito.mock(EventDataBatch.class);

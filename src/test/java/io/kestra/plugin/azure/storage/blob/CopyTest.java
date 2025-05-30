@@ -18,32 +18,32 @@ class CopyTest extends AbstractTest {
         Copy task = Copy.builder()
             .id(CopyTest.class.getSimpleName())
             .type(List.class.getName())
-            .endpoint(Property.of(this.storageEndpoint))
-            .connectionString(Property.of(connectionString))
+            .endpoint(Property.ofValue(this.storageEndpoint))
+            .connectionString(Property.ofValue(connectionString))
             .from(Copy.CopyObject.builder()
-                .container(Property.of(this.container))
-                .name(Property.of(upload.getBlob().getName()))
+                .container(Property.ofValue(this.container))
+                .name(Property.ofValue(upload.getBlob().getName()))
                 .build()
             )
             .to(Copy.CopyObject.builder()
-                .container(Property.of(this.container))
-                .name(Property.of(move.getBlob().getName()))
+                .container(Property.ofValue(this.container))
+                .name(Property.ofValue(move.getBlob().getName()))
                 .build()
             )
-            .delete(Property.of(delete))
+            .delete(Property.ofValue(delete))
             .build();
 
         Copy.Output run = task.run(runContext(task));
         assertThat(run.getBlob().getName(), is(move.getBlob().getName()));
 
         // list
-        List list = list().prefix(Property.of(move.getBlob().getName())).build();
+        List list = list().prefix(Property.ofValue(move.getBlob().getName())).build();
 
         List.Output listOutput = list.run(runContext(list));
         assertThat(listOutput.getBlobs().size(), is(1));
 
         // original is here
-        list = list().prefix(Property.of(upload.getBlob().getName())).build();
+        list = list().prefix(Property.ofValue(upload.getBlob().getName())).build();
 
         listOutput = list.run(runContext(list));
         assertThat(listOutput.getBlobs().size(), is(delete ? 0 : 1));

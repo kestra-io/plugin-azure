@@ -22,10 +22,10 @@ class DeleteFilesTest extends AbstractTest {
         DeleteFiles task = DeleteFiles.builder()
             .id(DeleteFilesTest.class.getSimpleName())
             .type(List.class.getName())
-            .endpoint(Property.of(this.adlsEndpoint))
-            .connectionString(Property.of(connectionString))
-            .fileSystem(Property.of(this.fileSystem))
-            .directoryPath(Property.of("adls/azure/" + prefix + "/"))
+            .endpoint(Property.ofValue(this.adlsEndpoint))
+            .connectionString(Property.ofValue(connectionString))
+            .fileSystem(Property.ofValue(this.fileSystem))
+            .directoryPath(Property.ofValue("adls/azure/" + prefix + "/"))
             .concurrent(5)
             .build();
 

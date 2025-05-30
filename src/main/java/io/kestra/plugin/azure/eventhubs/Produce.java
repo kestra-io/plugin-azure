@@ -103,7 +103,7 @@ public class Produce extends AbstractEventHubTask implements RunnableTask<Produc
             " body during Event Hubs operations."
     )
     @Builder.Default
-    private Property<Map<String, String>> eventProperties = Property.of(new HashMap<>());
+    private Property<Map<String, String>> eventProperties = Property.ofValue(new HashMap<>());
 
     @Schema(
         title = "The content of the message to be sent to EventHub",
@@ -131,7 +131,7 @@ public class Produce extends AbstractEventHubTask implements RunnableTask<Produc
         title = "The maximum number of events per batches."
     )
     @Builder.Default
-    private Property<Integer> maxEventsPerBatch = Property.of(1000);
+    private Property<Integer> maxEventsPerBatch = Property.ofValue(1000);
 
     @Schema(
         title = "The MIME type describing the event data",
@@ -144,14 +144,14 @@ public class Produce extends AbstractEventHubTask implements RunnableTask<Produc
         title = "The Serializer to be used for serializing the event value."
     )
     @Builder.Default
-    private Property<Serdes> bodySerializer = Property.of(Serdes.STRING);
+    private Property<Serdes> bodySerializer = Property.ofValue(Serdes.STRING);
 
     @Schema(
         title = "The config properties to be passed to the Serializer.",
         description = "Configs in key/value pairs."
     )
     @Builder.Default
-    private Property<Map<String, Object>> bodySerializerProperties = Property.of(new HashMap<>());
+    private Property<Map<String, Object>> bodySerializerProperties = Property.ofValue(new HashMap<>());
 
     // SERVICES
     @Getter(AccessLevel.NONE)

@@ -80,9 +80,9 @@ class SuiteTest {
 
         // create
         Bulk bulk = Bulk.builder()
-            .endpoint(Property.of(this.endpoint))
-            .connectionString(Property.of(connectionString))
-            .table(Property.of(this.table))
+            .endpoint(Property.ofValue(this.endpoint))
+            .connectionString(Property.ofValue(connectionString))
+            .table(Property.ofValue(this.table))
             .from(uri.toString())
             .build();
 
@@ -91,11 +91,11 @@ class SuiteTest {
 
         // get
         Get get = Get.builder()
-            .endpoint(Property.of(this.endpoint))
-            .connectionString(Property.of(connectionString))
-            .table(Property.of(this.table))
-            .partitionKey(Property.of(partitionKey))
-            .rowKey(Property.of(rowKey))
+            .endpoint(Property.ofValue(this.endpoint))
+            .connectionString(Property.ofValue(connectionString))
+            .table(Property.ofValue(this.table))
+            .partitionKey(Property.ofValue(partitionKey))
+            .rowKey(Property.ofValue(rowKey))
             .build();
 
         Get.Output getOutput = get.run(runContext);
@@ -110,10 +110,10 @@ class SuiteTest {
 
         // list
         List list = List.builder()
-            .endpoint(Property.of(this.endpoint))
-            .connectionString(Property.of(connectionString))
-            .table(Property.of(this.table))
-            .filter(Property.of("PartitionKey eq '" + partitionKey + "'"))
+            .endpoint(Property.ofValue(this.endpoint))
+            .connectionString(Property.ofValue(connectionString))
+            .table(Property.ofValue(this.table))
+            .filter(Property.ofValue("PartitionKey eq '" + partitionKey + "'"))
             .build();
 
         List.Output listOutput = list.run(runContext);
@@ -128,11 +128,11 @@ class SuiteTest {
 
         // delete
         Delete delete = Delete.builder()
-            .endpoint(Property.of(this.endpoint))
-            .connectionString(Property.of(connectionString))
-            .table(Property.of(this.table))
-            .partitionKey(Property.of(partitionKey))
-            .rowKey(Property.of(rowKey))
+            .endpoint(Property.ofValue(this.endpoint))
+            .connectionString(Property.ofValue(connectionString))
+            .table(Property.ofValue(this.table))
+            .partitionKey(Property.ofValue(partitionKey))
+            .rowKey(Property.ofValue(rowKey))
             .build();
 
         delete.run(runContext);

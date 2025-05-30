@@ -42,18 +42,18 @@ class ConsumeTest {
         RunContext runContext = runContextFactory.of();
 
         Consume task = Consume.builder()
-            .bodyDeserializer(Property.of(Serdes.STRING))
-            .eventHubName(Property.of(eventHubName))
-            .connectionString(Property.of(connectionString))
-            .checkpointStoreProperties(Property.of(Map.of(
+            .bodyDeserializer(Property.ofValue(Serdes.STRING))
+            .eventHubName(Property.ofValue(eventHubName))
+            .connectionString(Property.ofValue(connectionString))
+            .checkpointStoreProperties(Property.ofValue(Map.of(
                     "connectionString", checkPointStoreConnectionString,
                     "containerName", checkPointStoreContainerName
                 )
             ))
-            .consumerGroup(Property.of("$Default"))
-            .maxBatchSizePerPartition(Property.of(10))
-            .maxWaitTimePerPartition(Property.of(Duration.ofSeconds(5)))
-            .maxDuration(Property.of(Duration.ofSeconds(10)))
+            .consumerGroup(Property.ofValue("$Default"))
+            .maxBatchSizePerPartition(Property.ofValue(10))
+            .maxWaitTimePerPartition(Property.ofValue(Duration.ofSeconds(5)))
+            .maxDuration(Property.ofValue(Duration.ofSeconds(10)))
             .build();
 
         // When
@@ -68,9 +68,9 @@ class ConsumeTest {
         Produce task = Produce.builder()
             .id(ConsumeTest.class.getSimpleName())
             .type(Produce.class.getName())
-            .bodySerializer(Property.of(Serdes.STRING))
-            .eventHubName(Property.of(eventHubName))
-            .connectionString(Property.of(connectionString))
+            .bodySerializer(Property.ofValue(Serdes.STRING))
+            .eventHubName(Property.ofValue(eventHubName))
+            .connectionString(Property.ofValue(connectionString))
             .from(List.of(
                 ImmutableMap.builder()
                     .put("body", "event-1")

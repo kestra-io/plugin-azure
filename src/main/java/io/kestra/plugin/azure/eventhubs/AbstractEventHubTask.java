@@ -21,10 +21,10 @@ public abstract class AbstractEventHubTask extends Task implements EventHubClien
     private Property<String> sasToken;
 
     @Builder.Default
-    private Property<Integer> clientMaxRetries = Property.of(5);
+    private Property<Integer> clientMaxRetries = Property.ofValue(5);
 
     @Builder.Default
-    private Property<Long> clientRetryDelay = Property.of(500L);
+    private Property<Long> clientRetryDelay = Property.ofValue(500L);
 
     private Property<String> namespace;
 

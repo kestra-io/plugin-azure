@@ -20,12 +20,12 @@ class LeaseTest extends AbstractTest {
         Lease acquireTask = Lease.builder()
             .id(LeaseTest.class.getSimpleName())
             .type(Lease.class.getName())
-            .endpoint(Property.of(this.adlsEndpoint))
-            .connectionString(Property.of(connectionString))
-            .fileSystem(Property.of(this.fileSystem))
-            .filePath(Property.of(upload.getFile().getName()))
-            .action(Property.of(Lease.LeaseAction.ACQUIRE))
-            .leaseDuration(Property.of(30))
+            .endpoint(Property.ofValue(this.adlsEndpoint))
+            .connectionString(Property.ofValue(connectionString))
+            .fileSystem(Property.ofValue(this.fileSystem))
+            .filePath(Property.ofValue(upload.getFile().getName()))
+            .action(Property.ofValue(Lease.LeaseAction.ACQUIRE))
+            .leaseDuration(Property.ofValue(30))
             .build();
 
         Lease.Output acquire = acquireTask.run(runContext(acquireTask));
@@ -36,12 +36,12 @@ class LeaseTest extends AbstractTest {
         Lease releaseTask = Lease.builder()
             .id(LeaseTest.class.getSimpleName())
             .type(Lease.class.getName())
-            .endpoint(Property.of(this.adlsEndpoint))
-            .connectionString(Property.of(connectionString))
-            .fileSystem(Property.of(this.fileSystem))
-            .filePath(Property.of(upload.getFile().getName()))
-            .action(Property.of(Lease.LeaseAction.RELEASE))
-            .leaseId(Property.of(acquire.getId()))
+            .endpoint(Property.ofValue(this.adlsEndpoint))
+            .connectionString(Property.ofValue(connectionString))
+            .fileSystem(Property.ofValue(this.fileSystem))
+            .filePath(Property.ofValue(upload.getFile().getName()))
+            .action(Property.ofValue(Lease.LeaseAction.RELEASE))
+            .leaseId(Property.ofValue(acquire.getId()))
             .build();
 
         Lease.Output release = releaseTask.run(runContext(releaseTask));

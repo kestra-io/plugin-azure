@@ -59,7 +59,7 @@ import static io.kestra.core.utils.Rethrow.throwFunction;
     }
 )
 @Schema(
-    title = "Insert or update entities in an Azure Storage Table.", 
+    title = "Insert or update entities in an Azure Storage Table.",
     description = "Make sure to pass either a list of entities or a file with a list of entities."
 )
 public class Bulk extends AbstractTableStorage implements RunnableTask<Bulk.Output> {
@@ -77,7 +77,7 @@ public class Bulk extends AbstractTableStorage implements RunnableTask<Bulk.Outp
     )
     @NotNull
     @Builder.Default
-    private Property<TableTransactionActionType> defaultType = Property.of(TableTransactionActionType.UPSERT_REPLACE);
+    private Property<TableTransactionActionType> defaultType = Property.ofValue(TableTransactionActionType.UPSERT_REPLACE);
 
     @SuppressWarnings("unchecked")
     @Override

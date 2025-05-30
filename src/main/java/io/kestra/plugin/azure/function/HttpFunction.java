@@ -76,7 +76,7 @@ public class HttpFunction extends Task implements RunnableTask<HttpFunction.Outp
             description = "JSON body of the Azure function"
     )
     @Builder.Default
-    protected Property<Map<String, Object>> httpBody = Property.of(new HashMap<>());
+    protected Property<Map<String, Object>> httpBody = Property.ofValue(new HashMap<>());
 
     @Schema(
             title = "Max duration",
@@ -84,7 +84,7 @@ public class HttpFunction extends Task implements RunnableTask<HttpFunction.Outp
     )
     @Builder.Default
     @PluginProperty(dynamic = true)
-    protected Property<Duration> maxDuration = Property.of(Duration.ofMinutes(60));
+    protected Property<Duration> maxDuration = Property.ofValue(Duration.ofMinutes(60));
 
     @Override
     public HttpFunction.Output run(RunContext runContext) throws Exception {

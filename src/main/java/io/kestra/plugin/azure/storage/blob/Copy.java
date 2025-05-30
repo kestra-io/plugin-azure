@@ -68,7 +68,7 @@ public class Copy extends AbstractBlobStorageWithSas implements RunnableTask<Cop
         title = "Whether to delete the source file after copy."
     )
     @Builder.Default
-    private Property<Boolean> delete = Property.of(false);
+    private Property<Boolean> delete = Property.ofValue(false);
     @Override
     public Output run(RunContext runContext) throws Exception {
         BlobServiceClient client = this.client(runContext);

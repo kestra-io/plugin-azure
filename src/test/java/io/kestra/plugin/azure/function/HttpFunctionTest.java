@@ -33,8 +33,8 @@ class HttpFunctionTest {
     @Test
     void testAzureFunctionWithStringOutput() throws Exception {
         HttpFunction httpFunction = HttpFunction.builder()
-                .url(Property.of(AZURE_FUNCTION_URI_STRING_OUTPUT + "&firstName=John&name=Doe"))
-                .httpMethod(Property.of("GET"))
+                .url(Property.ofValue(AZURE_FUNCTION_URI_STRING_OUTPUT + "&firstName=John&name=Doe"))
+                .httpMethod(Property.ofValue("GET"))
                 .build();
 
         RunContext runContext = runContextFactory.of(Collections.emptyMap());
@@ -48,8 +48,8 @@ class HttpFunctionTest {
     @Test
     void testAzureFunctionWithJsonListOutput() throws Exception {
         HttpFunction httpFunction = HttpFunction.builder()
-            .url(Property.of(AZURE_FUNCTION_URI_LIST_OUTPUT + "&n=6"))
-            .httpMethod(Property.of("GET"))
+            .url(Property.ofValue(AZURE_FUNCTION_URI_LIST_OUTPUT + "&n=6"))
+            .httpMethod(Property.ofValue("GET"))
             .build();
 
         RunContext runContext = runContextFactory.of(Collections.emptyMap());
@@ -70,9 +70,9 @@ class HttpFunctionTest {
     @Test
     void testAzureFunctionWithBodyAndJsonObjectOutput() throws Exception {
         HttpFunction httpFunction = HttpFunction.builder()
-            .url(Property.of(AZURE_FUNCTION_URI_OBJECT_OUTPUT ))
-            .httpBody(Property.of(Map.of("text", "Hello, Kestra")))
-            .httpMethod(Property.of("POST"))
+            .url(Property.ofValue(AZURE_FUNCTION_URI_OBJECT_OUTPUT ))
+            .httpBody(Property.ofValue(Map.of("text", "Hello, Kestra")))
+            .httpMethod(Property.ofValue("POST"))
             .build();
 
         RunContext runContext = runContextFactory.of(Collections.emptyMap());

@@ -22,11 +22,11 @@ abstract class AbstractTest extends BaseTest {
         Upload upload = Upload.builder()
             .id(AllTest.class.getSimpleName())
             .type(Upload.class.getName())
-            .endpoint(Property.of(this.storageEndpoint))
-            .connectionString(Property.of(connectionString))
-            .container(Property.of(this.container))
-            .from(Property.of(source.toString()))
-            .name(Property.of(dir + "/" + out + ".yml"))
+            .endpoint(Property.ofValue(this.storageEndpoint))
+            .connectionString(Property.ofValue(connectionString))
+            .container(Property.ofValue(this.container))
+            .from(Property.ofValue(source.toString()))
+            .name(Property.ofValue(dir + "/" + out + ".yml"))
             .build();
 
         directoryToClean.add(dir);
@@ -38,19 +38,19 @@ abstract class AbstractTest extends BaseTest {
         return List.builder()
             .id(AbstractTest.class.getSimpleName())
             .type(List.class.getName())
-            .endpoint(Property.of(this.storageEndpoint))
-            .connectionString(Property.of(connectionString))
-            .container(Property.of(this.container));
+            .endpoint(Property.ofValue(this.storageEndpoint))
+            .connectionString(Property.ofValue(connectionString))
+            .container(Property.ofValue(this.container));
     }
 
     protected DeleteList.DeleteListBuilder<?, ?> deleteDir(String dir) {
         return DeleteList.builder()
             .id(AbstractTest.class.getSimpleName())
             .type(DeleteList.class.getName())
-            .endpoint(Property.of(this.storageEndpoint))
-            .connectionString(Property.of(connectionString))
-            .container(Property.of(this.container))
-            .prefix(Property.of(dir));
+            .endpoint(Property.ofValue(this.storageEndpoint))
+            .connectionString(Property.ofValue(connectionString))
+            .container(Property.ofValue(this.container))
+            .prefix(Property.ofValue(dir));
     }
 
     @AfterEach

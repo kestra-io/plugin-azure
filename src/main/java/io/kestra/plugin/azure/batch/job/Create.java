@@ -159,20 +159,20 @@ public class Create extends AbstractBatch implements RunnableTask<Create.Output>
         title = "The frequency with which the task checks whether the job is completed."
     )
     @Builder.Default
-    private final Property<Duration> completionCheckInterval = Property.of(Duration.ofSeconds(1));
+    private final Property<Duration> completionCheckInterval = Property.ofValue(Duration.ofSeconds(1));
 
     @Schema(
         title = "Whether the job should be deleted upon completion."
     )
     @NotNull
     @Builder.Default
-    private final Property<Boolean> delete = Property.of(true);
+    private final Property<Boolean> delete = Property.ofValue(true);
 
     @Schema(
         title = "Whether to reconnect to the current job if it already exists."
     )
     @NotNull
-    private final Property<Boolean> resume = Property.of(true);
+    private final Property<Boolean> resume = Property.ofValue(true);
 
     @JsonIgnore
     private AbstractLogConsumer logConsumer;

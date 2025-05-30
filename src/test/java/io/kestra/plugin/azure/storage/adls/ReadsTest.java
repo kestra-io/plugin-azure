@@ -20,10 +20,10 @@ class ReadsTest extends AbstractTest {
         Reads task = Reads.builder()
             .id(ReadsTest.class.getSimpleName())
             .type(List.class.getName())
-            .endpoint(Property.of(this.adlsEndpoint))
-            .connectionString(Property.of(connectionString))
-            .fileSystem(Property.of(this.fileSystem))
-            .directoryPath(Property.of("adls/azure/" + prefix + "/"))
+            .endpoint(Property.ofValue(this.adlsEndpoint))
+            .connectionString(Property.ofValue(connectionString))
+            .fileSystem(Property.ofValue(this.fileSystem))
+            .directoryPath(Property.ofValue("adls/azure/" + prefix + "/"))
             .build();
 
         Reads.Output run = task.run(runContext(task));

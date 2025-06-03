@@ -30,7 +30,7 @@ import java.util.Map;
 @Getter
 @NoArgsConstructor
 @Schema(
-    title = "Execute a command with the Azure CLI.", 
+    title = "Execute a command with the Azure CLI.",
     description = "We recommend using a Service Principal and a Client Secret for authentication. " +
         "To create a Service Principal and Client Secret, you can use the following " +
         "[documentation](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/guides/service_principal_client_secret). " +
@@ -214,7 +214,7 @@ public class AzCLI extends Task implements RunnableTask<ScriptOutput>, Namespace
             if (this.tenant != null) {
                 loginCommand.append(" --tenant ").append(runContext.render(this.tenant).as(String.class).orElseThrow());
             }
-            if (runContext.render(this.getServicePrincipal()).as(Boolean.class).orElseThrow()) {
+            if (runContext.render(this.getServicePrincipal()).as(Boolean.class).orElse(false)) {
                 loginCommand.append(" --service-principal");
             }
 

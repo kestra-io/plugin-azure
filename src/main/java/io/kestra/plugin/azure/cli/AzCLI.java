@@ -213,7 +213,7 @@ public class AzCLI extends Task implements RunnableTask<ScriptOutput>, Namespace
             if (this.tenant != null) {
                 loginCommand.append(" --tenant ").append(runContext.render(this.tenant).as(String.class).orElseThrow());
             }
-            if (runContext.render(this.getServicePrincipal()).as(Boolean.class).orElseThrow()) {
+            if (runContext.render(this.getServicePrincipal()).as(Boolean.class).orElse(false)) {
                 loginCommand.append(" --service-principal");
             }
 

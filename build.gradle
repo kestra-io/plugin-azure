@@ -127,7 +127,7 @@ dependencies {
     }
 
     //Azure resource manager
-    implementation 'com.azure.resourcemanager:azure-resourcemanager-datafactory:1.1.0'
+    implementation 'com.azure.resourcemanager:azure-resourcemanager-datafactory:1.2.0'
 }
 
 

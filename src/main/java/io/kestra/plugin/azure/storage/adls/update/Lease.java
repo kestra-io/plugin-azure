@@ -29,7 +29,7 @@ import lombok.experimental.SuperBuilder;
 
                 tasks:
                   - id: lease_file
-                    type: io.kestra.plugin.azure.storage.adls.Lease
+                    type: io.kestra.plugin.azure.storage.adls.update.Lease
                     endpoint: "https://yourblob.blob.core.windows.net"
                     sasToken: "{{ secret('SAS_TOKEN') }}"
                     fileSystem: "mydata"

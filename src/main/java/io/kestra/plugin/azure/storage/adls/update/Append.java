@@ -33,7 +33,7 @@ import lombok.experimental.SuperBuilder;
 
                 tasks:
                   - id: read_file
-                    type: io.kestra.plugin.azure.storage.adls.Append
+                    type: io.kestra.plugin.azure.storage.adls.update.Append
                     endpoint: "https://yourblob.blob.core.windows.net"
                     sasToken: "{{ secret('SAS_TOKEN') }}"
                     fileSystem: "mydata"

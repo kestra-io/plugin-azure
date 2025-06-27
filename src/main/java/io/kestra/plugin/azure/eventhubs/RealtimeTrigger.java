@@ -66,7 +66,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
         code = """
             id: eventhubs_realtime_trigger
             namespace: company.team
-            
+
             tasks:
               - id: insert_into_storagetable
                 type: io.kestra.plugin.azure.storage.table.Bulk
@@ -83,7 +83,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
                       price: "{{ trigger.body | jq('.price') | first }}"
                       quantity: "{{ trigger.body | jq('.quantity') | first }}"
                       total: "{{ trigger.body | jq('.total') | first }}"
-            
+
             triggers:
               - id: realtime_trigger
                 type: io.kestra.plugin.azure.eventhubs.RealtimeTrigger
@@ -96,7 +96,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
                   containerName: kestra
                   connectionString: "{{ secret('BLOB_CONNECTION') }}"
         """
-    )   
+    )
 })
 @Schema(
     title = "Trigger a flow on message consumption in real-time from Azure Event Hubs.",
@@ -120,27 +120,27 @@ public class RealtimeTrigger extends AbstractTrigger implements EventHubConsumer
     protected Property<String> sasToken;
 
     @Builder.Default
-    protected Property<Integer> clientMaxRetries = Property.of(5);
+    protected Property<Integer> clientMaxRetries = Property.ofValue(5);
 
     @Builder.Default
-    protected Property<Long> clientRetryDelay = Property.of(500L);
+    protected Property<Long> clientRetryDelay = Property.ofValue(500L);
 
     @Builder.Default
-    private Property<Serdes> bodyDeserializer = Property.of(Serdes.STRING);
+    private Property<Serdes> bodyDeserializer = Property.ofValue(Serdes.STRING);
 
     @Builder.Default
-    private Property<Map<String, Object>> bodyDeserializerProperties = Property.of(new HashMap<>());
+    private Property<Map<String, Object>> bodyDeserializerProperties = Property.ofValue(new HashMap<>());
 
     @Builder.Default
-    private Property<String> consumerGroup = Property.of("$Default");
+    private Property<String> consumerGroup = Property.ofValue("$Default");
 
     @Builder.Default
-    private Property<StartingPosition> partitionStartingPosition = Property.of(StartingPosition.EARLIEST);
+    private Property<StartingPosition> partitionStartingPosition = Property.ofValue(StartingPosition.EARLIEST);
 
     private Property<String> enqueueTime;
 
     @Builder.Default
-    private Property<Map<String, String>> checkpointStoreProperties = Property.of(new HashMap<>());
+    private Property<Map<String, String>> checkpointStoreProperties = Property.ofValue(new HashMap<>());
 
     private Property<String> namespace;
 

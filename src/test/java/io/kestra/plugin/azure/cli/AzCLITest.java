@@ -38,7 +38,7 @@ public class AzCLITest {
         AzCLI execute = AzCLI.builder()
             .id(IdUtils.create())
             .type(AzCLI.class.getName())
-            .env(Property.of(Map.of(envKey, envValue)))
+            .env(Property.ofValue(Map.of(envKey, envValue)))
             .commands(TestsUtils.propertyFromList(List.of(
                 "echo \"::{\\\"outputs\\\":{\\\"{{ inputs.outputName }}\\\":\\\"$" + envKey + "\\\"}}::\""
             )))
@@ -62,8 +62,8 @@ public class AzCLITest {
             .username(new Property<>("{{ inputs.myUser }}"))
             .password(new Property<>("{{ inputs.myPassword }}"))
             .tenant(new Property<>("{{ inputs.myTenant }}"))
-            .servicePrincipal(Property.of(true))
-            .commands(Property.of(List.of("az keyvault list")))
+            .servicePrincipal(Property.ofValue(true))
+            .commands(Property.ofValue(List.of("az keyvault list")))
             .build();
 
         runContext = TestsUtils.mockRunContext(runContextFactory, execute, Map.of(

@@ -87,7 +87,7 @@ class TriggerTest extends AbstractTest {
             assertThat(trigger.size(), is(2));
 
             List listTask = list()
-                .prefix(Property.of(toUploadDir))
+                .prefix(Property.ofValue(toUploadDir))
                 .build();
             int remainingFilesOnBucket = listTask.run(runContext(listTask))
                 .getBlobs()
@@ -142,7 +142,7 @@ class TriggerTest extends AbstractTest {
             assertThat(trigger.size(), is(2));
 
             List listTask = list()
-                .prefix(Property.of("trigger/none-action-storage-listen"))
+                .prefix(Property.ofValue("trigger/none-action-storage-listen"))
                 .build();
             int remainingFilesOnBucket = listTask.run(runContext(listTask))
                 .getBlobs()

@@ -103,14 +103,14 @@ public class CreateRun extends AbstractAzureIdentityConnection implements Runnab
             title = "Pipeline parameters."
     )
     @Builder.Default
-    private Property<Map<String, Object>> parameters = Property.of(new HashMap<>());
+    private Property<Map<String, Object>> parameters = Property.ofValue(new HashMap<>());
 
     @Schema(
             title = "Wait for the end of the run.",
             description = "Allowing to capture job status & logs."
     )
     @Builder.Default
-    private Property<Boolean> wait = Property.of(Boolean.TRUE);
+    private Property<Boolean> wait = Property.ofValue(Boolean.TRUE);
 
     @Schema(title = "Check the frequency configuration.")
     @PluginProperty
@@ -238,13 +238,13 @@ public class CreateRun extends AbstractAzureIdentityConnection implements Runnab
             title = "Maximum duration of the task until timing out the task."
         )
         @Builder.Default
-        private Property<Duration> maxDuration = Property.of(Duration.ofHours(1));
+        private Property<Duration> maxDuration = Property.ofValue(Duration.ofHours(1));
 
         @Schema(
             title = "Frequency at which Kestra checks if the pipeline has finished."
         )
         @Builder.Default
-        private Property<Duration> interval = Property.of(Duration.ofSeconds(5));
+        private Property<Duration> interval = Property.ofValue(Duration.ofSeconds(5));
     }
 
     private DataFactoryManager dataFactoryManager(RunContext runContext) throws IllegalVariableEvaluationException {

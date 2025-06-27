@@ -69,7 +69,7 @@ public class Downloads extends AbstractBlobStorageWithSas implements RunnableTas
     private Copy.CopyObject moveTo;
 
     @Builder.Default
-    private Property<Filter> filter = Property.of(Filter.FILES);
+    private Property<Filter> filter = Property.ofValue(Filter.FILES);
 
     @Override
     public Output run(RunContext runContext) throws Exception {

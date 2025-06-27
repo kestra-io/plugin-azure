@@ -61,8 +61,8 @@ public class BlobService {
                     .sharedKeyAccountName(blobStorageInterface.getSharedKeyAccountName())
                     .sharedKeyAccountAccessKey(blobStorageInterface.getSharedKeyAccountAccessKey())
                     .sasToken(blobStorageInterface.getSasToken())
-                    .container(Property.of(object.getContainer()))
-                    .name(Property.of(object.getName()))
+                    .container(Property.ofValue(object.getContainer()))
+                    .name(Property.ofValue(object.getName()))
                     .build();
                 delete.run(runContext);
             }
@@ -77,18 +77,18 @@ public class BlobService {
                     .sharedKeyAccountAccessKey(blobStorageInterface.getSharedKeyAccountAccessKey())
                     .sasToken(blobStorageInterface.getSasToken())
                     .from(Copy.CopyObject.builder()
-                        .container(Property.of(object.getContainer()))
-                        .name(Property.of(object.getName()))
+                        .container(Property.ofValue(object.getContainer()))
+                        .name(Property.ofValue(object.getName()))
                         .build()
                     )
                     .to(moveTo.toBuilder()
-                        .container(Property.of(object.getContainer()))
-                        .name(Property.of(StringUtils.stripEnd(runContext.render(moveTo.getName()).as(String.class).orElseThrow() + "/", "/")
+                        .container(Property.ofValue(object.getContainer()))
+                        .name(Property.ofValue(StringUtils.stripEnd(runContext.render(moveTo.getName()).as(String.class).orElseThrow() + "/", "/")
                             + "/" + FilenameUtils.getName(object.getName())
                         ))
                         .build()
                     )
-                    .delete(Property.of(true))
+                    .delete(Property.ofValue(true))
                     .build();
                 copy.run(runContext);
             }

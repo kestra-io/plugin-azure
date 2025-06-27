@@ -159,7 +159,7 @@ public class AzCLI extends Task implements RunnableTask<ScriptOutput>, Namespace
 
     @Schema(title = "The task runner container image, only used if the task runner is container-based.")
     @Builder.Default
-    protected Property<String> containerImage = Property.of(DEFAULT_IMAGE);
+    protected Property<String> containerImage = Property.ofValue(DEFAULT_IMAGE);
 
     private NamespaceFiles namespaceFiles;
 
@@ -179,8 +179,8 @@ public class AzCLI extends Task implements RunnableTask<ScriptOutput>, Namespace
             .withDockerOptions(injectDefaults(getDocker()))
             .withTaskRunner(this.taskRunner)
             .withContainerImage(runContext.render(this.containerImage).as(String.class).orElseThrow())
-            .withBeforeCommands(Property.of(loginCommands))
-            .withInterpreter(Property.of(List.of("/bin/sh", "-c")))
+            .withBeforeCommands(Property.ofValue(loginCommands))
+            .withInterpreter(Property.ofValue(List.of("/bin/sh", "-c")))
             .withCommands(this.commands)
             .withEnv(renderedEnv.isEmpty() ? null : renderedEnv)
             .withNamespaceFiles(namespaceFiles)

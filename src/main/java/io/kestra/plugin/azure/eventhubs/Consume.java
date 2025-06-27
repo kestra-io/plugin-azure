@@ -80,30 +80,30 @@ import java.util.concurrent.atomic.AtomicReference;
 public class Consume extends AbstractEventHubTask implements EventHubConsumerInterface, EventHubBatchConsumerInterface, RunnableTask<Consume.Output> {
     // TASK'S PARAMETERS
     @Builder.Default
-    private Property<Serdes> bodyDeserializer = Property.of(Serdes.STRING);
+    private Property<Serdes> bodyDeserializer = Property.ofValue(Serdes.STRING);
 
     @Builder.Default
-    private Property<Map<String, Object>> bodyDeserializerProperties = Property.of(new HashMap<>());
+    private Property<Map<String, Object>> bodyDeserializerProperties = Property.ofValue(new HashMap<>());
 
     @Builder.Default
-    private Property<String> consumerGroup = Property.of("$Default");
+    private Property<String> consumerGroup = Property.ofValue("$Default");
 
     @Builder.Default
-    private Property<StartingPosition> partitionStartingPosition = Property.of(StartingPosition.EARLIEST);
+    private Property<StartingPosition> partitionStartingPosition = Property.ofValue(StartingPosition.EARLIEST);
 
     private Property<String> enqueueTime;
 
     @Builder.Default
-    private Property<Integer> maxBatchSizePerPartition = Property.of(50);
+    private Property<Integer> maxBatchSizePerPartition = Property.ofValue(50);
 
     @Builder.Default
-    private Property<Duration> maxWaitTimePerPartition = Property.of(Duration.ofSeconds(5));
+    private Property<Duration> maxWaitTimePerPartition = Property.ofValue(Duration.ofSeconds(5));
 
     @Builder.Default
-    private Property<Duration> maxDuration = Property.of(Duration.ofSeconds(10));
+    private Property<Duration> maxDuration = Property.ofValue(Duration.ofSeconds(10));
 
     @Builder.Default
-    private Property<Map<String, String>> checkpointStoreProperties = Property.of(new HashMap<>());
+    private Property<Map<String, String>> checkpointStoreProperties = Property.ofValue(new HashMap<>());
 
     // SERVICES
     @Getter(AccessLevel.NONE)
@@ -216,10 +216,10 @@ public class Consume extends AbstractEventHubTask implements EventHubConsumerInt
                                                    final EventHubClientFactory factory) throws IllegalVariableEvaluationException {
         var renderedMap = runContext.render(pluginConfig.getCheckpointStoreProperties()).asMap(String.class, String.class);
         BlobContainerClientInterface config = BlobContainerClientInterface.builder()
-            .containerName(Property.of(renderedMap.get("containerName")))
-            .connectionString(Property.of(renderedMap.get("connectionString")))
-            .sharedKeyAccountAccessKey(Property.of(renderedMap.get("sharedKeyAccountAccessKey")))
-            .sharedKeyAccountName(Property.of(renderedMap.get("sharedKeyAccountName")))
+            .containerName(Property.ofValue(renderedMap.get("containerName")))
+            .connectionString(Property.ofValue(renderedMap.get("connectionString")))
+            .sharedKeyAccountAccessKey(Property.ofValue(renderedMap.get("sharedKeyAccountAccessKey")))
+            .sharedKeyAccountName(Property.ofValue(renderedMap.get("sharedKeyAccountName")))
             .build();
         BlobContainerAsyncClient client = factory.createBlobContainerAsyncClient(
             new BlobContainerClientConfig(runContext, config)

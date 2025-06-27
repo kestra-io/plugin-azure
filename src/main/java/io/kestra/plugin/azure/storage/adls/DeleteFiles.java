@@ -98,7 +98,7 @@ public class DeleteFiles extends AbstractDataLakeConnection implements RunnableT
         title = "Whether to raise an error if the file is not found."
     )
     @Builder.Default
-    private final Property<Boolean> errorOnEmpty = Property.of(false);
+    private final Property<Boolean> errorOnEmpty = Property.ofValue(false);
 
     @Override
     public Output run(RunContext runContext) throws Exception {

@@ -28,8 +28,8 @@ class SharedAccessTest extends AbstractTest {
             .connectionString(Property.ofValue(connectionString))
             .fileSystem(Property.ofValue(this.fileSystem))
             .filePath(Property.ofValue(upload.getFile().getName()))
-            .expirationDate(Property.ofExpression(" {{ now() | dateAdd(1, 'DAYS')  }}"))
             .permissions(Set.of(SharedAccess.Permission.READ))
+            .expirationDate(Property.ofExpression(" {{ now() | dateAdd(1, 'DAYS')  }}"))
             .build();
         SharedAccess.Output run = task.run(runContext(task));
 

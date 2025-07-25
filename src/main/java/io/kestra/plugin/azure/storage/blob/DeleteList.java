@@ -69,7 +69,7 @@ public class DeleteList extends AbstractBlobStorageWithSas implements RunnableTa
     protected Property<String> delimiter;
 
     @Builder.Default
-    private Property<Filter> filter = Property.of(Filter.FILES);
+    private Property<Filter> filter = Property.ofValue(Filter.FILES);
 
     @Min(2)
     @Schema(
@@ -82,7 +82,7 @@ public class DeleteList extends AbstractBlobStorageWithSas implements RunnableTa
         title = "Whether to raise an error if the file is not found."
     )
     @Builder.Default
-    private final Property<Boolean> errorOnEmpty = Property.of(false);
+    private final Property<Boolean> errorOnEmpty = Property.ofValue(false);
 
     @Override
     public Output run(RunContext runContext) throws Exception {

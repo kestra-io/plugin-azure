@@ -37,9 +37,9 @@ class OauthAccessTokenTest {
         final String clientSecret = "";
 
         OauthAccessToken task = OauthAccessToken.builder()
-            .tenantId(Property.of(tenantId))
-            .clientId(Property.of(clientId))
-            .clientSecret(Property.of(clientSecret))
+            .tenantId(Property.ofValue(tenantId))
+            .clientId(Property.ofValue(clientId))
+            .clientSecret(Property.ofValue(clientSecret))
             .build();
 
         OauthAccessToken.Output run = task.run(runContextFactory.of(Collections.emptyMap()));

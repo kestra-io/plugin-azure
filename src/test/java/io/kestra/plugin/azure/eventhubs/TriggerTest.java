@@ -97,9 +97,9 @@ class TriggerTest {
         Produce task = Produce.builder()
             .id(ConsumeTest.class.getSimpleName())
             .type(Produce.class.getName())
-            .bodySerializer(Property.of(Serdes.STRING))
-            .eventHubName(Property.of(eventHubName))
-            .connectionString(Property.of(connectionString))
+            .bodySerializer(Property.ofValue(Serdes.STRING))
+            .eventHubName(Property.ofValue(eventHubName))
+            .connectionString(Property.ofValue(connectionString))
             .from(List.of(
                 ImmutableMap.builder()
                     .put("body", "event-1")

@@ -46,7 +46,7 @@ import java.util.List;
 public class OauthAccessToken extends AbstractAzureIdentityConnection implements RunnableTask<OauthAccessToken.Output> {
     @Schema(title = "The Azure scopes to be used")
     @Builder.Default
-    Property<List<String>> scopes = Property.of(Collections.singletonList("https://management.azure.com/.default"));
+    Property<List<String>> scopes = Property.ofValue(Collections.singletonList("https://management.azure.com/.default"));
 
     @Override
     public Output run(RunContext runContext) throws Exception {

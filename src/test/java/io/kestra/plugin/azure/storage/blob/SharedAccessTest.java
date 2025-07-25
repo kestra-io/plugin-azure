@@ -23,11 +23,11 @@ class SharedAccessTest extends AbstractTest {
         SharedAccess task = SharedAccess.builder()
             .id(CopyTest.class.getSimpleName())
             .type(List.class.getName())
-            .endpoint(Property.of(this.storageEndpoint))
-            .connectionString(Property.of(connectionString))
-            .container(Property.of(upload.getBlob().getContainer()))
-            .name(Property.of(upload.getBlob().getName()))
-            .expirationDate(new Property<>("{{ now() | dateAdd(1, 'DAYS')  }}"))
+            .endpoint(Property.ofValue(this.storageEndpoint))
+            .connectionString(Property.ofValue(connectionString))
+            .container(Property.ofValue(upload.getBlob().getContainer()))
+            .name(Property.ofValue(upload.getBlob().getName()))
+            .expirationDate(Property.ofExpression("{{ now() | dateAdd(1, 'DAYS')  }}"))
             .permissions(Set.of(SharedAccess.Permission.READ))
             .build();
         SharedAccess.Output run = task.run(runContext(task));

@@ -40,11 +40,11 @@ class CreateTest extends AbstractTest {
         SharedAccess task = SharedAccess.builder()
             .id(SharedAccess.class.getSimpleName())
             .type(io.kestra.plugin.azure.storage.blob.List.class.getName())
-            .endpoint(Property.of(this.endpoint))
-            .connectionString(Property.of(connectionString))
-            .container(Property.of(container))
-            .name(Property.of(name))
-            .expirationDate(Property.of("{{ now() | dateAdd(1, 'DAYS')  }}"))
+            .endpoint(Property.ofValue(this.endpoint))
+            .connectionString(Property.ofValue(connectionString))
+            .container(Property.ofValue(container))
+            .name(Property.ofValue(name))
+            .expirationDate(Property.ofValue("{{ now() | dateAdd(1, 'DAYS')  }}"))
             .permissions(Set.of(perms))
             .build();
         return task.run(runContext(task));
@@ -56,11 +56,11 @@ class CreateTest extends AbstractTest {
         Upload upload = Upload.builder()
             .id(CreateTest.class.getSimpleName())
             .type(Upload.class.getName())
-            .endpoint(Property.of(this.storageEndpoint))
-            .connectionString(Property.of(connectionString))
-            .container(Property.of(this.container))
-            .from(Property.of(upload(content.getBytes(StandardCharsets.UTF_8)).toString()))
-            .name(Property.of("batch/" + prefix + ".yml"))
+            .endpoint(Property.ofValue(this.storageEndpoint))
+            .connectionString(Property.ofValue(connectionString))
+            .container(Property.ofValue(this.container))
+            .from(Property.ofValue(upload(content.getBytes(StandardCharsets.UTF_8)).toString()))
+            .name(Property.ofValue("batch/" + prefix + ".yml"))
             .build();
 
         Upload.Output uploadRun = upload.run(runContext(upload));
@@ -72,10 +72,10 @@ class CreateTest extends AbstractTest {
         Create task = Create.builder()
             .id(CreateTest.class.getSimpleName())
             .type(Create.class.getName())
-            .endpoint(Property.of(this.endpoint))
-            .account(Property.of(this.account))
-            .accessKey(Property.of(this.accessKey))
-            .poolId(Property.of(this.poolId))
+            .endpoint(Property.ofValue(this.endpoint))
+            .account(Property.ofValue(this.account))
+            .accessKey(Property.ofValue(this.accessKey))
+            .poolId(Property.ofValue(this.poolId))
             .job(Job.builder()
                 .id(IdUtils.create())
                 .build()
@@ -98,63 +98,63 @@ class CreateTest extends AbstractTest {
             List.of(
                 Task.builder()
                     .id("env")
-                    .interpreter(Property.of("/bin/bash"))
-                    .commands(Property.of(List.of("echo t1=$ENV_STRING | awk '{ print $1 }'")))
-                    .environments(Property.of(Map.of("ENV_STRING", "{{ inputs.first }}")))
-                    .containerSettings(TaskContainerSettings.builder().imageName(Property.of("ubuntu")).build())
+                    .interpreter(Property.ofValue("/bin/bash"))
+                    .commands(Property.ofValue(List.of("echo t1=$ENV_STRING | awk '{ print $1 }'")))
+                    .environments(Property.ofValue(Map.of("ENV_STRING", "{{ inputs.first }}")))
+                    .containerSettings(TaskContainerSettings.builder().imageName(Property.ofValue("ubuntu")).build())
                     .build(),
                 Task.builder()
                     .id("echo")
-                    .interpreter(Property.of("/bin/bash"))
-                    .commands(Property.of(List.of("echo t2=`echo {{ inputs.second }}` 1>&2")))
-                    .containerSettings(TaskContainerSettings.builder().imageName(Property.of("ubuntu")).build())
+                    .interpreter(Property.ofValue("/bin/bash"))
+                    .commands(Property.ofValue(List.of("echo t2=`echo {{ inputs.second }}` 1>&2")))
+                    .containerSettings(TaskContainerSettings.builder().imageName(Property.ofValue("ubuntu")).build())
                     .build(),
                 Task.builder()
                     .id("for")
-                    .interpreter(Property.of("/bin/bash"))
-                    .commands(Property.of(List.of(("for i in $(seq 10); do echo t3=$i; done"))))
-                    .containerSettings(TaskContainerSettings.builder().imageName(Property.of("ubuntu")).build())
+                    .interpreter(Property.ofValue("/bin/bash"))
+                    .commands(Property.ofValue(List.of(("for i in $(seq 10); do echo t3=$i; done"))))
+                    .containerSettings(TaskContainerSettings.builder().imageName(Property.ofValue("ubuntu")).build())
                     .build(),
                 Task.builder()
                     .id("vars")
                     .resourceFiles(List.of(
                         ResourceFile.builder()
-                            .filePath(Property.of("files/in/in.txt"))
-                            .httpUrl(Property.of(uploadToContainer(random).toString()))
+                            .filePath(Property.ofValue("files/in/in.txt"))
+                            .httpUrl(Property.ofValue(uploadToContainer(random).toString()))
                             .build()
                     ))
                     .uploadFiles(List.of(
                         OutputFile.builder()
-                            .filePattern(Property.of("files/in/*"))
+                            .filePattern(Property.ofValue("files/in/*"))
                             .destination(OutputFileDestination.builder()
                                 .container(OutputFileBlobContainerDestination.builder()
-                                    .containerUrl(Property.of(outputs.getUri().toString()))
+                                    .containerUrl(Property.ofValue(outputs.getUri().toString()))
                                     .build()
                                 )
                                 .build()
                             )
                             .build()
                     ))
-                    .interpreter(Property.of("/bin/bash"))
-                    .commands(Property.of(List.of("echo '::{\"outputs\": {\"extract\":\"'$(cat files/in/in.txt)'\"}}::' | tee files/in/tee.txt")))
-                    .containerSettings(TaskContainerSettings.builder().imageName(Property.of("ubuntu")).build())
+                    .interpreter(Property.ofValue("/bin/bash"))
+                    .commands(Property.ofValue(List.of("echo '::{\"outputs\": {\"extract\":\"'$(cat files/in/in.txt)'\"}}::' | tee files/in/tee.txt")))
+                    .containerSettings(TaskContainerSettings.builder().imageName(Property.ofValue("ubuntu")).build())
                     .build(),
                 Task.builder()
                     .id("output")
-                    .outputFiles(Property.of(List.of(
+                    .outputFiles(Property.ofValue(List.of(
                         "outs/1.txt"
                     )))
-                    .outputDirs(Property.of(List.of(
+                    .outputDirs(Property.ofValue(List.of(
                         "outs/child"
                     )))
-                    .interpreter(Property.of("/bin/bash"))
-                    .commands(Property.of(List.of(
+                    .interpreter(Property.ofValue("/bin/bash"))
+                    .commands(Property.ofValue(List.of(
                         "mkdir -p outs/child/sub",
                         "echo 1 > outs/1.txt",
                         "echo 2 > outs/child/2.txt",
                         "echo 3 > outs/child/sub/3.txt"
                     )))
-                    .containerSettings(TaskContainerSettings.builder().imageName(Property.of("ubuntu")).build())
+                    .containerSettings(TaskContainerSettings.builder().imageName(Property.ofValue("ubuntu")).build())
                     .build()
             ),
             Map.of("first", "first", "second", "second")
@@ -187,13 +187,13 @@ class CreateTest extends AbstractTest {
             List.of(
                 Task.builder()
                     .id("echo")
-                    .commands(Property.of(List.of(("echo ok"))))
-                    .containerSettings(TaskContainerSettings.builder().imageName(Property.of("ubuntu")).build())
+                    .commands(Property.ofValue(List.of(("echo ok"))))
+                    .containerSettings(TaskContainerSettings.builder().imageName(Property.ofValue("ubuntu")).build())
                     .build(),
                 Task.builder()
                     .id("failed")
-                    .commands(Property.of(List.of(("cat failed"))))
-                    .containerSettings(TaskContainerSettings.builder().imageName(Property.of("ubuntu")).build())
+                    .commands(Property.ofValue(List.of(("cat failed"))))
+                    .containerSettings(TaskContainerSettings.builder().imageName(Property.ofValue("ubuntu")).build())
                     .build()
             ),
             Map.of()

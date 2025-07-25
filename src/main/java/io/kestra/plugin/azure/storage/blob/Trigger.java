@@ -135,7 +135,7 @@ public class Trigger extends AbstractTrigger implements PollingTriggerInterface,
     private Copy.CopyObject moveTo;
 
     @Builder.Default
-    private Property<ListInterface.Filter> filter = Property.of(Filter.FILES);
+    private Property<ListInterface.Filter> filter = Property.ofValue(Filter.FILES);
 
     @Override
     public Optional<Execution> evaluate(ConditionContext conditionContext, TriggerContext context) throws Exception {
@@ -174,7 +174,7 @@ public class Trigger extends AbstractTrigger implements PollingTriggerInterface,
                     .sharedKeyAccountAccessKey(this.sharedKeyAccountAccessKey)
                     .sasToken(this.sasToken)
                     .container(this.container)
-                    .name(Property.of(object.getName()))
+                    .name(Property.ofValue(object.getName()))
                     .build();
                 Download.Output downloadOutput = download.run(runContext);
 

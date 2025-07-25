@@ -21,10 +21,10 @@ class DeleteListTest extends AbstractTest {
         DeleteList task = DeleteList.builder()
             .id(DeleteListTest.class.getSimpleName())
             .type(List.class.getName())
-            .endpoint(Property.of(this.storageEndpoint))
-            .connectionString(Property.of(connectionString))
-            .container(Property.of(this.container))
-            .prefix(Property.of("/tasks/" + prefix + "/"))
+            .endpoint(Property.ofValue(this.storageEndpoint))
+            .connectionString(Property.ofValue(connectionString))
+            .container(Property.ofValue(this.container))
+            .prefix(Property.ofValue("/tasks/" + prefix + "/"))
             .concurrent(5)
             .build();
 

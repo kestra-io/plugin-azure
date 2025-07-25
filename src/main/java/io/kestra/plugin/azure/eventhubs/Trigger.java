@@ -77,36 +77,36 @@ public class Trigger extends AbstractTrigger implements EventHubConsumerInterfac
     protected Property<String> sasToken;
 
     @Builder.Default
-    protected Property<Integer> clientMaxRetries = Property.of(5);
+    protected Property<Integer> clientMaxRetries = Property.ofValue(5);
 
     @Builder.Default
-    protected Property<Long> clientRetryDelay = Property.of(500L);
+    protected Property<Long> clientRetryDelay = Property.ofValue(500L);
 
     @Builder.Default
-    private Property<Serdes> bodyDeserializer = Property.of(Serdes.STRING);
+    private Property<Serdes> bodyDeserializer = Property.ofValue(Serdes.STRING);
 
     @Builder.Default
-    private Property<Map<String, Object>> bodyDeserializerProperties = Property.of(new HashMap<>());
+    private Property<Map<String, Object>> bodyDeserializerProperties = Property.ofValue(new HashMap<>());
 
     @Builder.Default
-    private Property<String> consumerGroup = Property.of("$Default");
+    private Property<String> consumerGroup = Property.ofValue("$Default");
 
     @Builder.Default
-    private Property<StartingPosition> partitionStartingPosition = Property.of(StartingPosition.EARLIEST);
+    private Property<StartingPosition> partitionStartingPosition = Property.ofValue(StartingPosition.EARLIEST);
 
     private Property<String> enqueueTime;
 
     @Builder.Default
-    private Property<Integer> maxBatchSizePerPartition = Property.of(50);
+    private Property<Integer> maxBatchSizePerPartition = Property.ofValue(50);
 
     @Builder.Default
-    private Property<Duration> maxWaitTimePerPartition = Property.of(Duration.ofSeconds(5));
+    private Property<Duration> maxWaitTimePerPartition = Property.ofValue(Duration.ofSeconds(5));
 
     @Builder.Default
-    private Property<Duration> maxDuration = Property.of(Duration.ofSeconds(10));
+    private Property<Duration> maxDuration = Property.ofValue(Duration.ofSeconds(10));
 
     @Builder.Default
-    private Property<Map<String, String>> checkpointStoreProperties = Property.of(new HashMap<>());
+    private Property<Map<String, String>> checkpointStoreProperties = Property.ofValue(new HashMap<>());
 
     private Property<String> namespace;
 

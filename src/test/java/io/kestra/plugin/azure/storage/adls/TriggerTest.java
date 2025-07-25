@@ -89,7 +89,7 @@ class TriggerTest extends AbstractTest {
             assertThat(trigger.size(), is(2));
 
             List listTask = list()
-                .directoryPath(Property.of("adls/azure/trigger/adls-listen"))
+                .directoryPath(Property.ofValue("adls/azure/trigger/adls-listen"))
                 .build();
             int remainingFilesOnBucket = listTask.run(runContext(listTask))
                 .getFiles()
@@ -147,7 +147,7 @@ class TriggerTest extends AbstractTest {
             assertThat(trigger.size(), is(2));
 
             List listTask = list()
-                .directoryPath(Property.of("adls/azure/trigger/adls-listen-delete-action"))
+                .directoryPath(Property.ofValue("adls/azure/trigger/adls-listen-delete-action"))
                 .build();
 
             int remainingFilesOnBucket = listTask.run(runContext(listTask))
@@ -204,7 +204,7 @@ class TriggerTest extends AbstractTest {
 
             //Moved files
             List listTask = list()
-                .directoryPath(Property.of("adls/azure/trigger/adls-listen-move-action-direction"))
+                .directoryPath(Property.ofValue("adls/azure/trigger/adls-listen-move-action-direction"))
                 .build();
 
             int movedFilesOnBucket = listTask.run(runContext(listTask))
@@ -214,7 +214,7 @@ class TriggerTest extends AbstractTest {
 
             //Initial files
             List remainingFiles = list()
-                .directoryPath(Property.of("adls/azure/trigger/adls-listen-move-action"))
+                .directoryPath(Property.ofValue("adls/azure/trigger/adls-listen-move-action"))
                 .build();
 
             int remainingFilesOnBucket = remainingFiles.run(runContext(listTask))

@@ -24,11 +24,11 @@ class SharedAccessTest extends AbstractTest {
         SharedAccess task = SharedAccess.builder()
             .id(SharedAccess.class.getSimpleName())
             .type(List.class.getName())
-            .endpoint(Property.of(this.adlsEndpoint))
-            .connectionString(Property.of(connectionString))
-            .fileSystem(Property.of(this.fileSystem))
-            .filePath(Property.of(upload.getFile().getName()))
-            .expirationDate(new Property<>("{{ now() | dateAdd(1, 'DAYS')  }}"))
+            .endpoint(Property.ofValue(this.adlsEndpoint))
+            .connectionString(Property.ofValue(connectionString))
+            .fileSystem(Property.ofValue(this.fileSystem))
+            .filePath(Property.ofValue(upload.getFile().getName()))
+            .expirationDate(Property.ofExpression("{{ now() | dateAdd(1, 'DAYS')  }}"))
             .permissions(Set.of(SharedAccess.Permission.READ))
             .build();
         SharedAccess.Output run = task.run(runContext(task));

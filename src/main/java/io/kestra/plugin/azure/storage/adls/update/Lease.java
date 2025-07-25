@@ -51,7 +51,7 @@ public class Lease extends AbstractDataLakeWithFile implements RunnableTask<Leas
     )
     @NotNull
     @Builder.Default
-    protected Property<Integer> leaseDuration = Property.of(-1); //Set to -1 for infinite lease duration by default
+    protected Property<Integer> leaseDuration = Property.ofValue(-1); //Set to -1 for infinite lease duration by default
 
     @Schema(
         title = "Lease action",
@@ -59,7 +59,7 @@ public class Lease extends AbstractDataLakeWithFile implements RunnableTask<Leas
     )
     @NotNull
     @Builder.Default
-    protected Property<LeaseAction> action = Property.of(LeaseAction.ACQUIRE);
+    protected Property<LeaseAction> action = Property.ofValue(LeaseAction.ACQUIRE);
 
     @Schema(
         title = "Lease ID",

@@ -95,7 +95,7 @@ public class Trigger extends AbstractTrigger implements PollingTriggerInterface,
     )
     @Builder.Default
     @NotNull
-    private Property<Action> action = Property.of(Action.NONE);
+    private Property<Action> action = Property.ofValue(Action.NONE);
 
     @Schema(
         title = "The destination container and key."
@@ -137,7 +137,7 @@ public class Trigger extends AbstractTrigger implements PollingTriggerInterface,
                     .sharedKeyAccountAccessKey(this.sharedKeyAccountAccessKey)
                     .sasToken(this.sasToken)
                     .fileSystem(this.fileSystem)
-                    .filePath(Property.of(object.getName()))
+                    .filePath(Property.ofValue(object.getName()))
                     .build();
                 Read.Output downloadOutput = download.run(runContext);
 
@@ -173,7 +173,7 @@ public class Trigger extends AbstractTrigger implements PollingTriggerInterface,
                         .sharedKeyAccountAccessKey(this.sharedKeyAccountAccessKey)
                         .sasToken(this.sasToken)
                         .fileSystem(this.fileSystem)
-                        .filePath(Property.of(file.getName()))
+                        .filePath(Property.ofValue(file.getName()))
                         .build();
                     delete.run(runContext);
                 }

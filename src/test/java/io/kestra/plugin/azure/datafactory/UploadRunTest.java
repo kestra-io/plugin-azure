@@ -45,11 +45,11 @@ class UploadRunTest {
     @ParameterizedTest
     @ValueSource(booleans = {true, false})
     void testRunPipeline(boolean useCustomDuration) throws Exception {
-        final var tenantId = Property.of(this.tenantId);
-        final var subscriptionId = Property.of(this.subscriptionId);
-        final var factoryName = Property.of("unit-test");
-        final var resourceGroupName = Property.of("unit-test");
-        final var pipelineName = Property.of("http-test");
+        final var tenantId = Property.ofValue(this.tenantId);
+        final var subscriptionId = Property.ofValue(this.subscriptionId);
+        final var factoryName = Property.ofValue("unit-test");
+        final var resourceGroupName = Property.ofValue("unit-test");
+        final var pipelineName = Property.ofValue("http-test");
 
         RunContext runContext = runContextFactory.of();
 
@@ -62,8 +62,8 @@ class UploadRunTest {
 
         if (useCustomDuration) {
             createRunBuilder.checkFrequency(CreateRun.CheckFrequency.builder()
-                .maxDuration(Property.of(Duration.ofMinutes(1)))
-                .interval(Property.of(Duration.ofSeconds(30)))
+                .maxDuration(Property.ofValue(Duration.ofMinutes(1)))
+                .interval(Property.ofValue(Duration.ofSeconds(30)))
                 .build());
         }
 
@@ -91,12 +91,12 @@ class UploadRunTest {
     @Disabled
     @Test
     void testRunPipelineWithParameter() throws Exception {
-        final var tenantId = Property.of(this.tenantId);
-        final var subscriptionId = Property.of(this.subscriptionId);
-        final var factoryName = Property.of("unit-test");
-        final var resourceGroupName = Property.of("unit-test");
-        final var pipelineName = Property.of("http-test-with-parameter");
-        final var parameters = Property.of(Map.of("pokemonName", (Object) "pikachu"));
+        final var tenantId = Property.ofValue(this.tenantId);
+        final var subscriptionId = Property.ofValue(this.subscriptionId);
+        final var factoryName = Property.ofValue("unit-test");
+        final var resourceGroupName = Property.ofValue("unit-test");
+        final var pipelineName = Property.ofValue("http-test-with-parameter");
+        final var parameters = Property.ofValue(Map.of("pokemonName", (Object) "pikachu"));
 
         RunContext runContext = runContextFactory.of();
 
@@ -130,11 +130,11 @@ class UploadRunTest {
     @Disabled
     @Test
     void testRunPipelineNoWait() throws Exception {
-        final var tenantId = Property.of(this.tenantId);
-        final var subscriptionId = Property.of(this.subscriptionId);
-        final var factoryName = Property.of("unit-test");
-        final var resourceGroupName = Property.of("unittest");
-        final var pipelineName = Property.of("http-test");
+        final var tenantId = Property.ofValue(this.tenantId);
+        final var subscriptionId = Property.ofValue(this.subscriptionId);
+        final var factoryName = Property.ofValue("unit-test");
+        final var resourceGroupName = Property.ofValue("unittest");
+        final var pipelineName = Property.ofValue("http-test");
 
         RunContext runContext = runContextFactory.of();
 
@@ -143,7 +143,7 @@ class UploadRunTest {
                 .subscriptionId(subscriptionId)
                 .factoryName(factoryName)
                 .resourceGroupName(resourceGroupName)
-                .wait(Property.of(Boolean.FALSE))
+                .wait(Property.ofValue(Boolean.FALSE))
                 .pipelineName(pipelineName)
                 .build();
 

@@ -55,14 +55,14 @@ public class Resize extends AbstractBatch implements RunnableTask<Resize.Output>
     )
     @NotNull
     @Builder.Default
-    private Property<Integer> targetDedicatedNodes = Property.of(0);
+    private Property<Integer> targetDedicatedNodes = Property.ofValue(0);
 
     @Schema(
         title = "The desired number of low-priority compute nodes in the pool."
     )
     @NotNull
     @Builder.Default
-    private Property<Integer> targetLowPriorityNodes = Property.of(0);
+    private Property<Integer> targetLowPriorityNodes = Property.ofValue(0);
 
     @Override
     public Output run(RunContext runContext) throws Exception {

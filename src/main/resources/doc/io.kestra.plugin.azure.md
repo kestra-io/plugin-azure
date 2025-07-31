@@ -2,7 +2,7 @@
 
 All tasks must be authenticated for the Azure Platform. Multiple authentication methods are supported:
 
-#### 1. **Service Principal with Client Secret**
+#### 1. Service Principal with Client Secret
 You can set the following task properties:
 - `tenantId`: Directory (tenant) ID of the Azure Active Directory instance.
 - `clientId`: Application (client) ID of your service principal.

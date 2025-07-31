@@ -18,7 +18,7 @@ Alternatively, you can use a PEM certificate for authentication by specifying:
 
 This method is preferred over client secrets when enhanced security and certificate lifecycle management are required.
 
-#### 3. **Default Azure Credentials**
+#### 3. Default Azure Credentials
 If no client secret or certificate is defined, the [DefaultAzureCredential](https://learn.microsoft.com/en-us/java/api/overview/azure/identity-readme?view=azure-java-stable#defaultazurecredential) chain will be used. This includes:
 - Environment variables (`AZURE_TENANT_ID`, `AZURE_CLIENT_ID`, `AZURE_CLIENT_SECRET`, etc.).
 - Managed identity for Azure resources (if the task is running on an Azure VM, App Service, etc.).

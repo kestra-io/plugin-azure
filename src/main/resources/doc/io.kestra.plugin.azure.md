@@ -10,7 +10,7 @@ You can set the following task properties:
 
 This is a common method for server-to-server authentication and recommended for automation scenarios. This is best used with [secrets](https://kestra.io/docs/concepts/secret) to avoid exposing credentials in plain text.
 
-#### 2. **Service Principal with Certificate**
+#### 2. Service Principal with Certificate
 Alternatively, you can use a PEM certificate for authentication by specifying:
 - `tenantId`
 - `clientId`

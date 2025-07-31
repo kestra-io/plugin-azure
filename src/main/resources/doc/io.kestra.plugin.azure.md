@@ -27,7 +27,7 @@ If no client secret or certificate is defined, the [DefaultAzureCredential](http
 
 > ⚠️ In all cases, specifying `tenantId` is **required**.
 
-#### 4. **SAS Token or Shared Key Authentication**
+#### 4. SAS Token or Shared Key Authentication
 Some Azure services support alternate authentication modes:
 - **Shared Key**: use `sharedKeyAccountName` and `sharedKeyAccountAccessKey` for services like Azure Storage.
 - **SAS Token**: use `sasToken` for temporary delegated access to resources.

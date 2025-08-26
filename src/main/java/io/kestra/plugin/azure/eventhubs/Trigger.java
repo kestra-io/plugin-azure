@@ -10,6 +10,7 @@ import io.kestra.core.runners.RunContext;
 import io.kestra.plugin.azure.eventhubs.serdes.Serdes;
 import io.kestra.plugin.azure.eventhubs.service.consumer.StartingPosition;
 import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.NotNull;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
 import lombok.extern.slf4j.Slf4j;
@@ -105,8 +106,8 @@ public class Trigger extends AbstractTrigger implements EventHubConsumerInterfac
     @Builder.Default
     private Property<Duration> maxDuration = Property.ofValue(Duration.ofSeconds(10));
 
-    @Builder.Default
-    private Property<Map<String, String>> checkpointStoreProperties = Property.ofValue(new HashMap<>());
+    @NotNull
+    private Property<Map<String, String>> checkpointStoreProperties;
 
     private Property<String> namespace;
 

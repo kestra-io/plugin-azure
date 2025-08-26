@@ -24,6 +24,7 @@ import io.kestra.plugin.azure.eventhubs.service.consumer.EventHubConsumerService
 import io.kestra.plugin.azure.eventhubs.service.consumer.EventHubNamePartition;
 import io.kestra.plugin.azure.eventhubs.service.consumer.StartingPosition;
 import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.NotNull;
 import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.EqualsAndHashCode;
@@ -102,8 +103,8 @@ public class Consume extends AbstractEventHubTask implements EventHubConsumerInt
     @Builder.Default
     private Property<Duration> maxDuration = Property.ofValue(Duration.ofSeconds(10));
 
-    @Builder.Default
-    private Property<Map<String, String>> checkpointStoreProperties = Property.ofValue(new HashMap<>());
+    @NotNull
+    private Property<Map<String, String>> checkpointStoreProperties;
 
     // SERVICES
     @Getter(AccessLevel.NONE)
@@ -215,6 +216,22 @@ public class Consume extends AbstractEventHubTask implements EventHubConsumerInt
                                                    final EventHubConsumerInterface pluginConfig,
                                                    final EventHubClientFactory factory) throws IllegalVariableEvaluationException {
         var renderedMap = runContext.render(pluginConfig.getCheckpointStoreProperties()).asMap(String.class, String.class);
+
+        var connectionString = renderedMap.get("connectionString");
+        var containerName = renderedMap.get("containerName");
+
+        if (connectionString == null || connectionString.trim().isEmpty()) {
+            throw new IllegalArgumentException(
+                "checkpointStoreProperties.connectionString is required. Provide your Azure Blob Storage connection string."
+            );
+        }
+
+        if (containerName == null || containerName.trim().isEmpty()) {
+            throw new IllegalArgumentException(
+                "checkpointStoreProperties.containerName is required. Provide your Azure Blob Storage container name."
+            );
+        }
+
         BlobContainerClientInterface config = BlobContainerClientInterface.builder()
             .containerName(Property.ofValue(renderedMap.get("containerName")))
             .connectionString(Property.ofValue(renderedMap.get("connectionString")))

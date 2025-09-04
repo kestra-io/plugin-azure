@@ -9,6 +9,7 @@ import lombok.With;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
+import java.util.Base64;
 import java.util.List;
 
 @Builder
@@ -52,7 +53,9 @@ public class AdlsFile {
             .contentType(dataLakeFileClient.getProperties().getContentType())
             .contentEncoding(dataLakeFileClient.getProperties().getContentEncoding())
             .contentLanguage(dataLakeFileClient.getProperties().getContentLanguage())
-            .contentMd5(dataLakeFileClient.getProperties().getContentMd5() != null ? new String(dataLakeFileClient.getProperties().getContentMd5(), StandardCharsets.UTF_8) : null)
+            .contentMd5(dataLakeFileClient.getProperties().getContentMd5() != null
+                ? Base64.getEncoder().encodeToString(dataLakeFileClient.getProperties().getContentMd5())
+                : null)
             .lastModifed(dataLakeFileClient.getProperties().getCreationTime().toInstant())
             .lastModifed(dataLakeFileClient.getProperties().getLastModified().toInstant())
             .eTag(dataLakeFileClient.getProperties().getETag())

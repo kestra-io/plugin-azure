@@ -44,7 +44,7 @@ class CreateTest extends AbstractTest {
             .connectionString(Property.ofValue(connectionString))
             .container(Property.ofValue(container))
             .name(Property.ofValue(name))
-            .expirationDate(Property.ofValue("{{ now() | dateAdd(1, 'DAYS')  }}"))
+            .expirationDate(Property.ofExpression("{{ now() | dateAdd(1, 'DAYS')  }}"))
             .permissions(Set.of(perms))
             .build();
         return task.run(runContext(task));
@@ -92,7 +92,7 @@ class CreateTest extends AbstractTest {
         Flux<LogEntry> receive = TestsUtils.receive(logQueue);
 
         String random = IdUtils.create();
-        SharedAccess.Output outputs = sas(this.container, null, SharedAccess.Permission.WRITE);
+        SharedAccess.Output outputs = sas(this.container, "files/out/", SharedAccess.Permission.WRITE);
 
         Create.Output run = create(
             List.of(

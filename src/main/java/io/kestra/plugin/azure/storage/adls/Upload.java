@@ -1,9 +1,13 @@
 package io.kestra.plugin.azure.storage.adls;
 
+import com.azure.core.http.HttpHeaderName;
 import com.azure.core.util.BinaryData;
 import com.azure.core.util.FluxUtil;
+import com.azure.storage.common.ParallelTransferOptions;
 import com.azure.storage.common.implementation.Constants;
 import com.azure.storage.file.datalake.DataLakeFileClient;
+import com.azure.storage.file.datalake.models.DataLakeStorageException;
+import com.azure.storage.file.datalake.options.FileParallelUploadOptions;
 import io.kestra.core.models.annotations.Example;
 import io.kestra.core.models.annotations.Plugin;
 import io.kestra.core.models.annotations.PluginProperty;
@@ -73,13 +77,20 @@ public class Upload extends AbstractDataLakeWithFile implements RunnableTask<Upl
 
         try (InputStream is = runContext.storage().getFile(fromUri)) {
             DataLakeFileClient fileClient = this.dataLakeFileClient(runContext);
+
             // The fromFlux is necessary in case of using a BlobInputStream as the upload method is relying on Reactor which doesn't allow blocking to be done
             // Related to https://github.com/Azure/azure-sdk-for-java/issues/42268#issuecomment-2891995269
             BinaryData binaryData = BinaryData.fromFlux(
                 FluxUtil.toFluxByteBuffer(is, Constants.MAX_INPUT_STREAM_CONVERTER_BUFFER_LENGTH)
                     .subscribeOn(Schedulers.boundedElastic())
             ).block();
-            fileClient.upload(binaryData, true);
+
+            // Force a "mono-threaded" upload to guarantee segments order on ADLS side (to avoid InvalidFlushPosition errors)
+            if (binaryData != null) {
+                var pto = new ParallelTransferOptions().setMaxConcurrency(1);
+                var opts = new FileParallelUploadOptions(binaryData).setParallelTransferOptions(pto);
+                fileClient.uploadWithResponse(opts, null, null);
+            }
 
             runContext.metric(Counter.of("file.size", fileClient.getProperties().getFileSize()));
 
@@ -87,8 +98,12 @@ public class Upload extends AbstractDataLakeWithFile implements RunnableTask<Upl
                 .builder()
                 .file(AdlsFile.of(fileClient))
                 .build();
+        } catch (DataLakeStorageException e) {
+            String requestId = e.getResponse().getHeaders().getValue(HttpHeaderName.fromString("x-ms-request-id"));
+            runContext.logger().warn("ADLS upload failed. RequestId={}, statusCode={}, errorCode={}",
+                requestId, e.getStatusCode(), e.getErrorCode(), e);
+            throw e;
         }
-
     }
 
     @SuperBuilder

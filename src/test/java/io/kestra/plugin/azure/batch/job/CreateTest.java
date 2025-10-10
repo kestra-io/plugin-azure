@@ -40,7 +40,7 @@ class CreateTest extends AbstractTest {
         SharedAccess task = SharedAccess.builder()
             .id(SharedAccess.class.getSimpleName())
             .type(io.kestra.plugin.azure.storage.blob.List.class.getName())
-            .endpoint(Property.ofValue(this.endpoint))
+            .endpoint(Property.ofValue(this.storageEndpoint))
             .connectionString(Property.ofValue(connectionString))
             .container(Property.ofValue(container))
             .name(Property.ofValue(name))
@@ -86,8 +86,8 @@ class CreateTest extends AbstractTest {
         return task.run(runContext(task, inputs));
     }
 
-    @Disabled("pool are not running !")
     @Test
+    @Disabled("pool are not running !")
     void run() throws Exception {
         Flux<LogEntry> receive = TestsUtils.receive(logQueue);
 
@@ -165,16 +165,16 @@ class CreateTest extends AbstractTest {
         assertThat(run.getVars().get("extract"), is(random));
         List<LogEntry> logs = receive.collectList().block();
         assertThat(logs.stream().filter(logEntry -> logEntry.getMessage().equals("t1=first")).count(), is(1L));
-        assertThat(logs.stream().filter(logEntry -> logEntry.getMessage().equals("t2=second")).filter(logEntry -> logEntry.getLevel().equals(Level.WARN)).count(), is(1L));
+        assertThat(logs.stream().filter(logEntry -> logEntry.getMessage().equals("t2=second")).filter(logEntry -> logEntry.getLevel().equals(Level.ERROR)).count(), is(1L));
         assertThat(logs.stream().filter(logEntry -> logEntry.getMessage().equals("t3=5")).count(), is(1L));
 
         InputStream get = storageInterface.get(TenantService.MAIN_TENANT, null, run.getOutputFiles().get("outs/1.txt"));
         assertThat(CharStreams.toString(new InputStreamReader(get)), is("1\n"));
 
-        get = storageInterface.get(TenantService.MAIN_TENANT, null, run.getOutputFiles().get("outs/child/2.txt"));
+        get = storageInterface.get(TenantService.MAIN_TENANT, null, run.getOutputFiles().get("2.txt"));
         assertThat(CharStreams.toString(new InputStreamReader(get)), is("2\n"));
 
-        get = storageInterface.get(TenantService.MAIN_TENANT, null, run.getOutputFiles().get("outs/child/sub/3.txt"));
+        get = storageInterface.get(TenantService.MAIN_TENANT, null, run.getOutputFiles().get("sub/3.txt"));
         assertThat(CharStreams.toString(new InputStreamReader(get)), is("3\n"));
     }
 

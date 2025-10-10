@@ -15,6 +15,7 @@ import io.kestra.core.models.property.Property;
 import io.kestra.core.models.tasks.runners.AbstractLogConsumer;
 import io.kestra.core.models.tasks.runners.DefaultLogConsumer;
 import io.kestra.core.models.tasks.RunnableTask;
+import io.kestra.core.models.tasks.runners.RemoteRunnerInterface;
 import io.kestra.core.models.tasks.runners.ScriptService;
 import io.kestra.core.runners.RunContext;
 import io.kestra.plugin.azure.batch.AbstractBatch;
@@ -31,16 +32,12 @@ import java.io.File;
 import java.io.IOException;
 import java.net.URI;
 import java.time.Duration;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.stream.Collectors;
 
-import static io.kestra.core.utils.Rethrow.*;
+import static io.kestra.core.utils.Rethrow.throwRunnable;
 
 @SuperBuilder
 @ToString
@@ -127,7 +124,7 @@ import static io.kestra.core.utils.Rethrow.*;
 @Schema(
     title = "Create an Azure Batch job with tasks."
 )
-public class Create extends AbstractBatch implements RunnableTask<Create.Output> {
+public class Create extends AbstractBatch implements RunnableTask<Create.Output>, RemoteRunnerInterface {
     public static final String DIRECTORY_MARKER = ".kestradirectory";
     @Schema(
         title = "The ID of the pool."
@@ -155,6 +152,9 @@ public class Create extends AbstractBatch implements RunnableTask<Create.Output>
     )
     private Property<Duration> maxDuration;
 
+    @Builder.Default
+    private Property<Boolean> syncWorkingDirectory = Property.ofValue(false);
+
     @Schema(
         title = "The frequency with which the task checks whether the job is completed."
     )
@@ -162,7 +162,8 @@ public class Create extends AbstractBatch implements RunnableTask<Create.Output>
     private final Property<Duration> completionCheckInterval = Property.ofValue(Duration.ofSeconds(1));
 
     @Schema(
-        title = "Whether the job should be deleted upon completion."
+        title = "Whether the job should be deleted upon completion.",
+        description = "Warning, if the job is not deleted, a retry of the task could resume an old failed attempt of the job."
     )
     @NotNull
     @Builder.Default
@@ -172,6 +173,7 @@ public class Create extends AbstractBatch implements RunnableTask<Create.Output>
         title = "Whether to reconnect to the current job if it already exists."
     )
     @NotNull
+    @Builder.Default
     private final Property<Boolean> resume = Property.ofValue(true);
 
     @JsonIgnore
@@ -253,13 +255,7 @@ public class Create extends AbstractBatch implements RunnableTask<Create.Output>
             }
 
             String finalJobId = jobId;
-            this.killable.set(() -> {
-                try {
-                    safelyKillJobTask(runContext, client, finalJobId);
-                } catch (IllegalVariableEvaluationException e) {
-                    throw new RuntimeException(e);
-                }
-            });
+            this.killable.set(throwRunnable(() -> safelyKillJobTask(runContext, client, finalJobId)));
 
             TaskService.waitForTasksToComplete(
                 runContext,
@@ -328,18 +324,32 @@ public class Create extends AbstractBatch implements RunnableTask<Create.Output>
                     }
                 }
 
-                if (currentTask.getOutputDirs() != null) {
+                List<String> renderedOutputDirs = runContext.render(currentTask.getOutputDirs()).asList(String.class);
+                boolean renderedSyncWorkingDirectory = runContext.render(syncWorkingDirectory).as(Boolean.class).orElseThrow();
+                // If we need to sync working directory or have output directories, we need to list all remote files to know which files we are interested in
+                if (renderedSyncWorkingDirectory || !renderedOutputDirs.isEmpty()) {
                     PagedList<NodeFile> nodeFiles = client.fileOperations()
                         .listFilesFromTask(jobId, task.id(), true, new DetailLevel.Builder().build());
 
-                    for (String s : runContext.render(currentTask.getOutputDirs()).asList(String.class)) {
-                        for (NodeFile nodeFile : nodeFiles) {
-                            if (nodeFile.name().startsWith(remoteWorkingDir + s) && !nodeFile.isDirectory() && !nodeFile.name().endsWith("/" + DIRECTORY_MARKER)) {
-                                String relativeFileName = nodeFile.name().substring(remoteWorkingDir.length());
-                                File file = TaskService.readRemoteFile(runContext, client, jobId, task, nodeFile.name(), relativeFileName, true);
-                                if (pushOutputFilesToInternalStorage) {
-                                    outputFiles.put(relativeFileName, runContext.storage().putFile(file));
-                                }
+                    for (NodeFile nodeFile : nodeFiles) {
+                        // Filter out directories and files not in the working directory
+                        if (!nodeFile.name().startsWith(remoteWorkingDir) || nodeFile.isDirectory() || nodeFile.name().endsWith("/" + DIRECTORY_MARKER)) {
+                            continue;
+                        }
+
+                        // We check if the file is in one of the output directories to know if we should push it to outputFiles later on
+                        Optional<String> parentOutputDirectory = renderedOutputDirs.stream()
+                            .filter(s -> nodeFile.name().startsWith(remoteWorkingDir + s + "/"))
+                            .findFirst();
+                        if (parentOutputDirectory.isPresent() || renderedSyncWorkingDirectory) {
+                            String relativeFileName = nodeFile.name().substring(remoteWorkingDir.length());
+
+                            // This will download the file to runContext wdir so it will already perform the syncWorkingDirectory
+                            File file = TaskService.readRemoteFile(runContext, client, jobId, task, nodeFile.name(), relativeFileName, true);
+
+                            // We only push the file to outputFiles if it's in one of the output directories
+                            if (parentOutputDirectory.isPresent() && pushOutputFilesToInternalStorage) {
+                                outputFiles.put(relativeFileName.substring((parentOutputDirectory.get() + "/").length()), runContext.storage().putFile(file));
                             }
                         }
                     }
@@ -374,7 +384,7 @@ public class Create extends AbstractBatch implements RunnableTask<Create.Output>
     private void safelyKillJobTask(final RunContext runContext,
                                    final BatchClient client,
                                    final String jobId) throws IllegalVariableEvaluationException {
-        if (Boolean.TRUE.equals(runContext.render(delete).as(Boolean.class).orElseThrow())) {
+        if (runContext.render(delete).as(Boolean.class).orElse(true)) {
             try {
                 client.jobOperations().deleteJob(jobId);
                 runContext.logger().debug("Job deleted: {}", jobId);

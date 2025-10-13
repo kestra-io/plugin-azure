@@ -100,9 +100,7 @@ public class Upload extends AbstractDataLakeWithFile implements RunnableTask<Upl
 
             String leaseId = null;
             BlobLeaseClient leaseClient = null;
-            BlobClient blobClient = null;
 
-            String filePath = fileClient.getFilePath();
             if (enableLease) {
                 String endpoint = runContext.render(this.getEndpoint()).as(String.class).orElseThrow();
                 String fileSystem = runContext.render(this.getFileSystem()).as(String.class).orElseThrow();
@@ -115,7 +113,7 @@ public class Upload extends AbstractDataLakeWithFile implements RunnableTask<Upl
                         .buildClient();
 
                 BlobContainerClient containerClient = blobServiceClient.getBlobContainerClient(fileSystem);
-                blobClient = containerClient.getBlobClient(filePath);
+                BlobClient blobClient = containerClient.getBlobClient(fileClient.getFilePath());
 
                 leaseClient = new BlobLeaseClientBuilder()
                     .blobClient(blobClient)
@@ -123,35 +121,30 @@ public class Upload extends AbstractDataLakeWithFile implements RunnableTask<Upl
 
                 try {
                     leaseId = leaseClient.acquireLease(leaseDuration);
-                    runContext.logger().debug("Acquired lease {} on file {}", leaseId, filePath);
+                    runContext.logger().debug("Acquired lease {} on file {}", leaseId, fileClient.getFilePath());
                 } catch (Exception e) {
-                    runContext.logger().warn("Failed to acquire lease on {}: {}", filePath, e.getMessage());
+                    runContext.logger().warn("Failed to acquire lease on {}: {}", fileClient.getFilePath(), e.getMessage());
                 }
             }
 
             try {
+                // The fromFlux is necessary in case of using a BlobInputStream as the upload method is relying on Reactor which doesn't allow blocking to be done
+                // Related to https://github.com/Azure/azure-sdk-for-java/issues/42268#issuecomment-2891995269
                 BinaryData binaryData = BinaryData.fromFlux(
                     FluxUtil.toFluxByteBuffer(is, Constants.MAX_INPUT_STREAM_CONVERTER_BUFFER_LENGTH)
                         .subscribeOn(Schedulers.boundedElastic())
                 ).block();
 
-                if (enableLease && leaseId != null && blobClient != null && binaryData != null) {
-                    blobClient.upload(binaryData.toStream(), true);
-                    runContext.logger().debug("Uploaded file {} using blobClient under lease {}", filePath, leaseId);
-                } else {
-                    fileClient.upload(binaryData, true);
-                    runContext.logger().debug("Uploaded file {} using fileClient (no lease)", filePath);
-                }
-
+                fileClient.upload(binaryData, true);
                 runContext.metric(Counter.of("file.size", fileClient.getProperties().getFileSize()));
 
             } finally {
                 if (leaseClient != null && leaseId != null) {
                     try {
                         leaseClient.releaseLease();
-                        runContext.logger().debug("Released lease {} on {}", leaseId, filePath);
+                        runContext.logger().debug("Released lease {} on {}", leaseId, fileClient.getFilePath());
                     } catch (Exception e) {
-                        runContext.logger().warn("Failed to release lease {} on {}", leaseId, filePath, e);
+                        runContext.logger().warn("Failed to release lease {} on {}", leaseId, fileClient.getFilePath(), e);
                     }
                 }
             }

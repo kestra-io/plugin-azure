@@ -23,10 +23,9 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Optional;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import static io.kestra.core.models.triggers.StatefulTriggerService.writeState;
+import static io.kestra.core.models.triggers.StatefulTriggerService.*;
 import static io.kestra.core.utils.Rethrow.throwFunction;
 
 @SuperBuilder
@@ -176,7 +175,7 @@ public class Trigger extends AbstractTrigger implements PollingTriggerInterface,
             return Optional.empty();
         }
 
-        var state = StatefulTriggerService.readState(runContext, rStateKey, rStateTtl);
+        var previousState = readState(runContext, rStateKey, rStateTtl);
 
         var actionBlobs = new ArrayList<Blob>();
 
@@ -184,19 +183,14 @@ public class Trigger extends AbstractTrigger implements PollingTriggerInterface,
             .flatMap(throwFunction(blob -> {
                 var uri = String.format("az://%s/%s", runContext.render(container).as(String.class).orElse(""), blob.getName());
                 var modifiedAt = Optional.ofNullable(blob.getLastModified()).map(java.time.OffsetDateTime::toInstant).orElse(Instant.now());
-
-                String version;
-                if (blob.getETag() != null) {
-                    version = blob.getETag();
-                } else {
-                    version = String.valueOf(modifiedAt.toEpochMilli());
-                }
+                var version = Optional.ofNullable(blob.getETag()).orElse(String.valueOf(modifiedAt.toEpochMilli()));
 
                 var candidate = StatefulTriggerService.Entry.candidate(uri, version, modifiedAt);
-                var update = StatefulTriggerService.computeAndUpdateState(state, candidate, rOn);
 
-                if (update.fire()) {
-                    var changeType = update.isNew() ? ChangeType.CREATE : ChangeType.UPDATE;
+                var stateChange = computeAndUpdateState(previousState, candidate, rOn);
+
+                if (stateChange.fire()) {
+                    var changeType = stateChange.isNew() ? ChangeType.CREATE : ChangeType.UPDATE;
 
                     Download download = Download.builder()
                         .id(this.id)
@@ -224,7 +218,7 @@ public class Trigger extends AbstractTrigger implements PollingTriggerInterface,
             }))
             .toList();
 
-        writeState(runContext, rStateKey, state, rStateTtl);
+        writeState(runContext, rStateKey, previousState, rStateTtl);
 
         if (toFire.isEmpty()) {
             return Optional.empty();

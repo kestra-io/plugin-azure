@@ -237,5 +237,4 @@ class TriggerTest extends AbstractTest {
         Optional<Execution> updateExecution = trigger.evaluate(context.getKey(), context.getValue());
         assertThat(updateExecution.isPresent(), is(true));
     }
-
 }

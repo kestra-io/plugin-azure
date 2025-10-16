@@ -59,6 +59,7 @@ abstract class AbstractTest extends BaseTest {
         Upload upload = Upload.builder()
             .id(AbstractTest.class.getSimpleName())
             .type(Upload.class.getName())
+            .endpoint(Property.ofValue(this.storageEndpoint))
             .connectionString(Property.ofValue(connectionString))
             .container(Property.ofValue(container))
             .from(Property.ofValue(source.toString()))

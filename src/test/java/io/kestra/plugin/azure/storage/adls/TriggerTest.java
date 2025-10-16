@@ -1,12 +1,15 @@
 package io.kestra.plugin.azure.storage.adls;
 
+import io.kestra.core.models.conditions.ConditionContext;
 import io.kestra.core.models.executions.Execution;
 import io.kestra.core.models.property.Property;
+import io.kestra.core.models.triggers.StatefulTriggerInterface;
 import io.kestra.core.queues.QueueFactoryInterface;
 import io.kestra.core.queues.QueueInterface;
 import io.kestra.core.repositories.LocalFlowRepositoryLoader;
 import io.kestra.core.runners.FlowListeners;
 import io.kestra.core.runners.Worker;
+import io.kestra.core.utils.IdUtils;
 import io.kestra.scheduler.AbstractScheduler;
 import io.kestra.core.utils.TestsUtils;
 import io.kestra.jdbc.runner.JdbcScheduler;
@@ -20,7 +23,10 @@ import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import reactor.core.publisher.Flux;
 
+import java.time.Duration;
+import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -230,4 +236,84 @@ class TriggerTest extends AbstractTest {
             cleaner.run(runContext(cleaner));
         }
     }
+
+    @Test
+    void shouldExecuteOnCreate() throws Exception {
+        Trigger trigger = Trigger.builder()
+            .id("adls-" + IdUtils.create())
+            .type(Trigger.class.getName())
+            .fileSystem(Property.ofValue("tasks"))
+            .directoryPath(Property.ofValue("trigger/adls/on-create"))
+            .action(Property.ofValue(Trigger.Action.NONE))
+            .on(Property.ofValue(StatefulTriggerInterface.On.CREATE))
+            .interval(Duration.ofSeconds(10))
+            .build();
+
+        upload("adls/trigger/adls/on-create");
+
+        Map.Entry<ConditionContext, io.kestra.core.models.triggers.Trigger> context = TestsUtils.mockTrigger(runContextFactory, trigger);
+        Optional<Execution> execution = trigger.evaluate(context.getKey(), context.getValue());
+
+        assertThat(execution.isPresent(), is(true));
+
+        DeleteFiles cleaner = deleteDir("trigger/adls/on-create").build();
+        cleaner.run(runContext(cleaner));
+    }
+
+    @Test
+    void shouldExecuteOnUpdate() throws Exception {
+        upload("adls/trigger/adls/on-update");
+
+        Trigger trigger = Trigger.builder()
+            .id("adls-" + IdUtils.create())
+            .type(Trigger.class.getName())
+            .fileSystem(Property.ofValue("tasks"))
+            .directoryPath(Property.ofValue("trigger/adls/on-update"))
+            .action(Property.ofValue(Trigger.Action.NONE))
+            .on(Property.ofValue(StatefulTriggerInterface.On.UPDATE))
+            .interval(Duration.ofSeconds(10))
+            .build();
+
+        Map.Entry<ConditionContext, io.kestra.core.models.triggers.Trigger> context = TestsUtils.mockTrigger(runContextFactory, trigger);
+
+        trigger.evaluate(context.getKey(), context.getValue());
+
+        update("adls/trigger/adls/on-update");
+        Thread.sleep(2000);
+
+        Optional<Execution> execution = trigger.evaluate(context.getKey(), context.getValue());
+        assertThat(execution.isPresent(), is(true));
+
+        DeleteFiles cleaner = deleteDir("trigger/adls/on-update").build();
+        cleaner.run(runContext(cleaner));
+    }
+
+    @Test
+    void shouldExecuteOnCreateOrUpdate() throws Exception {
+        Trigger trigger = Trigger.builder()
+            .id("adls-" + IdUtils.create())
+            .type(Trigger.class.getName())
+            .fileSystem(Property.ofValue("tasks"))
+            .directoryPath(Property.ofValue("trigger/adls/on-create-or-update"))
+            .action(Property.ofValue(Trigger.Action.NONE))
+            .interval(Duration.ofSeconds(10))
+            .build();
+
+        upload("trigger/adls/on-create-or-update");
+
+        Map.Entry<ConditionContext, io.kestra.core.models.triggers.Trigger> context = TestsUtils.mockTrigger(runContextFactory, trigger);
+
+        Optional<Execution> createExecution = trigger.evaluate(context.getKey(), context.getValue());
+        assertThat(createExecution.isPresent(), is(true));
+
+        update("trigger/adls/on-create-or-update");
+        Thread.sleep(2000);
+
+        Optional<Execution> updateExecution = trigger.evaluate(context.getKey(), context.getValue());
+        assertThat(updateExecution.isPresent(), is(true));
+
+        DeleteFiles cleaner = deleteDir("trigger/adls/on-create-or-update").build();
+        cleaner.run(runContext(cleaner));
+    }
+
 }

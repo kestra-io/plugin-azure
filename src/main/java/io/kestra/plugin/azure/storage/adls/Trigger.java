@@ -130,9 +130,6 @@ public class Trigger extends AbstractTrigger implements PollingTriggerInterface,
             .fileSystem(this.fileSystem)
             .directoryPath(this.directoryPath)
             .build();
-
-        runContext.logger().info("list {}", task);
-
         
         List.Output run = task.run(runContext);
 

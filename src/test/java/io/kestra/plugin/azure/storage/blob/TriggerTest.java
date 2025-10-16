@@ -186,7 +186,7 @@ class TriggerTest extends AbstractTest {
 
     @Test
     void shouldExecuteOnUpdate() throws Exception {
-        upload("trigger/blob/on-update");
+        var output = upload("trigger/blob/on-update");
 
         Trigger trigger = Trigger.builder()
             .id("blob-" + IdUtils.create())
@@ -204,7 +204,7 @@ class TriggerTest extends AbstractTest {
 
         trigger.evaluate(context.getKey(), context.getValue());
 
-        update("trigger/blob/on-update");
+        update(output.getBlob().getName());
         Thread.sleep(2000);
 
         Optional<Execution> execution = trigger.evaluate(context.getKey(), context.getValue());
@@ -224,14 +224,14 @@ class TriggerTest extends AbstractTest {
             .interval(Duration.ofSeconds(10))
             .build();
 
-        upload("trigger/blob/on-create-or-update/");
+        var output = upload("trigger/blob/on-create-or-update/");
 
         Map.Entry<ConditionContext, io.kestra.core.models.triggers.Trigger> context = TestsUtils.mockTrigger(runContextFactory, trigger);
 
         Optional<Execution> createExecution = trigger.evaluate(context.getKey(), context.getValue());
         assertThat(createExecution.isPresent(), is(true));
 
-        update("trigger/blob/on-update");
+        update(output.getBlob().getName());
         Thread.sleep(2000);
 
         Optional<Execution> updateExecution = trigger.evaluate(context.getKey(), context.getValue());

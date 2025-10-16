@@ -8,6 +8,7 @@ import lombok.Value;
 import lombok.With;
 
 import java.net.URI;
+import java.time.OffsetDateTime;
 
 @Builder
 @Value
@@ -17,6 +18,8 @@ public class Blob {
     String container;
     String name;
     Long size;
+    OffsetDateTime lastModified;
+    String eTag;
 
     public static Blob of(BlobClient blobClient) {
         return Blob.of(blobClient, blobClient.getProperties());
@@ -35,6 +38,8 @@ public class Blob {
             .container(container)
             .name(blobItem.getName())
             .size(blobItem.getProperties().getContentLength())
+            .lastModified(blobItem.getProperties().getLastModified())
+            .eTag(blobItem.getProperties().getETag())
             .build();
     }
 }

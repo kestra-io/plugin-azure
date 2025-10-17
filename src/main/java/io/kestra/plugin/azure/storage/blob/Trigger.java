@@ -1,5 +1,6 @@
 package io.kestra.plugin.azure.storage.blob;
 
+import com.fasterxml.jackson.annotation.JsonUnwrapped;
 import io.kestra.core.models.annotations.Example;
 import io.kestra.core.models.annotations.Plugin;
 import io.kestra.core.models.conditions.ConditionContext;
@@ -19,9 +20,12 @@ import lombok.*;
 import lombok.experimental.SuperBuilder;
 
 import java.time.Duration;
+import java.time.Instant;
+import java.util.ArrayList;
 import java.util.Optional;
-import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
+import static io.kestra.core.models.triggers.StatefulTriggerService.*;
 import static io.kestra.core.utils.Rethrow.throwFunction;
 
 @SuperBuilder
@@ -107,7 +111,7 @@ import static io.kestra.core.utils.Rethrow.throwFunction;
         )
     }
 )
-public class Trigger extends AbstractTrigger implements PollingTriggerInterface, TriggerOutput<List.Output>, AbstractConnectionInterface, ListInterface, ActionInterface, AbstractBlobStorageContainerInterface, AzureClientWithSasInterface {
+public class Trigger extends AbstractTrigger implements PollingTriggerInterface, TriggerOutput<Trigger.Output>, AbstractConnectionInterface, ListInterface, ActionInterface, AbstractBlobStorageContainerInterface, AzureClientWithSasInterface, StatefulTriggerInterface {
 
     @Builder.Default
     private final Duration interval = Duration.ofSeconds(60);
@@ -137,11 +141,21 @@ public class Trigger extends AbstractTrigger implements PollingTriggerInterface,
     @Builder.Default
     private Property<ListInterface.Filter> filter = Property.ofValue(Filter.FILES);
 
+    @Builder.Default
+    private final Property<On> on = Property.ofValue(On.CREATE_OR_UPDATE);
+
+    private Property<String> stateKey;
+
+    private Property<Duration> stateTtl;
+
     @Override
     public Optional<Execution> evaluate(ConditionContext conditionContext, TriggerContext context) throws Exception {
         RunContext runContext = conditionContext.getRunContext();
+        var rOn = runContext.render(on).as(On.class).orElse(On.CREATE_OR_UPDATE);
+        var rStateKey = runContext.render(stateKey).as(String.class).orElse(StatefulTriggerService.defaultKey(context.getNamespace(), context.getFlowId(), id));
+        var rStateTtl = runContext.render(stateTtl).as(Duration.class);
 
-        List task = List.builder()
+        var task = List.builder()
             .id(this.id)
             .type(List.class.getName())
             .endpoint(this.endpoint)
@@ -161,39 +175,81 @@ public class Trigger extends AbstractTrigger implements PollingTriggerInterface,
             return Optional.empty();
         }
 
-        java.util.List<Blob> list = run
-            .getBlobs()
-            .stream()
-            .map(throwFunction(object -> {
-                Download download = Download.builder()
-                    .id(this.id)
-                    .type(List.class.getName())
-                    .endpoint(this.endpoint)
-                    .connectionString(this.connectionString)
-                    .sharedKeyAccountName(this.sharedKeyAccountName)
-                    .sharedKeyAccountAccessKey(this.sharedKeyAccountAccessKey)
-                    .sasToken(this.sasToken)
-                    .container(this.container)
-                    .name(Property.ofValue(object.getName()))
-                    .build();
-                Download.Output downloadOutput = download.run(runContext);
+        var previousState = readState(runContext, rStateKey, rStateTtl);
 
-                return object.withUri(downloadOutput.getBlob().getUri());
+        var actionBlobs = new ArrayList<Blob>();
+
+        var toFire = run.getBlobs().stream()
+            .flatMap(throwFunction(blob -> {
+                var uri = String.format("az://%s/%s", runContext.render(container).as(String.class).orElse(""), blob.getName());
+                var modifiedAt = Optional.ofNullable(blob.getLastModified()).map(java.time.OffsetDateTime::toInstant).orElse(Instant.now());
+                var version = Optional.ofNullable(blob.getETag()).orElse(String.valueOf(modifiedAt.toEpochMilli()));
+
+                var candidate = StatefulTriggerService.Entry.candidate(uri, version, modifiedAt);
+
+                var stateChange = computeAndUpdateState(previousState, candidate, rOn);
+
+                if (stateChange.fire()) {
+                    var changeType = stateChange.isNew() ? ChangeType.CREATE : ChangeType.UPDATE;
+
+                    Download download = Download.builder()
+                        .id(this.id)
+                        .type(Download.class.getName())
+                        .endpoint(this.endpoint)
+                        .connectionString(this.connectionString)
+                        .sharedKeyAccountName(this.sharedKeyAccountName)
+                        .sharedKeyAccountAccessKey(this.sharedKeyAccountAccessKey)
+                        .sasToken(this.sasToken)
+                        .container(this.container)
+                        .name(Property.ofValue(blob.getName()))
+                        .build();
+
+                    Download.Output downloadOutput = download.run(runContext);
+                    Blob downloadedBlob = blob.withUri(downloadOutput.getBlob().getUri());
+                    actionBlobs.add(blob);
+
+                    return Stream.of(TriggeredBlob.builder()
+                        .blob(downloadedBlob)
+                        .changeType(changeType)
+                        .build());
+                }
+
+                return Stream.empty();
             }))
-            .collect(Collectors.toList());
+            .toList();
 
+        writeState(runContext, rStateKey, previousState, rStateTtl);
 
-        BlobService.archive(
-            run.getBlobs(),
-            runContext.render(this.action).as(ActionInterface.Action.class).orElse(null),
-            this.moveTo,
-            runContext,
-            this,
-            this
-        );
+        if (toFire.isEmpty()) {
+            return Optional.empty();
+        }
 
-        Execution execution = TriggerService.generateExecution(this, conditionContext, context, List.Output.builder().blobs(list).build());
+        BlobService.archive(actionBlobs, runContext.render(this.action).as(ActionInterface.Action.class).orElse(null), this.moveTo, runContext, this, this);
+
+        var output = Output.builder().blobs(toFire).build();
+        Execution execution = TriggerService.generateExecution(this, conditionContext, context, output);
 
         return Optional.of(execution);
+    }
+
+    @Builder
+    @Getter
+    public static class Output implements io.kestra.core.models.tasks.Output {
+        @Schema(title = "List of blobs that triggered the flow, each with its change type.")
+        private final java.util.List<TriggeredBlob> blobs;
+    }
+
+    @Getter
+    @AllArgsConstructor
+    @Builder
+    public static class TriggeredBlob {
+        @JsonUnwrapped
+        private final Blob blob;
+        private final Trigger.ChangeType changeType;
+    }
+
+    public enum ChangeType {
+        CREATE,
+        UPDATE
     }
 }

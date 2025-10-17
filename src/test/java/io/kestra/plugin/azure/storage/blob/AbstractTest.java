@@ -53,6 +53,22 @@ abstract class AbstractTest extends BaseTest {
             .prefix(Property.ofValue(dir));
     }
 
+    protected void update(String blobPath) throws Exception {
+        URI source = uploadStringFile();
+
+        Upload upload = Upload.builder()
+            .id(AbstractTest.class.getSimpleName())
+            .type(Upload.class.getName())
+            .endpoint(Property.ofValue(this.storageEndpoint))
+            .connectionString(Property.ofValue(connectionString))
+            .container(Property.ofValue(container))
+            .from(Property.ofValue(source.toString()))
+            .name(Property.ofValue(blobPath))
+            .build();
+
+        upload.run(runContext(upload));
+    }
+
     @AfterEach
     void cleanup() throws Exception {
         for (String dirName : directoryToClean) {

@@ -73,6 +73,22 @@ public class AbstractTest extends BaseTest {
             .directoryPath(Property.ofValue(dir));
     }
 
+    protected void update(String filePath) throws Exception {
+        URI source = uploadStringFile();
+
+        Upload upload = Upload.builder()
+            .id(AbstractTest.class.getSimpleName())
+            .type(Upload.class.getName())
+            .endpoint(Property.ofValue(this.adlsEndpoint))
+            .connectionString(Property.ofValue(connectionString))
+            .fileSystem(Property.ofValue(this.fileSystem))
+            .from(Property.ofValue(source.toString()))
+            .filePath(Property.ofValue(filePath))
+            .build();
+
+        upload.run(runContext(upload));
+    }
+
     @AfterEach
     void cleanup() throws Exception {
         DataLakeServiceClient client = DataLakeService.client(adlsEndpoint, connectionString, null, null, null, runContextFactory.of());

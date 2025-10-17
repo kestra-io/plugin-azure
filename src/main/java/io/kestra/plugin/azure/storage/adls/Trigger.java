@@ -1,9 +1,8 @@
 package io.kestra.plugin.azure.storage.adls;
 
-import com.azure.storage.file.datalake.DataLakeDirectoryClient;
 import com.azure.storage.file.datalake.DataLakeFileClient;
-import com.azure.storage.file.datalake.DataLakeFileSystemClient;
 import com.azure.storage.file.datalake.DataLakeServiceClient;
+import com.fasterxml.jackson.annotation.JsonUnwrapped;
 import io.kestra.core.models.annotations.Example;
 import io.kestra.core.models.annotations.Plugin;
 import io.kestra.core.models.annotations.PluginProperty;
@@ -16,16 +15,17 @@ import io.kestra.plugin.azure.AbstractConnectionInterface;
 import io.kestra.plugin.azure.AzureClientWithSasInterface;
 import io.kestra.plugin.azure.storage.adls.models.AdlsFile;
 import io.kestra.plugin.azure.storage.adls.services.DataLakeService;
-import io.kestra.plugin.azure.storage.blob.Copy;
-import io.kestra.plugin.azure.storage.blob.abstracts.ActionInterface;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotNull;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
 
 import java.time.Duration;
+import java.time.Instant;
 import java.util.Optional;
+import java.util.stream.Stream;
 
+import static io.kestra.core.models.triggers.StatefulTriggerService.*;
 import static io.kestra.core.utils.Rethrow.throwFunction;
 
 @SuperBuilder
@@ -71,7 +71,7 @@ import static io.kestra.core.utils.Rethrow.throwFunction;
         )
     }
 )
-public class Trigger extends AbstractTrigger implements PollingTriggerInterface, TriggerOutput<List.Output>, AbstractConnectionInterface, AzureClientWithSasInterface {
+public class Trigger extends AbstractTrigger implements PollingTriggerInterface, TriggerOutput<Trigger.Output>, AbstractConnectionInterface, AzureClientWithSasInterface, StatefulTriggerInterface {
 
     @Builder.Default
     private final Duration interval = Duration.ofSeconds(60);
@@ -103,9 +103,21 @@ public class Trigger extends AbstractTrigger implements PollingTriggerInterface,
     @PluginProperty(dynamic = true)
     DestinationObject moveTo;
 
+    @Builder.Default
+    private final Property<On> on = Property.ofValue(On.CREATE_OR_UPDATE);
+
+    private Property<String> stateKey;
+
+    private Property<Duration> stateTtl;
+
+
     @Override
     public Optional<Execution> evaluate(ConditionContext conditionContext, TriggerContext context) throws Exception {
         RunContext runContext = conditionContext.getRunContext();
+
+        var rOn = runContext.render(on).as(On.class).orElse(On.CREATE_OR_UPDATE);
+        var rStateKey = runContext.render(stateKey).as(String.class).orElse(StatefulTriggerService.defaultKey(context.getNamespace(), context.getFlowId(), id));
+        var rStateTtl = runContext.render(stateTtl).as(Duration.class);
 
         List task = List.builder()
             .id(this.id)
@@ -118,30 +130,49 @@ public class Trigger extends AbstractTrigger implements PollingTriggerInterface,
             .fileSystem(this.fileSystem)
             .directoryPath(this.directoryPath)
             .build();
+
         List.Output run = task.run(runContext);
 
         if (run.getFiles().isEmpty()) {
             return Optional.empty();
         }
 
-        java.util.List<AdlsFile> list = run
-            .getFiles()
-            .stream()
-            .map(throwFunction(object -> {
-                Read download = Read.builder()
-                    .id(this.id)
-                    .type(List.class.getName())
-                    .endpoint(this.endpoint)
-                    .connectionString(this.connectionString)
-                    .sharedKeyAccountName(this.sharedKeyAccountName)
-                    .sharedKeyAccountAccessKey(this.sharedKeyAccountAccessKey)
-                    .sasToken(this.sasToken)
-                    .fileSystem(this.fileSystem)
-                    .filePath(Property.ofValue(object.getName()))
-                    .build();
-                Read.Output downloadOutput = download.run(runContext);
+        var state = readState(runContext, rStateKey, rStateTtl);
 
-                return downloadOutput.getFile();
+        var toFire = run.getFiles().stream()
+            .flatMap(throwFunction(file -> {
+                var uri = String.format("adls://%s/%s", runContext.render(fileSystem).as(String.class).orElse(""), file.getName());
+                var modifiedAt = Optional.ofNullable(file.getLastModifed()).orElse(Instant.now());
+                var version = Optional.ofNullable(file.getETag()).orElse(String.valueOf(modifiedAt.toEpochMilli()));
+
+                var candidate = StatefulTriggerService.Entry.candidate(uri, version, modifiedAt);
+
+                var stateChange = computeAndUpdateState(state, candidate, rOn);
+
+                if (stateChange.fire()) {
+                    var changeType = stateChange.isNew() ? ChangeType.CREATE : ChangeType.UPDATE;
+
+                    Read read = Read.builder()
+                        .id(this.id)
+                        .type(Read.class.getName())
+                        .endpoint(this.endpoint)
+                        .connectionString(this.connectionString)
+                        .sharedKeyAccountName(this.sharedKeyAccountName)
+                        .sharedKeyAccountAccessKey(this.sharedKeyAccountAccessKey)
+                        .sasToken(this.sasToken)
+                        .fileSystem(this.fileSystem)
+                        .filePath(Property.ofValue(file.getName()))
+                        .build();
+
+                    Read.Output readOutput = read.run(runContext);
+                    AdlsFile downloadedFile = readOutput.getFile();
+
+                    return Stream.of(TriggeredFile.builder()
+                        .file(downloadedFile)
+                        .changeType(changeType)
+                        .build());
+                }
+                return Stream.empty();
             }))
             .toList();
 
@@ -161,7 +192,9 @@ public class Trigger extends AbstractTrigger implements PollingTriggerInterface,
 
         }
 
-        for (AdlsFile file : list) {
+        for (TriggeredFile file : toFire) {
+            var adlsFile = file.getFile();
+
             switch (runContext.render(this.action).as(Action.class).orElseThrow()) {
                 case DELETE -> {
                     Delete delete = Delete.builder()
@@ -173,13 +206,13 @@ public class Trigger extends AbstractTrigger implements PollingTriggerInterface,
                         .sharedKeyAccountAccessKey(this.sharedKeyAccountAccessKey)
                         .sasToken(this.sasToken)
                         .fileSystem(this.fileSystem)
-                        .filePath(Property.ofValue(file.getName()))
+                        .filePath(Property.ofValue(adlsFile.getName()))
                         .build();
                     delete.run(runContext);
                 }
                 case MOVE -> {
                     DataLakeFileClient fileClient = client.getFileSystemClient(runContext.render(this.fileSystem).as(String.class).orElseThrow())
-                        .getFileClient(file.getName());
+                        .getFileClient(adlsFile.getName());
 
                     fileClient.rename(
                         runContext.render(this.moveTo.getFileSystem()).as(String.class).orElseThrow(),
@@ -190,12 +223,14 @@ public class Trigger extends AbstractTrigger implements PollingTriggerInterface,
             }
         }
 
+        writeState(runContext, rStateKey, state, rStateTtl);
 
-        Execution execution = TriggerService.generateExecution(this,
-            conditionContext,
-            context,
-            List.Output.builder().files(list).build()
-        );
+        if (toFire.isEmpty()) {
+            return Optional.empty();
+        }
+
+        var output = Output.builder().files(toFire).build();
+        Execution execution = TriggerService.generateExecution(this, conditionContext, context, output);
 
         return Optional.of(execution);
     }
@@ -222,4 +257,26 @@ public class Trigger extends AbstractTrigger implements PollingTriggerInterface,
         @NotNull
         Property<String> directoryPath;
     }
+
+    @Getter
+    @AllArgsConstructor
+    @Builder
+    public static class TriggeredFile {
+        @JsonUnwrapped
+        private final AdlsFile file;
+        private final ChangeType changeType;
+    }
+
+    @Builder
+    @Getter
+    public static class Output implements io.kestra.core.models.tasks.Output {
+        @Schema(title = "List of files that triggered the flow, each with its change type.")
+        private final java.util.List<TriggeredFile> files;
+    }
+
+    public enum ChangeType {
+        CREATE,
+        UPDATE
+    }
+
 }

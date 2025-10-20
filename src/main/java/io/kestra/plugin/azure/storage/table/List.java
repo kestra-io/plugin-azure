@@ -4,6 +4,7 @@ import com.azure.data.tables.TableClient;
 import com.azure.data.tables.models.ListEntitiesOptions;
 import io.kestra.core.models.annotations.Example;
 import io.kestra.core.models.annotations.Plugin;
+import io.kestra.core.models.annotations.Metric;
 import io.kestra.core.models.annotations.PluginProperty;
 import io.kestra.core.models.executions.metrics.Counter;
 import io.kestra.core.models.property.Property;
@@ -45,6 +46,9 @@ import java.net.URI;
                     table: "table_name"
                 """
         )
+    },
+    metrics = {
+        @Metric(name = "records.count", type = Counter.class.getName(), description = "The total number of entities listed.")
     }
 )
 @Schema(
@@ -95,7 +99,7 @@ public class List extends AbstractTableStorage implements RunnableTask<List.Outp
             Mono<Long> longMono = FileSerde.writeAll(output, flux);
             Long count = longMono.block();
 
-            runContext.metric(Counter.of("records", count, "table", tableClient.getTableName()));
+            runContext.metric(Counter.of("records.count", count, "table", tableClient.getTableName()));
 
             return Output.builder()
                 .count(count)

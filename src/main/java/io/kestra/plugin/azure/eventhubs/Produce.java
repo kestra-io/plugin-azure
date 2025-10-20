@@ -4,6 +4,7 @@ import com.azure.messaging.eventhubs.models.CreateBatchOptions;
 import io.kestra.core.exceptions.IllegalVariableEvaluationException;
 import io.kestra.core.models.annotations.Example;
 import io.kestra.core.models.annotations.Plugin;
+import io.kestra.core.models.annotaions.Metric;
 import io.kestra.core.models.annotations.PluginProperty;
 import io.kestra.core.models.executions.metrics.Counter;
 import io.kestra.core.models.property.Property;
@@ -38,51 +39,57 @@ import java.util.Map;
 /**
  * The {@link RunnableTask} can be used for producing batches of events to Azure Event Hubs.
  */
-@Plugin(examples = {
-    @Example(
-        title = "Publish a file as events into Azure EventHubs.",
-        full = true,
-        code = """
-            id: azure_eventhubs_send_events
-            namespace: company.team
+@Plugin(
+    examples = {
+        @Example(
+            title = "Publish a file as events into Azure EventHubs.",
+            full = true,
+            code = """
+                id: azure_eventhubs_send_events
+                namespace: company.team
 
-            inputs:
-              - id: file
-                type: FILE
-                description: a CSV file with columns id, username, tweet, and timestamp
+                inputs:
+                  - id: file
+                    type: FILE
+                    description: a CSV file with columns id, username, tweet, and timestamp
 
-            tasks:
-              - id: read_csv_file
-                type: io.kestra.plugin.serdes.csv.CsvToIon
-                from: "{{ inputs.file }}"
+                tasks:
+                  - id: read_csv_file
+                    type: io.kestra.plugin.serdes.csv.CsvToIon
+                    from: "{{ inputs.file }}"
 
-              - id: transform_row_to_json
-                type: io.kestra.plugin.scripts.nashorn.FileTransform
-                from: "{{ outputs.read_csv_file.uri }}"
-                script: |
-                  var result = {
-                    "body": {
-                      "username": row.username,
-                      "tweet": row.tweet
-                    }
-                  };
-                  row = result
+                  - id: transform_row_to_json
+                    type: io.kestra.plugin.scripts.nashorn.FileTransform
+                    from: "{{ outputs.read_csv_file.uri }}"
+                    script: |
+                      var result = {
+                        "body": {
+                          "username": row.username,
+                          "tweet": row.tweet
+                        }
+                      };
+                      row = result
 
-              - id: send_to_eventhub
-                type: io.kestra.plugin.azure.eventhubs.Produce
-                from: "{{ outputs.transform_row_to_json.uri }}"
-                eventHubName: my_eventhub
-                namespace: my_event_hub_namespace
-                connectionString: "{{ secret('EVENTHUBS_CONNECTION') }}"
-                maxBatchSizeInBytes: 4096
-                maxEventsPerBatch: 100
-                bodySerializer: "JSON"
-                bodyContentType: application/json
-                eventProperties:
-                  source: kestra
-            """
-    )
-})
+                  - id: send_to_eventhub
+                    type: io.kestra.plugin.azure.eventhubs.Produce
+                    from: "{{ outputs.transform_row_to_json.uri }}"
+                    eventHubName: my_eventhub
+                    namespace: my_event_hub_namespace
+                    connectionString: "{{ secret('EVENTHUBS_CONNECTION') }}"
+                    maxBatchSizeInBytes: 4096
+                    maxEventsPerBatch: 100
+                    bodySerializer: "JSON"
+                    bodyContentType: application/json
+                    eventProperties:
+                      source: kestra
+                """
+        )
+    },
+    metrics = {
+        @Metric(name = "events.sent.count", type = Counter.class.getName(), description = "The total number of events sent."),
+        @Metric(name = "batches.sent.count", type = Counter.class.getName(), description = "The total number of batches sent.")
+    }
+)
 @Schema(
     title = "Publish events to Azure Event Hubs."
 )
@@ -93,8 +100,8 @@ import java.util.Map;
 public class Produce extends AbstractEventHubTask implements RunnableTask<Produce.Output> {
 
     // TASK'S METRICS
-    private static final String METRIC_SENT_EVENTS_NAME = "total-sent-events";
-    private static final String METRIC_SENT_BATCHES_NAME = "total-sent-batches";
+    private static final String METRIC_SENT_EVENTS_NAME = "events.sent.count";
+    private static final String METRIC_SENT_BATCHES_NAME = "batches.sent.count";
 
     // TASK'S PARAMETERS
     @Schema(

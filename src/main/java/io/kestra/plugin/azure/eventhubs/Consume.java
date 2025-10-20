@@ -7,6 +7,7 @@ import com.azure.storage.blob.BlobContainerAsyncClient;
 import io.kestra.core.exceptions.IllegalVariableEvaluationException;
 import io.kestra.core.models.annotations.Example;
 import io.kestra.core.models.annotations.Plugin;
+import io.kestra.core.models.annotations.Metric;
 import io.kestra.core.models.executions.metrics.Counter;
 import io.kestra.core.models.property.Property;
 import io.kestra.core.models.tasks.RunnableTask;
@@ -47,28 +48,33 @@ import java.util.concurrent.atomic.AtomicReference;
 /**
  * The {@link RunnableTask} can be used for consuming batches of events from Azure Event Hubs.
  */
-@Plugin(examples = {
-    @Example(
-        title = "Consume data events from Azure EventHubs.",
-        full = true,
-        code = """
-            id: azure_eventhubs_consume_data_events
-            namespace: company.team
+@Plugin(
+    examples = {
+        @Example(
+            title = "Consume data events from Azure EventHubs.",
+            full = true,
+            code = """
+                id: azure_eventhubs_consume_data_events
+                namespace: company.team
 
-            tasks:
-              - id: consume_from_eventhub
-                type: io.kestra.plugin.azure.eventhubs.Consume
-                eventHubName: my_eventhub
-                namespace: my_eventhub_namespace
-                connectionString: "{{ secret('EVENTHUBS_CONNECTION') }}"
-                bodyDeserializer: JSON
-                consumerGroup: "$Default"
-                checkpointStoreProperties:
-                  containerName: kestra
-                  connectionString: "{{ secret('BLOB_CONNECTION') }}"
-            """
-    )
-})
+                tasks:
+                  - id: consume_from_eventhub
+                    type: io.kestra.plugin.azure.eventhubs.Consume
+                    eventHubName: my_eventhub
+                    namespace: my_eventhub_namespace
+                    connectionString: "{{ secret('EVENTHUBS_CONNECTION') }}"
+                    bodyDeserializer: JSON
+                    consumerGroup: "$Default"
+                    checkpointStoreProperties:
+                      containerName: kestra
+                      connectionString: "{{ secret('BLOB_CONNECTION') }}"
+                """
+        )
+    },
+    metrics = {
+        @Metric(name = "records.consumed", type = Counter.class.getName(), description = "The total number of events consumed.")
+    }
+)
 @Schema(
     title = "Consume events from Azure Event Hubs."
 )
@@ -180,7 +186,7 @@ public class Consume extends AbstractEventHubTask implements EventHubConsumerInt
             int numEvents = result.entrySet().stream()
                 .peek(entry -> {
                     Counter counter = Counter.of(
-                        "records",
+                        "records.consumed",
                         entry.getValue(),
                         "eventHubName",
                         entry.getKey().eventHubName(),

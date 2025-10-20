@@ -3,6 +3,7 @@ package io.kestra.plugin.azure.storage.blob;
 import com.azure.storage.blob.BlobClient;
 import io.kestra.core.models.annotations.Example;
 import io.kestra.core.models.annotations.Plugin;
+import io.kestra.core.models.annotations.Metric;
 import io.kestra.core.models.annotations.PluginProperty;
 import io.kestra.core.models.executions.metrics.Counter;
 import io.kestra.core.models.property.Property;
@@ -76,6 +77,9 @@ import static io.kestra.core.utils.Rethrow.throwFunction;
                     name: data.csv
             """
         )
+    },
+    metrics = {
+        @Metric(name = "file.size", type = Counter.class.getName(), description = "The size of the uploaded blob, in bytes.")
     }
 )
 @Schema(

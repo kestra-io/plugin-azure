@@ -12,6 +12,7 @@ import com.azure.storage.common.implementation.Constants;
 import com.azure.storage.file.datalake.DataLakeFileClient;
 import io.kestra.core.models.annotations.Example;
 import io.kestra.core.models.annotations.Plugin;
+import io.kestra.core.models.annotations.Metric;
 import io.kestra.core.models.annotations.PluginProperty;
 import io.kestra.core.models.executions.metrics.Counter;
 import io.kestra.core.models.property.Property;
@@ -59,6 +60,9 @@ import java.net.URI;
                     endpoint: "https://yourblob.blob.core.windows.net"
                 """
         )
+    },
+    metrics = {
+        @Metric(name = "file.size", type = Counter.class.getName(), description = "The size of the uploaded file, in bytes.")
     }
 )
 @Schema(

@@ -43,7 +43,7 @@ import lombok.experimental.SuperBuilder;
         )
     },
     metrics = {
-        @Metric(name = "blobs.count", type = Counter.class.getName(), description = "The total number of blobs listed.")
+        @Metric(name = "blobs.count", type = Counter.TYPE, description = "The total number of blobs listed.")
     }
 )
 @Schema(

@@ -78,8 +78,8 @@ import java.util.concurrent.atomic.AtomicReference;
         )
     },
     metrics = {
-        @Metric(name = "pipeline.duration.ms", type = Timer.class.getName(), description = "The duration of the pipeline run in milliseconds."),
-        @Metric(name = "activities.count", type = Counter.class.getName(), description = "The total number of activities in the pipeline run.")
+        @Metric(name = "pipeline.duration.ms", type = Timer.TYPE, description = "The duration of the pipeline run in milliseconds."),
+        @Metric(name = "activities.count", type = Counter.TYPE, description = "The total number of activities in the pipeline run.")
     }
 )
 @Schema(

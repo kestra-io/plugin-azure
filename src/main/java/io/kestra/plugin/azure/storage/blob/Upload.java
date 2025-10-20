@@ -79,7 +79,7 @@ import static io.kestra.core.utils.Rethrow.throwFunction;
         )
     },
     metrics = {
-        @Metric(name = "file.size", type = Counter.class.getName(), description = "The size of the uploaded blob, in bytes.")
+        @Metric(name = "file.size", type = Counter.TYPE, description = "The size of the uploaded blob, in bytes.")
     }
 )
 @Schema(

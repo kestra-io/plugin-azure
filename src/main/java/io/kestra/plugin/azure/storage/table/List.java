@@ -48,7 +48,7 @@ import java.net.URI;
         )
     },
     metrics = {
-        @Metric(name = "records.count", type = Counter.class.getName(), description = "The total number of entities listed.")
+        @Metric(name = "records.count", type = Counter.TYPE, description = "The total number of entities listed.")
     }
 )
 @Schema(

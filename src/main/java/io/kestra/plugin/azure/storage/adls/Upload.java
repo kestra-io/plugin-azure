@@ -62,7 +62,7 @@ import java.net.URI;
         )
     },
     metrics = {
-        @Metric(name = "file.size", type = Counter.class.getName(), description = "The size of the uploaded file, in bytes.")
+        @Metric(name = "file.size", type = Counter.TYPE, description = "The size of the uploaded file, in bytes.")
     }
 )
 @Schema(

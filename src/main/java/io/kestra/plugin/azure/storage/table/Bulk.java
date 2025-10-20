@@ -59,7 +59,7 @@ import static io.kestra.core.utils.Rethrow.throwFunction;
         )
     },
     metrics = {
-        @Metric(name = "records.count", type = Counter.class.getName(), description = "The total number of entities processed in the bulk operation.")
+        @Metric(name = "records.count", type = Counter.TYPE, description = "The total number of entities processed in the bulk operation.")
     }
 )
 @Schema(

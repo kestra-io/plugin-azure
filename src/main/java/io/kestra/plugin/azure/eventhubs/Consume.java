@@ -48,6 +48,7 @@ import java.util.concurrent.atomic.AtomicReference;
 /**
  * The {@link RunnableTask} can be used for consuming batches of events from Azure Event Hubs.
  */
+
 @Plugin(
     examples = {
         @Example(
@@ -72,7 +73,7 @@ import java.util.concurrent.atomic.AtomicReference;
         )
     },
     metrics = {
-        @Metric(name = "records.consumed", type = Counter.class.getName(), description = "The total number of events consumed.")
+        @Metric(name = "records.consumed", type = Counter.TYPE, description = "The total number of events consumed.")
     }
 )
 @Schema(

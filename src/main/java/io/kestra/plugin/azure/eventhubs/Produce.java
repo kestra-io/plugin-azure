@@ -4,7 +4,7 @@ import com.azure.messaging.eventhubs.models.CreateBatchOptions;
 import io.kestra.core.exceptions.IllegalVariableEvaluationException;
 import io.kestra.core.models.annotations.Example;
 import io.kestra.core.models.annotations.Plugin;
-import io.kestra.core.models.annotaions.Metric;
+import io.kestra.core.models.annotations.Metric;
 import io.kestra.core.models.annotations.PluginProperty;
 import io.kestra.core.models.executions.metrics.Counter;
 import io.kestra.core.models.property.Property;
@@ -86,8 +86,8 @@ import java.util.Map;
         )
     },
     metrics = {
-        @Metric(name = "events.sent.count", type = Counter.class.getName(), description = "The total number of events sent."),
-        @Metric(name = "batches.sent.count", type = Counter.class.getName(), description = "The total number of batches sent.")
+        @Metric(name = "events.sent.count", type = Counter.TYPE, description = "The total number of events sent."),
+        @Metric(name = "batches.sent.count", type = Counter.TYPE, description = "The total number of batches sent.")
     }
 )
 @Schema(

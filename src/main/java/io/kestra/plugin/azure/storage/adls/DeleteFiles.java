@@ -78,8 +78,8 @@ import static io.kestra.core.utils.Rethrow.throwConsumer;
         )
     },
     metrics = {
-        @Metric(name = "files.count", type = Counter.class.getName(), description = "The total number of files deleted."),
-        @Metric(name = "files.size", type = Counter.class.getName(), description = "The total size of all files deleted, in bytes.")
+        @Metric(name = "files.count", type = Counter.TYPE, description = "The total number of files deleted."),
+        @Metric(name = "files.size", type = Counter.TYPE, description = "The total size of all files deleted, in bytes.")
     }
 )
 @Schema(

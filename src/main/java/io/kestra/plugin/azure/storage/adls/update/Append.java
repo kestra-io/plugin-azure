@@ -44,8 +44,8 @@ import lombok.experimental.SuperBuilder;
         )
     },
     metrics = {
-        @Metric(name = "file.size", type = Counter.class.getName(), description = "The size of the file before appending data, in bytes."),
-        @Metric(name = "data.size", type = Counter.class.getName(), description = "The size of the appended data, in bytes.")
+        @Metric(name = "file.size", type = Counter.TYPE, description = "The size of the file before appending data, in bytes."),
+        @Metric(name = "data.size", type = Counter.TYPE, description = "The size of the appended data, in bytes.")
     }
 )
 @Schema(

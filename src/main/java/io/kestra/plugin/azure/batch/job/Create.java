@@ -7,14 +7,15 @@ import com.microsoft.azure.batch.DetailLevel;
 import com.microsoft.azure.batch.protocol.models.*;
 import io.kestra.core.exceptions.IllegalVariableEvaluationException;
 import io.kestra.core.models.annotations.Example;
+import io.kestra.core.models.annotations.Metric;
 import io.kestra.core.models.annotations.Plugin;
 import io.kestra.core.models.annotations.PluginProperty;
 import io.kestra.core.models.executions.metrics.Counter;
 import io.kestra.core.models.executions.metrics.Timer;
 import io.kestra.core.models.property.Property;
+import io.kestra.core.models.tasks.RunnableTask;
 import io.kestra.core.models.tasks.runners.AbstractLogConsumer;
 import io.kestra.core.models.tasks.runners.DefaultLogConsumer;
-import io.kestra.core.models.tasks.RunnableTask;
 import io.kestra.core.models.tasks.runners.RemoteRunnerInterface;
 import io.kestra.core.models.tasks.runners.ScriptService;
 import io.kestra.core.runners.RunContext;
@@ -119,6 +120,15 @@ import static io.kestra.core.utils.Rethrow.throwRunnable;
                           imageName: python
                 """
         )
+    },
+    metrics = {
+        @Metric(name = "io.read.ops.count", type = Counter.TYPE, description = "The number of read I/O operations performed by the task."),
+        @Metric(name = "io.read.gib.count", type = Counter.TYPE, description = "The number of gibibytes read from I/O by the task."),
+        @Metric(name = "io.write.ops.count", type = Counter.TYPE, description = "The number of write I/O operations performed by the task."),
+        @Metric(name = "io.write.gib.count", type = Counter.TYPE, description = "The number of gibibytes written to I/O by the task."),
+        @Metric(name = "cpu.kernel.duration", type = Timer.TYPE, description = "The CPU kernel time."),
+        @Metric(name = "cpu.user.duration", type = Timer.TYPE, description = "The CPU user time."),
+        @Metric(name = "wall.clock.duration", type = Timer.TYPE, description = "The wall clock time.")
     }
 )
 @Schema(
@@ -394,7 +404,9 @@ public class Create extends AbstractBatch implements RunnableTask<Create.Output>
         }
     }
 
-    /** {@inheritDoc} **/
+    /**
+     * {@inheritDoc}
+     **/
     @Override
     public void kill() {
         if (isKilled.compareAndSet(false, true)) {

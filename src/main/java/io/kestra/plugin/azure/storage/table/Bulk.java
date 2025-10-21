@@ -6,6 +6,7 @@ import com.azure.data.tables.models.TableTransactionActionType;
 import io.kestra.core.exceptions.IllegalVariableEvaluationException;
 import io.kestra.core.models.annotations.Example;
 import io.kestra.core.models.annotations.Plugin;
+import io.kestra.core.models.annotations.Metric;
 import io.kestra.core.models.annotations.PluginProperty;
 import io.kestra.core.models.executions.metrics.Counter;
 import io.kestra.core.models.property.Property;
@@ -56,6 +57,9 @@ import static io.kestra.core.utils.Rethrow.throwFunction;
                           "code": "00FF00"
                 """
         )
+    },
+    metrics = {
+        @Metric(name = "records.count", type = Counter.TYPE, description = "The total number of entities processed in the bulk operation.")
     }
 )
 @Schema(
@@ -112,7 +116,7 @@ public class Bulk extends AbstractTableStorage implements RunnableTask<Bulk.Outp
                 .reduce(Integer::sum)
                 .block();
 
-            runContext.metric(Counter.of("records", count, "table", tableClient.getTableName()));
+            runContext.metric(Counter.of("records.count", count, "table", tableClient.getTableName()));
 
             return Output.builder()
                 .count(count)

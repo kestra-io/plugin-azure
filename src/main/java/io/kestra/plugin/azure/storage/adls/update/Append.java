@@ -4,6 +4,7 @@ import com.azure.core.util.BinaryData;
 import com.azure.storage.file.datalake.DataLakeFileClient;
 import io.kestra.core.models.annotations.Example;
 import io.kestra.core.models.annotations.Plugin;
+import io.kestra.core.models.annotations.Metric;
 import io.kestra.core.models.executions.metrics.Counter;
 import io.kestra.core.models.property.Property;
 import io.kestra.core.models.tasks.RunnableTask;
@@ -41,6 +42,10 @@ import lombok.experimental.SuperBuilder;
                     data: "Text to append"
                 """
         )
+    },
+    metrics = {
+        @Metric(name = "file.size", type = Counter.TYPE, description = "The size of the file before appending data, in bytes."),
+        @Metric(name = "data.size", type = Counter.TYPE, description = "The size of the appended data, in bytes.")
     }
 )
 @Schema(

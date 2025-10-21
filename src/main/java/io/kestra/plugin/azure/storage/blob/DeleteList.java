@@ -5,6 +5,7 @@ import com.azure.storage.blob.BlobContainerClient;
 import com.azure.storage.blob.BlobServiceClient;
 import io.kestra.core.models.annotations.Example;
 import io.kestra.core.models.annotations.Plugin;
+import io.kestra.core.models.annotations.Metric;
 import io.kestra.core.models.annotations.PluginProperty;
 import io.kestra.core.models.executions.metrics.Counter;
 import io.kestra.core.models.property.Property;
@@ -54,6 +55,10 @@ import static io.kestra.core.utils.Rethrow.throwConsumer;
                     delimiter: "/"
                 """
         )
+    },
+    metrics = {
+        @Metric(name = "blobs.count", type = Counter.TYPE , description = "The total number of blobs deleted."),
+        @Metric(name = "blobs.size", type = Counter.TYPE, description = "The total size of all blobs deleted, in bytes.")
     }
 )
 @Schema(
@@ -117,8 +122,8 @@ public class DeleteList extends AbstractBlobStorageWithSas implements RunnableTa
             .reduce(Pair.of(0L, 0L), (pair, size) -> Pair.of(pair.getLeft() + 1, pair.getRight() + size))
             .block();
 
-        runContext.metric(Counter.of("count", finalResult.getLeft()));
-        runContext.metric(Counter.of("size", finalResult.getRight()));
+        runContext.metric(Counter.of("blobs.count", finalResult.getLeft()));
+        runContext.metric(Counter.of("blobs.size", finalResult.getRight()));
 
         if (runContext.render(errorOnEmpty).as(Boolean.class).orElseThrow() && finalResult.getLeft() == 0) {
             throw new NoSuchElementException("Unable to find any files to delete on " +

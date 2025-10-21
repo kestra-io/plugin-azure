@@ -16,6 +16,7 @@ import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import io.kestra.core.exceptions.IllegalVariableEvaluationException;
 import io.kestra.core.models.annotations.Example;
 import io.kestra.core.models.annotations.Plugin;
+import io.kestra.core.models.annotations.Metric;
 import io.kestra.core.models.annotations.PluginProperty;
 import io.kestra.core.models.executions.metrics.Counter;
 import io.kestra.core.models.executions.metrics.Timer;
@@ -56,10 +57,10 @@ import java.util.concurrent.atomic.AtomicReference;
 @Getter
 @NoArgsConstructor
 @Plugin(
-        examples = {
-                @Example(
-                        full = true,
-                        code = """
+    examples = {
+        @Example(
+            full = true,
+            code = """
                 id: azure_datafactory_create_run
                 namespace: company.team
 
@@ -69,13 +70,17 @@ import java.util.concurrent.atomic.AtomicReference;
                     factoryName: exampleFactoryName
                     pipelineName: examplePipeline
                     resourceGroupName: exampleResourceGroup
-                    subscriptionId: 12345678-1234-1234-1234-12345678abc
+                    subscriptionId: 12345678-1234-1234-12345678abc
                     tenantId: "{{ secret('DATAFACTORY_TENANT_ID') }}"
                     clientId: "{{ secret('DATAFACTORY_CLIENT_ID') }}"
                     clientSecret: "{{ secret('DATAFACTORY_CLIENT_SECRET') }}"
                 """
-                )
-        }
+        )
+    },
+    metrics = {
+        @Metric(name = "pipeline.duration.ms", type = Timer.TYPE, description = "The duration of the pipeline run in milliseconds."),
+        @Metric(name = "activities.count", type = Counter.TYPE, description = "The total number of activities in the pipeline run.")
+    }
 )
 @Schema(
         title = "Create a Pipeline run from an Azure Data Factory.",
@@ -210,7 +215,7 @@ public class CreateRun extends AbstractAzureIdentityConnection implements Runnab
             Mono<Long> longMono = FileSerde.writeAll(ionMapper(), output, flux);
             Long count = longMono.blockOptional().orElse(0L);
 
-            runContext.metric(Counter.of("activities", count));
+            runContext.metric(Counter.of("activities.count", count));
 
             return Output.builder()
                     .runId(runId)

@@ -4,6 +4,7 @@ import com.azure.storage.blob.BlobContainerClient;
 import com.azure.storage.blob.BlobServiceClient;
 import io.kestra.core.models.annotations.Example;
 import io.kestra.core.models.annotations.Plugin;
+import io.kestra.core.models.annotations.Metric;
 import io.kestra.core.models.executions.metrics.Counter;
 import io.kestra.core.models.property.Property;
 import io.kestra.core.models.tasks.RunnableTask;
@@ -40,6 +41,9 @@ import lombok.experimental.SuperBuilder;
                     delimiter: "/"
                 """
         )
+    },
+    metrics = {
+        @Metric(name = "blobs.count", type = Counter.TYPE, description = "The total number of blobs listed.")
     }
 )
 @Schema(
@@ -64,7 +68,7 @@ public class List extends AbstractBlobStorageWithSas implements RunnableTask<Lis
 
         java.util.List<Blob> list = BlobService.list(runContext, containerClient, this);
 
-        runContext.metric(Counter.of("size", list.size()));
+        runContext.metric(Counter.of("blobs.count", list.size()));
 
         runContext.logger().debug(
             "Found '{}' keys on {} with regexp='{}', prefix={}",

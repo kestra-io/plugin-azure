@@ -5,6 +5,7 @@ import com.azure.storage.file.datalake.DataLakeFileSystemClient;
 import com.azure.storage.file.datalake.DataLakeServiceClient;
 import io.kestra.core.models.annotations.Example;
 import io.kestra.core.models.annotations.Plugin;
+import io.kestra.core.models.annotations.Metric;
 import io.kestra.core.models.annotations.PluginProperty;
 import io.kestra.core.models.executions.metrics.Counter;
 import io.kestra.core.models.property.Property;
@@ -75,6 +76,10 @@ import static io.kestra.core.utils.Rethrow.throwConsumer;
                     directoryPath: "adls/pokemon/"
                 """
         )
+    },
+    metrics = {
+        @Metric(name = "files.count", type = Counter.TYPE, description = "The total number of files deleted."),
+        @Metric(name = "files.size", type = Counter.TYPE, description = "The total size of all files deleted, in bytes.")
     }
 )
 @Schema(
@@ -134,8 +139,8 @@ public class DeleteFiles extends AbstractDataLakeConnection implements RunnableT
             .blockOptional()
             .orElse(Pair.of(0L, 0L));
 
-        runContext.metric(Counter.of("count", finalResult.getLeft()));
-        runContext.metric(Counter.of("size", finalResult.getRight()));
+        runContext.metric(Counter.of("files.count", finalResult.getLeft()));
+        runContext.metric(Counter.of("files.size", finalResult.getRight()));
 
         if (Boolean.TRUE.equals(runContext.render(errorOnEmpty).as(Boolean.class).orElseThrow()) && finalResult.getLeft() == 0) {
             throw new NoSuchElementException("Unable to find any files to delete on " +

@@ -33,4 +33,7 @@ kestra:
         datafactory:
           tenantId: ""
           subscriptionId: ""
-
+        monitoring:
+          tenantId: ""
+          resourceId: "/subscriptions/YOUR_SUB_ID/resourceGroups/YOUR_RG/providers/Microsoft.Compute/virtualMachines/YOUR_VM"
+          metricsNamespace: "Microsoft.Compute/virtualMachines"

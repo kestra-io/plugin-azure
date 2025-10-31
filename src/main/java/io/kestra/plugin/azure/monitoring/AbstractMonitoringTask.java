@@ -53,7 +53,7 @@ public abstract class AbstractMonitoringTask extends AbstractAzureIdentityConnec
             .buildClient();
     }
 
-    protected HttpResponse<Map<String, Object>> postToIngestion(RunContext runContext, String path, Map<String, Object> body) throws Exception {
+    protected HttpResponse<Map<String, Object>> ingestMetrics(RunContext runContext, String path, Map<String, Object> body) throws Exception {
         var rEndpoint = runContext.render(endpoint).as(String.class).orElseThrow();
         TokenCredential credential = this.credentials(runContext);
 

@@ -1,5 +1,6 @@
 package io.kestra.plugin.azure.monitoring;
 
+import io.kestra.core.junit.annotations.KestraTest;
 import io.kestra.core.models.conditions.ConditionContext;
 import io.kestra.core.models.executions.Execution;
 import io.kestra.core.models.property.Property;
@@ -7,6 +8,7 @@ import io.kestra.core.runners.RunContextFactory;
 import io.kestra.core.utils.TestsUtils;
 import io.micronaut.context.annotation.Value;
 import jakarta.inject.Inject;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
@@ -18,6 +20,8 @@ import static org.hamcrest.CoreMatchers.startsWith;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.*;
 
+@KestraTest
+@Disabled("To run this test provide your service principal credentials")
 public class TriggerTest {
     @Inject
     private RunContextFactory runContextFactory;

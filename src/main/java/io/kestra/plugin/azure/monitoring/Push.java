@@ -59,7 +59,7 @@ public class Push extends AbstractMonitoringTask implements RunnableTask<Push.Ou
         var rPath = runContext.render(path).as(String.class).orElseThrow();
         var rMetrics = runContext.render(metrics).asMap(String.class, Object.class);
 
-        var response = postToIngestion(runContext, rPath, rMetrics);
+        var response = ingestMetrics(runContext, rPath, rMetrics);
 
         runContext.logger().info("Ingestion request completed with status {}", response.getStatus());
 

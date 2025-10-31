@@ -17,6 +17,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.*;
 
 @KestraTest
+@Disabled("To run this test provide your service principal credentials")
 class QueryTest {
 
     @Inject

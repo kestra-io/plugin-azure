@@ -1,0 +1,8 @@
+group: io.kestra.plugin.azure.batch.pool
+name: "pool"
+title: "Pool"
+description: "This sub-group of plugins contains tasks for using Azure Batch Pool. Azure Batch runs large-scale applications efficiently in the cloud."
+body: ""
+videos: []
+createdBy: "Kestra Core Team"
+managedBy: "Kestra Core Team"

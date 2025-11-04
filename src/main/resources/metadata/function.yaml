@@ -1,0 +1,8 @@
+group: io.kestra.plugin.azure.function
+name: "function"
+title: "Function"
+description: "This sub-group of plugins contains tasks for using Azure Functions. Azure Functions is a serverless solution that allows you to write less code, maintain less infrastructure, and save on costs."
+body: ""
+videos: []
+createdBy: "Kestra Core Team"
+managedBy: "Kestra Core Team"

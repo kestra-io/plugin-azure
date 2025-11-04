@@ -5,14 +5,14 @@ import io.kestra.core.exceptions.IllegalVariableEvaluationException;
 import io.kestra.core.models.annotations.Example;
 import io.kestra.core.models.annotations.Plugin;
 import io.kestra.core.models.annotations.Metric;
-import io.kestra.core.models.annotations.PluginProperty;
 import io.kestra.core.models.executions.metrics.Counter;
+import io.kestra.core.models.property.Data;
 import io.kestra.core.models.property.Property;
 import io.kestra.core.models.tasks.RunnableTask;
 import io.kestra.core.runners.RunContext;
+import io.kestra.core.serializers.FileSerde;
 import io.kestra.plugin.azure.eventhubs.client.EventHubClientFactory;
 import io.kestra.plugin.azure.eventhubs.config.EventHubClientConfig;
-import io.kestra.plugin.azure.eventhubs.internal.InputStreamProvider;
 import io.kestra.plugin.azure.eventhubs.serdes.Serdes;
 import io.kestra.plugin.azure.eventhubs.service.EventDataObjectConverter;
 import io.kestra.plugin.azure.eventhubs.service.producer.EventDataBatchFactory;
@@ -28,10 +28,7 @@ import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
 import lombok.extern.slf4j.Slf4j;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
+import java.io.*;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -97,7 +94,7 @@ import java.util.Map;
 @SuperBuilder
 @Getter
 @NoArgsConstructor
-public class Produce extends AbstractEventHubTask implements RunnableTask<Produce.Output> {
+public class Produce extends AbstractEventHubTask implements RunnableTask<Produce.Output>, Data.From {
 
     // TASK'S METRICS
     private static final String METRIC_SENT_EVENTS_NAME = "events.sent.count";
@@ -113,13 +110,11 @@ public class Produce extends AbstractEventHubTask implements RunnableTask<Produc
     private Property<Map<String, String>> eventProperties = Property.ofValue(new HashMap<>());
 
     @Schema(
-        title = "The content of the message to be sent to EventHub",
-        description = "Can be an internal storage URI, a map (i.e. a list of key-value pairs) or a list of maps. " +
-            "The following keys are supported: `from`, `contentType`, `properties`.",
+        title = Data.From.TITLE,
+        description = Data.From.DESCRIPTION,
         anyOf = {String.class, List.class, Map.class}
     )
     @NotNull
-    @PluginProperty(dynamic = true)
     private Object from;
 
     @Schema(
@@ -184,23 +179,23 @@ public class Produce extends AbstractEventHubTask implements RunnableTask<Produc
     }
 
     // VisibleForTesting
-    @SuppressWarnings("unchecked")
     Output run(final RunContext runContext, final EventHubProducerService service) throws Exception {
+        InputStream is = Data.from(this.from)
+            .read(runContext)
+            .collectList()
+            .<ByteArrayInputStream>handle((items, sink) -> {
+                try {
+                    ByteArrayOutputStream os = new ByteArrayOutputStream();
+                    for (Map<String, Object> item : items) {
+                        FileSerde.write(os, item);
+                    }
+                    sink.next(new ByteArrayInputStream(os.toByteArray()));
+                } catch (IOException e) {
+                    sink.error(new RuntimeException(e));
+                }
+            })
+            .block();
 
-        final InputStreamProvider reader = new InputStreamProvider(runContext);
-
-        InputStream is;
-        if (this.getFrom() instanceof String uri) {
-            is = reader.get(runContext.render(uri));
-        } else if (this.getFrom() instanceof Map data) {
-            is = reader.get(runContext.render(data));
-        } else if (this.getFrom() instanceof List data) {
-            is = reader.get(runContext.render(data));
-        } else {
-            throw new IllegalArgumentException(
-                "Unsupported type for task-property `from`: " + this.getFrom().getClass().getSimpleName()
-            );
-        }
         return send(runContext, service, is);
     }
 

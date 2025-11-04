@@ -7,26 +7,20 @@ import io.kestra.core.exceptions.IllegalVariableEvaluationException;
 import io.kestra.core.models.annotations.Example;
 import io.kestra.core.models.annotations.Plugin;
 import io.kestra.core.models.annotations.Metric;
-import io.kestra.core.models.annotations.PluginProperty;
 import io.kestra.core.models.executions.metrics.Counter;
+import io.kestra.core.models.property.Data;
 import io.kestra.core.models.property.Property;
 import io.kestra.core.models.tasks.RunnableTask;
 import io.kestra.core.runners.RunContext;
-import io.kestra.core.serializers.FileSerde;
 import io.kestra.plugin.azure.storage.table.abstracts.AbstractTableStorage;
 import io.kestra.plugin.azure.storage.table.models.Entity;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
 
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
-import java.io.Reader;
-import java.net.URI;
 import java.util.List;
 import java.util.Map;
 import jakarta.validation.constraints.NotNull;
-import reactor.core.publisher.Flux;
 
 import static io.kestra.core.utils.Rethrow.throwFunction;
 
@@ -66,14 +60,13 @@ import static io.kestra.core.utils.Rethrow.throwFunction;
     title = "Insert or update entities in an Azure Storage Table.",
     description = "Make sure to pass either a list of entities or a file with a list of entities."
 )
-public class Bulk extends AbstractTableStorage implements RunnableTask<Bulk.Output> {
+public class Bulk extends AbstractTableStorage implements RunnableTask<Bulk.Output>, Data.From {
     @Schema(
-        title = "Source of a message.",
-        description = "Can be an internal storage URI or a list of maps " +
-            "in the format `partitionKey`, `rowKey`, `type`, `properties`, as shown in the example."
+        title = Data.From.TITLE,
+        description = Data.From.DESCRIPTION,
+        anyOf = {String.class, List.class, Map.class}
     )
     @NotNull
-    @PluginProperty(dynamic = true)
     private Object from;
 
     @Schema(
@@ -83,49 +76,31 @@ public class Bulk extends AbstractTableStorage implements RunnableTask<Bulk.Outp
     @Builder.Default
     private Property<TableTransactionActionType> defaultType = Property.ofValue(TableTransactionActionType.UPSERT_REPLACE);
 
-    @SuppressWarnings("unchecked")
     @Override
     public Bulk.Output run(RunContext runContext) throws Exception {
         TableClient tableClient = this.tableClient(runContext);
-        Reader reader = null;
 
-        try {
-            Flux<Object> flowable;
-            if (this.from instanceof String) {
-                URI from = new URI(runContext.render((String) this.from));
-                reader = new BufferedReader(new InputStreamReader(runContext.storage().getFile(from)), FileSerde.BUFFER_SIZE);
-                flowable = FileSerde.readAll(reader);
-            } else if (this.from instanceof List) {
-                flowable = Flux.fromIterable(((List<Entity>) this.from));
-            } else {
-                flowable = Flux.just(this.createEntity(runContext, this.from).to());
-            }
+        Integer count = Data.from(this.from)
+            .read(runContext)
+            .map(throwFunction(row -> {
+                Entity entity = this.createEntity(runContext, row);
 
-            Integer count = flowable
-                .map(throwFunction(row -> {
-                    Entity entity = this.createEntity(runContext, row);
+                return new TableTransactionAction(entity.getType() != null ? entity.getType() : runContext.render(defaultType).as(TableTransactionActionType.class).orElseThrow(), entity.to());
+            }))
+            .buffer(100, 100)
+            .map(o -> {
+                tableClient.submitTransaction(o);
 
-                    return new TableTransactionAction(entity.getType() != null ? entity.getType() : runContext.render(defaultType).as(TableTransactionActionType.class).orElseThrow(), entity.to());
-                }))
-                .buffer(100, 100)
-                .map(o -> {
-                    tableClient.submitTransaction(o);
-
-                    return o.size();
-                })
-                .reduce(Integer::sum)
-                .block();
+                return o.size();
+            })
+            .reduce(Integer::sum)
+            .block();
 
             runContext.metric(Counter.of("records.count", count, "table", tableClient.getTableName()));
 
-            return Output.builder()
-                .count(count)
-                .build();
-        } finally {
-            if (reader != null) {
-                reader.close();
-            }
-        }
+        return Output.builder()
+            .count(count)
+            .build();
     }
 
     @SuppressWarnings("unchecked")

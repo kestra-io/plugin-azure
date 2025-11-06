@@ -5,8 +5,8 @@ import com.azure.data.tables.models.TableTransactionAction;
 import com.azure.data.tables.models.TableTransactionActionType;
 import io.kestra.core.exceptions.IllegalVariableEvaluationException;
 import io.kestra.core.models.annotations.Example;
-import io.kestra.core.models.annotations.Plugin;
 import io.kestra.core.models.annotations.Metric;
+import io.kestra.core.models.annotations.Plugin;
 import io.kestra.core.models.executions.metrics.Counter;
 import io.kestra.core.models.property.Data;
 import io.kestra.core.models.property.Property;
@@ -15,12 +15,12 @@ import io.kestra.core.runners.RunContext;
 import io.kestra.plugin.azure.storage.table.abstracts.AbstractTableStorage;
 import io.kestra.plugin.azure.storage.table.models.Entity;
 import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.NotNull;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
 
 import java.util.List;
 import java.util.Map;
-import jakarta.validation.constraints.NotNull;
 
 import static io.kestra.core.utils.Rethrow.throwFunction;
 
@@ -96,7 +96,7 @@ public class Bulk extends AbstractTableStorage implements RunnableTask<Bulk.Outp
             .reduce(Integer::sum)
             .block();
 
-            runContext.metric(Counter.of("records.count", count, "table", tableClient.getTableName()));
+        runContext.metric(Counter.of("records.count", count, "table", tableClient.getTableName()));
 
         return Output.builder()
             .count(count)
@@ -105,7 +105,7 @@ public class Bulk extends AbstractTableStorage implements RunnableTask<Bulk.Outp
 
     @SuppressWarnings("unchecked")
     private Entity createEntity(RunContext runContext, Object row) throws IllegalVariableEvaluationException {
-        if (row instanceof Map<?,?> rowMap) {
+        if (row instanceof Map<?, ?> rowMap) {
             Map<String, Object> map = runContext.render((Map<String, Object>) rowMap);
             return Entity.builder()
                 .partitionKey((String) map.get("partitionKey"))

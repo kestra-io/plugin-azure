@@ -61,7 +61,7 @@ import java.util.Optional;
     title = "Trigger a flow on message consumption periodically from Azure Event Hubs.",
     description = "If you would like to consume each message from Azure Event Hubs in real-time and create one execution per message, you can use the [io.kestra.plugin.azure.eventhubs.RealtimeTrigger](https://kestra.io/plugins/plugin-azure/triggers/io.kestra.plugin.azure.eventhubs.realtimetrigger) instead."
 )
-//@Slf4j
+
 @NoArgsConstructor
 @SuperBuilder
 @ToString

@@ -1,6 +1,6 @@
 package io.kestra.plugin.azure.eventhubs.service.producer;
 
-import org.slf4j.Logger;
+//import org.slf4j.Logger;
 
 import java.util.Map;
 

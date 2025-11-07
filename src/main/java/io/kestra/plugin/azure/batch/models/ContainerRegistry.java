@@ -1,3 +1,4 @@
+
 package io.kestra.plugin.azure.batch.models;
 
 import io.kestra.core.exceptions.IllegalVariableEvaluationException;

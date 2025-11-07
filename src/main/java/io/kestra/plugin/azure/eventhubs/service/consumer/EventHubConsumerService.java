@@ -12,8 +12,8 @@ import io.kestra.core.exceptions.IllegalVariableEvaluationException;
 import io.kestra.plugin.azure.eventhubs.client.EventHubClientFactory;
 import io.kestra.plugin.azure.eventhubs.config.EventHubConsumerConfig;
 import io.kestra.plugin.azure.eventhubs.model.EventDataObject;
-import lombok.extern.slf4j.Slf4j;
-import org.slf4j.Logger;
+//import lombok.extern.slf4j.Slf4j;
+//import org.slf4j.Logger;
 
 import java.util.Collection;
 import java.util.Collections;
@@ -31,7 +31,7 @@ import java.util.stream.Collectors;
 
 import static io.kestra.core.utils.Rethrow.throwFunction;
 
-@Slf4j
+//@Slf4j
 public final class EventHubConsumerService {
 
     private final EventHubClientFactory clientFactory;

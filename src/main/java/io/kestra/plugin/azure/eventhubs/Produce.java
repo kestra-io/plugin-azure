@@ -22,7 +22,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotNull;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
-import lombok.extern.slf4j.Slf4j;
+//import lombok.extern.slf4j.Slf4j;
 
 import java.io.*;
 import java.util.HashMap;
@@ -86,7 +86,7 @@ import java.util.Map;
 @Schema(
     title = "Publish events to Azure Event Hubs."
 )
-@Slf4j
+//@Slf4j
 @SuperBuilder
 @Getter
 @NoArgsConstructor

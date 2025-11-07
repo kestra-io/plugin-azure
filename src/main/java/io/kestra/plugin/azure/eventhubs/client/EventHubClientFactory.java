@@ -15,13 +15,13 @@ import io.kestra.plugin.azure.client.AzureClientConfig;
 import io.kestra.plugin.azure.eventhubs.config.BlobContainerClientConfig;
 import io.kestra.plugin.azure.eventhubs.config.EventHubClientConfig;
 import io.kestra.plugin.azure.eventhubs.config.EventHubConsumerConfig;
-import lombok.extern.slf4j.Slf4j;
+//import lombok.extern.slf4j.Slf4j;
 
 import java.time.Duration;
 import java.util.Objects;
 import java.util.Optional;
 
-@Slf4j
+//@Slf4j
 public class EventHubClientFactory {
 
     /**

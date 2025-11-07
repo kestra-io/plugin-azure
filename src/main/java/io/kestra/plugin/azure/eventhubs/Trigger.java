@@ -13,7 +13,12 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotNull;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
-//import lombok.extern.slf4j.Slf4j;
+//import lombok.extern.slf4j.Slf4j;import org.slf4j.Logger;
+//import org.slf4j.LoggerFactory;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 
 import java.time.Duration;
 import java.util.Collections;
@@ -63,6 +68,8 @@ import java.util.Optional;
 @EqualsAndHashCode
 @Getter
 public class Trigger extends AbstractTrigger implements EventHubConsumerInterface, EventHubBatchConsumerInterface, PollingTriggerInterface, TriggerOutput<Consume.Output> {
+
+    private static final Logger log = LoggerFactory.getLogger(Trigger.class);
 
     // TRIGGER'S PROPERTIES
     @Builder.Default

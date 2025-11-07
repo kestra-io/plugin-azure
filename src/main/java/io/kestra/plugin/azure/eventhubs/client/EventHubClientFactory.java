@@ -16,6 +16,8 @@ import io.kestra.plugin.azure.eventhubs.config.BlobContainerClientConfig;
 import io.kestra.plugin.azure.eventhubs.config.EventHubClientConfig;
 import io.kestra.plugin.azure.eventhubs.config.EventHubConsumerConfig;
 //import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.time.Duration;
 import java.util.Objects;
@@ -23,6 +25,9 @@ import java.util.Optional;
 
 //@Slf4j
 public class EventHubClientFactory {
+
+    private static final Logger log = LoggerFactory.getLogger(EventHubClientFactory.class);
+
 
     /**
      * Factory method for constructing a new {@link EventHubClientBuilder} for the given config.

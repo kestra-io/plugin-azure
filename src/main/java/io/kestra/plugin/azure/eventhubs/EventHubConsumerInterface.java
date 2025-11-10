@@ -9,12 +9,13 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.Duration;
 import java.util.Map;
 
+
 /**
  * Base class for implementing tasks that consume events into EventHubs.
  * This class provides all required and optional parameters.
  */
 public interface EventHubConsumerInterface extends EventHubClientInterface {
-
+    
     // TASK'S PARAMETERS
     @Schema(
         title = "The Deserializer to be used for serializing the event value."

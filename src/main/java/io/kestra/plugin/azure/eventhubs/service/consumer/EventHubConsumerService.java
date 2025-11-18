@@ -1,4 +1,5 @@
 package io.kestra.plugin.azure.eventhubs.service.consumer;
+import org.slf4j.Logger;
 
 import com.azure.messaging.eventhubs.CheckpointStore;
 import com.azure.messaging.eventhubs.EventData;

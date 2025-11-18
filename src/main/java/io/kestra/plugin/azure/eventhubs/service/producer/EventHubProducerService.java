@@ -1,4 +1,5 @@
 package io.kestra.plugin.azure.eventhubs.service.producer;
+import org.slf4j.Logger;
 
 import com.azure.messaging.eventhubs.EventData;
 import com.azure.messaging.eventhubs.EventDataBatch;

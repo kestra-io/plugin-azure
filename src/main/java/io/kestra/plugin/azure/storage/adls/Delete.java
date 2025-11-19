@@ -1,4 +1,5 @@
 package io.kestra.plugin.azure.storage.adls;
+import org.slf4j.Logger;
 
 import com.azure.storage.file.datalake.DataLakeFileClient;
 import io.kestra.core.models.annotations.Example;

@@ -19,13 +19,11 @@ import io.kestra.plugin.azure.eventhubs.service.consumer.StartingPosition;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
-import lombok.extern.slf4j.Slf4j;
 import org.reactivestreams.Publisher;
 import org.slf4j.Logger;
 import reactor.core.publisher.Flux;
 
 import java.time.Duration;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
@@ -102,7 +100,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
     title = "Trigger a flow on message consumption in real-time from Azure Event Hubs.",
     description = "If you would like to consume multiple messages processed within a given time frame and process them in batch, you can use the [io.kestra.plugin.azure.eventhubs.Trigger](https://kestra.io/plugins/plugin-azure/triggers/io.kestra.plugin.azure.eventhubs.trigger) instead."
 )
-@Slf4j
 @NoArgsConstructor
 @SuperBuilder
 @ToString

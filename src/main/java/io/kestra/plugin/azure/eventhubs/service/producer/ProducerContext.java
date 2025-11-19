@@ -14,6 +14,6 @@ import java.util.Map;
 public record ProducerContext(String bodyContentType,
                               Map<String, String> eventProperties,
                               Integer maxEventsPerBatch,
-                              Logger logger
+                              Logger     logger
 ) {
 }

@@ -1,4 +1,5 @@
 package io.kestra.plugin.azure.eventhubs.service.producer;
+import org.slf4j.Logger;
 
 import com.azure.messaging.eventhubs.EventData;
 import com.azure.messaging.eventhubs.EventDataBatch;
@@ -10,7 +11,7 @@ import io.kestra.plugin.azure.eventhubs.config.EventHubClientConfig;
 import io.kestra.plugin.azure.eventhubs.config.EventHubConsumerConfig;
 import io.kestra.plugin.azure.eventhubs.model.EventDataObject;
 import io.kestra.plugin.azure.eventhubs.service.EventDataObjectConverter;
-import org.slf4j.Logger;
+
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 

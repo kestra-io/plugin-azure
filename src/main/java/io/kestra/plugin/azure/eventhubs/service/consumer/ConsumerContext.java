@@ -1,7 +1,8 @@
 package io.kestra.plugin.azure.eventhubs.service.consumer;
+import org.slf4j.Logger;
 
 import io.kestra.plugin.azure.eventhubs.service.EventDataObjectConverter;
-import org.slf4j.Logger;
+
 
 import java.time.Duration;
 

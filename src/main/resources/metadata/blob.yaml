@@ -1,0 +1,8 @@
+group: io.kestra.plugin.azure.storage.blob
+name: "blob"
+title: "Blob"
+description: "This sub-group of plugins contains tasks for using Azure Blob Storage. Azure Blob Storage includes object, file, disk, queue, and table storage."
+body: ""
+videos: []
+createdBy: "Kestra Core Team"
+managedBy: "Kestra Core Team"

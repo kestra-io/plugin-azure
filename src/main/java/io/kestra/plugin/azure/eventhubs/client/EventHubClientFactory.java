@@ -24,7 +24,6 @@ import java.util.Objects;
 import java.util.Optional;
 
 public class EventHubClientFactory {
-
     private static final Logger log = LoggerFactory.getLogger(EventHubClientFactory.class);
 
 

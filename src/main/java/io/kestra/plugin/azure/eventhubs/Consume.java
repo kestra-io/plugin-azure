@@ -33,6 +33,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.ToString;
 import lombok.experimental.SuperBuilder;
+import org.slf4j.Logger;
 
 
 import java.io.BufferedOutputStream;
@@ -78,7 +79,6 @@ import java.util.concurrent.atomic.AtomicReference;
 @Schema(
     title = "Consume events from Azure Event Hubs."
 )
-
 @SuperBuilder
 @NoArgsConstructor
 @Getter

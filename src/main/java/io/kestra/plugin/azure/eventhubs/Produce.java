@@ -86,7 +86,6 @@ import java.util.Map;
 @Schema(
     title = "Publish events to Azure Event Hubs."
 )
-
 @SuperBuilder
 @Getter
 @NoArgsConstructor

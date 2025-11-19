@@ -12,16 +12,10 @@ import io.kestra.plugin.azure.eventhubs.service.consumer.StartingPosition;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotNull;
 import lombok.*;
-import lombok.experimental.SupperBuilder;
 import lombok.experimental.SuperBuilder;
 
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-
 import java.time.Duration;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
@@ -68,9 +62,6 @@ import java.util.Optional;
 @EqualsAndHashCode
 @Getter
 public class Trigger extends AbstractTrigger implements EventHubConsumerInterface, EventHubBatchConsumerInterface, PollingTriggerInterface, TriggerOutput<Consume.Output> {
-
-runContext.logger().info("Trigger started");
-
 
     // TRIGGER'S PROPERTIES
     @Builder.Default

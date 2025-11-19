@@ -15,7 +15,7 @@ import java.util.Map;
  * This class provides all required and optional parameters.
  */
 public interface EventHubConsumerInterface extends EventHubClientInterface {
-    
+
     // TASK'S PARAMETERS
     @Schema(
         title = "The Deserializer to be used for serializing the event value."

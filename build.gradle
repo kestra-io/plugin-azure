@@ -282,7 +282,7 @@ shadowJar {
         exclude {
             it.moduleGroup.startsWith('com.fasterxml.jackson') && !it.moduleName.equals('jackson-datatype-joda')
         }
-exclude "org/slf4j/**"
+        exclude "org/slf4j/**"
     }
 }
 

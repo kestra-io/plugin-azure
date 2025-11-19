@@ -1,14 +1,11 @@
 package io.kestra.plugin.azure.eventhubs;
 
-import io.kestra.core.models.annotations.PluginProperty;
 import io.kestra.core.models.property.Property;
 import io.kestra.plugin.azure.eventhubs.serdes.Serdes;
 import io.kestra.plugin.azure.eventhubs.service.consumer.StartingPosition;
 import io.swagger.v3.oas.annotations.media.Schema;
 
-import java.time.Duration;
 import java.util.Map;
-
 
 /**
  * Base class for implementing tasks that consume events into EventHubs.

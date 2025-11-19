@@ -69,7 +69,8 @@ import java.util.Optional;
 @Getter
 public class Trigger extends AbstractTrigger implements EventHubConsumerInterface, EventHubBatchConsumerInterface, PollingTriggerInterface, TriggerOutput<Consume.Output> {
 
-    private static final Logger log = LoggerFactory.getLogger(Trigger.class);
+runContext.logger().info("Trigger started");
+
 
     // TRIGGER'S PROPERTIES
     @Builder.Default

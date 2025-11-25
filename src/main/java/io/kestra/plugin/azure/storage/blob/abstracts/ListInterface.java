@@ -16,7 +16,7 @@ public interface ListInterface {
         title = "A regular expression to filter on the full key.",
         description = "ex:\n"+
             "`regExp: .*` to match all files\n"+
-            "`regExp: .*2020-01-0.\\\\.csv` to match files between 01 and 09 of january ending with `.csv`"
+            "`regExp: .*2020-01-0.\\\\.csv` to match files between 01 and 09 of January ending with `.csv`"
     )
     Property<String> getRegexp();
 

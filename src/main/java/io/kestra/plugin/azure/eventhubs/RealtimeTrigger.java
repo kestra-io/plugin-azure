@@ -60,7 +60,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
     ),
     @Example(
         full = true,
-        title = "Use Azure Eventhubs Realtime Trigger to push events into StorageTable",
+        title = "Use the Azure Event Hubs Realtime Trigger to push events into Azure Table Storage",
         code = """
             id: eventhubs_realtime_trigger
             namespace: company.team

@@ -52,7 +52,7 @@ import java.net.URI;
     }
 )
 @Schema(
-    title = "List entities from an Azure Storage Table.",
+    title = "List entities from an Azure Table Storage table.",
     description = "If the `filter` parameter in the options is set, only entities matching the filter will be returned.\n" +
         "If the `select` parameter is set, only the properties included in the select parameter will be returned for each entity.\n" +
         "If the `top` parameter is set, the maximum number of returned entities per page will be limited to that value."
@@ -65,12 +65,12 @@ public class List extends AbstractTableStorage implements RunnableTask<List.Outp
     private Property<String> filter;
 
     @Schema(
-        title = "The desired properties of an entity from the Azure Storage Table."
+        title = "The desired properties of an entity from the Azure Table Storage table."
     )
     private Property<java.util.List<String>> select;
 
     @Schema(
-        title = "List the top `n` tables or entities from the Azure Storage Table."
+        title = "List the top `n` tables or entities from the Azure Table Storage table."
     )
     private Property<Integer> top;
 

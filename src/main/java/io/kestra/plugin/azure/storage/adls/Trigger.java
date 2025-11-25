@@ -34,16 +34,16 @@ import static io.kestra.core.utils.Rethrow.throwFunction;
 @Getter
 @NoArgsConstructor
 @Schema(
-    title = "Trigger a flow on new file arrival in Azure Data Lake Storage.",
-    description = "This trigger will poll the specified Azure Data Lake Storage bucket every `interval`. " +
-        "Using the `from` and `regExp` properties, you can define which file's arrival will trigger the flow. " +
-        "Under the hood, we use the Azure Data Lake Storage API to list the files in a specified location and download them to the internal storage and process them with the declared `action`. " +
-        "You can use the `action` property to move or delete the files from the container after processing to avoid the trigger to be fired again for the same files during the next polling interval."
-)
+        title = "Trigger a flow on new file arrival in Azure Data Lake Storage.",
+        description = "This trigger will poll the specified Azure Data Lake Storage file system every `interval`. " +
+            "Using the `from` and `regExp` properties, you can define which files' arrival will trigger the flow. " +
+            "Under the hood, we use the Azure Data Lake Storage API to list the files in a specified location and download them to the internal storage and process them with the declared `action`. " +
+            "You can use the `action` property to move or delete the files from the container after processing to avoid the trigger to be fired again for the same files during the next polling interval."
+    )
 @Plugin(
     examples = {
         @Example(
-            title = "Run a flow if one or more files arrived in the specified Azure Data Lake Storage bucket location. Then, process all files in a for-loop either sequentially or concurrently, depending on the `concurrencyLimit` property.",
+            title = "Run a flow if one or more files arrived in the specified Azure Data Lake Storage file system location. Then, process all files in a for-loop either sequentially or concurrently, depending on the `concurrencyLimit` property.",
             full = true,
             code = """
                 id: react_to_files

@@ -83,7 +83,7 @@ import java.util.concurrent.atomic.AtomicReference;
 )
 @Schema(
         title = "Create a Pipeline run from an Azure Data Factory.",
-        description = "Launch an Azure DataFactory pipeline from Kestra. " +
+        description = "Launch an Azure Data Factory pipeline from Kestra. " +
                 "Data Factory contains a series of interconnected systems that provide a complete end-to-end platform for data engineers."
 )
 public class CreateRun extends AbstractAzureIdentityConnection implements RunnableTask<CreateRun.Output> {
@@ -111,7 +111,7 @@ public class CreateRun extends AbstractAzureIdentityConnection implements Runnab
 
     @Schema(
             title = "Wait for the end of the run.",
-            description = "Allowing to capture job status & logs."
+            description = "Allows you to capture job status and logs."
     )
     @Builder.Default
     private Property<Boolean> wait = Property.ofValue(Boolean.TRUE);

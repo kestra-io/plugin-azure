@@ -45,7 +45,7 @@ import jakarta.validation.constraints.NotNull;
     }
 )
 @Schema(
-    title = "Get an entity from an Azure Storage Table."
+    title = "Get an entity from an Azure Table Storage table."
 )
 public class Get extends AbstractTableStorage implements RunnableTask<Get.Output> {
     @Schema(

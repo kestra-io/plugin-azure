@@ -8,7 +8,7 @@ import jakarta.validation.constraints.NotNull;
 
 public interface AbstractTableStorageInterface {
     @Schema(
-        title = "The Azure Storage Table name."
+        title = "The Azure Table Storage table name."
     )
     @NotNull
     Property<String> getTable();

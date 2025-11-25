@@ -103,8 +103,8 @@ public class Query extends AbstractMonitoringTask implements RunnableTask<Query.
     private Property<String> orderBy;
 
     @Schema(
-        title = "Dimension name(s) to rollup results by",
-        description = "For example, 'City' to combine multiple city dimension values into one timeseries"
+        title = "Dimension name(s) to roll up results by",
+        description = "For example, 'City' to combine multiple city dimension values into one time series"
     )
     private Property<String> rollupBy;
 

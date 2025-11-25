@@ -38,7 +38,7 @@
 
 # Kestra Azure Plugin
 
-Plugin to interact with Azure Cloud from kestra workflows.
+Plugin to interact with Azure Cloud from Kestra workflows.
 
 ![Kestra orchestrator](https://kestra.io/video.gif)
 

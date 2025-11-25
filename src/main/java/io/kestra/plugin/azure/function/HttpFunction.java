@@ -52,7 +52,7 @@ import java.util.Map;
 
             tasks:
               - id: encode_string
-                type: io.kestra.plugin.azure.function.HttpTrigger
+                type: io.kestra.plugin.azure.function.HttpFunction
                 httpMethod: POST
                 url: https://service.azurewebsites.net/api/Base64Encoder?code=${{secret('AZURE_FUNCTION_CODE')}}
                 httpBody: {"text": "Hello, Kestra"}
@@ -67,20 +67,20 @@ public class HttpFunction extends Task implements RunnableTask<HttpFunction.Outp
     @NotNull
     protected Property<String> httpMethod;
 
-    @Schema(title = "Azure function URL")
+    @Schema(title = "Azure Function URL")
     @NotNull
     protected Property<String> url;
 
     @Schema(
             title = "HTTP body",
-            description = "JSON body of the Azure function"
+            description = "JSON body of the Azure Function"
     )
     @Builder.Default
     protected Property<Map<String, Object>> httpBody = Property.ofValue(new HashMap<>());
 
     @Schema(
             title = "Max duration",
-            description = "The maximum duration the task should wait until the Azure Function completion."
+            description = "The maximum duration the task should wait until the Azure Function completes."
     )
     @Builder.Default
     @PluginProperty(dynamic = true)

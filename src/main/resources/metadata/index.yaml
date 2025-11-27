@@ -1,7 +1,7 @@
 group: io.kestra.plugin.azure
 name: "azure"
 title: "Azure"
-description: ""
+description: "Leverage Microsoft Azure services within Kestra data workflows."
 body: ""
 videos: []
 createdBy: "Kestra Core Team"

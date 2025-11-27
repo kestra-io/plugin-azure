@@ -1,0 +1,8 @@
+group: io.kestra.plugin.azure.eventhubs
+name: "eventhubs"
+title: "Eventhubs"
+description: "This sub-group of plugins contains tasks for using Azure Event Hubs."
+body: ""
+videos: []
+createdBy: "Kestra Core Team"
+managedBy: "Kestra Core Team"

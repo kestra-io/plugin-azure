@@ -1,0 +1,8 @@
+group: io.kestra.plugin.azure.monitoring
+name: "monitoring"
+title: "Monitoring"
+description: "This sub-group of plugins contains tasks for using Azure Monitor. Azure Monitor provides full-stack observability across applications, infrastructure, and networks, and enables querying and pushing metrics using Azure Monitor Query and Ingestion APIs."
+body: ""
+videos: []
+createdBy: "Kestra Core Team"
+managedBy: "Kestra Core Team"

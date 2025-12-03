@@ -1,8 +1,8 @@
 group: io.kestra.plugin.azure.function
 name: "function"
 title: "Function"
-description: "This sub-group of plugins contains tasks for using Azure Functions. Azure Functions is a serverless solution that allows you to write less code, maintain less infrastructure, and save on costs."
-body: ""
+description: "Tasks that invoke Azure Functions over HTTP and return responses to flows."
+body: "Trigger Azure Functions over HTTP and capture their responses for downstream steps. Provide the function URL (including function key), choose the HTTP method, and pass an optional JSON body; configurable timeouts help avoid long-running calls, and responses are returned as parsed JSON when possible."
 videos: []
 createdBy: "Kestra Core Team"
 managedBy: "Kestra Core Team"

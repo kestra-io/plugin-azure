@@ -1,8 +1,0 @@
-group: io.kestra.plugin.azure.update
-name: "update"
-title: "Update"
-description: ""
-body: ""
-videos: []
-createdBy: "Kestra Core Team"
-managedBy: "Kestra Core Team"

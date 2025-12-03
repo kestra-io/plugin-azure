@@ -1,8 +1,8 @@
 group: io.kestra.plugin.azure.batch.job
 name: "job"
 title: "Job"
-description: "This sub-group of plugins contains tasks for using Azure Batch Job. Azure Batch runs large-scale applications efficiently in the cloud."
-body: ""
+description: "Tasks that create and supervise Azure Batch jobs and their tasks."
+body: "Create and supervise Azure Batch jobs and their tasks. Provide the Batch account endpoint, account name, access key, and poolId, then define tasks (commands, containers, files, outputs); jobs can wait for completion while emitting timing and task count metrics and returning logs or outputs."
 videos: []
 createdBy: "Kestra Core Team"
 managedBy: "Kestra Core Team"

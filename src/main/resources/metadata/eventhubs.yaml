@@ -1,8 +1,8 @@
 group: io.kestra.plugin.azure.eventhubs
 name: "eventhubs"
 title: "Eventhubs"
-description: "This sub-group of plugins contains tasks for using Azure Event Hubs."
-body: ""
+description: "Tasks that publish, consume, and trigger on Azure Event Hubs streams."
+body: "Supply the namespace, eventHubName, and connectionString; consumers set a consumerGroup and blob checkpoint store (container name and connection string) with starting positions, while producers support multiple body serializers for sending events."
 videos: []
 createdBy: "Kestra Core Team"
 managedBy: "Kestra Core Team"

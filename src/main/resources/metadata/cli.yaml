@@ -1,8 +1,8 @@
 group: io.kestra.plugin.azure.cli
 name: "cli"
 title: "CLI"
-description: "This sub-group of plugins contains tasks to interact with Azure CLI."
-body: ""
+description: "Tasks that run Azure CLI commands within Kestra."
+body: "Provide one or more commands with optional service principal login (tenant, username/clientId, password/secret); runs in the Azure CLI container or chosen task runner and supports environment variables plus file inputs/outputs."
 videos: []
 createdBy: "Kestra Core Team"
 managedBy: "Kestra Core Team"

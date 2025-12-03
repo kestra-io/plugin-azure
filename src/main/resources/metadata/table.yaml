@@ -1,8 +1,8 @@
 group: io.kestra.plugin.azure.storage.table
 name: "table"
 title: "Table"
-description: "This sub-group of plugins contains tasks for using Azure Table Storage. Azure Storage includes object, file, disk, queue, and table storage."
-body: ""
+description: "Tasks that interact with Azure Table Storage entities."
+body: "List, query, retrieve, insert, or delete rows using a connection string or SAS/shared key and endpoint plus the table name; supply partition/row keys for targeted operations or filter expressions for bulk queries and upserts."
 videos: []
 createdBy: "Kestra Core Team"
 managedBy: "Kestra Core Team"

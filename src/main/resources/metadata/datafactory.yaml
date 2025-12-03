@@ -1,8 +1,8 @@
 group: io.kestra.plugin.azure.datafactory
 name: "datafactory"
 title: "Datafactory"
-description: "This sub-group of plugins contains tasks for using Azure Data Factory. Azure Data Factory is a managed cloud service that's built for these complex hybrid extract-transform-load (ETL), extract-load-transform (ELT), and data integration projects."
-body: ""
+description: "Tasks that start and monitor Azure Data Factory pipelines for ETL and integration."
+body: "Provide Azure AD credentials plus subscriptionId, resourceGroupName, factoryName, and pipelineName; pass pipeline parameters as needed and choose to wait for completion to collect activity counts and run duration metrics."
 videos: []
 createdBy: "Kestra Core Team"
 managedBy: "Kestra Core Team"

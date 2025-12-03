@@ -1,8 +1,8 @@
 group: io.kestra.plugin.azure.storage.adls
 name: "adls"
 title: "ADLS"
-description: "This sub-group of plugins contains tasks for using Azure Data Lake Storage. It's engineered to store massive amounts of data in any format, and to facilitate big data analytical workloads."
-body: ""
+description: "Tasks that work with Azure Data Lake Storage for large-scale file operations and analytics workloads."
+body: "Upload, read, list, and delete ADLS Gen2 files, generate shared access links, or trigger workflows on storage events. Provide an endpoint with either a connection string, shared key, or SAS token plus the target fileSystem and filePath; optional leasing can prevent concurrent writes."
 videos: []
 createdBy: "Kestra Core Team"
 managedBy: "Kestra Core Team"

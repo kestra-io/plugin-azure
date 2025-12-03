@@ -1,9 +1,0 @@
-group: io.kestra.plugin.azure.update
-name: "update"
-title: "Update"
-description: ""
-description: "Tasks that will surface Azure update and maintenance utilities."
-body: "Reserved for upcoming tasks related to updating or patching Azure resources; no runnable tasks are published in this group yet."
-videos: []
-createdBy: "Kestra Core Team"
-managedBy: "Kestra Core Team"

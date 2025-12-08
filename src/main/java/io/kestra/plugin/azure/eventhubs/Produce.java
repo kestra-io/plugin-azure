@@ -52,7 +52,7 @@ import java.util.Map;
                     from: "{{ inputs.file }}"
 
                   - id: transform_row_to_json
-                    type: io.kestra.plugin.scripts.nashorn.FileTransform
+                    type: io.kestra.plugin.scripts.graalvm.FileTransform
                     from: "{{ outputs.read_csv_file.uri }}"
                     script: |
                       var result = {

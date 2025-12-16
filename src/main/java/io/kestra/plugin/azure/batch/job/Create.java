@@ -56,12 +56,12 @@ import static io.kestra.core.utils.Rethrow.throwRunnable;
                 tasks:
                   - id: create
                     type: io.kestra.plugin.azure.batch.job.Create
-                    endpoint: https://***.francecentral.batch.azure.com
-                    account: <batch-account>
-                    accessKey: <access-key>
-                    poolId: <pool-id>
+                    endpoint: https://my.francecentral.batch.azure.com
+                    account: "{{ secret('AZURE_ACCOUNT') }}"
+                    accessKey: "{{ secret('AZURE_ACCESS_KEY') }}"
+                    poolId: "{{ secret('AZURE_POOL_ID') }}"
                     job:
-                      id: <job-name>
+                      id: myjob
                     tasks:
                       - id: env
                         commands:
@@ -82,7 +82,7 @@ import static io.kestra.core.utils.Rethrow.throwRunnable;
                           - echo '::{"outputs":{"extract":"'$(cat files/in/in.txt)'"}::'
                         resourceFiles:
                           - httpUrl: https://unittestkt.blob.core.windows.net/tasks/***?sv=***&se=***&sr=***&sp=***&sig=***
-                          filePath: files/in/in.txt
+                            filePath: files/in/in.txt
 
                       - id: output
                         commands:

@@ -2,35 +2,26 @@ package io.kestra.plugin.azure.function;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.kestra.core.exceptions.IllegalVariableEvaluationException;
+import io.kestra.core.http.HttpRequest;
+import io.kestra.core.http.HttpResponse;
+import io.kestra.core.http.client.HttpClient;
+import io.kestra.core.http.client.HttpClientException;
+import io.kestra.core.http.client.configurations.HttpConfiguration;
 import io.kestra.core.models.annotations.Example;
 import io.kestra.core.models.annotations.PluginProperty;
 import io.kestra.core.models.annotations.Plugin;
 import io.kestra.core.models.property.Property;
 import io.kestra.core.models.tasks.RunnableTask;
 import io.kestra.core.models.tasks.Task;
-import io.kestra.core.runners.DefaultRunContext;
 import io.kestra.core.runners.RunContext;
-import io.micronaut.core.type.Argument;
-import io.micronaut.http.HttpMethod;
-import io.micronaut.http.HttpRequest;
-import io.micronaut.http.HttpResponse;
-import io.micronaut.http.client.DefaultHttpClientConfiguration;
-import io.micronaut.http.client.HttpClient;
-import io.micronaut.http.client.exceptions.HttpClientResponseException;
-import io.micronaut.http.client.netty.DefaultHttpClient;
-import io.micronaut.http.client.netty.NettyHttpClientFactory;
-import io.micronaut.http.codec.MediaTypeCodecRegistry;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotNull;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
-import reactor.core.publisher.Mono;
 
-import java.net.MalformedURLException;
+import java.io.IOException;
 import java.net.URI;
-import java.net.URISyntaxException;
 import java.time.Duration;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -60,9 +51,6 @@ import java.util.Map;
     )
 })
 public class HttpFunction extends Task implements RunnableTask<HttpFunction.Output> {
-    private static final Duration HTTP_READ_TIMEOUT = Duration.ofSeconds(60);
-    private static final NettyHttpClientFactory FACTORY = new NettyHttpClientFactory();
-
     @Schema(title = "HTTP method")
     @NotNull
     protected Property<String> httpMethod;
@@ -88,16 +76,30 @@ public class HttpFunction extends Task implements RunnableTask<HttpFunction.Outp
 
     @Override
     public HttpFunction.Output run(RunContext runContext) throws Exception {
-        try (HttpClient client = this.client(runContext)) {
-            Mono<HttpResponse> mono = Mono.from(client.exchange(HttpRequest
-                    .create(
-                            HttpMethod.valueOf(runContext.render(httpMethod).as(String.class).orElseThrow()),
-                            runContext.render(url).as(String.class).orElseThrow()
-                    ).body(runContext.render(httpBody).asMap(String.class, Object.class)),
-                Argument.of(String.class))
-            );
-            HttpResponse result =  maxDuration != null ? mono.block(runContext.render(maxDuration).as(Duration.class).orElseThrow()) : mono.block();
-            String body = result != null &&  result.getBody().isPresent() ? (String) result.getBody().get() : "";
+        String renderedUrl = runContext.render(url).as(String.class).orElseThrow();
+        String renderedMethod = runContext.render(httpMethod).as(String.class).orElseThrow();
+        Map<String, Object> renderedBody = runContext.render(httpBody).asMap(String.class, Object.class);
+        Duration timeout = runContext.render(maxDuration).as(Duration.class).orElseThrow();
+
+        try (HttpClient client = HttpClient.builder()
+                .runContext(runContext)
+                .configuration(HttpConfiguration.builder()
+                    .readTimeout(timeout)
+                    .build())
+                .build()) {
+
+            HttpRequest.HttpRequestBuilder requestBuilder = HttpRequest.builder()
+                .uri(URI.create(renderedUrl))
+                .method(renderedMethod);
+
+            if (renderedBody != null && !renderedBody.isEmpty()) {
+                requestBuilder.body(HttpRequest.JsonRequestBody.builder()
+                    .content(renderedBody)
+                    .build());
+            }
+
+            HttpResponse<String> response = client.request(requestBuilder.build());
+            String body = response.getBody() != null ? response.getBody() : "";
 
             try {
                 ObjectMapper mapper = new ObjectMapper();
@@ -109,13 +111,12 @@ public class HttpFunction extends Task implements RunnableTask<HttpFunction.Outp
                     .repsonseBody(body)
                     .build();
             }
-        } catch (HttpClientResponseException e) {
-            throw new HttpClientResponseException(
-                    "Request failed '" + e.getStatus().getCode() + "' and body '" + e.getResponse().getBody(String.class).orElse("null") + "'",
-                    e,
-                    e.getResponse()
+        } catch (HttpClientException | IOException e) {
+            throw new RuntimeException(
+                    "Request failed with error: " + e.getMessage(),
+                    e
             );
-        } catch (IllegalVariableEvaluationException | MalformedURLException | URISyntaxException e) {
+        } catch (IllegalVariableEvaluationException e) {
             throw new RuntimeException(e);
         }
     }
@@ -125,18 +126,5 @@ public class HttpFunction extends Task implements RunnableTask<HttpFunction.Outp
     static class Output implements io.kestra.core.models.tasks.Output {
         @Schema(title = "Response body")
         private Object repsonseBody;
-    }
-
-    protected HttpClient client(RunContext runContext) throws IllegalVariableEvaluationException, MalformedURLException, URISyntaxException {
-        MediaTypeCodecRegistry mediaTypeCodecRegistry = ((DefaultRunContext)runContext).getApplicationContext().getBean(MediaTypeCodecRegistry.class);
-
-        var httpConfig = new DefaultHttpClientConfiguration();
-        httpConfig.setMaxContentLength(Integer.MAX_VALUE);
-        httpConfig.setReadTimeout(HTTP_READ_TIMEOUT);
-
-        DefaultHttpClient client = (DefaultHttpClient) FACTORY.createClient(URI.create(runContext.render(this.url).as(String.class).orElseThrow()).toURL(), httpConfig);
-        client.setMediaTypeCodecRegistry(mediaTypeCodecRegistry);
-
-        return client;
     }
 }

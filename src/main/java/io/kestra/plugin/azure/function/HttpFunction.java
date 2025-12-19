@@ -76,9 +76,9 @@ public class HttpFunction extends Task implements RunnableTask<HttpFunction.Outp
 
     @Override
     public HttpFunction.Output run(RunContext runContext) throws Exception {
-        String renderedUrl = runContext.render(url).as(String.class).orElseThrow();
-        String renderedMethod = runContext.render(httpMethod).as(String.class).orElseThrow();
-        Map<String, Object> renderedBody = runContext.render(httpBody).asMap(String.class, Object.class);
+        String rUrl = runContext.render(url).as(String.class).orElseThrow();
+        String rMethod = runContext.render(httpMethod).as(String.class).orElseThrow();
+        Map<String, Object> rBody = runContext.render(httpBody).asMap(String.class, Object.class);
         Duration timeout = runContext.render(maxDuration).as(Duration.class).orElseThrow();
 
         try (HttpClient client = HttpClient.builder()
@@ -89,12 +89,12 @@ public class HttpFunction extends Task implements RunnableTask<HttpFunction.Outp
                 .build()) {
 
             HttpRequest.HttpRequestBuilder requestBuilder = HttpRequest.builder()
-                .uri(URI.create(renderedUrl))
-                .method(renderedMethod);
+                .uri(URI.create(rUrl))
+                .method(rMethod);
 
-            if (renderedBody != null && !renderedBody.isEmpty()) {
+            if (rBody != null && !rBody.isEmpty()) {
                 requestBuilder.body(HttpRequest.JsonRequestBody.builder()
-                    .content(renderedBody)
+                    .content(rBody)
                     .build());
             }
 

@@ -1,6 +1,6 @@
 @PluginSubGroup(
     description = "This sub-group of plugins contains tasks for using Azure Event Hubs.",
-    categories = {PluginSubGroup.PluginCategory.CLOUD, PluginSubGroup.PluginCategory.MESSAGING}
+        categories = { PluginSubGroup.PluginCategory.CLOUD, PluginSubGroup.PluginCategory.DATA }
 )
 package io.kestra.plugin.azure.eventhubs;
 

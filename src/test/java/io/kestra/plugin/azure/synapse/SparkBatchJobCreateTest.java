@@ -14,32 +14,12 @@ import java.util.List;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.*;
 
-/**
- * Test for SparkBatchJobCreate task.
- * 
- * Note: This test is disabled by default as it requires:
- * - Azure Synapse workspace with Spark pool
- * - Valid Azure credentials (service principal)
- * - ADLS Gen2 storage with Spark application files
- * 
- * To run this test:
- * 1. Create Azure Synapse workspace and Spark pool
- * 2. Upload a test Spark application to ADLS Gen2
- * 3. Configure credentials in application.yml:
- *    - kestra.variables.globals.azure.synapse.endpoint
- *    - kestra.variables.globals.azure.synapse.sparkPoolName
- *    - kestra.variables.globals.azure.synapse.tenantId
- *    - kestra.variables.globals.azure.synapse.clientId
- *    - kestra.variables.globals.azure.synapse.clientSecret
- *    - kestra.variables.globals.azure.synapse.testFile
- * 4. Remove @Disabled annotation
- */
 class SparkBatchJobCreateTest extends BaseTest {
     @Inject
     private RunContextFactory runContextFactory;
 
     @Test
-    @Disabled("Requires Azure Synapse workspace and Spark pool - enable for integration testing")
+    @Disabled("Requires Azure Synapse workspace")
     void run() throws Exception {
         String jobName = "test-spark-job-" + IdUtils.create();
         
@@ -71,7 +51,7 @@ class SparkBatchJobCreateTest extends BaseTest {
     }
 
     @Test
-    @Disabled("Requires Azure Synapse workspace and Spark pool - enable for integration testing")
+    @Disabled("Requires Azure Synapse workspace")
     void runWithMinimalConfig() throws Exception {
         String jobName = "test-minimal-job-" + IdUtils.create();
         

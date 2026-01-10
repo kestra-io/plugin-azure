@@ -174,24 +174,15 @@ public class SparkBatchJobCreate extends AbstractAzureIdentityConnection impleme
         String endpoint = runContext.render(this.rEndpoint).as(String.class).orElseThrow();
         String sparkPoolName = runContext.render(this.rSparkPoolName).as(String.class).orElseThrow();
 
-        logger.debug("Connecting to Azure Synapse endpoint: {}, Spark pool: {}", endpoint, sparkPoolName);
-
         SparkBatchClient client = new SparkClientBuilder()
             .endpoint(endpoint)
             .sparkPoolName(sparkPoolName)
             .credential(this.credentials(runContext))
             .buildSparkBatchClient();
 
-        logger.info("Successfully authenticated to Azure Synapse Spark");
-
-        String jobName = runContext.render(this.rName).as(String.class).orElseThrow();
-        String jobFile = runContext.render(this.rFile).as(String.class).orElseThrow();
-
-        logger.debug("Configuring Spark batch job: name={}, file={}", jobName, jobFile);
-
         SparkBatchJobOptions options = new SparkBatchJobOptions()
-            .setName(jobName)
-            .setFile(jobFile);
+            .setName(runContext.render(this.rName).as(String.class).orElseThrow())
+            .setFile(runContext.render(this.rFile).as(String.class).orElseThrow());
 
         if (rClassName != null) {
             runContext.render(rClassName).as(String.class).ifPresent(options::setClassName);
@@ -199,85 +190,63 @@ public class SparkBatchJobCreate extends AbstractAzureIdentityConnection impleme
         if (rArguments != null) {
             List<String> argsList = runContext.render(rArguments).asList(String.class);
             if (!argsList.isEmpty()) {
-                logger.debug("Adding {} arguments to job", argsList.size());
                 options.setArguments(argsList);
             }
         }
         if (rJars != null) {
             List<String> jarsList = runContext.render(rJars).asList(String.class);
             if (!jarsList.isEmpty()) {
-                logger.debug("Adding {} additional JARs", jarsList.size());
                 options.setJars(jarsList);
             }
         }
         if (rPyFiles != null) {
             List<String> pyFilesList = runContext.render(rPyFiles).asList(String.class);
             if (!pyFilesList.isEmpty()) {
-                logger.debug("Adding {} Python files", pyFilesList.size());
                 options.setPythonFiles(pyFilesList);
             }
         }
         if (rFiles != null) {
             List<String> filesList = runContext.render(rFiles).asList(String.class);
             if (!filesList.isEmpty()) {
-                logger.debug("Adding {} additional files", filesList.size());
                 options.setFiles(filesList);
             }
         }
         if (rArchives != null) {
             List<String> archivesList = runContext.render(rArchives).asList(String.class);
             if (!archivesList.isEmpty()) {
-                logger.debug("Adding {} archives", archivesList.size());
                 options.setArchives(archivesList);
             }
         }
         if (rConf != null) {
             Map<String, String> confMap = runContext.render(rConf).asMap(String.class, String.class);
             if (!confMap.isEmpty()) {
-                logger.debug("Applying {} Spark configuration properties", confMap.size());
                 options.setConfiguration(confMap);
             }
         }
         if (rDriverMemory != null) {
-            runContext.render(rDriverMemory).as(String.class).ifPresent(m -> {
-                logger.debug("Setting driver memory: {}", m);
-                options.setDriverMemory(m);
-            });
+            runContext.render(rDriverMemory).as(String.class).ifPresent(options::setDriverMemory);
         }
         if (rDriverCores != null) {
-            runContext.render(rDriverCores).as(Integer.class).ifPresent(c -> {
-                logger.debug("Setting driver cores: {}", c);
-                options.setDriverCores(c);
-            });
+            runContext.render(rDriverCores).as(Integer.class).ifPresent(options::setDriverCores);
         }
         if (rExecutorMemory != null) {
-            runContext.render(rExecutorMemory).as(String.class).ifPresent(m -> {
-                logger.debug("Setting executor memory: {}", m);
-                options.setExecutorMemory(m);
-            });
+            runContext.render(rExecutorMemory).as(String.class).ifPresent(options::setExecutorMemory);
         }
         if (rExecutorCores != null) {
-            runContext.render(rExecutorCores).as(Integer.class).ifPresent(c -> {
-                logger.debug("Setting executor cores: {}", c);
-                options.setExecutorCores(c);
-            });
+            runContext.render(rExecutorCores).as(Integer.class).ifPresent(options::setExecutorCores);
         }
         if (rExecutorCount != null) {
-            runContext.render(rExecutorCount).as(Integer.class).ifPresent(e -> {
-                logger.debug("Setting executor count: {}", e);
-                options.setExecutorCount(e);
-            });
+            runContext.render(rExecutorCount).as(Integer.class).ifPresent(options::setExecutorCount);
         }
         if (rTags != null) {
             Map<String, String> tagsMap = runContext.render(rTags).asMap(String.class, String.class);
             if (!tagsMap.isEmpty()) {
-                logger.debug("Adding {} tags to job", tagsMap.size());
                 options.setTags(tagsMap);
             }
         }
 
         SparkBatchJob job = client.createSparkBatchJob(options);
-        logger.info("Created Spark batch job with ID: {}", job.getId());
+        logger.info("Submitted Spark batch job '{}' with ID {}", job.getName(), job.getId());
 
         return Output.builder()
             .jobId(job.getId())

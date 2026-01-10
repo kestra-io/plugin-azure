@@ -1,0 +1,8 @@
+group: io.kestra.plugin.azure.synapse
+name: "synapse"
+title: "Synapse"
+description: "Tasks for Azure Synapse Analytics to submit and manage Spark batch jobs on Synapse Spark pools."
+body: "Provide Azure AD credentials plus workspace endpoint and Spark pool name; submit Spark batch jobs with application files, arguments, and resource configurations for distributed data processing."
+videos: []
+createdBy: "Kestra Core Team"
+managedBy: "Kestra Core Team"

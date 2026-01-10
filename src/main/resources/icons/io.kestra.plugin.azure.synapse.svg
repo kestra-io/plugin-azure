@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 80" fill="none">
+  <!-- Azure Synapse icon - representing data integration and analytics -->
+  <!-- Background circle -->
+  <circle cx="40" cy="40" r="38" fill="#0078D4" stroke="#0078D4" stroke-width="2"/>
+  
+  <!-- Spark/Lightning symbol representing Spark pools -->
+  <path d="M50 15 L35 40 L45 40 L30 65 L48 37 L38 37 Z" fill="#FFB900" stroke="#FFB900" stroke-width="1.5" stroke-linejoin="round"/>
+  
+  <!-- Data nodes representing analytics -->
+  <circle cx="20" cy="25" r="4" fill="#FFFFFF"/>
+  <circle cx="60" cy="25" r="4" fill="#FFFFFF"/>
+  <circle cx="20" cy="55" r="4" fill="#FFFFFF"/>
+  <circle cx="60" cy="55" r="4" fill="#FFFFFF"/>
+  
+  <!-- Connection lines representing integration -->
+  <line x1="24" y1="25" x2="35" y2="33" stroke="#FFFFFF" stroke-width="2" opacity="0.7"/>
+  <line x1="56" y1="25" x2="48" y2="33" stroke="#FFFFFF" stroke-width="2" opacity="0.7"/>
+  <line x1="24" y1="55" x2="35" y2="47" stroke="#FFFFFF" stroke-width="2" opacity="0.7"/>
+  <line x1="56" y1="55" x2="48" y2="47" stroke="#FFFFFF" stroke-width="2" opacity="0.7"/>
+</svg>

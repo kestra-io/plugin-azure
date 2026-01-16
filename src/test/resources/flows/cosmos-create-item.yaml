@@ -8,7 +8,5 @@ tasks:
     containerId: "cosmos-container-unit-test"
     endpoint: "{{ globals.azure.cosmos['endpoint'] }}"
     tenantId: "{{ globals.azure.sp.tenantId }}"
-    clientId: "{{ globals.azure.sp.clientId }}"
-    clientSecret: "{{ globals.azure.sp.clientSecret }}"
     item:
       key: value

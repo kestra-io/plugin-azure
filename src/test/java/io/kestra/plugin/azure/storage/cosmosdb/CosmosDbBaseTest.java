@@ -2,7 +2,6 @@ package io.kestra.plugin.azure.storage.cosmosdb;
 
 import com.azure.cosmos.CosmosContainer;
 import com.azure.cosmos.CosmosDatabase;
-import io.kestra.core.runners.RunContext;
 import io.kestra.core.runners.RunContextFactory;
 import jakarta.inject.Inject;
 import org.mockito.Mockito;

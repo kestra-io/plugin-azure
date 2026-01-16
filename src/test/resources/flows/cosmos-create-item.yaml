@@ -1,0 +1,14 @@
+id: azure_cosmos_container_create_item
+namespace: company.team
+
+tasks:
+  - id: create
+    type: io.kestra.plugin.azure.storage.cosmosdb.CreateItem
+    databaseId: "cosmos-database-unit-test"
+    containerId: "cosmos-container-unit-test"
+    endpoint: "{{ globals.azure.cosmos['endpoint'] }}"
+    tenantId: "{{ globals.azure.sp.tenantId }}"
+    clientId: "{{ globals.azure.sp.clientId }}"
+    clientSecret: "{{ globals.azure.sp.clientSecret }}"
+    item:
+      key: value

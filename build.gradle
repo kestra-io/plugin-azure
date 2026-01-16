@@ -135,6 +135,9 @@ dependencies {
         exclude group: 'com.fasterxml.jackson.datatype', module: 'jackson-datatype-jsr310'
         exclude group: 'com.fasterxml.jackson.datatype', module: 'jackson-datatype-guava'
     }
+
+    implementation("com.azure:azure-cosmos:4.76.0")
+
     //Azure resource manager
     implementation 'com.azure.resourcemanager:azure-resourcemanager-datafactory:1.2.0'
 }

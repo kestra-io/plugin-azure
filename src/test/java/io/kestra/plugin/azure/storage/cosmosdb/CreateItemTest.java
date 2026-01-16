@@ -17,7 +17,7 @@ import java.util.Map;
 import static org.assertj.core.api.Assertions.assertThat;
 
 
-@KestraTest(startRunner = true, environments = "sp")
+@KestraTest(startRunner = true)
 class CreateItemTest extends CosmosDbBaseTest {
 
 

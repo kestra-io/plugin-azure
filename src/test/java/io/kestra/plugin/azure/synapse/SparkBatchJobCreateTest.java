@@ -1,10 +1,10 @@
 package io.kestra.plugin.azure.synapse;
 
+import io.kestra.core.junit.annotations.KestraTest;
 import io.kestra.core.models.property.Property;
 import io.kestra.core.runners.RunContext;
 import io.kestra.core.runners.RunContextFactory;
 import io.kestra.core.utils.IdUtils;
-import io.kestra.plugin.azure.BaseTest;
 import jakarta.inject.Inject;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
@@ -14,12 +14,13 @@ import java.util.List;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.*;
 
-class SparkBatchJobCreateTest extends BaseTest {
+@KestraTest
+@Disabled("Requires Azure Synapse workspace")
+class SparkBatchJobCreateTest {
     @Inject
     private RunContextFactory runContextFactory;
 
     @Test
-    @Disabled("Requires Azure Synapse workspace")
     void run() throws Exception {
         String jobName = "test-spark-job-" + IdUtils.create();
         
@@ -51,7 +52,6 @@ class SparkBatchJobCreateTest extends BaseTest {
     }
 
     @Test
-    @Disabled("Requires Azure Synapse workspace")
     void runWithMinimalConfig() throws Exception {
         String jobName = "test-minimal-job-" + IdUtils.create();
         

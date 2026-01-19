@@ -1,6 +1,7 @@
 package io.kestra.plugin.azure.storage.cosmosdb;
 
 import com.azure.cosmos.CosmosAsyncContainer;
+import com.azure.cosmos.CosmosDiagnostics;
 import io.kestra.core.exceptions.IllegalVariableEvaluationException;
 import io.kestra.core.models.annotations.Example;
 import io.kestra.core.models.annotations.Plugin;
@@ -14,7 +15,10 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.ToString;
 import lombok.experimental.SuperBuilder;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
+import java.time.Duration;
 import java.util.Map;
 import java.util.Objects;
 
@@ -32,7 +36,7 @@ import java.util.Objects;
                 namespace: company.team
 
                 tasks:
-                  - id: create
+                  - id: delete
                     type: io.kestra.plugin.azure.storage.cosmosdb.Delete
                     endpoint: "https://yourcosmosaccount.documents.azure.com"
                     databaseId: your_data_base_id
@@ -47,18 +51,48 @@ import java.util.Objects;
     }
 )
 @Schema(title = "Deletes a Cosmos item and returns its respective Cosmos item response.")
-public class Delete extends AbstractCosmosContainerTask<AbstractCosmosContainerTask.ItemResponseOutput<Object>> implements RunnableTask<AbstractCosmosContainerTask.ItemResponseOutput<Object>> {
+public class Delete extends AbstractCosmosContainerTask<Delete.Output> implements RunnableTask<Delete.Output> {
     @NotNull
     @Schema(title = "item")
     private Property<Map<String, Object>> item;
 
 
     @Override
-    protected ItemResponseOutput<Object> run(RunContext runContext, CosmosAsyncContainer cosmosContainer) throws IllegalVariableEvaluationException {
+    protected Output run(RunContext runContext, CosmosAsyncContainer cosmosContainer) throws IllegalVariableEvaluationException {
         Map<String, Object> rItem = runContext.render(item).asMap(String.class, Object.class);
 
-        return ItemResponseOutput.from(
+        return Output.from(
             Objects.requireNonNull(cosmosContainer.deleteItem(rItem, null).block())
         );
+    }
+
+    public record Output(
+        Object item,
+        String maxResourceQuota,
+        String currentResourceQuotaUsage,
+        String activityId,
+        double requestCharge,
+        int statusCode,
+        String sessionToken,
+        Map<String, String> responseHeaders,
+        CosmosDiagnostics diagnostics,
+        Duration duration,
+        String eTag
+    ) implements io.kestra.core.models.tasks.Output {
+        public static Output from(com.azure.cosmos.models.CosmosItemResponse<Object> r) {
+            return new Output(
+                r.getItem(),
+                r.getMaxResourceQuota(),
+                r.getCurrentResourceQuotaUsage(),
+                r.getActivityId(),
+                r.getRequestCharge(),
+                r.getStatusCode(),
+                r.getSessionToken(),
+                r.getResponseHeaders(),
+                r.getDiagnostics(),
+                r.getDuration(),
+                r.getETag()
+            );
+        }
     }
 }

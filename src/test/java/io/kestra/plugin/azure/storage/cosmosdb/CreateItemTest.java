@@ -34,7 +34,7 @@ class CreateItemTest extends CosmosContainerBaseTest<CreateItem.CreateItemBuilde
         //endregion
 
         //region WHEN
-        AbstractCosmosContainerTask.ItemResponseOutput<Map<String, Object>> itemResponseOutput = createItem.run(
+        CreateItem.Output itemResponseOutput = createItem.run(
             runContextFactory.of()
         );
         //endregion

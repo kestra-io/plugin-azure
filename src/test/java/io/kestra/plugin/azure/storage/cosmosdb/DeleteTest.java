@@ -26,7 +26,7 @@ class DeleteTest extends CosmosContainerBaseTest<Delete.DeleteBuilder<?, ?>> {
         //endregion
 
         //region WHEN
-        AbstractCosmosContainerTask.ItemResponseOutput<?> deleteItemResponseOutput =  delete.run(
+        Delete.Output deleteItemResponseOutput =  delete.run(
             runContextFactory.of()
         );
         //endregion

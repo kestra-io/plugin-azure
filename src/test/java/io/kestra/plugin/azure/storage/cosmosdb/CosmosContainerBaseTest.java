@@ -28,8 +28,17 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @KestraTest(startRunner = true)
 public abstract class CosmosContainerBaseTest<T extends AbstractCosmosContainerTask.AbstractCosmosContainerTaskBuilder<?,?,?>> {
-    @Value("${kestra.variables.globals.azure.cosmos.connectionString}")
-    protected String connectionString;
+    @Value("${kestra.variables.globals.azure.monitoring.tenantId}")
+    protected String tenantId;
+
+    @Value("${kestra.variables.globals.azure.monitoring.clientId}")
+    protected String clientId;
+
+    @Value("${kestra.variables.globals.azure.monitoring.clientSecret}")
+    protected String clientSecret;
+
+    @Value("${kestra.variables.globals.azure.cosmos.endpoint}")
+    protected String endpoint;
 
     @Value("${kestra.variables.globals.azure.cosmos.container-id}")
     protected String containerId;
@@ -52,16 +61,6 @@ public abstract class CosmosContainerBaseTest<T extends AbstractCosmosContainerT
     private final List<Map<String, Object>> createdItemsToRemove = new ArrayList<>();
 
     protected final String testId = IdUtils.create();
-
-    protected abstract T instantiateBaseTaskBuilder();
-
-    protected T getBaseTaskBuilder() {
-        return applyAuth(instantiateBaseTaskBuilder()
-            .id(this.getClass().getSimpleName())
-            .databaseId(Property.ofValue(databaseId))
-            .containerId(Property.ofValue(containerId))
-        );
-    }
 
     @SneakyThrows
     @AfterAll
@@ -109,9 +108,23 @@ public abstract class CosmosContainerBaseTest<T extends AbstractCosmosContainerT
         //endregion
     }
 
+
+    protected abstract T instantiateBaseTaskBuilder();
+
+    protected T getBaseTaskBuilder() {
+        return applyAuth(instantiateBaseTaskBuilder()
+            .id(this.getClass().getSimpleName())
+            .databaseId(Property.ofValue(databaseId))
+            .containerId(Property.ofValue(containerId))
+        );
+    }
+
     @SuppressWarnings("unchecked")
     protected T applyAuth(AbstractCosmosContainerTask.AbstractCosmosContainerTaskBuilder<?,?,?> containerTask) {
-        return (T) containerTask.connectionString(Property.ofValue(connectionString));
+        return (T) containerTask
+            .clientSecret(Property.ofValue(clientSecret))
+            .clientId(Property.ofValue(clientId))
+            .tenantId(Property.ofValue(tenantId));
     }
 
     protected Map<String, Object> createItem(String id, Map<String, Object> item) throws Exception {
@@ -127,11 +140,7 @@ public abstract class CosmosContainerBaseTest<T extends AbstractCosmosContainerT
             createdItemsToRemove.add(itemWithId);
         }
 
-        return CreateItem.builder()
-            .id("create-item-test-util")
-            .connectionString(Property.ofValue(connectionString))
-            .containerId(Property.ofValue(containerId))
-            .databaseId(Property.ofValue(databaseId))
+        return cosmosContainerTaskBuilder(CreateItem.builder())
             .item(Property.ofValue(itemWithId))
             .build()
             .run(runContextFactory.of()).item();
@@ -139,16 +148,21 @@ public abstract class CosmosContainerBaseTest<T extends AbstractCosmosContainerT
 
     protected void deleteItem(Map<String, Object> item) {
         try {
-            Delete.builder()
-                .id("delete-item-test-util")
-                .databaseId(Property.ofValue(databaseId))
-                .containerId(Property.ofValue(containerId))
-                .connectionString(Property.ofValue(connectionString))
-                .item(Property.ofValue(item))
+            cosmosContainerTaskBuilder(Delete.builder())
                 .build()
                 .run(runContextFactory.of());
         } catch (Exception e) {
             log.error("Error while deleting item", e);
         }
+    }
+
+    @SuppressWarnings("unchecked")
+    private <C extends AbstractCosmosContainerTask.AbstractCosmosContainerTaskBuilder<?,?,?>> C cosmosContainerTaskBuilder(C builder) {
+        return (C) applyAuth(builder
+            .id(this.getClass().getSimpleName())
+            .endpoint(Property.ofValue(endpoint))
+            .databaseId(Property.ofValue(databaseId))
+            .containerId(Property.ofValue(containerId))
+        );
     }
 }

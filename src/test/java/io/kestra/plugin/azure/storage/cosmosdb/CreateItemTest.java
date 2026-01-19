@@ -1,63 +1,67 @@
 package io.kestra.plugin.azure.storage.cosmosdb;
 
-import com.azure.cosmos.CosmosContainer;
-import com.azure.cosmos.CosmosDatabase;
-import com.azure.cosmos.models.CosmosItemResponse;
-import io.kestra.core.junit.annotations.ExecuteFlow;
-import io.kestra.core.junit.annotations.KestraTest;
-import io.kestra.core.models.executions.Execution;
-import io.kestra.core.models.flows.State;
+import io.kestra.core.exceptions.IllegalVariableEvaluationException;
 import io.kestra.core.models.property.Property;
 import io.kestra.core.runners.RunContext;
+import io.kestra.core.utils.IdUtils;
+import org.assertj.core.api.AbstractThrowableAssert;
 import org.junit.jupiter.api.Test;
-import org.mockito.Mockito;
 
 import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+class CreateItemTest extends CosmosContainerBaseTest<CreateItem.CreateItemBuilder<?, ?>> {
+    private final String testId = IdUtils.create();
 
-@KestraTest(startRunner = true)
-class CreateItemTest extends CosmosDbBaseTest {
-
-
+    @Override
+    protected CreateItem.CreateItemBuilder<?, ?> instantiateBaseTaskBuilder() {
+        return CreateItem.builder();
+    }
 
     @Test
-    void shouldCallCosmosContainerCreateItemAndReturnValidCosmosItemResponseGivenValidFlowProperties() throws Exception {
+    void shouldCreateNewItem() throws Exception {
         //region GIVEN
-        Map<String, Object> item = Map.of("key", "value");
+        Map<String, Object> item = Map.of(
+            "id", "simple-create-test" + testId,
+            "key", "value"
+        );
 
-        CreateItem createItem = CreateItem.builder()
-            .id(CreateItem.class.getSimpleName())
-            .endpoint(Property.ofValue("dummy-cosmos-endpoint"))
-            .tenantId(Property.ofValue("dummy-tenant-id"))
-            .clientId(Property.ofValue("dummy-client-id"))
-            .clientSecret(Property.ofValue("dummy-client-secret"))
-            .containerId(Property.ofValue(containerId))
+        CreateItem createItem = getBaseTaskBuilder()
             .item(Property.ofValue(item))
             .build();
-
-        CosmosDatabase cosmosDatabase = mockDatabase();
-        CosmosContainer cosmosContainer = mockContainer(cosmosDatabase);
-        CosmosItemResponse mockCosmosItemResponse = Mockito.mock(CosmosItemResponse.class);
-
-        Mockito.when(cosmosContainer.createItem(Mockito.eq(item))).thenReturn(mockCosmosItemResponse);
-
-        RunContext runContext = runContextFactory.of();
         //endregion
 
         //region WHEN
-        CreateItem.Output output = createItem.run(runContext, cosmosDatabase);
+        AbstractCosmosContainerTask.ItemResponseOutput<Map<String, Object>> itemResponseOutput = createItem.run(
+            runContextFactory.of()
+        );
         //endregion
 
         //region THEN
-        assertThat(output.cosmosItemResponse()).isEqualTo(mockCosmosItemResponse);
+        assertThat(itemResponseOutput.statusCode()).isEqualTo(201);
+        assertThat(itemResponseOutput.item().get("key")).isEqualTo("value");
+        deleteItem(itemResponseOutput.item());
         //endregion
     }
 
     @Test
-    @ExecuteFlow("flows/cosmos-create-item.yaml")
-    void run(Execution execution) {
-        assertThat(execution.getState().getCurrent()).isEqualTo(State.Type.SUCCESS);
+    void shouldThrowErrorWhenItemsNotSet() {
+        //region GIVEN
+        CreateItem createItem = getBaseTaskBuilder().build();
+        //endregion
+
+        //region WHEN
+        AbstractThrowableAssert<?, ?> throwableAssert = assertThatThrownBy(() -> createItem.run(
+            runContextFactory.of())
+        );
+
+        //endregion
+
+        //region THEN
+        throwableAssert.isInstanceOf(IllegalVariableEvaluationException.class);
+        throwableAssert.hasMessageContaining("item cannot be empty");
+        //endregion
     }
 }

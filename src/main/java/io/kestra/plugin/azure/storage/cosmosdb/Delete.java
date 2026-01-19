@@ -28,12 +28,12 @@ import java.util.Objects;
         @Example(
             full = true,
             code = """
-                id: azure_cosmos_container_create_item
+                id: azure_cosmos_container_delete_item
                 namespace: company.team
 
                 tasks:
                   - id: create
-                    type: io.kestra.plugin.azure.storage.cosmosdb.CreateItem
+                    type: io.kestra.plugin.azure.storage.cosmosdb.Delete
                     endpoint: "https://yourcosmosaccount.documents.azure.com"
                     databaseId: your_data_base_id
                     containerId: your_container_id
@@ -42,7 +42,6 @@ import java.util.Objects;
                     clientSecret: "{{ secret('AZURE_CLIENT_SECRET') }}"
                     item:
                         id: item_id
-                        key: value
                 """
         )
     }
@@ -50,22 +49,18 @@ import java.util.Objects;
 @Schema(
     title = "Creates a new Cosmos item and returns its respective Cosmos item response."
 )
-public class CreateItem
-    extends AbstractCosmosContainerTask<AbstractCosmosContainerTask.ItemResponseOutput<Map<String, Object>>>
-    implements RunnableTask<AbstractCosmosContainerTask.ItemResponseOutput<Map<String, Object>>> {
-
+public class Delete extends AbstractCosmosContainerTask<AbstractCosmosContainerTask.ItemResponseOutput<Object>> implements RunnableTask<AbstractCosmosContainerTask.ItemResponseOutput<Object>> {
     @NotNull
     @Schema(title = "item")
     private Property<Map<String, Object>> item;
 
+
     @Override
-    protected ItemResponseOutput<Map<String, Object>> run(RunContext runContext, CosmosAsyncContainer cosmosContainer) throws IllegalVariableEvaluationException {
+    protected ItemResponseOutput<Object> run(RunContext runContext, CosmosAsyncContainer cosmosContainer) throws IllegalVariableEvaluationException {
         Map<String, Object> rItem = runContext.render(item).asMap(String.class, Object.class);
 
-        if (rItem.isEmpty()) {
-            throw new IllegalVariableEvaluationException("item cannot be empty");
-        }
-
-        return ItemResponseOutput.from(Objects.requireNonNull(cosmosContainer.createItem(rItem).block()));
+        return ItemResponseOutput.from(
+            Objects.requireNonNull(cosmosContainer.deleteItem(rItem, null).block())
+        );
     }
 }

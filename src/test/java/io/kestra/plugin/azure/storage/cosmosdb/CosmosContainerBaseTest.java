@@ -18,10 +18,7 @@ import org.junit.jupiter.api.TestInstance;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -29,13 +26,16 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 @KestraTest(startRunner = true)
 public abstract class CosmosContainerBaseTest<T extends AbstractCosmosContainerTask.AbstractCosmosContainerTaskBuilder<?,?,?>> {
     @Value("${kestra.variables.globals.azure.monitoring.tenantId}")
-    protected String tenantId;
+    protected Optional<String> tenantId;
 
     @Value("${kestra.variables.globals.azure.monitoring.clientId}")
-    protected String clientId;
+    protected Optional<String> clientId;
 
     @Value("${kestra.variables.globals.azure.monitoring.clientSecret}")
-    protected String clientSecret;
+    protected Optional<String> clientSecret;
+
+    @Value("${kestra.variables.globals.azure.cosmos.connectionString}")
+    protected Optional<String> connectionString;
 
     @Value("${kestra.variables.globals.azure.cosmos.endpoint}")
     protected String endpoint;
@@ -121,10 +121,19 @@ public abstract class CosmosContainerBaseTest<T extends AbstractCosmosContainerT
 
     @SuppressWarnings("unchecked")
     protected T applyAuth(AbstractCosmosContainerTask.AbstractCosmosContainerTaskBuilder<?,?,?> containerTask) {
-        return (T) containerTask
-            .clientSecret(Property.ofValue(clientSecret))
-            .clientId(Property.ofValue(clientId))
-            .tenantId(Property.ofValue(tenantId));
+        if (connectionString.isPresent()) {
+            return (T) containerTask.connectionString(Property.ofValue(connectionString.get()));
+        }
+
+        if (clientId.isPresent() || tenantId.isPresent() || clientSecret.isPresent()) {
+            return (T) containerTask
+                .clientSecret(Property.ofValue(clientSecret.get()))
+                .clientId(Property.ofValue(clientId.get()))
+                .tenantId(Property.ofValue(tenantId.get()))
+                .endpoint(Property.ofValue(endpoint));
+        }
+
+        throw new RuntimeException("No auth method provided");
     }
 
     protected Map<String, Object> createItem(String id, Map<String, Object> item) throws Exception {

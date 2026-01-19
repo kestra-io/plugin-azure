@@ -54,9 +54,7 @@ import java.util.Objects;
         )
     }
 )
-@Schema(
-    title = "Creates a new Cosmos item and returns its respective Cosmos item response."
-)
+@Schema(title = "Batch creates a new Cosmos item and returns its respective Cosmos batch response output.")
 public class BatchCreate extends AbstractCosmosContainerTask<BatchCreate.BatchResponseOutput> implements RunnableTask<BatchCreate.BatchResponseOutput> {
     @NotNull
     @Schema(

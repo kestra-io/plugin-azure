@@ -149,6 +149,7 @@ public abstract class CosmosContainerBaseTest<T extends AbstractCosmosContainerT
     protected void deleteItem(Map<String, Object> item) {
         try {
             cosmosContainerTaskBuilder(Delete.builder())
+                .item(Property.ofValue(item))
                 .build()
                 .run(runContextFactory.of());
         } catch (Exception e) {

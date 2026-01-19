@@ -46,9 +46,7 @@ import java.util.Objects;
         )
     }
 )
-@Schema(
-    title = "Creates a new Cosmos item and returns its respective Cosmos item response."
-)
+@Schema(title = "Deletes a Cosmos item and returns its respective Cosmos item response.")
 public class Delete extends AbstractCosmosContainerTask<AbstractCosmosContainerTask.ItemResponseOutput<Object>> implements RunnableTask<AbstractCosmosContainerTask.ItemResponseOutput<Object>> {
     @NotNull
     @Schema(title = "item")

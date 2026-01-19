@@ -38,7 +38,7 @@ import java.util.Map;
 
                 tasks:
                   - id: bulk
-                    type: io.kestra.plugin.azure.storage.table.Bulk
+                    type: io.kestra.plugin.azure.storage.cosmosdb.Queries
                     endpoint: "https://yourstorageaccount.blob.core.windows.net"
                     connectionString: "DefaultEndpointsProtocol=...=="
                     table: "table_name"
@@ -58,6 +58,7 @@ import java.util.Map;
 public class Queries extends AbstractCosmosContainerTask<Queries.Output>{
     private static final Logger log = LoggerFactory.getLogger(Queries.class);
 
+    @NotNull
     private Property<Map<String, QueriesOptions>> queries;
 
     @Override

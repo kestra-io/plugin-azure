@@ -35,7 +35,7 @@ import java.util.Optional;
 
                 tasks:
                   - id: bulk
-                    type: io.kestra.plugin.azure.storage.table.Bulk
+                    type: io.kestra.plugin.azure.storage.cosmosdb.Query
                     endpoint: "https://yourstorageaccount.blob.core.windows.net"
                     tenantId: "{{ secret('AZURE_TENANT_ID') }}"
                     clientId: "{{ secret('AZURE_CLIENT_ID') }}"
@@ -54,6 +54,7 @@ import java.util.Optional;
         @Metric(name = "records.count", type = Counter.TYPE, description = "The total number of entities processed in the bulk operation.")
     }
 )
+@Schema(title = "Queries Cosmos items and returns its respective Cosmos query response output.")
 public class Query extends AbstractCosmosContainerTask<Query.Output> implements RunnableTask<Query.Output> {
     @NotNull
     @Schema(title = "query")

@@ -47,9 +47,7 @@ import java.util.Objects;
         )
     }
 )
-@Schema(
-    title = "Creates a new Cosmos item and returns its respective Cosmos item response."
-)
+@Schema(title = "Creates a new Cosmos item and returns its respective Cosmos item response.")
 public class CreateItem
     extends AbstractCosmosContainerTask<AbstractCosmosContainerTask.ItemResponseOutput<Map<String, Object>>>
     implements RunnableTask<AbstractCosmosContainerTask.ItemResponseOutput<Map<String, Object>>> {

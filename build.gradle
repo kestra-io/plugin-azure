@@ -36,6 +36,14 @@ tasks.withType(JavaCompile) {
     options.compilerArgs.add("-parameters")
 }
 
+def kestraProvidedJackson = { dep ->
+    dep.exclude group: 'com.fasterxml.jackson.core'
+    dep.exclude group: 'com.fasterxml.jackson.dataformat', module: 'jackson-dataformat-xml'
+    dep.exclude group: 'com.fasterxml.jackson.datatype', module: 'jackson-datatype-jdk8'
+    dep.exclude group: 'com.fasterxml.jackson.datatype', module: 'jackson-datatype-jsr310'
+    dep.exclude group: 'com.fasterxml.jackson.datatype', module: 'jackson-datatype-guava'
+}
+
 dependencies {
     // Platform
     annotationProcessor enforcedPlatform("io.kestra:platform:$kestraVersion")
@@ -60,82 +68,20 @@ dependencies {
     compileOnly group: "io.kestra", name: "script"
 
     // Logs
-    compileOnly'org.slf4j:slf4j-api'
+    compileOnly 'org.slf4j:slf4j-api'
 
     // Azure libraries are managed by the the Kestra Platform so they are aligned on all plugins
-    api (group: 'com.azure', name: 'azure-identity') {
-        // exclude libraries already provided by Kestra
-        exclude group: 'com.fasterxml.jackson.core'
-        exclude group: 'com.fasterxml.jackson.dataformat', module: 'jackson-dataformat-xml'
-        exclude group: 'com.fasterxml.jackson.datatype', module: 'jackson-datatype-jdk8'
-        exclude group: 'com.fasterxml.jackson.datatype', module: 'jackson-datatype-jsr310'
-        exclude group: 'com.fasterxml.jackson.datatype', module: 'jackson-datatype-guava'
-    }
-    api (group: 'com.azure', name: 'azure-storage-blob') {
-        // exclude libraries already provided by Kestra
-        exclude group: 'com.fasterxml.jackson.core'
-        exclude group: 'com.fasterxml.jackson.dataformat', module: 'jackson-dataformat-xml'
-        exclude group: 'com.fasterxml.jackson.datatype', module: 'jackson-datatype-jdk8'
-        exclude group: 'com.fasterxml.jackson.datatype', module: 'jackson-datatype-jsr310'
-        exclude group: 'com.fasterxml.jackson.datatype', module: 'jackson-datatype-guava'
-    }
-    api (group: 'com.azure', name: 'azure-storage-file-datalake') {
-        // exclude libraries already provided by Kestra
-        exclude group: 'com.fasterxml.jackson.core'
-        exclude group: 'com.fasterxml.jackson.dataformat', module: 'jackson-dataformat-xml'
-        exclude group: 'com.fasterxml.jackson.datatype', module: 'jackson-datatype-jdk8'
-        exclude group: 'com.fasterxml.jackson.datatype', module: 'jackson-datatype-jsr310'
-        exclude group: 'com.fasterxml.jackson.datatype', module: 'jackson-datatype-guava'
-    }
-    api (group: 'com.azure', name: 'azure-data-tables') {
-        // exclude libraries already provided by Kestra
-        exclude group: 'com.fasterxml.jackson.core'
-        exclude group: 'com.fasterxml.jackson.dataformat', module: 'jackson-dataformat-xml'
-        exclude group: 'com.fasterxml.jackson.datatype', module: 'jackson-datatype-jdk8'
-        exclude group: 'com.fasterxml.jackson.datatype', module: 'jackson-datatype-jsr310'
-        exclude group: 'com.fasterxml.jackson.datatype', module: 'jackson-datatype-guava'
-    }
-    api (group: 'com.microsoft.azure', name: 'azure-batch', version: '11.2.0') {
-        // exclude libraries already provided by Kestra
-        exclude group: 'com.fasterxml.jackson.core'
-        exclude group: 'com.fasterxml.jackson.dataformat', module: 'jackson-dataformat-xml'
-        exclude group: 'com.fasterxml.jackson.datatype', module: 'jackson-datatype-jdk8'
-        exclude group: 'com.fasterxml.jackson.datatype', module: 'jackson-datatype-jsr310'
-        exclude group: 'com.fasterxml.jackson.datatype', module: 'jackson-datatype-guava'
-    }
-    api (group: 'com.microsoft.azure', name: 'azure-storage', version: '8.6.6') {
-        // exclude libraries already provided by Kestra
-        exclude group: 'com.fasterxml.jackson.core'
-        exclude group: 'com.fasterxml.jackson.dataformat', module: 'jackson-dataformat-xml'
-        exclude group: 'com.fasterxml.jackson.datatype', module: 'jackson-datatype-jdk8'
-        exclude group: 'com.fasterxml.jackson.datatype', module: 'jackson-datatype-jsr310'
-        exclude group: 'com.fasterxml.jackson.datatype', module: 'jackson-datatype-guava'
-    }
-    api (group: 'com.azure', name: 'azure-messaging-eventhubs-checkpointstore-blob') {
-        // exclude libraries already provided by Kestra
-        exclude group: 'com.fasterxml.jackson.core'
-        exclude group: 'com.fasterxml.jackson.dataformat', module: 'jackson-dataformat-xml'
-        exclude group: 'com.fasterxml.jackson.datatype', module: 'jackson-datatype-jdk8'
-        exclude group: 'com.fasterxml.jackson.datatype', module: 'jackson-datatype-jsr310'
-        exclude group: 'com.fasterxml.jackson.datatype', module: 'jackson-datatype-guava'
-    }
-    api (group: 'com.azure', name: 'azure-storage-file-datalake') {
-        // exclude libraries already provided by Kestra
-        exclude group: 'com.fasterxml.jackson.core'
-        exclude group: 'com.fasterxml.jackson.dataformat', module: 'jackson-dataformat-xml'
-        exclude group: 'com.fasterxml.jackson.datatype', module: 'jackson-datatype-jdk8'
-        exclude group: 'com.fasterxml.jackson.datatype', module: 'jackson-datatype-jsr310'
-        exclude group: 'com.fasterxml.jackson.datatype', module: 'jackson-datatype-guava'
-    }
-    api (group: 'com.azure', name: 'azure-monitor-query-metrics') {
-        // exclude libraries already provided by Kestra
-        exclude group: 'com.fasterxml.jackson.core'
-        exclude group: 'com.fasterxml.jackson.dataformat', module: 'jackson-dataformat-xml'
-        exclude group: 'com.fasterxml.jackson.datatype', module: 'jackson-datatype-jdk8'
-        exclude group: 'com.fasterxml.jackson.datatype', module: 'jackson-datatype-jsr310'
-        exclude group: 'com.fasterxml.jackson.datatype', module: 'jackson-datatype-guava'
-    }
-    //Azure resource manager
+    api(group: 'com.azure', name: 'azure-identity', kestraProvidedJackson)
+    api(group: 'com.azure', name: 'azure-storage-blob', kestraProvidedJackson)
+    api(group: 'com.azure', name: 'azure-storage-file-datalake', kestraProvidedJackson)
+    api(group: 'com.azure', name: 'azure-data-tables', kestraProvidedJackson)
+    api(group: 'com.microsoft.azure', name: 'azure-batch', version: '11.2.0', kestraProvidedJackson)
+    api(group: 'com.microsoft.azure', name: 'azure-storage', version: '8.6.6', kestraProvidedJackson)
+    api(group: 'com.azure', name: 'azure-messaging-eventhubs-checkpointstore-blob', kestraProvidedJackson)
+    api(group: 'com.azure', name: 'azure-storage-file-datalake', kestraProvidedJackson)
+    api(group: 'com.azure', name: 'azure-monitor-query-metrics', kestraProvidedJackson)
+
+    // Azure resource manager
     implementation 'com.azure.resourcemanager:azure-resourcemanager-datafactory:1.2.0'
 }
 
@@ -216,7 +162,7 @@ dependencies {
 }
 
 test {
-    jvmArgs = [ "-javaagent:${configurations.agent.singleFile}" ]
+    jvmArgs = ["-javaagent:${configurations.agent.singleFile}"]
 }
 
 /**********************************************************************************************************************\
@@ -272,11 +218,11 @@ tasks.withType(GenerateModuleMetadata).configureEach {
 jar {
     manifest {
         attributes(
-                "X-Kestra-Name": project.name,
-                "X-Kestra-Title": "Azure",
-                "X-Kestra-Group": project.group + ".azure",
-                "X-Kestra-Description": project.description,
-                "X-Kestra-Version": project.version
+            "X-Kestra-Name": project.name,
+            "X-Kestra-Title": "Azure",
+            "X-Kestra-Group": project.group + ".azure",
+            "X-Kestra-Description": project.description,
+            "X-Kestra-Version": project.version
         )
     }
 }
@@ -310,11 +256,11 @@ release {
 
     // Dynamically set properties with default values
     failOnSnapshotDependencies = (project.hasProperty('release.failOnSnapshotDependencies')
-            ? project.property('release.failOnSnapshotDependencies').toBoolean()
-            : true)
+        ? project.property('release.failOnSnapshotDependencies').toBoolean()
+        : true)
     pushReleaseVersionBranch = (project.hasProperty('release.pushReleaseVersionBranch')
-            ? project.property('release.pushReleaseVersionBranch').toString()
-            : null)
+        ? project.property('release.pushReleaseVersionBranch').toString()
+        : null)
 }
 
 /**********************************************************************************************************************\

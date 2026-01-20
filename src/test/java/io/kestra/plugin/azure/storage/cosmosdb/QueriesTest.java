@@ -125,10 +125,8 @@ class QueriesTest extends CosmosContainerBaseTest<Queries.QueriesBuilder<?, ?>> 
     }
 
     @Test
-    void shouldThrowErrorWhenFeedRangePartitionKeySetAndPartitionKeyDefinitionNotSet() throws Exception {
+    void shouldThrowErrorWhenFeedRangePartitionKeySetAndPartitionKeyDefinitionNotSet() {
         //region GIVEN
-        Map<String, Object> itemOne = Map.of("id", "example_id");
-
         Map<String, Queries.QueriesOptions> queries = Map.of(
             "queryOne", Queries.QueriesOptions.builder()
                 .query("SELECT * FROM c WHERE c.secondId = 'one'")

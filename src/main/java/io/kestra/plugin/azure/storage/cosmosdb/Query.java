@@ -147,8 +147,6 @@ public class Query extends AbstractCosmosContainerTask<Query.Output> implements 
 
         });
 
-
-        ;
         return new Output(
             cosmosContainer.queryItems(rQuery, options, Map.class).byPage()
                 .flatMapIterable(FeedResponse::getResults)

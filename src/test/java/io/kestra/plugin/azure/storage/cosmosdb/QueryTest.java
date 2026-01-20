@@ -93,7 +93,7 @@ class QueryTest extends CosmosContainerBaseTest<Query.QueryBuilder<?, ?>> {
     }
 
     @Test
-    void shouldThrowErrorWhenFeedRangeSetWithoutPartitionDefinition() throws Exception {
+    void shouldThrowErrorWhenFeedRangeSetWithoutPartitionDefinition() {
         //region GIVEN
 
         Query query = getBaseTaskBuilder()
@@ -117,7 +117,7 @@ class QueryTest extends CosmosContainerBaseTest<Query.QueryBuilder<?, ?>> {
     }
 
     @Test
-    void shouldThrowErrorWhenPartitionKeySetWithoutPartitionDefinition() throws Exception {
+    void shouldThrowErrorWhenPartitionKeySetWithoutPartitionDefinition() {
         //region GIVEN
         Query query = getBaseTaskBuilder()
             .query(Property.ofValue("SELECT * FROM c WHERE c.id = '404'"))

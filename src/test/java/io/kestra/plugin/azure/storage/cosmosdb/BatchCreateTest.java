@@ -2,7 +2,6 @@ package io.kestra.plugin.azure.storage.cosmosdb;
 
 import io.kestra.core.exceptions.IllegalVariableEvaluationException;
 import io.kestra.core.models.property.Property;
-import io.kestra.core.runners.RunContext;
 import org.assertj.core.api.AbstractThrowableAssert;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Test;
@@ -56,7 +55,7 @@ class BatchCreateTest extends CosmosContainerBaseTest<BatchCreate.BatchCreateBui
     }
 
     @Test
-    void shouldThrowErrorWhenPartitionKeyNotSet() throws Exception {
+    void shouldThrowErrorWhenPartitionKeyNotSet() {
         //region GIVEN
         BatchCreate batchCreate = getBaseTaskBuilder()
             .items(Property.ofValue(items))
@@ -77,7 +76,7 @@ class BatchCreateTest extends CosmosContainerBaseTest<BatchCreate.BatchCreateBui
     }
 
     @Test
-    void shouldThrowErrorWhenItemsNotSet() throws Exception {
+    void shouldThrowErrorWhenItemsNotSet() {
         //region GIVEN
         BatchCreate batchCreate = getBaseTaskBuilder()
             .build();

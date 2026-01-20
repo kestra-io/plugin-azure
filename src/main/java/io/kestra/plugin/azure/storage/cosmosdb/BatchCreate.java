@@ -1,7 +1,6 @@
 package io.kestra.plugin.azure.storage.cosmosdb;
 
 import com.azure.cosmos.CosmosAsyncContainer;
-import com.azure.cosmos.CosmosContainer;
 import com.azure.cosmos.CosmosDiagnostics;
 import com.azure.cosmos.models.*;
 import io.kestra.core.exceptions.IllegalVariableEvaluationException;

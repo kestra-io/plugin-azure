@@ -116,6 +116,7 @@ public abstract class CosmosContainerBaseTest<T extends AbstractCosmosContainerT
             .id(this.getClass().getSimpleName())
             .databaseId(Property.ofValue(databaseId))
             .containerId(Property.ofValue(containerId))
+            .endpoint(Property.ofValue(endpoint))
         );
     }
 
@@ -125,7 +126,7 @@ public abstract class CosmosContainerBaseTest<T extends AbstractCosmosContainerT
             return (T) containerTask.connectionString(Property.ofValue(connectionString.get()));
         }
 
-        if (clientId.isPresent() || tenantId.isPresent() || clientSecret.isPresent()) {
+        if (clientId.isPresent() && tenantId.isPresent() && clientSecret.isPresent()) {
             return (T) containerTask
                 .clientSecret(Property.ofValue(clientSecret.get()))
                 .clientId(Property.ofValue(clientId.get()))

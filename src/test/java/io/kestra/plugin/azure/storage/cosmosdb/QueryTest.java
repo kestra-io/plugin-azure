@@ -12,7 +12,7 @@ import java.util.Map;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 
-@KestraTest
+
 class QueryTest extends CosmosContainerBaseTest<Query.QueryBuilder<?, ?>> {
     @Override
     protected Query.QueryBuilder<?, ?> instantiateBaseTaskBuilder() {

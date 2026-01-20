@@ -41,4 +41,3 @@ kestra:
           endpoint: "https://cosmos-unit-test.documents.azure.com"
           database-id: "cosmos-database-unit-test"
           container-id: "cosmos-container-unit-test"
-          connectionString: "${COSMOS_CONNECTION_STRING:}"

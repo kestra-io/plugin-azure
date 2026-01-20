@@ -25,15 +25,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @KestraTest(startRunner = true, environments = "sp")
 public abstract class CosmosContainerBaseTest<T extends AbstractCosmosContainerTask.AbstractCosmosContainerTaskBuilder<?,?,?>> {
-    @Value("${kestra.variables.globals.azure.sp.username}")
-    private Optional<String> clientId;
-    @Value("${kestra.variables.globals.azure.sp.secret}")
-    private Optional<String> clientSecret;
-    @Value("${kestra.variables.globals.azure.sp.tenant}")
-    private Optional<String> tenantId;
-
-    @Value("${kestra.variables.globals.azure.cosmos.connectionString}")
-    protected Optional<String> connectionString;
+    @Value("${kestra.variables.globals.azure.cosmos.connection-string}")
+    protected String connectionString;
 
     @Value("${kestra.variables.globals.azure.cosmos.endpoint}")
     protected String endpoint;
@@ -120,19 +113,7 @@ public abstract class CosmosContainerBaseTest<T extends AbstractCosmosContainerT
 
     @SuppressWarnings("unchecked")
     protected T applyAuth(AbstractCosmosContainerTask.AbstractCosmosContainerTaskBuilder<?,?,?> containerTask) {
-        if (connectionString.isPresent() && !connectionString.get().isBlank()) {
-            return (T) containerTask.connectionString(Property.ofValue(connectionString.get()));
-        }
-
-        if (clientId.isPresent() && tenantId.isPresent() && clientSecret.isPresent()) {
-            return (T) containerTask
-                .clientSecret(Property.ofValue(clientSecret.get()))
-                .clientId(Property.ofValue(clientId.get()))
-                .tenantId(Property.ofValue(tenantId.get()))
-                .endpoint(Property.ofValue(endpoint));
-        }
-
-        throw new RuntimeException("No auth method provided");
+        return (T) containerTask.connectionString(Property.ofValue(connectionString));
     }
 
     protected Map<String, Object> createItem(String id, Map<String, Object> item) throws Exception {

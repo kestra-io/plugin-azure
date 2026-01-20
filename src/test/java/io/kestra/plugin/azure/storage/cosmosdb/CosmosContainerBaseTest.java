@@ -23,7 +23,7 @@ import java.util.*;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
-@KestraTest(startRunner = true)
+@KestraTest(startRunner = true, environments = "sp")
 public abstract class CosmosContainerBaseTest<T extends AbstractCosmosContainerTask.AbstractCosmosContainerTaskBuilder<?,?,?>> {
     @Value("${kestra.variables.globals.azure.monitoring.tenantId}")
     protected Optional<String> tenantId;
@@ -122,7 +122,7 @@ public abstract class CosmosContainerBaseTest<T extends AbstractCosmosContainerT
 
     @SuppressWarnings("unchecked")
     protected T applyAuth(AbstractCosmosContainerTask.AbstractCosmosContainerTaskBuilder<?,?,?> containerTask) {
-        if (connectionString.isPresent()) {
+        if (connectionString.isPresent() && !connectionString.get().isBlank()) {
             return (T) containerTask.connectionString(Property.ofValue(connectionString.get()));
         }
 

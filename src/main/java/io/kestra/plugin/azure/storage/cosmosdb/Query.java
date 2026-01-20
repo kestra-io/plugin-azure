@@ -30,23 +30,19 @@ import java.util.Optional;
         @Example(
             full = true,
             code = """
-                id: azure_storage_table_bulk
+                id: azure_storage_cosmos_query
                 namespace: company.team
 
                 tasks:
                   - id: bulk
                     type: io.kestra.plugin.azure.storage.cosmosdb.Query
                     endpoint: "https://yourstorageaccount.blob.core.windows.net"
+                    databaseId: your_data_base_id
+                    containerId: your_container_id
                     tenantId: "{{ secret('AZURE_TENANT_ID') }}"
                     clientId: "{{ secret('AZURE_CLIENT_ID') }}"
                     clientSecret: "{{ secret('AZURE_CLIENT_SECRET') }}"
-                    table: "table_name"
-                    from:
-                      - partitionKey: "color"
-                        rowKey: "green"
-                        type: "UPSERT_MERGE"
-                        properties:
-                          "code": "00FF00"
+                    query: "SELECT * FROM c"
                 """
         )
     },

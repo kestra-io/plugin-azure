@@ -6,10 +6,9 @@ import com.azure.cosmos.models.FeedRange;
 import com.azure.cosmos.models.PartitionKey;
 import io.kestra.core.exceptions.IllegalVariableEvaluationException;
 import io.kestra.core.models.annotations.Example;
-import io.kestra.core.models.annotations.Metric;
 import io.kestra.core.models.annotations.Plugin;
-import io.kestra.core.models.executions.metrics.Counter;
 import io.kestra.core.models.property.Property;
+import io.kestra.core.models.tasks.RunnableTask;
 import io.kestra.core.runners.RunContext;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotNull;
@@ -33,29 +32,26 @@ import java.util.Map;
         @Example(
             full = true,
             code = """
-                id: azure_storage_table_bulk
+                id: azure_storage_cosmos_queries
                 namespace: company.team
 
                 tasks:
-                  - id: bulk
+                  - id: cosmos_queries
                     type: io.kestra.plugin.azure.storage.cosmosdb.Queries
                     endpoint: "https://yourstorageaccount.blob.core.windows.net"
-                    connectionString: "DefaultEndpointsProtocol=...=="
-                    table: "table_name"
-                    from:
-                      - partitionKey: "color"
-                        rowKey: "green"
-                        type: "UPSERT_MERGE"
-                        properties:
-                          "code": "00FF00"
+                    tenantId: "{{ secret('AZURE_TENANT_ID') }}"
+                    clientId: "{{ secret('AZURE_CLIENT_ID') }}"
+                    clientSecret: "{{ secret('AZURE_CLIENT_SECRET') }}"
+                    queries:
+                      query-one:
+                        query: SELECT * FROM c
+                      query-two:
+                        query: SELECT * FROM c WHERE c.id = 'test'
                 """
         )
-    },
-    metrics = {
-        @Metric(name = "records.count", type = Counter.TYPE, description = "The total number of entities processed in the bulk operation.")
     }
 )
-public class Queries extends AbstractCosmosContainerTask<Queries.Output>{
+public class Queries extends AbstractCosmosContainerTask<Queries.Output> implements RunnableTask<Queries.Output> {
     private static final Logger log = LoggerFactory.getLogger(Queries.class);
 
     @NotNull

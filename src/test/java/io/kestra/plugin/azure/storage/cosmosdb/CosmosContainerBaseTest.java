@@ -25,14 +25,12 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @KestraTest(startRunner = true, environments = "sp")
 public abstract class CosmosContainerBaseTest<T extends AbstractCosmosContainerTask.AbstractCosmosContainerTaskBuilder<?,?,?>> {
-    @Value("${kestra.variables.globals.azure.monitoring.tenantId}")
-    protected Optional<String> tenantId;
-
-    @Value("${kestra.variables.globals.azure.monitoring.clientId}")
-    protected Optional<String> clientId;
-
-    @Value("${kestra.variables.globals.azure.monitoring.clientSecret}")
-    protected Optional<String> clientSecret;
+    @Value("${kestra.variables.globals.azure.sp.username}")
+    private Optional<String> clientId;
+    @Value("${kestra.variables.globals.azure.sp.secret}")
+    private Optional<String> clientSecret;
+    @Value("${kestra.variables.globals.azure.sp.tenant}")
+    private Optional<String> tenantId;
 
     @Value("${kestra.variables.globals.azure.cosmos.connectionString}")
     protected Optional<String> connectionString;

@@ -1,4 +1,4 @@
-group: io.kestra.plugin.azure.cli
+group: io.kestra.plugin.azure.storage.cosmosdb
 name: "cosmosdb"
 title: "Cosmos DB"
 description: "Tasks that interact with Azure Cosmos DB."

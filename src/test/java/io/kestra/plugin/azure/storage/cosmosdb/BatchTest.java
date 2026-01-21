@@ -12,7 +12,7 @@ import java.util.Map;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 
-class BatchCreateTest extends CosmosContainerBaseTest<BatchCreate.BatchCreateBuilder<?,?>> {
+class BatchTest extends CosmosContainerBaseTest<Batch.BatchBuilder<?,?>> {
     List<Map<String, Object>> items = List.of(
         Map.of(
             "id", "batch-create-test-one" + testId,
@@ -32,21 +32,21 @@ class BatchCreateTest extends CosmosContainerBaseTest<BatchCreate.BatchCreateBui
     }
 
     @Override
-    protected BatchCreate.BatchCreateBuilder<?, ?> instantiateBaseTaskBuilder() {
-        return BatchCreate.builder();
+    protected Batch.BatchBuilder<?, ?> instantiateBaseTaskBuilder() {
+        return Batch.builder();
     }
 
     @Test
     void shouldBatchCreateItems() throws Exception {
         //region GIVEN
-        BatchCreate batchCreate = getBaseTaskBuilder()
+        Batch batch = getBaseTaskBuilder()
             .partitionKeyValue(Property.ofValue("test"))
             .items(Property.ofValue(items))
             .build();
         //endregion
 
         //region WHEN
-        BatchCreate.BatchResponseOutput output = batchCreate.run(runContextFactory.of());
+        Batch.BatchResponseOutput output = batch.run(runContextFactory.of());
         //endregion
 
         //region WHEN
@@ -57,14 +57,14 @@ class BatchCreateTest extends CosmosContainerBaseTest<BatchCreate.BatchCreateBui
     @Test
     void shouldThrowErrorWhenPartitionKeyNotSet() {
         //region GIVEN
-        BatchCreate batchCreate = getBaseTaskBuilder()
+        Batch batch = getBaseTaskBuilder()
             .items(Property.ofValue(items))
             .build();
         //endregion
 
         //region WHEN
         AbstractThrowableAssert<?, ?> throwableAssert = assertThatThrownBy(
-            () -> batchCreate.run(runContextFactory.of())
+            () -> batch.run(runContextFactory.of())
         );
 
         //endregion
@@ -78,13 +78,13 @@ class BatchCreateTest extends CosmosContainerBaseTest<BatchCreate.BatchCreateBui
     @Test
     void shouldThrowErrorWhenItemsNotSet() {
         //region GIVEN
-        BatchCreate batchCreate = getBaseTaskBuilder()
+        Batch batch = getBaseTaskBuilder()
             .build();
         //endregion
 
         //region WHEN
         AbstractThrowableAssert<?, ?> throwableAssert = assertThatThrownBy(
-            () -> batchCreate.run(runContextFactory.of())
+            () -> batch.run(runContextFactory.of())
         );
 
         //endregion

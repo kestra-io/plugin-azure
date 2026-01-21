@@ -37,7 +37,7 @@ import java.util.Objects;
 
                 tasks:
                   - id: batch_create
-                    type: io.kestra.plugin.azure.storage.cosmosdb.BatchCreate
+                    type: io.kestra.plugin.azure.storage.cosmosdb.Batch
                     endpoint: "https://yourcosmosaccount.documents.azure.com"
                     databaseId: your_data_base_id
                     containerId: your_container_id
@@ -54,7 +54,7 @@ import java.util.Objects;
     }
 )
 @Schema(title = "Batch creates a new Cosmos item and returns its respective Cosmos batch response output.")
-public class BatchCreate extends AbstractCosmosContainerTask<BatchCreate.BatchResponseOutput> implements RunnableTask<BatchCreate.BatchResponseOutput> {
+public class Batch extends AbstractCosmosContainerTask<Batch.BatchResponseOutput> implements RunnableTask<Batch.BatchResponseOutput> {
     @NotNull
     @Schema(
         name = "partitionKeyValue",
@@ -84,7 +84,7 @@ public class BatchCreate extends AbstractCosmosContainerTask<BatchCreate.BatchRe
 
         rItems.forEach(batch::createItemOperation);
 
-        return BatchCreate.BatchResponseOutput.from(
+        return Batch.BatchResponseOutput.from(
             Objects.requireNonNull(cosmosContainer.executeCosmosBatch(batch).block())
         );
     }

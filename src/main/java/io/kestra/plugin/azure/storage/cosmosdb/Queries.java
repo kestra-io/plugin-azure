@@ -138,11 +138,12 @@ public class Queries extends AbstractCosmosContainerTask<Queries.Output> impleme
 
         @Schema(
             title = "excludeRegions",
-            description = "List of regions to be excluded for the request/retries. " +
-                "Example \"East US\" or \"East US, West US\" These regions will be excluded from the preferred regions list." +
-                " If all the regions are excluded, the request will be sent to the primary region for the account. " +
-                "The primary region is the write region in a single master account and the hub region " +
-                "in a multi-master account."
+            description = """
+                List of regions to be excluded for the request/retries. Example \"East US\" or \"East US, West US\" \
+                These regions will be excluded from the preferred regions list. If all the regions are excluded, the \
+                request will be sent to the primary region for the account. The primary region is the write region in a\
+                 single master account and the hub region in a multi-master account.
+                """
         )
         private List<String> excludeRegions;
 

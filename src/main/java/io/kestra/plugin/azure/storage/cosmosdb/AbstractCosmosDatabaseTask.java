@@ -22,8 +22,10 @@ import java.util.Optional;
 public abstract class AbstractCosmosDatabaseTask<T extends Output> extends AbstractAzureIdentityConnection {
     @Schema(
         title = "consistencyLevel",
-        description = "Represents the consistency levels supported for Azure Cosmos DB client operations in the Azure " +
-            "Cosmos DB service."
+        description = """
+            Represents the consistency levels supported for Azure Cosmos DB client operations \
+            in the Azure Cosmos DB service.
+            """
     )
     @Builder.Default()
     private Property<ConsistencyLevel> consistencyLevel = Property.ofValue(ConsistencyLevel.SESSION);
@@ -33,10 +35,11 @@ public abstract class AbstractCosmosDatabaseTask<T extends Output> extends Abstr
 
     @Schema(
         title = "contentResponseOnWriteEnabled",
-        description = "Sets the boolean to only return the headers and status code in Cosmos DB response in case of " +
-            "Create, Update and Delete operations on CosmosItem.\n" +
-        "If set to false (which is by default), service doesn't return payload in the response. It reduces networking " +
-            "and CPU load by not sending the payload back over the network and serializing it on the client."
+        description = """
+            Sets the boolean to only return the headers and status code in Cosmos DB response in case of Create, \
+            Update and Delete operations on CosmosItem.\n If set to false (which is by default), service doesn't \
+            return payload in the response. It reduces networking and CPU load by not sending the payload back over \
+            the network and serializing it on the client."""
     )
     @Builder.Default()
     private Property<Boolean> contentResponseOnWriteEnabled = Property.ofValue(DEFAULT_CONTENT_RESPONSE_ON_WRITE_ENABLED);

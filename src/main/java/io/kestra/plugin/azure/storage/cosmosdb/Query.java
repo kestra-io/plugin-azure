@@ -58,33 +58,40 @@ public class Query extends AbstractCosmosContainerTask<Query.Output> implements 
 
     @Schema(
         title = "excludeRegions",
-        description = "List of regions to be excluded for the request/retries. " +
-            "Example \"East US\" or \"East US, West US\" These regions will be excluded from the preferred regions list." +
-            " If all the regions are excluded, the request will be sent to the primary region for the account. " +
-            "The primary region is the write region in a single master account and the hub region " +
-            "in a multi-master account."
+        description = """
+            List of regions to be excluded for the request/retries. Example \"East US\" or \"East US, \
+            West US\" These regions will be excluded from the preferred regions list. If all the regions are excluded, \
+            the request will be sent to the primary region for the account. The primary region is the write region in a \
+            single master account and the hub region in a multi-master account.
+            """
     )
     private Property<List<String>> excludeRegions;
 
     @Schema(
         title = "partitionKey",
-        description = "Sets the partition key used to identify the current request's target partition. " +
-            "Must be used in conjunction with partitionKeyDefinition",
+        description = """
+            Sets the partition key used to identify the current request's target partition. \
+            Must be used in conjunction with partitionKeyDefinition
+            """,
         requiredProperties = "partitionKeyDefinition"
     )
     private Property<Map<String, Object>> partitionKey;
 
     @Schema(
         title = "partitionKeyDefinition",
-        description = "The PartitionKeyDefinition used to extract the PartitionKey value. " +
-            "Must be used in conjunction with partitionKey or feedRangePartitionKey."
+        description = """
+            The PartitionKeyDefinition used to extract the PartitionKey value. \
+            Must be used in conjunction with partitionKey or feedRangePartitionKey.
+            """
     )
     private Property<PartitionKeyDefinition> partitionKeyDefinition;
 
     @Schema(
         title = "feedRangePartitionKey",
-        description = "The Partiton key feed range used to target specific physical partitions. " +
-            "Must be used in conjunction with partitionKeyDefinition. ",
+        description = """
+            The Partiton key feed range used to target specific physical partitions. \
+            Must be used in conjunction with partitionKeyDefinition.
+            """,
         requiredProperties = "partitionKeyDefinition"
     )
     private Property<Map<String, Object>> feedRangePartitionKey;

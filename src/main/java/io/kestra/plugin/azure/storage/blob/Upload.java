@@ -37,7 +37,7 @@ import lombok.experimental.SuperBuilder;
 @Getter
 @NoArgsConstructor
 @Plugin(examples = {
-        @Example(full = true, title = "Upload an input file to Azure Blob Storage", code = """
+    @Example(full = true, title = "Upload an input file to Azure Blob Storage", code = """
                 id: azure_storage_blob_upload
                 namespace: company.team
 
@@ -54,7 +54,7 @@ import lombok.experimental.SuperBuilder;
                     from: "{{ inputs.myfile }}"
                     name: "myblob"
                 """),
-        @Example(full = true, title = "Extract data via an HTTP API call and upload it as a file to Azure Blob Storage", code = """
+    @Example(full = true, title = "Extract data via an HTTP API call and upload it as a file to Azure Blob Storage", code = """
                     id: azure_blob_upload
                     namespace: company.team
 
@@ -72,10 +72,11 @@ import lombok.experimental.SuperBuilder;
                         name: data.csv
                 """)
 }, metrics = {
-        @Metric(name = "file.size", type = Counter.TYPE, description = "The size of the uploaded blob, in bytes.")
+    @Metric(name = "file.size", type = Counter.TYPE, description = "The size of the uploaded blob, in bytes.")
 })
 @Schema(title = "Upload a file to Azure Blob Storage container.")
 public class Upload extends AbstractBlobStorageWithSasObject implements RunnableTask<Upload.Output> {
+
     @Schema(title = "The file from the internal storage to upload to the Azure Blob Storage.")
     @PluginProperty(internalStorageURI = true)
     @NotNull
@@ -88,16 +89,13 @@ public class Upload extends AbstractBlobStorageWithSasObject implements Runnable
     private Property<Map<String, String>> tags;
 
     @Schema(title = "The access tier of the uploaded blob.", description = "The operation is allowed on a page blob in a premium Storage Account or a block blob in a blob "
-            +
-            "Storage Account or GPV2 Account. A premium page blob's tier determines the allowed size, IOPS, and bandwidth "
-            +
-            "of the blob. A block blob's tier determines the Hot/Cool/Archive storage type. " +
-            "This does not update the blob's etag.")
+            + "Storage Account or GPV2 Account. A premium page blob's tier determines the allowed size, IOPS, and bandwidth "
+            + "of the blob. A block blob's tier determines the Hot/Cool/Archive storage type. "
+            + "This does not update the blob's etag.")
     private Property<AccessTier> accessTier;
 
     @Schema(title = "Sets a legal hold on the blob.", description = "NOTE: Blob Versioning must be enabled on your storage account and the blob must be in a container"
-            +
-            " with immutable storage with versioning enabled to call this API.")
+            + " with immutable storage with versioning enabled to call this API.")
     private Property<Boolean> legalHold;
 
     private BlobImmutabilityPolicy immutabilityPolicy;
@@ -110,15 +108,35 @@ public class Upload extends AbstractBlobStorageWithSasObject implements Runnable
         List<Blob> uploadedBlobs = new ArrayList<>();
         if (fromUri.toString().endsWith("/")) {
             var containerClient = baseClient.getContainerClient();
-            String prefix = fromUri.getPath();
-            if (prefix.startsWith("/")) {
-                prefix = prefix.substring(1);
+            String baseBlobName = baseClient.getBlobName();
+            if (baseBlobName == null) {
+                baseBlobName = "";
             }
 
-            var blobItems = containerClient.listBlobsByHierarchy(prefix);
-            for (var blobItem : blobItems) {
-                BlobClient blobClient = containerClient.getBlobClient(blobItem.getName());
-                uploadedBlobs.add(uploadSingleFile(runContext, null, blobClient));
+            String directoryPath = runContext.render(this.from).as(String.class).orElseThrow();
+            List<URI> files = runContext.storage().list(directoryPath).stream()
+                    .filter(u -> !u.toString().endsWith("/"))
+                    .collect(Collectors.toList());
+
+            runContext.logger().debug(
+                    "Uploading {} files from '{}' to container '{}'",
+                    files.size(),
+                    fromUri,
+                    containerClient.getBlobContainerName()
+            );
+
+            for (URI fileUri : files) {
+                String relativePath = Paths.get(fromUri.getPath()).relativize(Paths.get(fileUri.getPath())).toString();
+                String targetBlobName;
+                if (baseBlobName.isEmpty()) {
+                    targetBlobName = relativePath;
+                } else if (baseBlobName.endsWith("/")) {
+                    targetBlobName = baseBlobName + relativePath;
+                } else {
+                    targetBlobName = baseBlobName + "/" + relativePath;
+                }
+                BlobClient blobClient = containerClient.getBlobClient(targetBlobName.replace("\\", "/"));
+                uploadedBlobs.add(uploadSingleFile(runContext, fileUri, blobClient));
             }
 
             if (uploadedBlobs.isEmpty()) {
@@ -137,22 +155,15 @@ public class Upload extends AbstractBlobStorageWithSasObject implements Runnable
     private Blob uploadSingleFile(RunContext runContext, URI fileUri, BlobClient blobClient) throws Exception {
         runContext.logger().debug("Uploading blob '{}'", blobClient.getBlobName());
 
-        // fileUri is null for blobs uploaded directly from Azure Blob container
-        if (fileUri != null) {
-            try (var is = runContext.storage().getFile(fileUri)) {
-                blobClient.upload(is, true);
-            }
-        }
-
         if (this.metadata != null) {
             blobClient.setMetadata(
                     runContext.render(this.metadata)
                             .asMap(String.class, String.class)
                             .entrySet()
                             .stream()
-                            .map(throwFunction(e -> new AbstractMap.SimpleEntry<>(
-                                    runContext.render(e.getKey()),
-                                    runContext.render(e.getValue()))))
+                            .map(throwFunction(entry -> new AbstractMap.SimpleEntry<>(
+                            runContext.render(entry.getKey()),
+                            runContext.render(entry.getValue()))))
                             .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue)));
         }
 
@@ -162,9 +173,9 @@ public class Upload extends AbstractBlobStorageWithSasObject implements Runnable
                             .asMap(String.class, String.class)
                             .entrySet()
                             .stream()
-                            .map(throwFunction(e -> new AbstractMap.SimpleEntry<>(
-                                    runContext.render(e.getKey()),
-                                    runContext.render(e.getValue()))))
+                            .map(throwFunction(entry -> new AbstractMap.SimpleEntry<>(
+                            runContext.render(entry.getKey()),
+                            runContext.render(entry.getValue()))))
                             .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue)));
         }
 
@@ -196,7 +207,8 @@ public class Upload extends AbstractBlobStorageWithSasObject implements Runnable
     @Getter
     public static class Output implements io.kestra.core.models.tasks.Output {
 
-        @Schema(title = "The uploaded blob (single file upload only).")
+        @Schema(title = "The uploaded blob (single file upload only).",
+                description = "Present only when a single file is uploaded; will be null when uploading a directory (see 'blobs').")
         private final Blob blob;
 
         @Schema(title = "The uploaded blobs (directory upload).")

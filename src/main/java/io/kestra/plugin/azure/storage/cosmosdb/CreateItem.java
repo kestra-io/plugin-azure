@@ -43,8 +43,8 @@ import java.util.Objects;
                     clientId: "{{ secret('AZURE_CLIENT_ID') }}"
                     clientSecret: "{{ secret('AZURE_CLIENT_SECRET') }}"
                     item:
-                        id: item_id
-                        key: value
+                      id: item_id
+                      key: value
                 """
         )
     }

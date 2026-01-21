@@ -1,0 +1,8 @@
+group: io.kestra.plugin.azure.cli
+name: "cosmosdb"
+title: "Cosmos DB"
+description: "Tasks that interact with Azure Cosmos DB."
+body: "Create, Query, Delete Cosmos DB Container Items using a connection string or or SAS/shared key and endpoint."
+videos: []
+createdBy: "Kestra Core Team"
+managedBy: "Kestra Core Team"

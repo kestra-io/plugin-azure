@@ -16,6 +16,9 @@ import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
+import org.junit.jupiter.api.Disabled;
+
+@Disabled("Requires Azure Storage credentials not available in CI")
 class AllTest extends AbstractTest {
     @Test
     void run() throws Exception {

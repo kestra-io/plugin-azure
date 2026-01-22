@@ -34,6 +34,9 @@ import java.util.concurrent.atomic.AtomicReference;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 
+import org.junit.jupiter.api.Disabled;
+
+@Disabled("Requires Azure Storage credentials not available in CI")
 class TriggerTest extends AbstractTest {
     @Inject
     private ApplicationContext applicationContext;

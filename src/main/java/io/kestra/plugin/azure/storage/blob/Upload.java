@@ -18,6 +18,7 @@ import io.kestra.core.models.executions.metrics.Counter;
 import io.kestra.core.models.property.Property;
 import io.kestra.core.models.tasks.RunnableTask;
 import io.kestra.core.runners.RunContext;
+import io.kestra.core.storages.FileAttributes;
 import static io.kestra.core.utils.Rethrow.throwFunction;
 import io.kestra.plugin.azure.storage.blob.abstracts.AbstractBlobStorageWithSasObject;
 import io.kestra.plugin.azure.storage.blob.models.AccessTier;
@@ -114,8 +115,11 @@ public class Upload extends AbstractBlobStorageWithSasObject implements Runnable
             }
 
             String directoryPath = runContext.render(this.from).as(String.class).orElseThrow();
-            List<URI> files = runContext.storage().list(directoryPath).stream()
-                    .filter(u -> !u.toString().endsWith("/"))
+            URI directoryUri = URI.create(directoryPath);
+
+            List<URI> files = runContext.storage().list(directoryUri).stream()
+                    .filter(fileAttr -> fileAttr.getType() == FileAttributes.FileType.File)
+                    .map(fileAttr -> URI.create(directoryPath + fileAttr.getFileName()))
                     .collect(Collectors.toList());
 
             runContext.logger().debug(

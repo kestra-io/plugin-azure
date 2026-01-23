@@ -20,7 +20,7 @@ import java.util.List;
 import java.util.Map;
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
-@KestraTest(startRunner = true, environments = "sp")
+@KestraTest(startRunner = true)
 public class BaseServiceBusTest {
     @Value("${kestra.variables.globals.azure.servicebus.queue-name}")
     protected String queueName;

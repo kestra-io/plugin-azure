@@ -5,6 +5,7 @@ import io.kestra.core.models.property.Property;
 import org.assertj.core.api.AbstractThrowableAssert;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 
 import java.util.List;
 import java.util.Map;
@@ -12,6 +13,7 @@ import java.util.Map;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 
+@EnabledIfEnvironmentVariable(named = "AZURE_CONNECTION_STRING", matches = ".+")
 class BatchTest extends CosmosContainerBaseTest<Batch.BatchBuilder<?,?>> {
     List<Map<String, Object>> items = List.of(
         Map.of(

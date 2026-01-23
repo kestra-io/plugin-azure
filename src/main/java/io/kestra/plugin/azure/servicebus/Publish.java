@@ -6,6 +6,7 @@ import com.azure.messaging.servicebus.ServiceBusMessage;
 import com.azure.messaging.servicebus.ServiceBusSenderClient;
 import io.kestra.core.exceptions.IllegalVariableEvaluationException;
 import io.kestra.core.models.annotations.Example;
+import io.kestra.core.models.annotations.Metric;
 import io.kestra.core.models.annotations.Plugin;
 import io.kestra.core.models.executions.metrics.Counter;
 import io.kestra.core.models.property.Data;
@@ -48,6 +49,20 @@ import static io.kestra.core.utils.Rethrow.throwFunction;
                       timeToLive: PT10S
                       body: "messageBody"
                 """
+        )
+    },
+    metrics = {
+        @Metric(
+            name = "servicebus.publish.queue.messages",
+            type = Counter.TYPE,
+            unit = "messages",
+            description = "Number of messages published to the Service Bus queue."
+        ),
+        @Metric(
+            name = "servicebus.publish.topic.messages",
+            type = Counter.TYPE,
+            unit = "messages",
+            description = "Number of messages published to the Service Bus topic."
         )
     }
 )
@@ -109,10 +124,10 @@ public class Publish extends AbstractServiceBusTask implements RunnableTask<Publ
 
 
             rQueueName.ifPresent(queueName -> runContext.metric(
-                Counter.of("servicebus.publish.messages", count, "queue", queueName)
+                Counter.of("servicebus.publish.queue.messages", count, "queue", queueName)
             ));
             rTopicName.ifPresent(topicName -> runContext.metric(
-                Counter.of("servicebus.publish.messages", count, "topic", rTopicName.get())
+                Counter.of("servicebus.publish.topic.messages", count, "topic", rTopicName.get())
             ));
             return new Output(count);
         }

@@ -60,7 +60,6 @@ class UploadTest {
     @Test
     void testSingleFileUpload() throws Exception {
         RunContext runContext = runContextFactory.of();
-
         String fileContent = "test content for single file upload";
         URI fileUri = storageInterface.put(
                 null,
@@ -122,6 +121,7 @@ class UploadTest {
 
         assertThat(output.getBlob(), nullValue());
         assertThat(output.getBlobs(), hasSize(3));
+
         assertThat(output.getBlobs().stream()
                 .map(blob -> blob.getName())
                 .toList(),
@@ -150,11 +150,12 @@ class UploadTest {
                 .endpoint(Property.of(endpoint))
                 .connectionString(Property.of(connectionString))
                 .container(Property.of(container))
-                .name(Property.of("")) // empty name
+                .name(Property.of(""))
                 .from(Property.of("kestra://" + dir))
                 .build();
 
         Upload.Output output = upload.run(runContext);
+
         assertThat(output.getBlobs(), hasSize(1));
         assertThat(output.getBlobs().get(0).getName(), is("file1.txt"));
     }

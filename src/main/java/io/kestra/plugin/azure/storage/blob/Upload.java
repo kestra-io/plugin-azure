@@ -120,7 +120,7 @@ public class Upload extends AbstractBlobStorageWithSasObject implements Runnable
             List<URI> files = runContext.storage().list(directoryUri).stream()
                     .filter(fileAttr -> fileAttr.getType() == FileAttributes.FileType.File)
                     .map(fileAttr -> URI.create(directoryPath + fileAttr.getFileName()))
-                    .collect(Collectors.toList());
+                    .toList();
 
             runContext.logger().debug(
                     "Uploading {} files from '{}' to container '{}'",

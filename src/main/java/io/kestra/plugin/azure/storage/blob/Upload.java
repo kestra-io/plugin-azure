@@ -177,7 +177,6 @@ public class Upload extends AbstractBlobStorageWithSasObject implements Runnable
         BlobClient baseClient = this.blobClient(runContext);
 
         List<Blob> uploadedBlobs = new ArrayList<>();
-
         if (fromUri.toString().endsWith("/")) {
             var containerClient = baseClient.getContainerClient();
             String baseBlobName = baseClient.getBlobName();
@@ -233,7 +232,6 @@ public class Upload extends AbstractBlobStorageWithSasObject implements Runnable
         try (var is = runContext.storage().getFile(fileUri)) {
             blobClient.upload(is, true);
         }
-
         if (this.metadata != null) {
             blobClient.setMetadata(
                     runContext.render(this.metadata)
@@ -266,7 +264,6 @@ public class Upload extends AbstractBlobStorageWithSasObject implements Runnable
                                     .orElseThrow()
                                     .name()));
         }
-
         if (this.legalHold != null) {
             blobClient.setLegalHold(
                     runContext.render(this.legalHold).as(Boolean.class).orElseThrow());

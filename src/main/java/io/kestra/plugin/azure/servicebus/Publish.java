@@ -1,5 +1,6 @@
 package io.kestra.plugin.azure.servicebus;
 
+import com.azure.core.util.BinaryData;
 import com.azure.messaging.servicebus.ServiceBusClientBuilder;
 import com.azure.messaging.servicebus.ServiceBusMessage;
 import com.azure.messaging.servicebus.ServiceBusSenderClient;
@@ -16,8 +17,8 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotNull;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
-import lombok.extern.jackson.Jacksonized;
 
+import java.util.List;
 import java.util.Optional;
 
 import static io.kestra.core.utils.Rethrow.throwFunction;
@@ -32,34 +33,39 @@ import static io.kestra.core.utils.Rethrow.throwFunction;
         @Example(
             full = true,
             code = """
-                id: azure_cosmos_container_create_item
+                id: azure_cosmos_service_bus_publish
                 namespace: company.team
 
                 tasks:
                   - id: create
-                    type: io.kestra.plugin.azure.storage.cosmosdb.CreateItem
-                    endpoint: "https://yourcosmosaccount.documents.azure.com"
-                    databaseId: your_data_base_id
-                    containerId: your_container_id
+                    type: io.kestra.plugin.azure.servicebus.Publish
+                    queueName: your-queue-name
                     tenantId: "{{ secret('AZURE_TENANT_ID') }}"
                     clientId: "{{ secret('AZURE_CLIENT_ID') }}"
                     clientSecret: "{{ secret('AZURE_CLIENT_SECRET') }}"
-                    item:
-                      id: item_id
-                      key: value
+                    type: io.kestra.plugin.azure.servicebus.Publish
+                    from:
+                      timeToLive: PT10S
+                      body: "messageBody"
                 """
         )
     }
 )
 public class Publish extends AbstractServiceBusTask implements RunnableTask<Publish.Output> {
     @NotNull
-    @Schema(title = "The message to publish")
+    @Schema(
+        title = Data.From.TITLE,
+        description = Data.From.DESCRIPTION,
+        anyOf = {String.class, List.class, Message.class}
+    )
     Property<Object> from;
 
     @Override
     public Publish.Output run(RunContext runContext) throws Exception {
         Optional<String> rQueueName = runContext.render(this.queueName).as(String.class);
         Optional<String> rTopicName = runContext.render(this.topicName).as(String.class);
+        SerdeType rSerdeType = runContext.render(this.serdeType).as(SerdeType.class).orElse(DEFAULT_SERDE_TYPE);
+
         Object rFrom = runContext.render(this.from).as(Object.class).orElseThrow(
             () -> new IllegalVariableEvaluationException("Message cannot be null or empty")
         );
@@ -79,9 +85,23 @@ public class Publish extends AbstractServiceBusTask implements RunnableTask<Publ
             int count = Data.from(rFrom)
                 .readAs(runContext, Message.class, msg -> JacksonMapper.toMap(msg, Message.class))
                 .map(throwFunction(message -> {
-                    ServiceBusMessage sendMessageRequest = new ServiceBusMessage(message.getBody())
+                    BinaryData binaryData = rSerdeType.serialize(
+                        message.getBody()
+                    );
+
+                    ServiceBusMessage sendMessageRequest = new ServiceBusMessage(binaryData)
                         .setMessageId(message.getMessageId())
                         .setSubject(message.getSubject());
+
+                    if (message.getTimeToLive() != null) {
+                        sendMessageRequest.setTimeToLive(message.getTimeToLive());
+                    }
+
+                    if (message.getApplicationProperties() != null && !message.getApplicationProperties().isEmpty()) {
+                        sendMessageRequest.getApplicationProperties().putAll(
+                            message.getApplicationProperties()
+                        );
+                    }
 
                     sender.sendMessage(sendMessageRequest);
                     return 1;
@@ -95,22 +115,6 @@ public class Publish extends AbstractServiceBusTask implements RunnableTask<Publ
                 Counter.of("servicebus.publish.messages", count, "topic", rTopicName.get())
             ));
             return new Output(count);
-        }
-    }
-
-    @Builder
-    @Getter
-    @Jacksonized
-    public static class Message {
-
-        private final String messageId;
-        private final String subject;
-        private final String body;
-
-        public Message(String messageId, String subject, String body) {
-            this.messageId = messageId;
-            this.subject = subject;
-            this.body = body;
         }
     }
 

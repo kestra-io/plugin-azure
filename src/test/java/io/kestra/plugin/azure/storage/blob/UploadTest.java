@@ -1,89 +1,161 @@
 package io.kestra.plugin.azure.storage.blob;
 
+import java.io.ByteArrayInputStream;
 import java.net.URI;
-import java.util.Collections;
-import java.util.List;
+import java.nio.charset.StandardCharsets;
+import java.util.UUID;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.containsInAnyOrder;
+import static org.hamcrest.Matchers.hasSize;
+import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.notNullValue;
+import static org.hamcrest.Matchers.nullValue;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 
+import com.azure.storage.blob.BlobContainerClient;
+import com.azure.storage.blob.BlobServiceClient;
+import com.azure.storage.blob.BlobServiceClientBuilder;
+
+import io.kestra.core.junit.annotations.KestraTest;
+import io.kestra.core.models.property.Property;
 import io.kestra.core.runners.RunContext;
-import io.kestra.core.storages.FileAttributes;
-import io.kestra.core.storages.Storage;
+import io.kestra.core.runners.RunContextFactory;
+import io.kestra.core.storages.StorageInterface;
+import io.micronaut.context.annotation.Value;
+import io.micronaut.test.extensions.junit5.annotation.MicronautTest;
+import jakarta.inject.Inject;
 
+@KestraTest
+@MicronautTest
+@EnabledIfEnvironmentVariable(named = "AZURE_CONNECTION_STRING", matches = ".+")
 class UploadTest {
 
-    @Test
-    void testDirectoryPathHandling() throws Exception {
-        // Test that directory paths are correctly processed
-        RunContext runContext = mock(RunContext.class);
-        Storage storage = mock(Storage.class);
+    @Inject
+    private RunContextFactory runContextFactory;
 
-        when(runContext.storage()).thenReturn(storage);
+    @Inject
+    private StorageInterface storageInterface;
 
-        URI dirUri = URI.create("kestra:///tmp/test-dir/");
+    @Value("${kestra.variables.globals.azure.blobs.connection-string}")
+    private String connectionString;
 
-        // Create mock FileAttributes
-        FileAttributes file1 = mock(FileAttributes.class);
-        when(file1.getFileName()).thenReturn("file1.txt");
-        when(file1.getType()).thenReturn(FileAttributes.FileType.File);
+    @Value("${kestra.variables.globals.azure.blobs.endpoint}")
+    private String endpoint;
 
-        FileAttributes file2 = mock(FileAttributes.class);
-        when(file2.getFileName()).thenReturn("file2.txt");
-        when(file2.getType()).thenReturn(FileAttributes.FileType.File);
+    private String container;
 
-        List<FileAttributes> mockFiles = List.of(file1, file2);
-        when(storage.list(dirUri)).thenReturn(mockFiles);
+    @BeforeEach
+    void setUp() {
+        this.container = "test-upload-" + UUID.randomUUID().toString().substring(0, 8);
+        BlobServiceClient serviceClient = new BlobServiceClientBuilder()
+                .connectionString(connectionString)
+                .buildClient();
 
-        // Verify that storage.list is called with correct URI
-        storage.list(dirUri);
-        verify(storage, times(1)).list(dirUri);
-
-        // Verify FileAttributes have correct properties
-        assertEquals("file1.txt", file1.getFileName());
-        assertEquals("file2.txt", file2.getFileName());
-        assertEquals(FileAttributes.FileType.File, file1.getType());
-        assertEquals(FileAttributes.FileType.File, file2.getType());
+        BlobContainerClient containerClient = serviceClient.createBlobContainer(container);
     }
 
     @Test
-    void testEmptyDirectoryHandling() throws Exception {
-        // Test that empty directory returns empty list
-        RunContext runContext = mock(RunContext.class);
-        Storage storage = mock(Storage.class);
+    void testSingleFileUpload() throws Exception {
+        RunContext runContext = runContextFactory.of();
 
-        when(runContext.storage()).thenReturn(storage);
+        String fileContent = "test content for single file upload";
+        URI fileUri = storageInterface.put(
+                null,
+                null,
+                new URI("/test-file.txt"),
+                new ByteArrayInputStream(fileContent.getBytes(StandardCharsets.UTF_8))
+        );
 
-        URI dirUri = URI.create("kestra:///tmp/empty-dir/");
-        when(storage.list(dirUri)).thenReturn(Collections.emptyList());
+        Upload upload = Upload.builder()
+                .endpoint(Property.of(endpoint))
+                .connectionString(Property.of(connectionString))
+                .container(Property.of(container))
+                .name(Property.of("uploaded-file.txt"))
+                .from(Property.of(fileUri.toString()))
+                .build();
 
-        List<FileAttributes> result = storage.list(dirUri);
-
-        // Verify empty directory handling
-        assertNotNull(result);
-        assertTrue(result.isEmpty());
+        Upload.Output output = upload.run(runContext);
+        assertThat(output.getBlob(), notNullValue());
+        assertThat(output.getBlob().getName(), is("uploaded-file.txt"));
+        assertThat(output.getBlobs(), hasSize(1));
+        assertThat(output.getBlobs().get(0).getName(), is("uploaded-file.txt"));
     }
 
     @Test
-    void testFileAttributesMapping() {
-        // Test FileAttributes to filename mapping logic
-        FileAttributes file = mock(FileAttributes.class);
-        when(file.getFileName()).thenReturn("test.txt");
-        when(file.getType()).thenReturn(FileAttributes.FileType.File);
+    void testDirectoryUpload() throws Exception {
+        RunContext runContext = runContextFactory.of();
+        String dir = "/test-dir/";
 
-        // Verify mapping works correctly
-        assertEquals("test.txt", file.getFileName());
-        assertEquals(FileAttributes.FileType.File, file.getType());
+        storageInterface.put(
+                null,
+                null,
+                new URI(dir + "file1.txt"),
+                new ByteArrayInputStream("content 1".getBytes(StandardCharsets.UTF_8))
+        );
 
-        // Test that directory path + filename produces correct URI
-        String directoryPath = "kestra:///tmp/test-dir/";
-        String expectedUri = directoryPath + file.getFileName();
-        assertEquals("kestra:///tmp/test-dir/test.txt", expectedUri);
+        storageInterface.put(
+                null,
+                null,
+                new URI(dir + "file2.txt"),
+                new ByteArrayInputStream("content 2".getBytes(StandardCharsets.UTF_8))
+        );
+
+        storageInterface.put(
+                null,
+                null,
+                new URI(dir + "file3.txt"),
+                new ByteArrayInputStream("content 3".getBytes(StandardCharsets.UTF_8))
+        );
+
+        Upload upload = Upload.builder()
+                .endpoint(Property.of(endpoint))
+                .connectionString(Property.of(connectionString))
+                .container(Property.of(container))
+                .name(Property.of("uploads/"))
+                .from(Property.of("kestra://" + dir))
+                .build();
+
+        Upload.Output output = upload.run(runContext);
+
+        assertThat(output.getBlob(), nullValue());
+        assertThat(output.getBlobs(), hasSize(3));
+        assertThat(output.getBlobs().stream()
+                .map(blob -> blob.getName())
+                .toList(),
+                containsInAnyOrder(
+                        "uploads/file1.txt",
+                        "uploads/file2.txt",
+                        "uploads/file3.txt"
+                )
+        );
+    }
+
+    @Test
+    void testDirectoryUploadWithoutBaseName() throws Exception {
+        RunContext runContext = runContextFactory.of();
+
+        String dir = "/test-dir2/";
+
+        storageInterface.put(
+                null,
+                null,
+                new URI(dir + "file1.txt"),
+                new ByteArrayInputStream("content 1".getBytes(StandardCharsets.UTF_8))
+        );
+
+        Upload upload = Upload.builder()
+                .endpoint(Property.of(endpoint))
+                .connectionString(Property.of(connectionString))
+                .container(Property.of(container))
+                .name(Property.of("")) // empty name
+                .from(Property.of("kestra://" + dir))
+                .build();
+
+        Upload.Output output = upload.run(runContext);
+        assertThat(output.getBlobs(), hasSize(1));
+        assertThat(output.getBlobs().get(0).getName(), is("file1.txt"));
     }
 }

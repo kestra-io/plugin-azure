@@ -4,6 +4,7 @@ import io.kestra.core.models.property.Property;
 import io.kestra.core.utils.IdUtils;
 import org.apache.commons.io.IOUtils;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 
 import java.io.FileReader;
 import java.nio.charset.StandardCharsets;
@@ -13,6 +14,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.notNullValue;
 
+@EnabledIfEnvironmentVariable(named = "AZURE_CONNECTION_STRING", matches = ".+")
 class SharedAccessTest extends AbstractTest {
     @Test
     void run() throws Exception {

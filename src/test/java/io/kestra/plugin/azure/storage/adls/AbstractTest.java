@@ -7,10 +7,12 @@ import io.kestra.core.utils.IdUtils;
 import io.kestra.plugin.azure.BaseTest;
 import io.kestra.plugin.azure.storage.adls.services.DataLakeService;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 
 import java.net.URI;
 import java.util.ArrayList;
 
+@EnabledIfEnvironmentVariable(named = "AZURE_CONNECTION_STRING", matches = ".+")
 public class AbstractTest extends BaseTest {
     public java.util.List<String> directoryToClean = new ArrayList<>();
 

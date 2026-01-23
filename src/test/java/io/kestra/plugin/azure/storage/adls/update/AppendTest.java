@@ -8,6 +8,7 @@ import io.kestra.plugin.azure.storage.adls.AbstractTest;
 import io.kestra.plugin.azure.storage.adls.Read;
 import io.kestra.plugin.azure.storage.adls.Upload;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 
 import java.io.FileInputStream;
 import java.io.InputStream;
@@ -16,6 +17,7 @@ import java.io.InputStreamReader;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 
+@EnabledIfEnvironmentVariable(named = "AZURE_CONNECTION_STRING", matches = ".+")
 class AppendTest extends AbstractTest {
     @Test
     void run() throws Exception {

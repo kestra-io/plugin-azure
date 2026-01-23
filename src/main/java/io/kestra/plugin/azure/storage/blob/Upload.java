@@ -71,6 +71,19 @@ import lombok.experimental.SuperBuilder;
                         container: kestra
                         from: "{{ outputs.extract.uri }}"
                         name: data.csv
+                """),
+    @Example(full = true, title = "Upload multiple files from a directory to Azure Blob Storage", code = """
+                    id: azure_blob_upload_directory
+                    namespace: company.team
+
+                    tasks:
+                      - id: upload_directory
+                        type: io.kestra.plugin.azure.storage.blob.Upload
+                        endpoint: https://kestra.blob.core.windows.net
+                        connectionString: "{{ secret('AZURE_CONNECTION_STRING') }}"
+                        container: kestra
+                        from: "{{ outputs.workingdir.outputFiles }}/"
+                        name: "uploads/"
                 """)
 }, metrics = {
 <<<<<<< HEAD
@@ -89,11 +102,18 @@ public class Upload extends AbstractBlobStorageWithSasObject implements Runnable
     @Metric(name = "file.size", type = Counter.TYPE, description = "The size of the uploaded blob, in bytes.")
 >>>>>>> 5ac43f5 (Fix Upload task for directory uploads, implement Copilot suggestions, and add UploadTest for coverage)
 })
-@Schema(title = "Upload a file to Azure Blob Storage container.")
+@Schema(title = "Upload a file or multiple files to Azure Blob Storage container.")
 public class Upload extends AbstractBlobStorageWithSasObject implements RunnableTask<Upload.Output> {
 
+<<<<<<< HEAD
     @Schema(title = "The file from the internal storage to upload to the Azure Blob Storage.")
 >>>>>>> 1411081 (Fix Upload task to support single and directory uploads safely)
+=======
+    @Schema(
+            title = "The file or directory from internal storage to upload to Azure Blob Storage.",
+            description = "If the path ends with '/', it will be treated as a directory and all files within will be uploaded."
+    )
+>>>>>>> 360d053 (feat: add support for uploading multiple files from directory)
     @PluginProperty(internalStorageURI = true)
     @NotNull
     private Property<String> from;
@@ -122,12 +142,16 @@ public class Upload extends AbstractBlobStorageWithSasObject implements Runnable
     @Schema(title = "User defined tags.")
     private Property<Map<String, String>> tags;
 
-    @Schema(title = "The access tier of the uploaded blob.", description = "The operation is allowed on a page blob in a premium Storage Account or a block blob in a blob "
+    @Schema(
+            title = "The access tier of the uploaded blob.",
+            description = "The operation is allowed on a page blob in a premium Storage Account or a block blob in a blob "
             + "Storage Account or GPV2 Account. A premium page blob's tier determines the allowed size, IOPS, and bandwidth "
             + "of the blob. A block blob's tier determines the Hot/Cool/Archive storage type. "
-            + "This does not update the blob's etag.")
+            + "This does not update the blob's etag."
+    )
     private Property<AccessTier> accessTier;
 
+<<<<<<< HEAD
     @Schema(title = "Sets a legal hold on the blob.", description = "NOTE: Blob Versioning must be enabled on your storage account and the blob must be in a container"
 <<<<<<< HEAD
             +
@@ -136,6 +160,13 @@ public class Upload extends AbstractBlobStorageWithSasObject implements Runnable
 =======
             + " with immutable storage with versioning enabled to call this API.")
 >>>>>>> 5ac43f5 (Fix Upload task for directory uploads, implement Copilot suggestions, and add UploadTest for coverage)
+=======
+    @Schema(
+            title = "Sets a legal hold on the blob.",
+            description = "NOTE: Blob Versioning must be enabled on your storage account and the blob must be in a container"
+            + " with immutable storage with versioning enabled to call this API."
+    )
+>>>>>>> 360d053 (feat: add support for uploading multiple files from directory)
     private Property<Boolean> legalHold;
 
     private BlobImmutabilityPolicy immutabilityPolicy;
@@ -146,6 +177,7 @@ public class Upload extends AbstractBlobStorageWithSasObject implements Runnable
         BlobClient baseClient = this.blobClient(runContext);
 
         List<Blob> uploadedBlobs = new ArrayList<>();
+
         if (fromUri.toString().endsWith("/")) {
             var containerClient = baseClient.getContainerClient();
             String baseBlobName = baseClient.getBlobName();
@@ -196,7 +228,11 @@ public class Upload extends AbstractBlobStorageWithSasObject implements Runnable
     }
 
     private Blob uploadSingleFile(RunContext runContext, URI fileUri, BlobClient blobClient) throws Exception {
-        runContext.logger().debug("Uploading blob '{}'", blobClient.getBlobName());
+        runContext.logger().debug("Uploading from '{}' to '{}'", fileUri, blobClient.getBlobName());
+
+        try (var is = runContext.storage().getFile(fileUri)) {
+            blobClient.upload(is, true);
+        }
 
         if (this.metadata != null) {
             blobClient.setMetadata(
@@ -240,8 +276,7 @@ public class Upload extends AbstractBlobStorageWithSasObject implements Runnable
             blobClient.setImmutabilityPolicy(this.immutabilityPolicy.to(runContext));
         }
 
-        runContext.metric(
-                Counter.of("file.size", blobClient.getProperties().getBlobSize()));
+        runContext.metric(Counter.of("file.size", blobClient.getProperties().getBlobSize()));
 
         return Blob.of(blobClient, blobClient.getProperties());
     }
@@ -256,15 +291,25 @@ public class Upload extends AbstractBlobStorageWithSasObject implements Runnable
 =======
 
 <<<<<<< HEAD
+<<<<<<< HEAD
         @Schema(title = "The uploaded blob (single file upload only).")
 >>>>>>> 1411081 (Fix Upload task to support single and directory uploads safely)
 =======
         @Schema(title = "The uploaded blob (single file upload only).",
                 description = "Present only when a single file is uploaded; will be null when uploading a directory (see 'blobs').")
 >>>>>>> 5ac43f5 (Fix Upload task for directory uploads, implement Copilot suggestions, and add UploadTest for coverage)
+=======
+        @Schema(
+                title = "The uploaded blob (single file upload only).",
+                description = "Present only when a single file is uploaded; will be null when uploading a directory (see 'blobs')."
+        )
+>>>>>>> 360d053 (feat: add support for uploading multiple files from directory)
         private final Blob blob;
 
-        @Schema(title = "The uploaded blobs (directory upload).")
+        @Schema(
+                title = "List of all uploaded blobs.",
+                description = "Contains all uploaded blobs. For single file uploads, this list will contain one item."
+        )
         private final List<Blob> blobs;
     }
 }

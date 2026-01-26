@@ -95,7 +95,7 @@ public abstract class CosmosContainerBaseTest<T extends AbstractCosmosContainerT
 
         //region WHEN
         throwableAssert.isInstanceOf(IllegalVariableEvaluationException.class);
-        throwableAssert.hasMessageContaining("container id needed");
+        throwableAssert.hasMessageContaining("container ID needed");
         //endregion
     }
 

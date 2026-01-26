@@ -38,7 +38,7 @@ import java.util.Map;
                 tasks:
                   - id: cosmos_queries
                     type: io.kestra.plugin.azure.storage.cosmosdb.Queries
-                    endpoint: "https://yourstorageaccount.blob.core.windows.net"
+                    endpoint: "https://yourcosmosaccount.documents.azure.com"
                     tenantId: "{{ secret('AZURE_TENANT_ID') }}"
                     clientId: "{{ secret('AZURE_CLIENT_ID') }}"
                     clientSecret: "{{ secret('AZURE_CLIENT_SECRET') }}"
@@ -47,9 +47,19 @@ import java.util.Map;
                         query: SELECT * FROM c
                       query-two:
                         query: SELECT * FROM c WHERE c.id = 'test'
+                        partitionKeyDefinition:
+                          paths: ["/id"]
+                          kind: HASH
+                          version: V2
+                        partitionKey:
+                          id: test
                 """
         )
     }
+)
+@Schema(
+    title = "Runs multiple queries on Cosmos items and returns their respective Cosmos query response outputs.",
+    description = "Runs multiple labeled Cosmos SQL queries in one task; each result set is returned under its label."
 )
 public class Queries extends AbstractCosmosContainerTask<Queries.Output> implements RunnableTask<Queries.Output> {
     private static final Logger log = LoggerFactory.getLogger(Queries.class);

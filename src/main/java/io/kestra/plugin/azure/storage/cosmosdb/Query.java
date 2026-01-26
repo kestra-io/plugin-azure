@@ -36,13 +36,19 @@ import java.util.Optional;
                 tasks:
                   - id: bulk
                     type: io.kestra.plugin.azure.storage.cosmosdb.Query
-                    endpoint: "https://yourstorageaccount.blob.core.windows.net"
+                    endpoint: "https://yourcosmosaccount.documents.azure.com"
                     databaseId: your_data_base_id
                     containerId: your_container_id
                     tenantId: "{{ secret('AZURE_TENANT_ID') }}"
                     clientId: "{{ secret('AZURE_CLIENT_ID') }}"
                     clientSecret: "{{ secret('AZURE_CLIENT_SECRET') }}"
-                    query: "SELECT * FROM c"
+                    query: "SELECT * FROM c WHERE c.region = 'europe'"
+                    partitionKeyDefinition:
+                      paths: ["/region"]
+                      kind: HASH
+                      version: V2
+                    partitionKey:
+                      region: europe
                 """
         )
     },
@@ -50,7 +56,10 @@ import java.util.Optional;
         @Metric(name = "records.count", type = Counter.TYPE, description = "The total number of entities processed in the bulk operation.")
     }
 )
-@Schema(title = "Queries Cosmos items and returns its respective Cosmos query response output.")
+@Schema(
+    title = "Queries Cosmos items and returns its respective Cosmos query response output.",
+    description = "Executes a Cosmos SQL query with optional partition scoping and returns the matching documents."
+)
 public class Query extends AbstractCosmosContainerTask<Query.Output> implements RunnableTask<Query.Output> {
     @NotNull
     @Schema(title = "SQL query string")

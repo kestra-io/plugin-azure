@@ -103,7 +103,7 @@ public class Consume extends AbstractServiceBusTask implements RunnableTask<Cons
         try (ServiceBusReceiverClient client = getServiceBusReceiverClientBuilder(runContext).buildClient()) {
             List<ServiceBusReceivedMessage> messages = new ArrayList<>();
 
-            boolean isEndded;
+            boolean isEnded;
             do {
                 int numberOfMessagesToPull = rDefaultPullBatchSize;
                 if (rMaxMessages.isPresent()) {
@@ -112,8 +112,8 @@ public class Consume extends AbstractServiceBusTask implements RunnableTask<Cons
 
                 List<ServiceBusReceivedMessage> latestReceivedMessages = client.receiveMessages(numberOfMessagesToPull, rMaxReceiveDuration).stream().toList();
                 messages.addAll(latestReceivedMessages);
-                isEndded = ended(messages.size(), start, latestReceivedMessages.size(), runContext);
-            } while (!isEndded);
+                isEnded = ended(messages.size(), start, latestReceivedMessages.size(), runContext);
+            } while (!isEnded);
 
             return new Output(
                 messages.size(),

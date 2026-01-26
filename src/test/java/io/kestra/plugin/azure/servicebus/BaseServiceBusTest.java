@@ -18,6 +18,7 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @KestraTest(startRunner = true)
@@ -46,6 +47,8 @@ public class BaseServiceBusTest {
     protected String subscriptionName;
 
     private final List<String> subscriptions = new ArrayList<>();
+
+    private final AtomicInteger atomicMessageCounter = new AtomicInteger(0);
 
     @BeforeAll
     void setUp () throws Exception {
@@ -111,12 +114,24 @@ public class BaseServiceBusTest {
         return subscriptionName;
     }
 
+    protected void clearTopicAfterRun(int numberOfMessagesToConsume) {
+        atomicMessageCounter.addAndGet(numberOfMessagesToConsume);
+    }
+
     private void clearTopic() throws Exception {
+        int numberOfMessages = atomicMessageCounter.get();
+
+        if (numberOfMessages <= 0) {
+            return;
+        }
+
         Consume.builder()
             .topicName(Property.ofValue(topicName))
             .subscriptionName(Property.ofValue(subscriptionName))
             .connectionString(Property.ofValue(connectionString))
-            .maxReceiveDuration(Property.ofValue(Duration.ofNanos(500)))
+            .maxMessages(Property.ofValue(numberOfMessages))
+            .maxReceiveDuration(Property.ofValue(Duration.ofSeconds(5)))
             .build().run(runContextFactory.of());
+        atomicMessageCounter.set(0);
     }
 }

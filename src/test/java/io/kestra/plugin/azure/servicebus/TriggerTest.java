@@ -31,7 +31,7 @@ class TriggerTest extends BaseServiceBusTest {
             .topicName(Property.ofValue(topicName))
             .connectionString(Property.ofValue(connectionString))
             .subscriptionName(Property.ofValue(subscriptionName))
-            .maxReceiveDuration(Property.ofValue(Duration.ofSeconds(1)))
+            .maxReceiveDuration(Property.ofValue(Duration.ofSeconds(5)))
             .build();
 
         Map.Entry<ConditionContext, io.kestra.core.models.triggers.Trigger> context = TestsUtils.mockTrigger(runContextFactory, trigger);
@@ -67,7 +67,7 @@ class TriggerTest extends BaseServiceBusTest {
             .topicName(Property.ofValue(topicName))
             .connectionString(Property.ofValue(connectionString))
             .subscriptionName(Property.ofValue(subscriptionName))
-            .maxReceiveDuration(Property.ofValue(Duration.ofSeconds(1)))
+            .maxReceiveDuration(Property.ofValue(Duration.ofSeconds(5)))
             .build();
 
         Map.Entry<ConditionContext, io.kestra.core.models.triggers.Trigger> context = TestsUtils.mockTrigger(runContextFactory, trigger);

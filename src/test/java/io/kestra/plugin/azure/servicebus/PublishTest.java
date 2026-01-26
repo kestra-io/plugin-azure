@@ -16,6 +16,7 @@ class PublishTest extends BaseServiceBusTest {
     @ResourceLock("service-bus-comsumer-lock")
     void shouldPublishToTopic() throws Exception {
         //region GIVEN
+        clearTopicAfterRun(1);
         Publish publish = Publish.builder()
             .from(Property.ofValue(messages))
             .topicName(Property.ofValue(topicName))
@@ -36,6 +37,7 @@ class PublishTest extends BaseServiceBusTest {
     @ResourceLock("service-bus-comsumer-lock")
     void shouldPublishToQueue() throws Exception {
         //region GIVEN
+        clearTopicAfterRun(1);
         Publish publish = Publish.builder()
             .from(Property.ofValue(messages))
             .queueName(Property.ofValue(queueName))
@@ -56,6 +58,7 @@ class PublishTest extends BaseServiceBusTest {
     @ResourceLock("service-bus-comsumer-lock")
     void shouldPublishMultipleMessages() throws Exception {
         //region GIVEN
+        clearTopicAfterRun(2);
         Publish publish = Publish.builder()
             .from(Property.ofValue(List.of(singleMessage, singleMessage)))
             .topicName(Property.ofValue(topicName))
@@ -76,6 +79,7 @@ class PublishTest extends BaseServiceBusTest {
     @ResourceLock("service-bus-comsumer-lock")
     void shouldPublishFromStringValue() throws Exception {
         //region GIVEN
+        clearTopicAfterRun(1);
         Publish publish = Publish.builder()
             .from(Property.ofValue("{\"body\":\"messageBody\"}"))
             .topicName(Property.ofValue(topicName))

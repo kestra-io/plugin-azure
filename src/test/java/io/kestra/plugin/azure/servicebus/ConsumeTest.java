@@ -25,7 +25,7 @@ class ConsumeTest extends BaseServiceBusTest {
             .topicName(Property.ofValue(topicName))
             .connectionString(Property.ofValue(connectionString))
             .subscriptionName(Property.ofValue(subscriptionName))
-            .maxReceiveDuration(Property.ofValue(Duration.ofSeconds(1)))
+            .maxReceiveDuration(Property.ofValue(Duration.ofSeconds(5)))
             .build();
         //endregion
 
@@ -51,7 +51,7 @@ class ConsumeTest extends BaseServiceBusTest {
             .connectionString(Property.ofValue(connectionString))
             .subscriptionName(Property.ofValue(subscriptionName))
             .serdeType(Property.ofValue(SerdeType.JSON))
-            .maxReceiveDuration(Property.ofValue(Duration.ofSeconds(1)))
+            .maxReceiveDuration(Property.ofValue(Duration.ofSeconds(5)))
             .build();
         //endregion
 
@@ -113,7 +113,7 @@ class ConsumeTest extends BaseServiceBusTest {
 
     @Test
     @ResourceLock("service-bus-comsumer-lock")
-    void shouldReturnOutputWhenAfterMaxMessagesReached() throws Exception {
+    void shouldReturnOutputWhenMaxMessagesReached() throws Exception {
         //region GIVEN
         publishToTopic(Message.builder()
             .body("{\"message\":\"example_message_body\"}")

@@ -2,6 +2,7 @@ package io.kestra.plugin.azure.servicebus;
 
 import io.kestra.core.exceptions.IllegalVariableEvaluationException;
 import io.kestra.core.models.property.Property;
+import io.kestra.core.utils.IdUtils;
 import org.assertj.core.api.AbstractThrowableAssert;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.parallel.ResourceLock;
@@ -17,7 +18,7 @@ class ConsumeTest extends BaseServiceBusTest {
     @ResourceLock("service-bus-comsumer-lock")
     void shouldConsumePublishedTextMessage() throws Exception {
         //region GIVEN
-        publishToTopic(Message.builder()
+        String subscriptionName = publishToTopic(Message.builder()
             .body("example_message_body")
             .timeToLive(Duration.ofSeconds(10))
         );
@@ -25,7 +26,8 @@ class ConsumeTest extends BaseServiceBusTest {
             .topicName(Property.ofValue(topicName))
             .connectionString(Property.ofValue(connectionString))
             .subscriptionName(Property.ofValue(subscriptionName))
-            .maxReceiveDuration(Property.ofValue(Duration.ofSeconds(1)))
+            .maxReceiveDuration(Property.ofValue(Duration.ofSeconds(30)))
+            .maxMessages(Property.ofValue(1))
             .build();
         //endregion
 
@@ -42,7 +44,7 @@ class ConsumeTest extends BaseServiceBusTest {
     @ResourceLock("service-bus-comsumer-lock")
     void shouldConsumePublishedJsonMessage() throws Exception {
         //region GIVEN
-        publishToTopic(Message.builder()
+        String subscriptionName = publishToTopic(Message.builder()
             .body("{\"message\":\"example_message_body\"}")
             .timeToLive(Duration.ofSeconds(10))
         );
@@ -51,7 +53,8 @@ class ConsumeTest extends BaseServiceBusTest {
             .connectionString(Property.ofValue(connectionString))
             .subscriptionName(Property.ofValue(subscriptionName))
             .serdeType(Property.ofValue(SerdeType.JSON))
-            .maxReceiveDuration(Property.ofValue(Duration.ofSeconds(1)))
+            .maxReceiveDuration(Property.ofValue(Duration.ofSeconds(30)))
+            .maxMessages(Property.ofValue(1))
             .build();
         //endregion
 
@@ -68,6 +71,7 @@ class ConsumeTest extends BaseServiceBusTest {
     @ResourceLock("service-bus-comsumer-lock")
     void shouldReturnEmptyOutputWhenNoMessagesConsumed() throws Exception {
         //region GIVEN
+        String subscriptionName = this.createSubscription(topicName, IdUtils.create());
         Consume consume = Consume.builder()
             .topicName(Property.ofValue(topicName))
             .connectionString(Property.ofValue(connectionString))
@@ -90,12 +94,14 @@ class ConsumeTest extends BaseServiceBusTest {
     @ResourceLock("service-bus-comsumer-lock")
     void shouldReturnEmptyOutputWhenNoMessagesConsumedAfterMaxDuration() throws Exception {
         //region GIVEN
+        String subscriptionName = this.createSubscription(topicName, IdUtils.create());
+
         Consume consume = Consume.builder()
-            .topicName(Property.ofValue(topicName))
             .connectionString(Property.ofValue(connectionString))
+            .topicName(Property.ofValue(topicName))
+            .subscriptionName(Property.ofValue(subscriptionName))
             .subscriptionName(Property.ofValue(subscriptionName))
             .serdeType(Property.ofValue(SerdeType.JSON))
-            .maxReceiveDuration(Property.ofValue(Duration.ofSeconds(1)))
             .maxReceiveDuration(Property.ofValue(Duration.ofSeconds(1)))
             .build();
         //endregion
@@ -113,15 +119,18 @@ class ConsumeTest extends BaseServiceBusTest {
 
     @Test
     @ResourceLock("service-bus-comsumer-lock")
-    void shouldReturnOutputWhenAfterMaxMessagesReached() throws Exception {
+    void shouldReturnOutputWhenMaxMessagesReached() throws Exception {
         //region GIVEN
+        String subscriptionName = this.createSubscription(topicName, IdUtils.create());
         publishToTopic(Message.builder()
             .body("{\"message\":\"example_message_body\"}")
-            .timeToLive(Duration.ofSeconds(1))
+            .timeToLive(Duration.ofSeconds(10)),
+            subscriptionName
         );
         publishToTopic(Message.builder()
             .body("{\"message\":\"example_message_body\"}")
-            .timeToLive(Duration.ofSeconds(1))
+            .timeToLive(Duration.ofSeconds(10)),
+            subscriptionName
         );
         Consume consume = Consume.builder()
             .topicName(Property.ofValue(topicName))
@@ -129,6 +138,7 @@ class ConsumeTest extends BaseServiceBusTest {
             .subscriptionName(Property.ofValue(subscriptionName))
             .serdeType(Property.ofValue(SerdeType.JSON))
             .maxMessages(Property.ofValue(1))
+            .maxReceiveDuration(Property.ofValue(Duration.ofSeconds(30)))
             .build();
         //endregion
 
@@ -148,7 +158,6 @@ class ConsumeTest extends BaseServiceBusTest {
             .topicName(Property.ofValue(topicName))
             .queueName(Property.ofValue(queueName))
             .connectionString(Property.ofValue(connectionString))
-            .subscriptionName(Property.ofValue(subscriptionName))
             .maxReceiveDuration(Property.ofValue(Duration.ofSeconds(1)))
             .build();
         //endregion
@@ -170,7 +179,6 @@ class ConsumeTest extends BaseServiceBusTest {
         //region GIVEN
         Consume consume = Consume.builder()
             .connectionString(Property.ofValue(connectionString))
-            .subscriptionName(Property.ofValue(subscriptionName))
             .maxReceiveDuration(Property.ofValue(Duration.ofSeconds(1)))
             .build();
         //endregion

@@ -23,7 +23,7 @@ public abstract class AbstractCosmosContainerTask<T extends Output> extends Abst
     @Override
     protected T run(RunContext runContext, CosmosAsyncDatabase cosmosDatabase) throws Exception {
         String rContainerId = runContext.render(containerId).as(String.class).orElseThrow(
-            () -> new IllegalVariableEvaluationException("container id needed")
+            () -> new IllegalVariableEvaluationException("container ID needed")
         );
 
         CosmosAsyncContainer cosmosContainer = cosmosDatabase.getContainer(rContainerId);

@@ -27,7 +27,7 @@ class RealTimeTriggerTest extends BaseServiceBusTest{
     void shouldConsumePublishedTextMessage() throws Exception {
         //region GIVEN
         String messageBody = "example_message_body";
-        publishToTopic(Message.builder()
+        String subscriptionName = publishToTopic(Message.builder()
             .body(messageBody)
             .timeToLive(Duration.ofSeconds(10))
         );
@@ -68,7 +68,7 @@ class RealTimeTriggerTest extends BaseServiceBusTest{
     void shouldConsumePublishedJsonMessage() throws Exception {
         //region GIVEN
         String messageBody = "{\"message\":\"example_message_body\"}";
-        publishToTopic(Message.builder()
+        String subscriptionName = publishToTopic(Message.builder()
             .body(messageBody)
             .timeToLive(Duration.ofSeconds(10))
         );
@@ -114,7 +114,6 @@ class RealTimeTriggerTest extends BaseServiceBusTest{
             .topicName(Property.ofValue(topicName))
             .queueName(Property.ofValue(queueName))
             .connectionString(Property.ofValue(connectionString))
-            .subscriptionName(Property.ofValue(subscriptionName))
             .build();
 
         Map.Entry<ConditionContext, Trigger> context =TestsUtils.mockTrigger(runContextFactory, realTimeTrigger);
@@ -144,7 +143,6 @@ class RealTimeTriggerTest extends BaseServiceBusTest{
             .type(RealTimeTrigger.class.getSimpleName())
             .connectionString(Property.ofValue(connectionString))
             .connectionString(Property.ofValue(connectionString))
-            .subscriptionName(Property.ofValue(subscriptionName))
             .build();
 
         Map.Entry<ConditionContext, Trigger> context =TestsUtils.mockTrigger(runContextFactory, realTimeTrigger);

@@ -4,6 +4,7 @@ import io.kestra.core.exceptions.IllegalVariableEvaluationException;
 import io.kestra.core.models.conditions.ConditionContext;
 import io.kestra.core.models.executions.Execution;
 import io.kestra.core.models.property.Property;
+import io.kestra.core.utils.IdUtils;
 import io.kestra.core.utils.TestsUtils;
 import org.assertj.core.api.AbstractThrowableAssert;
 import org.junit.jupiter.api.Test;
@@ -21,7 +22,7 @@ class TriggerTest extends BaseServiceBusTest {
     @ResourceLock("service-bus-comsumer-lock")
     void shouldConsumePublishedTextMessage() throws Exception {
         //region GIVEN
-        publishToTopic(Message.builder()
+        String subscriptionName = publishToTopic(Message.builder()
             .body("example_message_body")
             .timeToLive(Duration.ofSeconds(10))
         );
@@ -31,7 +32,8 @@ class TriggerTest extends BaseServiceBusTest {
             .topicName(Property.ofValue(topicName))
             .connectionString(Property.ofValue(connectionString))
             .subscriptionName(Property.ofValue(subscriptionName))
-            .maxReceiveDuration(Property.ofValue(Duration.ofSeconds(1)))
+            .maxReceiveDuration(Property.ofValue(Duration.ofSeconds(30)))
+            .maxMessages(Property.ofValue(1))
             .build();
 
         Map.Entry<ConditionContext, io.kestra.core.models.triggers.Trigger> context = TestsUtils.mockTrigger(runContextFactory, trigger);
@@ -56,7 +58,7 @@ class TriggerTest extends BaseServiceBusTest {
     @ResourceLock("service-bus-comsumer-lock")
     void shouldConsumePublishedJsonMessage() throws Exception {
         //region GIVEN
-        publishToTopic(Message.builder()
+        String subscriptionName = publishToTopic(Message.builder()
             .body("{\"message\":\"example_message_body\"}")
             .timeToLive(Duration.ofSeconds(10))
         );
@@ -67,7 +69,8 @@ class TriggerTest extends BaseServiceBusTest {
             .topicName(Property.ofValue(topicName))
             .connectionString(Property.ofValue(connectionString))
             .subscriptionName(Property.ofValue(subscriptionName))
-            .maxReceiveDuration(Property.ofValue(Duration.ofSeconds(1)))
+            .maxReceiveDuration(Property.ofValue(Duration.ofSeconds(30)))
+            .maxMessages(Property.ofValue(1))
             .build();
 
         Map.Entry<ConditionContext, io.kestra.core.models.triggers.Trigger> context = TestsUtils.mockTrigger(runContextFactory, trigger);
@@ -91,6 +94,8 @@ class TriggerTest extends BaseServiceBusTest {
     @ResourceLock("service-bus-comsumer-lock")
     void shouldReturnEmptyOptionalWhenNoMessagesAreConsumed() throws Exception {
         //region GIVEN
+        String subscriptionName = createSubscription(topicName, IdUtils.create());
+
         Trigger trigger = Trigger.builder()
             .id(TriggerTest.class.getSimpleName())
             .type(TriggerTest.class.getSimpleName())
@@ -124,7 +129,6 @@ class TriggerTest extends BaseServiceBusTest {
             .topicName(Property.ofValue(topicName))
             .queueName(Property.ofValue(queueName))
             .connectionString(Property.ofValue(connectionString))
-            .subscriptionName(Property.ofValue(subscriptionName))
             .maxReceiveDuration(Property.ofValue(Duration.ofSeconds(1)))
             .build();
 
@@ -153,7 +157,6 @@ class TriggerTest extends BaseServiceBusTest {
             .id(TriggerTest.class.getSimpleName())
             .type(TriggerTest.class.getSimpleName())
             .connectionString(Property.ofValue(connectionString))
-            .subscriptionName(Property.ofValue(subscriptionName))
             .maxReceiveDuration(Property.ofValue(Duration.ofSeconds(1)))
             .build();
 

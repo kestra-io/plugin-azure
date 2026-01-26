@@ -44,7 +44,6 @@ import static io.kestra.core.utils.Rethrow.throwFunction;
                     tenantId: "{{ secret('AZURE_TENANT_ID') }}"
                     clientId: "{{ secret('AZURE_CLIENT_ID') }}"
                     clientSecret: "{{ secret('AZURE_CLIENT_SECRET') }}"
-                    type: io.kestra.plugin.azure.servicebus.Publish
                     from:
                       timeToLive: PT10S
                       body: "messageBody"

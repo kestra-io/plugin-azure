@@ -50,10 +50,10 @@ import java.util.Objects;
         )
     }
 )
-@Schema(title = "Deletes a Cosmos item and returns its respective Cosmos item response.")
+    @Schema(title = "Deletes a Cosmos item and returns its respective Cosmos item response.")
 public class Delete extends AbstractCosmosContainerTask<Delete.Output> implements RunnableTask<Delete.Output> {
     @NotNull
-    @Schema(title = "item")
+    @Schema(title = "Document identifier to delete")
     private Property<Map<String, Object>> item;
 
 

@@ -53,11 +53,11 @@ import java.util.Optional;
 @Schema(title = "Queries Cosmos items and returns its respective Cosmos query response output.")
 public class Query extends AbstractCosmosContainerTask<Query.Output> implements RunnableTask<Query.Output> {
     @NotNull
-    @Schema(title = "query")
+    @Schema(title = "SQL query string")
     private Property<String> query;
 
     @Schema(
-        title = "excludeRegions",
+        title = "Regions to exclude",
         description = """
             List of regions to be excluded for the request/retries. Example \"East US\" or \"East US, \
             West US\" These regions will be excluded from the preferred regions list. If all the regions are excluded, \
@@ -68,29 +68,29 @@ public class Query extends AbstractCosmosContainerTask<Query.Output> implements 
     private Property<List<String>> excludeRegions;
 
     @Schema(
-        title = "partitionKey",
+        title = "Partition key values",
         description = """
-            Sets the partition key used to identify the current request's target partition. \
-            Must be used in conjunction with partitionKeyDefinition
+            Map of partition key path to value (e.g. `{ "country": "US" }` for a `/country` key). \
+            Use with `partitionKeyDefinition` to target a logical partition.
             """,
         requiredProperties = "partitionKeyDefinition"
     )
     private Property<Map<String, Object>> partitionKey;
 
     @Schema(
-        title = "partitionKeyDefinition",
+        title = "Partition key definition (paths, kind, version)",
         description = """
-            The PartitionKeyDefinition used to extract the PartitionKey value. \
-            Must be used in conjunction with partitionKey or feedRangePartitionKey.
+            Defines the partition key schema (paths, kind, version). Required when using `partitionKey` \
+            or `feedRangePartitionKey` so the task can build the correct `PartitionKey`.
             """
     )
     private Property<PartitionKeyDefinition> partitionKeyDefinition;
 
     @Schema(
-        title = "feedRangePartitionKey",
+        title = "Feed range partition key values",
         description = """
-            The Partiton key feed range used to target specific physical partitions. \
-            Must be used in conjunction with partitionKeyDefinition.
+            Map of partition key path to value used to build a feed range (e.g. `{ "country": "US" }`). \
+            Must be used with `partitionKeyDefinition`; mutually exclusive with `partitionKey`.
             """,
         requiredProperties = "partitionKeyDefinition"
     )

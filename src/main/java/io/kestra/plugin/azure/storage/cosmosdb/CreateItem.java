@@ -49,10 +49,10 @@ import java.util.Objects;
         )
     }
 )
-@Schema(title = "Creates a new Cosmos item and returns its respective Cosmos item response.")
+    @Schema(title = "Creates a new Cosmos item and returns its respective Cosmos item response.")
 public class CreateItem extends AbstractCosmosContainerTask<CreateItem.Output> implements RunnableTask<CreateItem.Output> {
     @NotNull
-    @Schema(title = "item")
+    @Schema(title = "Document body to create")
     private Property<Map<String, Object>> item;
 
     @Override

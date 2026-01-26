@@ -58,12 +58,17 @@ public class Batch extends AbstractCosmosContainerTask<Batch.BatchResponseOutput
     @NotNull
     @Schema(
         name = "partitionKeyValue",
-        description = "The partition key for all items in the batch."
+        title = "Partition key value",
+        description = "Single partition key value shared by every item in the batch (e.g. \"US\" if your key is /country)."
     )
     Property<String> partitionKeyValue;
 
     @NotNull
-    @Schema(name = "items")
+    @Schema(
+        name = "items",
+        title = "Documents to create in one batch",
+        description = "List of documents; each must include the partition key path matching partitionKeyValue."
+    )
     Property<List<Map<String, Object>>> items;
 
     @Override

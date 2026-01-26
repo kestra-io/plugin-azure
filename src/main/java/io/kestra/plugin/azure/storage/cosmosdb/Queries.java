@@ -55,6 +55,10 @@ public class Queries extends AbstractCosmosContainerTask<Queries.Output> impleme
     private static final Logger log = LoggerFactory.getLogger(Queries.class);
 
     @NotNull
+    @Schema(
+        title = "Named queries to execute",
+        description = "Map of label to query options. Each entry runs independently and returns under its label."
+    )
     private Property<Map<String, QueriesOptions>> queries;
 
     @Override
@@ -133,33 +137,39 @@ public class Queries extends AbstractCosmosContainerTask<Queries.Output> impleme
     @NoArgsConstructor
     public static class QueriesOptions {
         @NotNull
-        @Schema(title = "query")
+        @Schema(
+            title = "SQL query string",
+            description = "Cosmos SQL text to execute for this entry."
+        )
         private String query;
 
         @Schema(
-            title = "excludeRegions",
+            title = "Regions to exclude",
             description = """
                 List of regions to be excluded for the request/retries. Example \"East US\" or \"East US, West US\" \
                 These regions will be excluded from the preferred regions list. If all the regions are excluded, the \
                 request will be sent to the primary region for the account. The primary region is the write region in a\
                  single master account and the hub region in a multi-master account.
-                """
+            """
         )
         private List<String> excludeRegions;
 
         @Schema(
-            title = "partitionKey",
+            title = "Partition key values",
+            description = "Map of partition key path to value (e.g. `{ \"country\": \"US\" }`). Requires partitionKeyDefinition."
             requiredProperties = "partitionKeyDefinition"
         )
         private Map<String, Object> partitionKey;
 
         @Schema(
-            title = "partitionKeyDefinition"
+            title = "Partition key definition (paths, kind, version)",
+            description = "Schema of the container partition key used to build PartitionKey objects."
         )
         private PartitionKeyDefinition partitionKeyDefinition;
 
         @Schema(
-            title = "feedRangePartitionKey",
+            title = "Feed range partition key values",
+            description = "Map of partition key path to value used to build a feed range; mutually exclusive with partitionKey."
             requiredProperties = "partitionKeyDefinition"
         )
         private Map<String, Object> feedRangePartitionKey;

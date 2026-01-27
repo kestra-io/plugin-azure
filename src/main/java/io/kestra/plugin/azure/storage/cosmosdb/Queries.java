@@ -166,7 +166,7 @@ public class Queries extends AbstractCosmosContainerTask<Queries.Output> impleme
 
         @Schema(
             title = "Partition key values",
-            description = "Map of partition key path to value (e.g. `{ \"country\": \"US\" }`). Requires partitionKeyDefinition."
+            description = "Map of partition key path to value (e.g. `{ \"country\": \"US\" }`). Requires partitionKeyDefinition.",
             requiredProperties = "partitionKeyDefinition"
         )
         private Map<String, Object> partitionKey;
@@ -179,7 +179,7 @@ public class Queries extends AbstractCosmosContainerTask<Queries.Output> impleme
 
         @Schema(
             title = "Feed range partition key values",
-            description = "Map of partition key path to value used to build a feed range; mutually exclusive with partitionKey."
+            description = "Map of partition key path to value used to build a feed range; mutually exclusive with partitionKey.",
             requiredProperties = "partitionKeyDefinition"
         )
         private Map<String, Object> feedRangePartitionKey;

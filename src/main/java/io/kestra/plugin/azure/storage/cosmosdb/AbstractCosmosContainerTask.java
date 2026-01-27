@@ -17,7 +17,10 @@ import lombok.experimental.SuperBuilder;
 @NoArgsConstructor
 public abstract class AbstractCosmosContainerTask<T extends Output> extends AbstractCosmosDatabaseTask<T> {
     @NotNull
-    @Schema(title = "container ID")
+    @Schema(
+        title = "Cosmos container ID",
+        description = "Name of the container (collection) inside the specified database."
+    )
     private Property<String> containerId;
 
     @Override

@@ -38,7 +38,7 @@ import java.util.Map;
                 tasks:
                   - id: cosmos_queries
                     type: io.kestra.plugin.azure.storage.cosmosdb.Queries
-                    endpoint: "https://yourstorageaccount.blob.core.windows.net"
+                    endpoint: "https://yourcosmosaccount.documents.azure.com"
                     tenantId: "{{ secret('AZURE_TENANT_ID') }}"
                     clientId: "{{ secret('AZURE_CLIENT_ID') }}"
                     clientSecret: "{{ secret('AZURE_CLIENT_SECRET') }}"
@@ -47,14 +47,28 @@ import java.util.Map;
                         query: SELECT * FROM c
                       query-two:
                         query: SELECT * FROM c WHERE c.id = 'test'
+                        partitionKeyDefinition:
+                          paths: ["/id"]
+                          kind: HASH
+                          version: V2
+                        partitionKey:
+                          id: test
                 """
         )
     }
+)
+@Schema(
+    title = "Runs multiple queries on Cosmos items and returns their respective Cosmos query response outputs.",
+    description = "Runs multiple labeled Cosmos SQL queries in one task; each result set is returned under its label."
 )
 public class Queries extends AbstractCosmosContainerTask<Queries.Output> implements RunnableTask<Queries.Output> {
     private static final Logger log = LoggerFactory.getLogger(Queries.class);
 
     @NotNull
+    @Schema(
+        title = "Named queries to execute",
+        description = "Map of label to query options. Each entry runs independently and returns under its label."
+    )
     private Property<Map<String, QueriesOptions>> queries;
 
     @Override
@@ -133,33 +147,39 @@ public class Queries extends AbstractCosmosContainerTask<Queries.Output> impleme
     @NoArgsConstructor
     public static class QueriesOptions {
         @NotNull
-        @Schema(title = "query")
+        @Schema(
+            title = "SQL query string",
+            description = "Cosmos SQL text to execute for this entry."
+        )
         private String query;
 
         @Schema(
-            title = "excludeRegions",
+            title = "Regions to exclude",
             description = """
                 List of regions to be excluded for the request/retries. Example \"East US\" or \"East US, West US\" \
                 These regions will be excluded from the preferred regions list. If all the regions are excluded, the \
                 request will be sent to the primary region for the account. The primary region is the write region in a\
                  single master account and the hub region in a multi-master account.
-                """
+            """
         )
         private List<String> excludeRegions;
 
         @Schema(
-            title = "partitionKey",
+            title = "Partition key values",
+            description = "Map of partition key path to value (e.g. `{ \"country\": \"US\" }`). Requires partitionKeyDefinition.",
             requiredProperties = "partitionKeyDefinition"
         )
         private Map<String, Object> partitionKey;
 
         @Schema(
-            title = "partitionKeyDefinition"
+            title = "Partition key definition (paths, kind, version)",
+            description = "Schema of the container partition key used to build PartitionKey objects."
         )
         private PartitionKeyDefinition partitionKeyDefinition;
 
         @Schema(
-            title = "feedRangePartitionKey",
+            title = "Feed range partition key values",
+            description = "Map of partition key path to value used to build a feed range; mutually exclusive with partitionKey.",
             requiredProperties = "partitionKeyDefinition"
         )
         private Map<String, Object> feedRangePartitionKey;

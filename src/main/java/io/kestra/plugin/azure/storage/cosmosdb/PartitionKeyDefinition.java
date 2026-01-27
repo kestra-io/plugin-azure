@@ -10,19 +10,20 @@ import java.util.List;
 public record PartitionKeyDefinition(
     @NotNull
     @Schema(
-        title = "paths",
-        description = "Sets the item property paths for the partition key."
+        title = "Partition key paths (e.g. [/pk])",
+        description = "Item property paths used to compute the partition key. Include a leading '/'."
     )
     List<String> paths,
 
     @NotNull
     @Schema(
-        title = "kind",
-        description = "Sets the partition algorithm used to calculate the partition id given a partition key"
+        title = "Partitioning algorithm",
+        description = "Sets the algorithm used to calculate the partition id given a partition key."
     )
     PartitionKind kind,
 
     @NotNull
+    @Schema(title = "Partition key definition version")
     PartitionKeyDefinitionVersion version
 ) {
     com.azure.cosmos.models.PartitionKeyDefinition toAzurePartitionKeyDefinition() {

@@ -44,15 +44,19 @@ import java.util.Objects;
                     clientSecret: "{{ secret('AZURE_CLIENT_SECRET') }}"
                     item:
                       id: item_id
+                      region: europe
                       key: value
                 """
         )
     }
 )
-@Schema(title = "Creates a new Cosmos item and returns its respective Cosmos item response.")
+@Schema(
+    title = "Creates a new Cosmos item and returns its respective Cosmos item response.",
+    description = "Inserts one document into the container; returns status, request charge, diagnostics, and the stored document."
+)
 public class CreateItem extends AbstractCosmosContainerTask<CreateItem.Output> implements RunnableTask<CreateItem.Output> {
     @NotNull
-    @Schema(title = "item")
+    @Schema(title = "Document body to create")
     private Property<Map<String, Object>> item;
 
     @Override

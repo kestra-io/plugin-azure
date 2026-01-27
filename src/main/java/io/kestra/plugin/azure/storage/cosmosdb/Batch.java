@@ -41,29 +41,40 @@ import java.util.Objects;
                     endpoint: "https://yourcosmosaccount.documents.azure.com"
                     databaseId: your_data_base_id
                     containerId: your_container_id
+                    partitionKeyValue: europe
                     tenantId: "{{ secret('AZURE_TENANT_ID') }}"
                     clientId: "{{ secret('AZURE_CLIENT_ID') }}"
                     clientSecret: "{{ secret('AZURE_CLIENT_SECRET') }}"
                     items:
                         - id: item_one
+                          region: europe
                           key: value
                         - id: item_two
+                          region: europe
                           key: value
                 """
         )
     }
 )
-@Schema(title = "Batch creates a new Cosmos item and returns its respective Cosmos batch response output.")
+@Schema(
+    title = "Batch creates a new Cosmos item and returns its respective Cosmos batch response output.",
+    description = "Runs a transactional batch of create-item operations within one partition key and returns per-operation results."
+)
 public class Batch extends AbstractCosmosContainerTask<Batch.BatchResponseOutput> implements RunnableTask<Batch.BatchResponseOutput> {
     @NotNull
     @Schema(
         name = "partitionKeyValue",
-        description = "The partition key for all items in the batch."
+        title = "Partition key value",
+        description = "Single partition key value shared by every item in the batch (e.g. \"US\" if your key is /country)."
     )
     Property<String> partitionKeyValue;
 
     @NotNull
-    @Schema(name = "items")
+    @Schema(
+        name = "items",
+        title = "Documents to create in one batch",
+        description = "List of documents; each must include the partition key path matching partitionKeyValue."
+    )
     Property<List<Map<String, Object>>> items;
 
     @Override

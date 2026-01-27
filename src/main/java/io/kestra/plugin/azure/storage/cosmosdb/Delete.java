@@ -46,14 +46,18 @@ import java.util.Objects;
                     clientSecret: "{{ secret('AZURE_CLIENT_SECRET') }}"
                     item:
                       id: item_id
+                      region: europe
                 """
         )
     }
 )
-@Schema(title = "Deletes a Cosmos item and returns its respective Cosmos item response.")
+@Schema(
+    title = "Deletes a Cosmos item and returns its respective Cosmos item response.",
+    description = "Deletes a document by id and partition key; returns status, request charge, etag, and diagnostics."
+)
 public class Delete extends AbstractCosmosContainerTask<Delete.Output> implements RunnableTask<Delete.Output> {
     @NotNull
-    @Schema(title = "item")
+    @Schema(title = "Document identifier to delete")
     private Property<Map<String, Object>> item;
 
 

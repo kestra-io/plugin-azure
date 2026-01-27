@@ -21,7 +21,7 @@ import java.util.Optional;
 @NoArgsConstructor
 public abstract class AbstractCosmosDatabaseTask<T extends Output> extends AbstractAzureIdentityConnection {
     @Schema(
-        title = "consistencyLevel",
+        title = "Consistency level for requests",
         description = """
             Represents the consistency levels supported for Azure Cosmos DB client operations \
             in the Azure Cosmos DB service.
@@ -30,11 +30,14 @@ public abstract class AbstractCosmosDatabaseTask<T extends Output> extends Abstr
     @Builder.Default()
     private Property<ConsistencyLevel> consistencyLevel = Property.ofValue(ConsistencyLevel.SESSION);
 
-    @Schema(title = "endpoint")
+    @Schema(
+        title = "Cosmos account endpoint URL",
+        description = "Base URL of the Cosmos account, e.g. https://<account>.documents.azure.com. Required when no connectionString is provided."
+    )
     private Property<String> endpoint;
 
     @Schema(
-        title = "contentResponseOnWriteEnabled",
+        title = "Include response body on writes",
         description = """
             Sets the boolean to only return the headers and status code in Cosmos DB response in case of Create, \
             Update and Delete operations on CosmosItem.\n If set to false (which is by default), service doesn't \
@@ -44,11 +47,17 @@ public abstract class AbstractCosmosDatabaseTask<T extends Output> extends Abstr
     @Builder.Default()
     private Property<Boolean> contentResponseOnWriteEnabled = Property.ofValue(DEFAULT_CONTENT_RESPONSE_ON_WRITE_ENABLED);
 
-    @Schema(title = "databaseId")
+    @Schema(
+        title = "Cosmos database ID",
+        description = "Name of the database inside the Cosmos account."
+    )
     @NotNull
     private Property<String> databaseId;
 
-    @Schema(title = "connectionString")
+    @Schema(
+        title = "Cosmos connection string",
+        description = "Full connection string from the Azure portal; if set, endpoint and credentials are ignored."
+    )
     protected Property<String> connectionString;
 
     private static final ConsistencyLevel DEFAULT_CONSISTENCY_LEVEL = ConsistencyLevel.SESSION;

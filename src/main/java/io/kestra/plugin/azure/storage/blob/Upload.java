@@ -18,7 +18,6 @@ import io.kestra.core.models.executions.metrics.Counter;
 import io.kestra.core.models.property.Property;
 import io.kestra.core.models.tasks.RunnableTask;
 import io.kestra.core.runners.RunContext;
-import io.kestra.core.storages.FileAttributes;
 import static io.kestra.core.utils.Rethrow.throwFunction;
 import io.kestra.plugin.azure.storage.blob.abstracts.AbstractBlobStorageWithSasObject;
 import io.kestra.plugin.azure.storage.blob.models.AccessTier;
@@ -83,18 +82,56 @@ import lombok.experimental.SuperBuilder;
         ),
         @Example(
             full = true,
-            title = "Upload multiple files from a directory to Azure Blob Storage",
+            title = "Upload multiple files from a working directory to Azure Blob Storage",
             code = """
                 id: azure_blob_upload_directory
                 namespace: company.team
 
                 tasks:
+                  - id: working_dir
+                    type: io.kestra.plugin.core.flow.WorkingDirectory
+                    tasks:
+                      - id: create_files
+                        type: io.kestra.plugin.scripts.shell.Commands
+                        commands:
+                          - mkdir -p data
+                          - echo "File 1" > data/file1.txt
+                          - echo "File 2" > data/file2.txt
+                          - echo "File 3" > data/file3.txt
+
                   - id: upload_directory
                     type: io.kestra.plugin.azure.storage.blob.Upload
                     endpoint: https://kestra.blob.core.windows.net
                     connectionString: "{{ secret('AZURE_CONNECTION_STRING') }}"
                     container: kestra
-                    from: "{{ outputs.workingdir.outputFiles }}/"
+                    from: "{{ outputs.working_dir.outputFiles }}"
+                    name: "uploads/"
+                """
+        ),
+        @Example(
+            full = true,
+            title = "Upload multiple files from a list to Azure Blob Storage",
+            code = """
+                id: azure_blob_upload_list
+                namespace: company.team
+
+                tasks:
+                  - id: download_files
+                    type: io.kestra.plugin.core.http.Download
+                    uri: https://example.com/file1.csv
+
+                  - id: download_more
+                    type: io.kestra.plugin.core.http.Download
+                    uri: https://example.com/file2.csv
+
+                  - id: upload_multiple
+                    type: io.kestra.plugin.azure.storage.blob.Upload
+                    endpoint: https://kestra.blob.core.windows.net
+                    connectionString: "{{ secret('AZURE_CONNECTION_STRING') }}"
+                    container: kestra
+                    from:
+                      - "{{ outputs.download_files.uri }}"
+                      - "{{ outputs.download_more.uri }}"
                     name: "uploads/"
                 """
         )
@@ -104,16 +141,21 @@ import lombok.experimental.SuperBuilder;
     }
 )
 @Schema(
-    title = "Upload a file or multiple files to Azure Blob Storage container."
+    title = "Upload one or multiple files to Azure Blob Storage container.",
+    description = "This task supports uploading a single file, multiple files from a map (e.g., from WorkingDirectory outputs), or multiple files from a list."
 )
 public class Upload extends AbstractBlobStorageWithSasObject implements RunnableTask<Upload.Output> {
     @Schema(
-        title = "The file or directory from internal storage to upload to Azure Blob Storage.",
-        description = "If the path ends with '/', it will be treated as a directory and all files within will be uploaded."
+        title = "The file(s) from internal storage to upload to Azure Blob Storage.",
+        description = "Can be:\n" +
+            "- A single file URI (string): `\"{{ outputs.task.uri }}\"`\n" +
+            "- A map of files (from WorkingDirectory or similar tasks): `\"{{ outputs.workingdir.outputFiles }}\"`\n" +
+            "- A list of file URIs: `[\"kestra:///file1.txt\", \"kestra:///file2.txt\"]`\n\n" +
+            "When uploading multiple files, the 'name' property should typically end with '/' to indicate a directory prefix."
     )
     @PluginProperty(internalStorageURI = true)
     @NotNull
-    private Property<String> from;
+    private Property<Object> from;
 
     @Schema(
         title = "Metadata for the blob."
@@ -145,51 +187,98 @@ public class Upload extends AbstractBlobStorageWithSasObject implements Runnable
 
     @Override
     public Upload.Output run(RunContext runContext) throws Exception {
-        URI fromUri = new URI(runContext.render(this.from).as(String.class).orElseThrow());
+        Object fromValue = runContext.render(this.from).as(Object.class).orElseThrow();
         BlobClient baseClient = this.blobClient(runContext);
+        var containerClient = baseClient.getContainerClient();
 
         List<Blob> uploadedBlobs = new ArrayList<>();
-        if (fromUri.toString().endsWith("/")) {
-            var containerClient = baseClient.getContainerClient();
+
+        if (fromValue instanceof String) {
+            String fromString = (String) fromValue;
+            URI fromUri = new URI(fromString);
+            
+            uploadedBlobs.add(uploadSingleFile(runContext, fromUri, baseClient));
+            
+        } else if (fromValue instanceof Map) {
+            @SuppressWarnings("unchecked")
+            Map<String, Object> filesMap = (Map<String, Object>) fromValue;
+            
             String baseBlobName = baseClient.getBlobName();
             if (baseBlobName == null) {
                 baseBlobName = "";
             }
 
-            String directoryPath = runContext.render(this.from).as(String.class).orElseThrow();
-            URI directoryUri = URI.create(directoryPath);
-
-            List<URI> files = runContext.storage().list(directoryUri).stream()
-                .filter(fileAttr -> fileAttr.getType() == FileAttributes.FileType.File)
-                .map(fileAttr -> URI.create(directoryPath + fileAttr.getFileName()))
-                .collect(Collectors.toList());
-
             runContext.logger().debug(
-                "Uploading {} files from '{}' to container '{}'",
-                files.size(),
-                fromUri,
-                containerClient.getBlobContainerName()
+                "Uploading {} files to container '{}' with base name '{}'",
+                filesMap.size(),
+                containerClient.getBlobContainerName(),
+                baseBlobName
             );
 
-            for (URI fileUri : files) {
-                String relativePath = Paths.get(fromUri.getPath()).relativize(Paths.get(fileUri.getPath())).toString();
+            for (Map.Entry<String, Object> entry : filesMap.entrySet()) {
+                String fileName = entry.getKey();
+                URI fileUri = new URI(entry.getValue().toString());
+                
                 String targetBlobName;
                 if (baseBlobName.isEmpty()) {
-                    targetBlobName = relativePath;
+                    targetBlobName = fileName;
                 } else if (baseBlobName.endsWith("/")) {
-                    targetBlobName = baseBlobName + relativePath;
+                    targetBlobName = baseBlobName + fileName;
                 } else {
-                    targetBlobName = baseBlobName + "/" + relativePath;
+                    targetBlobName = baseBlobName + "/" + fileName;
                 }
+                
                 BlobClient blobClient = containerClient.getBlobClient(targetBlobName.replace("\\", "/"));
                 uploadedBlobs.add(uploadSingleFile(runContext, fileUri, blobClient));
             }
 
             if (uploadedBlobs.isEmpty()) {
-                throw new IllegalArgumentException("No files found under " + fromUri);
+                throw new IllegalArgumentException("No files found in the provided map");
             }
+            
+        } else if (fromValue instanceof List) {
+            // Multiple files from a list
+            @SuppressWarnings("unchecked")
+            List<?> filesList = (List<?>) fromValue;
+            
+            String baseBlobName = baseClient.getBlobName();
+            if (baseBlobName == null) {
+                baseBlobName = "";
+            }
+
+            runContext.logger().debug(
+                "Uploading {} files to container '{}' with base name '{}'",
+                filesList.size(),
+                containerClient.getBlobContainerName(),
+                baseBlobName
+            );
+
+            for (Object fileObj : filesList) {
+                URI fileUri = new URI(fileObj.toString());
+                String fileName = Paths.get(fileUri.getPath()).getFileName().toString();
+                
+                String targetBlobName;
+                if (baseBlobName.isEmpty()) {
+                    targetBlobName = fileName;
+                } else if (baseBlobName.endsWith("/")) {
+                    targetBlobName = baseBlobName + fileName;
+                } else {
+                    targetBlobName = baseBlobName + "/" + fileName;
+                }
+                
+                BlobClient blobClient = containerClient.getBlobClient(targetBlobName.replace("\\", "/"));
+                uploadedBlobs.add(uploadSingleFile(runContext, fileUri, blobClient));
+            }
+
+            if (uploadedBlobs.isEmpty()) {
+                throw new IllegalArgumentException("No files found in the provided list");
+            }
+            
         } else {
-            uploadedBlobs.add(uploadSingleFile(runContext, fromUri, baseClient));
+            throw new IllegalArgumentException(
+                "The 'from' property must be a String (single file URI), Map (multiple files), or List (multiple file URIs). " +
+                "Got: " + fromValue.getClass().getName()
+            );
         }
 
         return Output.builder()
@@ -251,7 +340,7 @@ public class Upload extends AbstractBlobStorageWithSasObject implements Runnable
     public static class Output implements io.kestra.core.models.tasks.Output {
         @Schema(
             title = "The uploaded blob (single file upload only).",
-            description = "Present only when a single file is uploaded; will be null when uploading a directory (see 'blobs')."
+            description = "Present only when a single file is uploaded; will be null when uploading multiple files (see 'blobs')."
         )
         private final Blob blob;
 

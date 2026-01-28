@@ -2,7 +2,9 @@ package io.kestra.plugin.azure.batch.job;
 
 import io.kestra.plugin.azure.BaseTest;
 import io.micronaut.context.annotation.Value;
+import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 
+@EnabledIfEnvironmentVariable(named = "AZURE_CONNECTION_STRING", matches = ".+")
 abstract class AbstractTest extends BaseTest {
     @Value("${kestra.variables.globals.azure.batch.endpoint}")
     protected String endpoint;

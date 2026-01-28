@@ -5,12 +5,14 @@ import io.kestra.core.models.property.Property;
 import io.kestra.core.utils.IdUtils;
 import org.assertj.core.api.AbstractThrowableAssert;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 
 import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+@EnabledIfEnvironmentVariable(named = "AZURE_CONNECTION_STRING", matches = ".+")
 class CreateItemTest extends CosmosContainerBaseTest<CreateItem.CreateItemBuilder<?, ?>> {
     private final String testId = IdUtils.create();
 

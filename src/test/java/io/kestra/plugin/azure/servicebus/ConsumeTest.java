@@ -1,18 +1,20 @@
 package io.kestra.plugin.azure.servicebus;
 
-import io.kestra.core.exceptions.IllegalVariableEvaluationException;
-import io.kestra.core.models.property.Property;
-import io.kestra.core.utils.IdUtils;
-import org.assertj.core.api.AbstractThrowableAssert;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.parallel.ResourceLock;
-
 import java.time.Duration;
 import java.time.Instant;
 
+import org.assertj.core.api.AbstractThrowableAssert;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.parallel.ResourceLock;
+import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 
+import io.kestra.core.exceptions.IllegalVariableEvaluationException;
+import io.kestra.core.models.property.Property;
+import io.kestra.core.utils.IdUtils;
+
+@EnabledIfEnvironmentVariable(named = "AZURE_CONNECTION_STRING", matches = ".+")
 class ConsumeTest extends BaseServiceBusTest {
     @Test
     @ResourceLock("service-bus-comsumer-lock")

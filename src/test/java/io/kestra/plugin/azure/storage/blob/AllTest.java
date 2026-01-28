@@ -6,6 +6,7 @@ import io.kestra.core.models.property.Property;
 import io.kestra.core.tenant.TenantService;
 import io.kestra.core.utils.IdUtils;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 
 import java.io.FileInputStream;
 import java.io.InputStream;
@@ -16,6 +17,7 @@ import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
+@EnabledIfEnvironmentVariable(named = "AZURE_CONNECTION_STRING", matches = ".+")
 class AllTest extends AbstractTest {
     @Test
     void run() throws Exception {

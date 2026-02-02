@@ -51,12 +51,15 @@ import java.util.Objects;
     }
 )
 @Schema(
-    title = "Creates a new Cosmos item and returns its respective Cosmos item response.",
-    description = "Inserts one document into the container; returns status, request charge, diagnostics, and the stored document."
+    title = "Create one Cosmos document",
+    description = "Inserts a document into the container and returns the stored record, diagnostics, and RU charge. Fails on duplicate id within the partition."
 )
 public class CreateItem extends AbstractCosmosContainerTask<CreateItem.Output> implements RunnableTask<CreateItem.Output> {
     @NotNull
-    @Schema(title = "Document body to create")
+    @Schema(
+        title = "Document body to create",
+        description = "JSON payload must include id and partition key fields expected by the container."
+    )
     private Property<Map<String, Object>> item;
 
     @Override

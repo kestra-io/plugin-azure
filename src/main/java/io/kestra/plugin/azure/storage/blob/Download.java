@@ -44,7 +44,8 @@ import java.net.URI;
     }
 )
 @Schema(
-    title = "Download a file from Azure Blob Storage."
+    title = "Download a blob to Kestra storage",
+    description = "Fetches a blob and stores it in internal storage, returning metadata and the downloaded URI."
 )
 public class Download extends AbstractBlobStorageWithSasObject implements RunnableTask<Download.Output> {
     @Override
@@ -64,7 +65,8 @@ public class Download extends AbstractBlobStorageWithSasObject implements Runnab
     @Getter
     public static class Output implements io.kestra.core.models.tasks.Output {
         @Schema(
-            title = "The downloaded blob."
+            title = "Downloaded blob",
+            description = "Metadata plus internal storage URI of the fetched blob"
         )
         private final Blob blob;
     }

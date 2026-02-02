@@ -34,7 +34,7 @@ public abstract class AbstractServiceBusTask extends AbstractAzureIdentityConnec
 
     @Builder.Default
     @NotNull
-    @Schema(title = SERDE_TYPE_DESCRIPTION)
+    @Schema(title = "Payload serializer", description = SERDE_TYPE_DESCRIPTION)
     protected Property<SerdeType> serdeType = Property.ofValue(DEFAULT_SERDE_TYPE);
 
     protected static final SerdeType DEFAULT_SERDE_TYPE = SerdeType.STRING;
@@ -42,22 +42,19 @@ public abstract class AbstractServiceBusTask extends AbstractAzureIdentityConnec
     protected static final ObjectMapper OBJECT_MAPPER = JacksonMapper.ofJson(false);
 
     public static final String QUEUE_NAME_DESCRIPTION = """
-        The name of the Service Bus queue to publish messages to. \
-        queueName and topicName must be set exclusively.
+        Name of the Service Bus queue to connect to; queueName and topicName are mutually exclusive
         """;
 
     public static final String TOPIC_NAME_DESCRIPTION = """
-        The name of the Service Bus topic to publish messages to. \
-        queueName and topicName must be set exclusively.
+        Name of the Service Bus topic to connect to; queueName and topicName are mutually exclusive
         """;
 
     public static final String CONNECTION_STRING_DESCRIPTION = """
-        The connection string for a Service Bus \
-         namespace or a specific Service Bus resource.
+        Connection string for the Service Bus namespace or entity; overrides client credential authentication
         """;
-    public static final String SUBSCRIPTION_NAME_DESCRIPTION = "The name of the subscription in the topic to listen to.";
+    public static final String SUBSCRIPTION_NAME_DESCRIPTION = "Subscription name when connecting to a topic";
 
-    public static final String SERDE_TYPE_DESCRIPTION = "The serializer/deserializer to use.";
+    public static final String SERDE_TYPE_DESCRIPTION = "Serializer/deserializer for the message body; defaults to STRING";
 
 
     protected ServiceBusClientBuilder applyAuth(RunContext runContext, ServiceBusClientBuilder serviceBusClientBuilder) throws IllegalVariableEvaluationException {

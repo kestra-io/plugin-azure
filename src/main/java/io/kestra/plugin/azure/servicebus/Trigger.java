@@ -25,7 +25,10 @@ import static io.kestra.plugin.azure.servicebus.Consume.*;
 @EqualsAndHashCode
 @Getter
 @NoArgsConstructor
-@Schema()
+@Schema(
+    title = "Poll Azure Service Bus for messages",
+    description = "Polling trigger that reads from a queue or topic subscription using connection string or Azure AD credentials. Polls every 60 seconds and stops each cycle when maxReceiveDuration elapses or no messages are returned."
+)
 @Plugin(
     examples = {
         @Example(
@@ -76,16 +79,16 @@ public class Trigger extends AbstractTrigger implements PollingTriggerInterface,
     @Schema(description = SERDE_TYPE_DESCRIPTION)
     private Property<SerdeType> serdeType = Property.ofValue(SerdeType.STRING);
 
-    @Schema
+    @Schema(description = "Azure Active Directory tenant ID used when authenticating without a connection string")
     private Property<String> tenantId;
 
-    @Schema
+    @Schema(description = "Client ID for the Azure app registration used with tenantId")
     private Property<String> clientId;
 
-    @Schema
+    @Schema(description = "Client secret for the Azure app registration; not needed when using pemCertificate")
     private Property<String> clientSecret;
 
-    @Schema
+    @Schema(description = "PEM certificate content for certificate-based authentication")
     private Property<String> pemCertificate;
 
     @Schema(description = MAX_MESSAGES_DESCRIPTION)

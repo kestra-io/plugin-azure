@@ -24,10 +24,8 @@ import static io.kestra.core.utils.Rethrow.throwFunction;
 @Value
 public class Job {
     @Schema(
-        title = "A string that uniquely identifies the Job within the Account. ",
-        description = "The ID can contain any combination of alphanumeric characters including hyphens and underscores, " +
-            "and cannot contain more than 64 characters. The ID is case-preserving and case-insensitive " +
-            "(that is, you may not have two IDs within an Account that differ only by case)."
+        title = "Job ID",
+        description = "Unique within the Batch account (<=64 chars, alphanumeric, hyphen, underscore); case-insensitive uniqueness"
     )
     @PluginProperty(dynamic = true)
     @NotNull
@@ -35,29 +33,28 @@ public class Job {
     private String id;
 
     @Schema(
-        title = "The display name for the Job.",
-        description = "The display name need not be unique and can contain any Unicode characters up to a maximum length of 1024."
+        title = "Display name",
+        description = "Optional friendly name (up to 1024 Unicode chars); not required to be unique"
     )
     @PluginProperty(dynamic = true)
     @Size(max=1024)
     private String displayName;
 
     @Schema(
-        title = "The priority of the Job.",
-        description = "Priority values can range from -1000 to 1000, with -1000 being the lowest priority and 1000 being the highest priority. The default value is 0."
+        title = "Job priority",
+        description = "Integer from -1000 to 1000; defaults to 0"
     )
     private Property<Integer> priority;
 
     @Schema(
-        title = "The maximum number of tasks that can be executed in parallel for the Job.",
-        description = "The value of `maxParallelTasks` must be -1 or greater than 0, if specified. " +
-            "If not specified, the default value is -1, which means there's no limit to the number of tasks that " +
-            "can be run at once. You can update a job's `maxParallelTasks` after it has been created using the update job API."
+        title = "Max parallel tasks",
+        description = "Set to -1 for unlimited (default) or a positive integer; controls concurrent task scheduling"
     )
     private Property<Integer> maxParallelTasks;
 
     @Schema(
-        title = "Labels to attach to the created job."
+        title = "Job labels",
+        description = "Key/value metadata applied to the job"
     )
     private Property<Map<String, String>> labels;
 

@@ -27,27 +27,26 @@ class SparkBatchJobCreateTest {
         SparkBatchJobCreate task = SparkBatchJobCreate.builder()
             .id(SparkBatchJobCreateTest.class.getSimpleName())
             .type(SparkBatchJobCreate.class.getName())
-            .rEndpoint(Property.ofExpression("{{ globals.azure.synapse.endpoint }}"))
-            .rSparkPoolName(Property.ofExpression("{{ globals.azure.synapse.sparkPoolName }}"))
+            .endpoint(Property.ofExpression("{{ globals.azure.synapse.endpoint }}"))
+            .sparkPoolName(Property.ofExpression("{{ globals.azure.synapse.sparkPoolName }}"))
             .tenantId(Property.ofExpression("{{ globals.azure.synapse.tenantId }}"))
             .clientId(Property.ofExpression("{{ globals.azure.synapse.clientId }}"))
             .clientSecret(Property.ofExpression("{{ globals.azure.synapse.clientSecret }}"))
-            .rName(Property.ofValue(jobName))
-            .rFile(Property.ofExpression("{{ globals.azure.synapse.testFile }}"))
-            .rClassName(Property.ofValue("org.apache.spark.examples.SparkPi"))
-            .rArguments(Property.ofValue(List.of("100")))
-            .rDriverMemory(Property.ofValue("4g"))
-            .rDriverCores(Property.ofValue(2))
-            .rExecutorMemory(Property.ofValue("4g"))
-            .rExecutorCores(Property.ofValue(2))
-            .rExecutorCount(Property.ofValue(2))
+            .name(Property.ofValue(jobName))
+            .file(Property.ofExpression("{{ globals.azure.synapse.testFile }}"))
+            .className(Property.ofValue("org.apache.spark.examples.SparkPi"))
+            .arguments(Property.ofValue(List.of("100")))
+            .driverMemory(Property.ofValue("4g"))
+            .driverCores(Property.ofValue(2))
+            .executorMemory(Property.ofValue("4g"))
+            .executorCores(Property.ofValue(2))
+            .executorCount(Property.ofValue(2))
             .build();
 
         RunContext runContext = runContextFactory.of();
         SparkBatchJobCreate.Output output = task.run(runContext);
 
         assertThat(output.getJobId(), is(notNullValue()));
-        assertThat(output.getJobName(), is(jobName));
         assertThat(output.getState(), is(notNullValue()));
     }
 
@@ -58,20 +57,19 @@ class SparkBatchJobCreateTest {
         SparkBatchJobCreate task = SparkBatchJobCreate.builder()
             .id(SparkBatchJobCreateTest.class.getSimpleName())
             .type(SparkBatchJobCreate.class.getName())
-            .rEndpoint(Property.ofExpression("{{ globals.azure.synapse.endpoint }}"))
-            .rSparkPoolName(Property.ofExpression("{{ globals.azure.synapse.sparkPoolName }}"))
+            .endpoint(Property.ofExpression("{{ globals.azure.synapse.endpoint }}"))
+            .sparkPoolName(Property.ofExpression("{{ globals.azure.synapse.sparkPoolName }}"))
             .tenantId(Property.ofExpression("{{ globals.azure.synapse.tenantId }}"))
             .clientId(Property.ofExpression("{{ globals.azure.synapse.clientId }}"))
             .clientSecret(Property.ofExpression("{{ globals.azure.synapse.clientSecret }}"))
-            .rName(Property.ofValue(jobName))
-            .rFile(Property.ofExpression("{{ globals.azure.synapse.testFile }}"))
+            .name(Property.ofValue(jobName))
+            .file(Property.ofExpression("{{ globals.azure.synapse.testFile }}"))
             .build();
 
         RunContext runContext = runContextFactory.of();
         SparkBatchJobCreate.Output output = task.run(runContext);
 
         assertThat(output.getJobId(), is(notNullValue()));
-        assertThat(output.getJobName(), is(jobName));
         assertThat(output.getState(), is(notNullValue()));
     }
 }

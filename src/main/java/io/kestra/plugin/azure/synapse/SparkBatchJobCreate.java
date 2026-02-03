@@ -56,192 +56,191 @@ import java.util.Map;
     }
 )
 @Schema(
-    title = "Create and submit a Spark batch job to Azure Synapse Analytics Spark pool.",
-    description = "This task submits a Spark batch job to an Azure Synapse Analytics Spark pool."
+    title = "Submit Spark batch to Synapse pool",
+    description = "Creates and submits a Spark batch job to an Azure Synapse Analytics Spark pool using the workspace endpoint, pool name, and optional resource overrides. Requires valid Azure credentials with permission to submit Spark jobs."
 )
 public class SparkBatchJobCreate extends AbstractAzureIdentityConnection implements RunnableTask<SparkBatchJobCreate.Output> {
 
     @Schema(
-        title = "The Synapse workspace endpoint.",
-        description = "Endpoint should be in the format: https://{YOUR_WORKSPACE_NAME}.dev.azuresynapse.net"
+        title = "Synapse workspace endpoint",
+        description = "Workspace URL in the form `https://{workspace}.dev.azuresynapse.net`."
     )
     @NotNull
-    private Property<String> rEndpoint;
+    private Property<String> endpoint;
 
     @Schema(
-        title = "The name of the Spark pool.",
-        description = "The Spark pool where the batch job will be submitted."
+        title = "Spark pool name",
+        description = "Name of the Spark pool where the batch job will be submitted."
     )
     @NotNull
-    private Property<String> rSparkPoolName;
+    private Property<String> sparkPoolName;
 
     @Schema(
-        title = "The name of the Spark batch job."
+        title = "Spark batch job name"
     )
     @NotNull
-    private Property<String> rName;
+    private Property<String> name;
 
     @Schema(
-        title = "The main file used for the job.",
-        description = "Path to the main application file (JAR, Python, etc.) in ADLS Gen2 storage. " +
-            "Format: abfss://{container}@{storage-account}.dfs.core.windows.net/path/to/file"
+        title = "Main application file",
+        description = "Path to the main application file (JAR, Python, etc.) in ADLS Gen2 storage in the form `abfss://{container}@{storage-account}.dfs.core.windows.net/path/to/file`."
     )
     @NotNull
-    private Property<String> rFile;
+    private Property<String> file;
 
     @Schema(
-        title = "The fully qualified class name for Java/Scala Spark jobs.",
-        description = "Main class to be executed. Required for Java/Scala jobs."
+        title = "Main class name",
+        description = "Fully qualified class name for Java/Scala Spark jobs."
     )
-    private Property<String> rClassName;
+    private Property<String> className;
 
     @Schema(
-        title = "Command line arguments for the Spark job.",
-        description = "List of arguments passed to the main method."
+        title = "Command line arguments",
+        description = "Arguments passed to the main method."
     )
-    private Property<List<String>> rArguments;
+    private Property<List<String>> arguments;
 
     @Schema(
-        title = "Additional JAR files.",
-        description = "List of additional JARs to be used in the job."
+        title = "Additional JAR files",
+        description = "Additional JARs to be used in the job."
     )
-    private Property<List<String>> rJars;
+    private Property<List<String>> jars;
 
     @Schema(
-        title = "Additional Python files.",
-        description = "List of additional Python files to be used in the job."
+        title = "Additional Python files",
+        description = "Additional Python files to be used in the job."
     )
-    private Property<List<String>> rPyFiles;
+    private Property<List<String>> pyFiles;
 
     @Schema(
-        title = "Additional files.",
-        description = "List of additional files to be used in the job."
+        title = "Additional files",
+        description = "Additional files to be used in the job."
     )
-    private Property<List<String>> rFiles;
+    private Property<List<String>> files;
 
     @Schema(
-        title = "Archives to be used in the job.",
-        description = "List of archives to be used in the job."
+        title = "Archives",
+        description = "Archives to be used in the job."
     )
-    private Property<List<String>> rArchives;
+    private Property<List<String>> archives;
 
     @Schema(
-        title = "Spark configuration properties.",
-        description = "Map of Spark configuration properties to be set for the job."
+        title = "Spark configuration",
+        description = "Spark configuration properties for the job."
     )
-    private Property<Map<String, String>> rConf;
+    private Property<Map<String, String>> conf;
 
     @Schema(
-        title = "Driver memory size.",
-        description = "Amount of memory to use for the driver process (e.g., '28g')."
+        title = "Driver memory",
+        description = "Memory for the driver process (e.g., `28g`)."
     )
-    private Property<String> rDriverMemory;
+    private Property<String> driverMemory;
 
     @Schema(
-        title = "Number of CPU cores for the driver.",
-        description = "Number of cores to use for the driver process."
+        title = "Driver cores",
+        description = "Number of cores for the driver process."
     )
-    private Property<Integer> rDriverCores;
+    private Property<Integer> driverCores;
 
     @Schema(
-        title = "Executor memory size.",
-        description = "Amount of memory to use per executor process (e.g., '28g')."
+        title = "Executor memory",
+        description = "Memory per executor process (e.g., `28g`)."
     )
-    private Property<String> rExecutorMemory;
+    private Property<String> executorMemory;
 
     @Schema(
-        title = "Number of CPU cores per executor.",
-        description = "Number of cores to use for each executor."
+        title = "Executor cores",
+        description = "Number of cores per executor."
     )
-    private Property<Integer> rExecutorCores;
+    private Property<Integer> executorCores;
 
     @Schema(
-        title = "Number of executors.",
-        description = "Number of executor processes to launch for this job."
+        title = "Executor count",
+        description = "Number of executor processes to launch."
     )
-    private Property<Integer> rExecutorCount;
+    private Property<Integer> executorCount;
 
     @Schema(
-        title = "Tags for the job.",
-        description = "Map of tags to associate with the job."
+        title = "Tags",
+        description = "Tags to associate with the job."
     )
-    private Property<Map<String, String>> rTags;
+    private Property<Map<String, String>> tags;
 
     @Override
     public Output run(RunContext runContext) throws Exception {
         Logger logger = runContext.logger();
 
-        String endpoint = runContext.render(this.rEndpoint).as(String.class).orElseThrow();
-        String sparkPoolName = runContext.render(this.rSparkPoolName).as(String.class).orElseThrow();
+        String rEndpoint = runContext.render(this.endpoint).as(String.class).orElseThrow();
+        String rSparkPoolName = runContext.render(this.sparkPoolName).as(String.class).orElseThrow();
 
         SparkBatchClient client = new SparkClientBuilder()
-            .endpoint(endpoint)
-            .sparkPoolName(sparkPoolName)
+            .endpoint(rEndpoint)
+            .sparkPoolName(rSparkPoolName)
             .credential(this.credentials(runContext))
             .buildSparkBatchClient();
 
         SparkBatchJobOptions options = new SparkBatchJobOptions()
-            .setName(runContext.render(this.rName).as(String.class).orElseThrow())
-            .setFile(runContext.render(this.rFile).as(String.class).orElseThrow());
+            .setName(runContext.render(this.name).as(String.class).orElseThrow())
+            .setFile(runContext.render(this.file).as(String.class).orElseThrow());
 
-        if (rClassName != null) {
-            runContext.render(rClassName).as(String.class).ifPresent(options::setClassName);
+        if (className != null) {
+            runContext.render(className).as(String.class).ifPresent(options::setClassName);
         }
-        if (rArguments != null) {
-            List<String> argsList = runContext.render(rArguments).asList(String.class);
-            if (!argsList.isEmpty()) {
-                options.setArguments(argsList);
+        if (arguments != null) {
+            List<String> rArguments = runContext.render(arguments).asList(String.class);
+            if (!rArguments.isEmpty()) {
+                options.setArguments(rArguments);
             }
         }
-        if (rJars != null) {
-            List<String> jarsList = runContext.render(rJars).asList(String.class);
-            if (!jarsList.isEmpty()) {
-                options.setJars(jarsList);
+        if (jars != null) {
+            List<String> rJars = runContext.render(jars).asList(String.class);
+            if (!rJars.isEmpty()) {
+                options.setJars(rJars);
             }
         }
-        if (rPyFiles != null) {
-            List<String> pyFilesList = runContext.render(rPyFiles).asList(String.class);
-            if (!pyFilesList.isEmpty()) {
-                options.setPythonFiles(pyFilesList);
+        if (pyFiles != null) {
+            List<String> rPyFiles = runContext.render(pyFiles).asList(String.class);
+            if (!rPyFiles.isEmpty()) {
+                options.setPythonFiles(rPyFiles);
             }
         }
-        if (rFiles != null) {
-            List<String> filesList = runContext.render(rFiles).asList(String.class);
-            if (!filesList.isEmpty()) {
-                options.setFiles(filesList);
+        if (files != null) {
+            List<String> rFiles = runContext.render(files).asList(String.class);
+            if (!rFiles.isEmpty()) {
+                options.setFiles(rFiles);
             }
         }
-        if (rArchives != null) {
-            List<String> archivesList = runContext.render(rArchives).asList(String.class);
-            if (!archivesList.isEmpty()) {
-                options.setArchives(archivesList);
+        if (archives != null) {
+            List<String> rArchives = runContext.render(archives).asList(String.class);
+            if (!rArchives.isEmpty()) {
+                options.setArchives(rArchives);
             }
         }
-        if (rConf != null) {
-            Map<String, String> confMap = runContext.render(rConf).asMap(String.class, String.class);
-            if (!confMap.isEmpty()) {
-                options.setConfiguration(confMap);
+        if (conf != null) {
+            Map<String, String> rConf = runContext.render(conf).asMap(String.class, String.class);
+            if (!rConf.isEmpty()) {
+                options.setConfiguration(rConf);
             }
         }
-        if (rDriverMemory != null) {
-            runContext.render(rDriverMemory).as(String.class).ifPresent(options::setDriverMemory);
+        if (driverMemory != null) {
+            runContext.render(driverMemory).as(String.class).ifPresent(options::setDriverMemory);
         }
-        if (rDriverCores != null) {
-            runContext.render(rDriverCores).as(Integer.class).ifPresent(options::setDriverCores);
+        if (driverCores != null) {
+            runContext.render(driverCores).as(Integer.class).ifPresent(options::setDriverCores);
         }
-        if (rExecutorMemory != null) {
-            runContext.render(rExecutorMemory).as(String.class).ifPresent(options::setExecutorMemory);
+        if (executorMemory != null) {
+            runContext.render(executorMemory).as(String.class).ifPresent(options::setExecutorMemory);
         }
-        if (rExecutorCores != null) {
-            runContext.render(rExecutorCores).as(Integer.class).ifPresent(options::setExecutorCores);
+        if (executorCores != null) {
+            runContext.render(executorCores).as(Integer.class).ifPresent(options::setExecutorCores);
         }
-        if (rExecutorCount != null) {
-            runContext.render(rExecutorCount).as(Integer.class).ifPresent(options::setExecutorCount);
+        if (executorCount != null) {
+            runContext.render(executorCount).as(Integer.class).ifPresent(options::setExecutorCount);
         }
-        if (rTags != null) {
-            Map<String, String> tagsMap = runContext.render(rTags).asMap(String.class, String.class);
-            if (!tagsMap.isEmpty()) {
-                options.setTags(tagsMap);
+        if (tags != null) {
+            Map<String, String> rTags = runContext.render(tags).asMap(String.class, String.class);
+            if (!rTags.isEmpty()) {
+                options.setTags(rTags);
             }
         }
 
@@ -250,7 +249,6 @@ public class SparkBatchJobCreate extends AbstractAzureIdentityConnection impleme
 
         return Output.builder()
             .jobId(job.getId())
-            .jobName(job.getName())
             .state(job.getState().toString())
             .appId(job.getAppId())
             .build();
@@ -260,23 +258,18 @@ public class SparkBatchJobCreate extends AbstractAzureIdentityConnection impleme
     @Getter
     public static class Output implements io.kestra.core.models.tasks.Output {
         @Schema(
-            title = "The Spark batch job ID."
+            title = "Spark batch job ID"
         )
         private final Integer jobId;
 
         @Schema(
-            title = "The Spark batch job name."
-        )
-        private final String jobName;
-
-        @Schema(
-            title = "The state of the Spark batch job.",
-            description = "Possible states: not_started, starting, running, idle, busy, shutting_down, error, dead, killed, success"
+            title = "Spark batch job state",
+            description = "Possible states: `not_started`, `starting`, `running`, `idle`, `busy`, `shutting_down`, `error`, `dead`, `killed`, `success`."
         )
         private final String state;
 
         @Schema(
-            title = "The Spark application ID."
+            title = "Spark application ID"
         )
         private final String appId;
     }

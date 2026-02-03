@@ -1,7 +1,6 @@
 @PluginSubGroup(
-        description = "This sub-group of plugins contains tasks for using Azure Synapse Analytics. \n" +
-                "Azure Synapse Analytics is an enterprise analytics service that accelerates time to insight across data warehouses and big data systems.",
-        categories = { PluginSubGroup.PluginCategory.TOOL }
+        description = "Tasks for Azure Synapse Analytics.",
+        categories = { PluginSubGroup.PluginCategory.CLOUD }
 )
 package io.kestra.plugin.azure.synapse;
 

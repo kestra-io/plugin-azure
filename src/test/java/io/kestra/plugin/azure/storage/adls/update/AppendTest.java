@@ -16,9 +16,6 @@ import java.io.InputStreamReader;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 
-import org.junit.jupiter.api.Disabled;
-
-@Disabled("Requires Azure Storage credentials not available in CI")
 class AppendTest extends AbstractTest {
     @Test
     void run() throws Exception {

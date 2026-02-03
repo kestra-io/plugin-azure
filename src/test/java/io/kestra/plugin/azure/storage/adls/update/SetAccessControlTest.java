@@ -5,10 +5,8 @@ import io.kestra.core.models.property.Property;
 import io.kestra.core.utils.IdUtils;
 import io.kestra.plugin.azure.storage.adls.AbstractTest;
 import io.kestra.plugin.azure.storage.adls.Upload;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
-@Disabled("Requires Azure Storage credentials not available in CI")
 class SetAccessControlTest extends AbstractTest {
     @Test
     void run() throws Exception {

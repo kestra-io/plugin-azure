@@ -7,9 +7,6 @@ import org.junit.jupiter.api.Test;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 
-import org.junit.jupiter.api.Disabled;
-
-@Disabled("Requires Azure Storage credentials not available in CI")
 class CopyTest extends AbstractTest {
     void run(Boolean delete) throws Exception {
         String prefix = IdUtils.create();

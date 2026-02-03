@@ -13,7 +13,6 @@ import io.kestra.core.utils.IdUtils;
 import io.micronaut.context.annotation.Value;
 import io.kestra.core.junit.annotations.KestraTest;
 import jakarta.inject.Inject;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import java.io.*;
@@ -32,7 +31,6 @@ import static org.hamcrest.Matchers.is;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 @KestraTest
-@Disabled("Requires Azure Table Storage credentials (kestra.variables.globals.azure.blobs.connection-string, tables endpoint, table name) not provided in CI")
 class SuiteTest {
     @Inject
     private RunContextFactory runContextFactory;

@@ -29,18 +29,29 @@ import static io.kestra.core.models.triggers.StatefulTriggerService.*;
 import static io.kestra.core.utils.Rethrow.throwFunction;
 
 @SuperBuilder
+@NoArgsConstructor
+@Getter
 @ToString
 @EqualsAndHashCode
-@Getter
-@NoArgsConstructor
-@Schema(title = "Trigger a flow on a new file arrival in an Azure Blob Storage container.", description = "This trigger will poll the specified Azure Blob Storage container every `interval`. "
-        +
-        "Using the `from` and `regExp` properties, you can define which files' arrival will trigger the flow. " +
-        "Under the hood, we use the Azure Blob Storage API to list the files in a specified location and download them to the internal storage and process them with the declared `action`. "
-        +
-        "You can use the `action` property to move or delete the files from the container after processing to avoid the trigger to be fired again for the same files during the next polling interval.")
-@Plugin(examples = {
-        @Example(title = "Run a flow if one or more files arrived in the specified Azure Blob Storage container location. Then, process all files in a for-loop either sequentially or concurrently, depending on the `concurrencyLimit` property.", full = true, code = """
+
+@Schema(
+    title = "Trigger a flow on a new file arrival in an Azure Blob Storage container.",
+    description = "This trigger will poll the specified Azure Blob Storage container every `interval`. "
+        + "Using the `from` and `regExp` properties, you can define which files' arrival will trigger the flow. "
+        + "Under the hood, we use the Azure Blob Storage API to list the files in a specified location and "
+        + "download them to the internal storage and process them with the declared `action`. "
+        + "You can use the `action` property to move or delete the files from the container after processing "
+        + "to avoid the trigger being fired again for the same files during the next polling interval."
+)
+
+@Plugin(
+    examples = {
+        @Example(
+            title = "Run a flow if one or more files arrived in the specified Azure Blob Storage container location. "
+                + "Then, process all files in a for-loop either sequentially or concurrently, depending on the "
+                + "`concurrencyLimit` property.",
+            full = true,
+            code = """
                 id: react_to_files
                 namespace: company.team
 
@@ -66,8 +77,14 @@ import static io.kestra.core.utils.Rethrow.throwFunction;
                     moveTo:
                       container: mydata
                       name: archive
-                """),
-        @Example(title = "Run a flow whenever one or more files arrived in the specified Azure Blob Storage container location. Then, process files and delete processed files to avoid re-triggering the flow for the same Blob objects during the next polling interval.", full = true, code = """
+                """
+        ),
+        @Example(
+            title = "Run a flow whenever one or more files arrived in the specified Azure Blob Storage container "
+                + "location. Then, process files and delete processed files to avoid re-triggering the flow for "
+                + "the same Blob objects during the next polling interval.",
+            full = true,
+            code = """
                 id: process_and_delete_files
                 namespace: company.team
 
@@ -152,7 +169,7 @@ public class Trigger extends AbstractTrigger implements PollingTriggerInterface,
         var rStateKey = runContext.render(stateKey).as(String.class).orElse(StatefulTriggerService.defaultKey(context.getNamespace(), context.getFlowId(), id));
         var rStateTtl = runContext.render(stateTtl).as(Duration.class);
 
-        var task = List.builder()
+        List task = List.builder()
                 .id(this.id)
                 .type(List.class.getName())
                 .endpoint(this.endpoint)

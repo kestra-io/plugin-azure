@@ -79,13 +79,17 @@ public class List extends AbstractDataLakeConnection implements RunnableTask<Lis
                 runContext.render(directoryPath).as(String.class).orElseThrow());
 
         if (this.maxFiles != null) {
-            int rMaxFiles = runContext.render(this.maxFiles).as(Integer.class).orElseThrow();
-            if (fileList.size() > rMaxFiles) {
+            Integer rMaxFiles = runContext.render(this.maxFiles).as(Integer.class).orElse(null);
+
+            if (rMaxFiles != null && fileList.size() > rMaxFiles) {
                 runContext.logger().warn(
-                        "Listing returned {} files but maxFiles limit is {}. Only the first {} files will be returned. "
-                                +
-                                "Increase the maxFiles property if you need more files.",
-                        fileList.size(), rMaxFiles, rMaxFiles);
+                    "Listing returned {} files but maxFiles limit is {}. "
+                        + "Only the first {} files will be returned. "
+                        + "Increase the maxFiles property if you need more files.",
+                    fileList.size(),
+                    rMaxFiles,
+                    rMaxFiles
+                );
                 fileList = fileList.subList(0, rMaxFiles);
             }
         }

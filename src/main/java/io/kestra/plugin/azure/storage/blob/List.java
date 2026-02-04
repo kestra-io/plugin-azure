@@ -85,13 +85,17 @@ public class List extends AbstractBlobStorageWithSas implements RunnableTask<Lis
                 runContext.render(prefix).as(String.class).orElse(null));
 
         if (this.maxFiles != null) {
-            int rMaxFiles = runContext.render(this.maxFiles).as(Integer.class).orElseThrow();
-            if (list.size() > rMaxFiles) {
+            Integer rMaxFiles = runContext.render(this.maxFiles).as(Integer.class).orElse(null);
+
+            if (rMaxFiles != null && list.size() > rMaxFiles) {
                 runContext.logger().warn(
-                        "Listing returned {} blobs but maxFiles limit is {}. Only the first {} blobs will be returned. "
-                                +
-                                "Increase the maxFiles property if you need more blobs.",
-                        list.size(), rMaxFiles, rMaxFiles);
+                    "Listing returned {} blobs but maxFiles limit is {}. "
+                        + "Only the first {} blobs will be returned. "
+                        + "Increase the maxFiles property if you need more blobs.",
+                    list.size(),
+                    rMaxFiles,
+                    rMaxFiles
+                );
                 list = list.subList(0, rMaxFiles);
             }
         }
@@ -104,9 +108,7 @@ public class List extends AbstractBlobStorageWithSas implements RunnableTask<Lis
     @Builder
     @Getter
     public static class Output implements io.kestra.core.models.tasks.Output {
-        @Schema(
-            title = "The list of blobs."
-        )
+        @Schema(title = "The list of blobs.")
         private final java.util.List<Blob> blobs;
     }
 }

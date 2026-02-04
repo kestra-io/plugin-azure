@@ -59,19 +59,26 @@ public class Reads extends AbstractDataLakeConnection implements RunnableTask<Re
 
     protected Property<String> fileSystem;
 
+    @Schema(
+        title = "The maximum number of files to read",
+        description = "Limits the number of files read. If not specified, all matching files will be read."
+    )
+    private Property<Integer> maxFiles;
+
     @Override
     public Reads.Output run(RunContext runContext) throws Exception {
         List task = List.builder()
-            .id(this.id)
-            .type(io.kestra.plugin.azure.storage.adls.List.class.getName())
-            .endpoint(this.endpoint)
-            .fileSystem(this.fileSystem)
-            .directoryPath(this.directoryPath)
-            .sasToken(this.sasToken)
-            .connectionString(this.connectionString)
-            .sharedKeyAccountName(this.sharedKeyAccountName)
-            .sharedKeyAccountAccessKey(this.sharedKeyAccountAccessKey)
-            .build();
+                .id(this.id)
+                .type(io.kestra.plugin.azure.storage.adls.List.class.getName())
+                .endpoint(this.endpoint)
+                .fileSystem(this.fileSystem)
+                .directoryPath(this.directoryPath)
+                .sasToken(this.sasToken)
+                .connectionString(this.connectionString)
+                .sharedKeyAccountName(this.sharedKeyAccountName)
+                .sharedKeyAccountAccessKey(this.sharedKeyAccountAccessKey)
+                .maxFiles(this.maxFiles)
+                .build();
         List.Output run = task.run(runContext);
 
         DataLakeServiceClient client = this.dataLakeServiceClient(runContext);
@@ -93,7 +100,6 @@ public class Reads extends AbstractDataLakeConnection implements RunnableTask<Re
             .filter(file -> !file.getName().endsWith("/"))
             .map(file -> new AbstractMap.SimpleEntry<>(file.getName(), file.getUri()))
             .collect(Collectors.toMap(AbstractMap.SimpleEntry::getKey, AbstractMap.SimpleEntry::getValue));
-
 
         return Output
             .builder()

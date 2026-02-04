@@ -71,22 +71,29 @@ public class Downloads extends AbstractBlobStorageWithSas implements RunnableTas
     @Builder.Default
     private Property<Filter> filter = Property.ofValue(Filter.FILES);
 
+    @Schema(
+        title = "The maximum number of files to download",
+        description = "Limits the number of blobs downloaded. If not specified, all matching blobs will be downloaded."
+    )
+    private Property<Integer> maxFiles;
+
     @Override
     public Output run(RunContext runContext) throws Exception {
         List task = List.builder()
-            .id(this.id)
-            .type(List.class.getName())
-            .endpoint(this.endpoint)
-            .connectionString(this.connectionString)
-            .sharedKeyAccountName(this.sharedKeyAccountName)
-            .sharedKeyAccountAccessKey(this.sharedKeyAccountAccessKey)
-            .sasToken(this.sasToken)
-            .container(this.container)
-            .prefix(this.prefix)
-            .delimiter(this.delimiter)
-            .regexp(this.regexp)
-            .delimiter(this.delimiter)
-            .build();
+                .id(this.id)
+                .type(List.class.getName())
+                .endpoint(this.endpoint)
+                .connectionString(this.connectionString)
+                .sharedKeyAccountName(this.sharedKeyAccountName)
+                .sharedKeyAccountAccessKey(this.sharedKeyAccountAccessKey)
+                .sasToken(this.sasToken)
+                .container(this.container)
+                .prefix(this.prefix)
+                .delimiter(this.delimiter)
+                .regexp(this.regexp)
+                .delimiter(this.delimiter)
+                .maxFiles(this.maxFiles)
+                .build();
         List.Output run = task.run(runContext);
 
         BlobServiceClient client = this.client(runContext);
@@ -98,7 +105,7 @@ public class Downloads extends AbstractBlobStorageWithSas implements RunnableTas
             .map(throwFunction(object -> {
                 BlobClient blobClient = containerClient.getBlobClient(object.getName());
 
-                Pair<BlobProperties, URI> download = BlobService.download(runContext, blobClient);
+                    Pair<BlobProperties, URI> download = BlobService.download(runContext, blobClient);
 
                 return Blob.of(blobClient, download.getLeft())
                     .withUri(download.getRight());
@@ -106,18 +113,17 @@ public class Downloads extends AbstractBlobStorageWithSas implements RunnableTas
             .collect(Collectors.toList());
 
         Map<String, URI> outputFiles = list.stream()
-            .filter(blob -> !blob.getName().endsWith("/"))
-            .map(blob -> new AbstractMap.SimpleEntry<>(blob.getName(), blob.getUri()))
-            .collect(Collectors.toMap(entry -> entry.getKey(), entry -> entry.getValue()));
+                .filter(blob -> !blob.getName().endsWith("/"))
+                .map(blob -> new AbstractMap.SimpleEntry<>(blob.getName(), blob.getUri()))
+                .collect(Collectors.toMap(AbstractMap.SimpleEntry::getKey, AbstractMap.SimpleEntry::getValue));
 
         BlobService.archive(
-            run.getBlobs(),
-            runContext.render(this.action).as(ActionInterface.Action.class).orElseThrow(),
-            this.moveTo,
-            runContext,
-            this,
-            this
-        );
+                run.getBlobs(),
+                runContext.render(this.action).as(ActionInterface.Action.class).orElseThrow(),
+                this.moveTo,
+                runContext,
+                this,
+                this);
 
         return Output
             .builder()

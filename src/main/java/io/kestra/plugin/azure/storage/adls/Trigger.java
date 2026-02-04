@@ -103,13 +103,18 @@ public class Trigger extends AbstractTrigger implements PollingTriggerInterface,
     @PluginProperty(dynamic = true)
     DestinationObject moveTo;
 
+    @Schema(
+        title = "The maximum number of files to retrieve at once",
+        description = "Limits the number of files retrieved per polling interval. If not specified, all matching files will be retrieved."
+    )
+    private Property<Integer> maxFiles;
+
     @Builder.Default
     private final Property<On> on = Property.ofValue(On.CREATE_OR_UPDATE);
 
     private Property<String> stateKey;
 
     private Property<Duration> stateTtl;
-
 
     @Override
     public Optional<Execution> evaluate(ConditionContext conditionContext, TriggerContext context) throws Exception {
@@ -120,16 +125,17 @@ public class Trigger extends AbstractTrigger implements PollingTriggerInterface,
         var rStateTtl = runContext.render(stateTtl).as(Duration.class);
 
         List task = List.builder()
-            .id(this.id)
-            .type(List.class.getName())
-            .endpoint(this.endpoint)
-            .connectionString(this.connectionString)
-            .sharedKeyAccountName(this.sharedKeyAccountName)
-            .sharedKeyAccountAccessKey(this.sharedKeyAccountAccessKey)
-            .sasToken(this.sasToken)
-            .fileSystem(this.fileSystem)
-            .directoryPath(this.directoryPath)
-            .build();
+                .id(this.id)
+                .type(List.class.getName())
+                .endpoint(this.endpoint)
+                .connectionString(this.connectionString)
+                .sharedKeyAccountName(this.sharedKeyAccountName)
+                .sharedKeyAccountAccessKey(this.sharedKeyAccountAccessKey)
+                .sasToken(this.sasToken)
+                .fileSystem(this.fileSystem)
+                .directoryPath(this.directoryPath)
+                .maxFiles(this.maxFiles)
+                .build();
 
         List.Output run = task.run(runContext);
 

@@ -63,16 +63,36 @@ public class List extends AbstractDataLakeConnection implements RunnableTask<Lis
 
     protected Property<String> fileSystem;
 
+    @Schema(
+        title = "The maximum number of files to return",
+        description = "Limits the number of files returned by the list operation. If not specified, all matching files will be returned."
+    )
+    private Property<Integer> maxFiles;
+
     @Override
     public List.Output run(RunContext runContext) throws Exception {
         DataLakeServiceClient dataLakeServiceClient = this.dataLakeServiceClient(runContext);
-        DataLakeFileSystemClient fileSystemClient = dataLakeServiceClient.getFileSystemClient(runContext.render(fileSystem).as(String.class).orElseThrow());
+        DataLakeFileSystemClient fileSystemClient = dataLakeServiceClient
+                .getFileSystemClient(runContext.render(fileSystem).as(String.class).orElseThrow());
 
-        java.util.List<AdlsFile> fileList = DataLakeService.list(fileSystemClient, runContext.render(directoryPath).as(String.class).orElseThrow());
+        java.util.List<AdlsFile> fileList = DataLakeService.list(fileSystemClient,
+                runContext.render(directoryPath).as(String.class).orElseThrow());
+
+        if (this.maxFiles != null) {
+            int rMaxFiles = runContext.render(this.maxFiles).as(Integer.class).orElseThrow();
+            if (fileList.size() > rMaxFiles) {
+                runContext.logger().warn(
+                        "Listing returned {} files but maxFiles limit is {}. Only the first {} files will be returned. "
+                                +
+                                "Increase the maxFiles property if you need more files.",
+                        fileList.size(), rMaxFiles, rMaxFiles);
+                fileList = fileList.subList(0, rMaxFiles);
+            }
+        }
 
         return Output.builder()
-            .files(fileList)
-            .build();
+                .files(fileList)
+                .build();
     }
 
     @SuperBuilder

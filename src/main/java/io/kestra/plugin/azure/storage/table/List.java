@@ -30,11 +30,8 @@ import java.net.URI;
 @EqualsAndHashCode
 @Getter
 @NoArgsConstructor
-@Plugin(
-    examples = {
-        @Example(
-            full = true,
-            code = """
+@Plugin(examples = {
+        @Example(full = true, code = """
                 id: azure_storage_table_list
                 namespace: company.team
 
@@ -74,6 +71,12 @@ public class List extends AbstractTableStorage implements RunnableTask<List.Outp
     )
     private Property<Integer> top;
 
+    @Schema(
+        title = "The maximum number of entities to return",
+        description = "Limits the number of entities returned by the list operation. If not specified, all matching entities will be returned."
+    )
+    private Property<Integer> maxFiles;
+
     @Override
     public List.Output run(RunContext runContext) throws Exception {
         TableClient tableClient = this.tableClient(runContext);
@@ -96,8 +99,24 @@ public class List extends AbstractTableStorage implements RunnableTask<List.Outp
         File tempFile = runContext.workingDir().createTempFile(".ion").toFile();
         try (var output = new BufferedWriter(new FileWriter(tempFile))) {
             var flux = Flux.fromIterable(tableClient.listEntities(options, null, null)).map(Entity::to);
+
+            if (this.maxFiles != null) {
+                int rMaxFiles = runContext.render(this.maxFiles).as(Integer.class).orElseThrow();
+                flux = flux.take(rMaxFiles);
+            }
+
             Mono<Long> longMono = FileSerde.writeAll(output, flux);
             Long count = longMono.block();
+
+            if (this.maxFiles != null) {
+                int rMaxFiles = runContext.render(this.maxFiles).as(Integer.class).orElseThrow();
+                if (count >= rMaxFiles) {
+                    runContext.logger().warn(
+                            "Listing was limited to {} entities by maxFiles property. " +
+                                    "Increase the maxFiles property if you need more entities.",
+                            rMaxFiles);
+                }
+            }
 
             runContext.metric(Counter.of("records.count", count, "table", tableClient.getTableName()));
 

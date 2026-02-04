@@ -53,22 +53,30 @@ import static io.kestra.core.utils.Rethrow.throwFunction;
     }
 )
 @Schema(
-    title = "Download files from Azure Blob Storage."
+    title = "Download multiple blobs to Kestra storage",
+    description = "Lists blobs with optional prefix/regex, downloads them to internal storage, and optionally archives or moves according to action."
 )
 public class Downloads extends AbstractBlobStorageWithSas implements RunnableTask<Downloads.Output>, ListInterface, ActionInterface, AbstractBlobStorageContainerInterface {
+    @Schema(title = "Container", description = "Target container to list and download from")
     private Property<String> container;
 
+    @Schema(title = "Prefix", description = "Limits listing to blobs starting with this path")
     private Property<String> prefix;
 
+    @Schema(title = "Regex filter", description = "Java regex applied to blob names after prefix")
     protected Property<String> regexp;
 
+    @Schema(title = "Delimiter", description = "Virtual folder delimiter for listing")
     protected Property<String> delimiter;
 
+    @Schema(title = "Post-action", description = "Action to apply after download (NONE, DELETE, MOVE)")
     private Property<ActionInterface.Action> action;
 
+    @Schema(title = "Move destination", description = "Target path when action=MOVE")
     private Copy.CopyObject moveTo;
 
     @Builder.Default
+    @Schema(title = "List filter", description = "FILES or DIRECTORIES filter for listing; defaults to FILES")
     private Property<Filter> filter = Property.ofValue(Filter.FILES);
 
     @Override
@@ -130,12 +138,13 @@ public class Downloads extends AbstractBlobStorageWithSas implements RunnableTas
     @Getter
     public static class Output implements io.kestra.core.models.tasks.Output {
         @Schema(
-            title = "The list of blobs."
+            title = "Downloaded blobs"
         )
         private final java.util.List<Blob> blobs;
 
         @Schema(
-            title = "The downloaded files as a map of from/to URIs."
+            title = "Downloaded files map",
+            description = "Map of blob name to kestra:// URI of the downloaded file"
         )
         private final Map<String, URI> outputFiles;
     }

@@ -12,23 +12,20 @@ import lombok.Value;
 @Value
 public class ContainerRegistry {
     @Schema(
-        title = "The registry server URL.",
-        description = "If omitted, the default is \"docker.io\"."
+        title = "Registry server",
+        description = "Container registry hostname; defaults to docker.io"
     )
     Property<String> registryServer;
 
-    @Schema(
-        title = "The user name to log into the registry server."
-    )
+    @Schema(title = "Registry username")
     Property<String> userName;
 
-    @Schema(
-        title = "The password to log into the registry server."
-    )
+    @Schema(title = "Registry password")
     Property<String> password;
 
     @Schema(
-        title = "The reference to the user assigned identity to use to access the Azure Container Registry instead of username and password."
+        title = "User-assigned identity for ACR",
+        description = "Use managed identity instead of username/password when supported by the registry"
     )
     @PluginProperty(dynamic = true)
     ComputeNodeIdentityReference identityReference;

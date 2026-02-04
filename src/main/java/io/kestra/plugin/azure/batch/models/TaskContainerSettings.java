@@ -15,29 +15,27 @@ import jakarta.validation.constraints.NotNull;
 @Value
 public class TaskContainerSettings {
     @Schema(
-        title = "Additional options to the container create command.",
-        description = "These additional options are supplied as arguments to the `docker create` command, in " +
-            "addition to those controlled by the Batch Service."
+        title = "Container run options",
+        description = "Extra arguments passed to docker create alongside Batch-managed options"
     )
     Property<String> containerRunOptions;
 
     @Schema(
-        title = "The Image to use to create the container in which the Task will run.",
-        description = "This is the full Image reference, as would be specified to `docker pull`. If no tag is " +
-            "provided as part of the Image name, the tag `:latest` is used as a default."
+        title = "Container image",
+        description = "Full image reference (e.g. repo/name:tag); defaults to :latest if no tag provided"
     )
     @NotNull
     Property<String> imageName;
 
     @Schema(
-        title = "The private registry which contains the container image.",
-        description = "This setting can be omitted if was already provided at Pool creation."
+        title = "Container registry",
+        description = "Registry credentials; omit when provided at pool creation"
     )
     ContainerRegistry registry;
 
     @Schema(
-        title = "The location of the container Task working directory.",
-        description = "The default is `TASK_WORKING_DIRECTORY`. Possible values include: `TASK_WORKING_DIRECTORY`, `CONTAINER_IMAGE_DEFAULT`."
+        title = "Working directory scope",
+        description = "Where the container starts; defaults to TASK_WORKING_DIRECTORY. Options: TASK_WORKING_DIRECTORY or CONTAINER_IMAGE_DEFAULT."
     )
     Property<ContainerWorkingDirectory> workingDirectory;
 

@@ -169,7 +169,7 @@ public class Trigger extends AbstractTrigger implements PollingTriggerInterface,
         var rStateKey = runContext.render(stateKey).as(String.class).orElse(StatefulTriggerService.defaultKey(context.getNamespace(), context.getFlowId(), id));
         var rStateTtl = runContext.render(stateTtl).as(Duration.class);
 
-        List task = List.builder()
+        var task = List.builder()
             .id(this.id)
             .type(List.class.getName())
             .endpoint(this.endpoint)

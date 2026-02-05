@@ -131,7 +131,8 @@ public class Downloads extends AbstractBlobStorageWithSas implements RunnableTas
             this.moveTo,
             runContext,
             this,
-            this);
+            this
+        );
 
         return Output
             .builder()

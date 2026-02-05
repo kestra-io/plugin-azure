@@ -108,7 +108,9 @@ public class List extends AbstractBlobStorageWithSas implements RunnableTask<Lis
     @Builder
     @Getter
     public static class Output implements io.kestra.core.models.tasks.Output {
-        @Schema(title = "The list of blobs.")
+        @Schema(
+            title = "The list of blobs."
+        )
         private final java.util.List<Blob> blobs;
     }
 }

@@ -72,11 +72,9 @@ public class List extends AbstractDataLakeConnection implements RunnableTask<Lis
     @Override
     public List.Output run(RunContext runContext) throws Exception {
         DataLakeServiceClient dataLakeServiceClient = this.dataLakeServiceClient(runContext);
-        DataLakeFileSystemClient fileSystemClient = dataLakeServiceClient
-            .getFileSystemClient(runContext.render(fileSystem).as(String.class).orElseThrow());
+        DataLakeFileSystemClient fileSystemClient = dataLakeServiceClient.getFileSystemClient(runContext.render(fileSystem).as(String.class).orElseThrow());
 
-        java.util.List<AdlsFile> fileList = DataLakeService.list(fileSystemClient,
-            runContext.render(directoryPath).as(String.class).orElseThrow());
+        java.util.List<AdlsFile> fileList = DataLakeService.list(fileSystemClient, runContext.render(directoryPath).as(String.class).orElseThrow());
 
         if (this.maxFiles != null) {
             Integer rMaxFiles = runContext.render(this.maxFiles).as(Integer.class).orElse(null);

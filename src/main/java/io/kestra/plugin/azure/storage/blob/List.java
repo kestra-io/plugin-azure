@@ -70,8 +70,7 @@ public class List extends AbstractBlobStorageWithSas implements RunnableTask<Lis
     @Override
     public Output run(RunContext runContext) throws Exception {
         BlobServiceClient client = this.client(runContext);
-        BlobContainerClient containerClient = client
-            .getBlobContainerClient(runContext.render(this.container).as(String.class).orElse(null));
+        BlobContainerClient containerClient = client.getBlobContainerClient(runContext.render(this.container).as(String.class).orElse(null));
 
         java.util.List<Blob> list = BlobService.list(runContext, containerClient, this);
 

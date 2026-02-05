@@ -81,7 +81,8 @@ public class List extends AbstractBlobStorageWithSas implements RunnableTask<Lis
             list.size(),
             runContext.render(containerClient.getBlobContainerName()),
             runContext.render(regexp).as(String.class).orElse(null),
-            runContext.render(prefix).as(String.class).orElse(null));
+            runContext.render(prefix).as(String.class).orElse(null)
+        );
 
         if (this.maxFiles != null) {
             Integer rMaxFiles = runContext.render(this.maxFiles).as(Integer.class).orElse(null);

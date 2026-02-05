@@ -77,6 +77,8 @@ dependencies {
 
     // Azure resource manager
     implementation 'com.azure.resourcemanager:azure-resourcemanager-datafactory:1.2.0'
+    // Azure Synapse Spark (beta SDK - no GA version available)
+    api(group: 'com.azure', name: 'azure-analytics-synapse-spark', version: '1.0.0-beta.5', kestraProvidedJackson)
 }
 
 

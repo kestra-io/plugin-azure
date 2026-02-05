@@ -57,8 +57,8 @@ import java.util.Optional;
     }
 )
 @Schema(
-    title = "Queries Cosmos items and returns its respective Cosmos query response output.",
-    description = "Executes a Cosmos SQL query with optional partition scoping and returns the matching documents."
+    title = "Run one Cosmos query",
+    description = "Executes a Cosmos SQL query with optional partition scope or feed range and returns the matching documents."
 )
 public class Query extends AbstractCosmosContainerTask<Query.Output> implements RunnableTask<Query.Output> {
     @NotNull
@@ -68,10 +68,8 @@ public class Query extends AbstractCosmosContainerTask<Query.Output> implements 
     @Schema(
         title = "Regions to exclude",
         description = """
-            List of regions to be excluded for the request/retries. Example \"East US\" or \"East US, \
-            West US\" These regions will be excluded from the preferred regions list. If all the regions are excluded, \
-            the request will be sent to the primary region for the account. The primary region is the write region in a \
-            single master account and the hub region in a multi-master account.
+            Regions to avoid for this query (e.g. "East US"). If all preferred regions are excluded, Cosmos falls back \
+            to the account primary region.
             """
     )
     private Property<List<String>> excludeRegions;
@@ -79,8 +77,7 @@ public class Query extends AbstractCosmosContainerTask<Query.Output> implements 
     @Schema(
         title = "Partition key values",
         description = """
-            Map of partition key path to value (e.g. `{ "country": "US" }` for a `/country` key). \
-            Use with `partitionKeyDefinition` to target a logical partition.
+            Map of partition key path to value (e.g. { "country": "US" } for a /country key); requires partitionKeyDefinition.
             """,
         requiredProperties = "partitionKeyDefinition"
     )
@@ -89,8 +86,8 @@ public class Query extends AbstractCosmosContainerTask<Query.Output> implements 
     @Schema(
         title = "Partition key definition (paths, kind, version)",
         description = """
-            Defines the partition key schema (paths, kind, version). Required when using `partitionKey` \
-            or `feedRangePartitionKey` so the task can build the correct `PartitionKey`.
+            Partition key schema (paths, kind, version); required with partitionKey or feedRangePartitionKey to build \
+            the correct PartitionKey.
             """
     )
     private Property<PartitionKeyDefinition> partitionKeyDefinition;
@@ -98,8 +95,8 @@ public class Query extends AbstractCosmosContainerTask<Query.Output> implements 
     @Schema(
         title = "Feed range partition key values",
         description = """
-            Map of partition key path to value used to build a feed range (e.g. `{ "country": "US" }`). \
-            Must be used with `partitionKeyDefinition`; mutually exclusive with `partitionKey`.
+            Map of partition key path to value used to build a feed range (e.g. { "country": "US" }); requires \
+            partitionKeyDefinition and is mutually exclusive with partitionKey.
             """,
         requiredProperties = "partitionKeyDefinition"
     )

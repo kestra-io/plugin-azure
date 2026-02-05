@@ -18,8 +18,8 @@ import lombok.experimental.SuperBuilder;
 public abstract class AbstractCosmosContainerTask<T extends Output> extends AbstractCosmosDatabaseTask<T> {
     @NotNull
     @Schema(
-        title = "Cosmos container ID",
-        description = "Name of the container (collection) inside the specified database."
+        title = "Container ID",
+        description = "Container (collection) name within the database; must already exist."
     )
     private Property<String> containerId;
 

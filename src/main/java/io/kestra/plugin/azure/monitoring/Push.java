@@ -17,7 +17,10 @@ import java.util.Map;
 @EqualsAndHashCode
 @Getter
 @NoArgsConstructor
-@Schema(title = "Query metrics from Azure Monitor.")
+@Schema(
+    title = "Push metrics to Azure Monitor",
+    description = "Posts custom metrics payloads to the Metrics Ingestion endpoint using Azure AD authentication. Requires regional endpoint and DCR ingestion path."
+)
 @Plugin(
     examples = {
         @Example(
@@ -46,11 +49,11 @@ import java.util.Map;
     }
 )
 public class Push extends AbstractMonitoringTask implements RunnableTask<Push.Output> {
-    @Schema(title = "DCR ingestion path")
+    @Schema(title = "DCR ingestion path", description = "Path portion of the Data Collection Rule ingestion URL (e.g., /dataCollectionRules/{id}/streams/{stream})")
     @NotNull
     private Property<String> path;
 
-    @Schema(title = "Metric data body")
+    @Schema(title = "Metric data body", description = "JSON payload formatted for Azure Monitor ingestion API")
     @NotNull
     private Property<Map<String, Object>> metrics;
 
@@ -71,6 +74,7 @@ public class Push extends AbstractMonitoringTask implements RunnableTask<Push.Ou
     @Builder
     @Getter
     public static class Output implements io.kestra.core.models.tasks.Output {
+        @Schema(title = "Ingestion response body", description = "Raw JSON returned by the ingestion API")
         private final Map<String, Object> body;
     }
 }

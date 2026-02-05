@@ -56,18 +56,20 @@ import java.net.URI;
 )
 public class List extends AbstractTableStorage implements RunnableTask<List.Output> {
     @Schema(
-        title = "Returns only tables or entities that satisfy the specified filter.",
-        description = "You can specify the filter using [Filter Strings](https://docs.microsoft.com/en-us/visualstudio/azure/vs-azure-tools-table-designer-construct-filter-strings?view=vs-2022)."
+        title = "OData filter expression",
+        description = "Server-side [filter strings](https://docs.microsoft.com/en-us/visualstudio/azure/vs-azure-tools-table-designer-construct-filter-strings?view=vs-2022) using Azure Tables syntax."
     )
     private Property<String> filter;
 
     @Schema(
-        title = "The desired properties of an entity from the Azure Table Storage table."
+        title = "Properties to return per entity",
+        description = "List of property names to return; empty returns all properties."
     )
     private Property<java.util.List<String>> select;
 
     @Schema(
-        title = "List the top `n` tables or entities from the Azure Table Storage table."
+        title = "Max entities per page",
+        description = "Limits the number of entities per page; Azure may still paginate further."
     )
     private Property<Integer> top;
 
@@ -132,12 +134,13 @@ public class List extends AbstractTableStorage implements RunnableTask<List.Outp
     @Getter
     public static class Output implements io.kestra.core.models.tasks.Output {
         @Schema(
-            title = "Number of listed entities."
+            title = "Total entities listed"
         )
         private final Long count;
 
         @Schema(
-            title = "URI of the Kestra internal storage file containing the output."
+            title = "Result file storage URI",
+            description = "kestra:// URI pointing to the ION file containing listed entities."
         )
         private URI uri;
     }

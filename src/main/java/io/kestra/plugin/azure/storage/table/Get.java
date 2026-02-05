@@ -45,17 +45,17 @@ import jakarta.validation.constraints.NotNull;
     }
 )
 @Schema(
-    title = "Get an entity from an Azure Table Storage table."
+    title = "Fetch one Table entity",
+    description = "Retrieves an entity by partitionKey and rowKey and returns its properties, keys, and ETag."
 )
 public class Get extends AbstractTableStorage implements RunnableTask<Get.Output> {
     @Schema(
-        title = "The partition key of the entity."
-    )
+        title = "Partition key to fetch"    )
     @NotNull
     private Property<String> partitionKey;
 
     @Schema(
-        title = "The row key of the entity."
+        title = "Row key to fetch"
     )
     private Property<String> rowKey;
 
@@ -77,7 +77,7 @@ public class Get extends AbstractTableStorage implements RunnableTask<Get.Output
     @Getter
     public static class Output implements io.kestra.core.models.tasks.Output {
         @Schema(
-            title = "The entity retrieved from the table."
+            title = "Retrieved Azure table entity"
         )
         private final Entity row;
     }

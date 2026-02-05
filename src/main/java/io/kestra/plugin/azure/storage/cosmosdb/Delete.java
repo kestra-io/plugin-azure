@@ -52,12 +52,15 @@ import java.util.Objects;
     }
 )
 @Schema(
-    title = "Deletes a Cosmos item and returns its respective Cosmos item response.",
-    description = "Deletes a document by id and partition key; returns status, request charge, etag, and diagnostics."
+    title = "Delete one Cosmos document",
+    description = "Deletes a document using its id and partition key values; returns status, ETag, diagnostics, and RU charge."
 )
 public class Delete extends AbstractCosmosContainerTask<Delete.Output> implements RunnableTask<Delete.Output> {
     @NotNull
-    @Schema(title = "Document identifier to delete")
+    @Schema(
+        title = "Document identifier to delete",
+        description = "JSON containing id and partition key fields identifying the document."
+    )
     private Property<Map<String, Object>> item;
 
 

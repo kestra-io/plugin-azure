@@ -57,23 +57,23 @@ import java.util.Objects;
     }
 )
 @Schema(
-    title = "Batch creates a new Cosmos item and returns its respective Cosmos batch response output.",
-    description = "Runs a transactional batch of create-item operations within one partition key and returns per-operation results."
+    title = "Run transactional batch creates",
+    description = "Executes a single-partition transactional batch of item creates; all operations share one partition key value and succeed or fail together."
 )
 public class Batch extends AbstractCosmosContainerTask<Batch.BatchResponseOutput> implements RunnableTask<Batch.BatchResponseOutput> {
     @NotNull
     @Schema(
         name = "partitionKeyValue",
-        title = "Partition key value",
-        description = "Single partition key value shared by every item in the batch (e.g. \"US\" if your key is /country)."
+        title = "Partition key value for batch",
+        description = "Value common to every item (e.g. \"US\" for a /country key); batch cannot span partitions."
     )
     Property<String> partitionKeyValue;
 
     @NotNull
     @Schema(
         name = "items",
-        title = "Documents to create in one batch",
-        description = "List of documents; each must include the partition key path matching partitionKeyValue."
+        title = "Documents to create",
+        description = "List of JSON documents; each must include the partition key field matching partitionKeyValue."
     )
     Property<List<Map<String, Object>>> items;
 

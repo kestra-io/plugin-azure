@@ -3,14 +3,14 @@ package io.kestra.plugin.azure.storage.blob;
 import com.azure.storage.blob.BlobContainerClient;
 import com.azure.storage.blob.BlobServiceClient;
 import io.kestra.core.models.annotations.Example;
-import io.kestra.core.models.annotations.Plugin;
 import io.kestra.core.models.annotations.Metric;
+import io.kestra.core.models.annotations.Plugin;
 import io.kestra.core.models.executions.metrics.Counter;
 import io.kestra.core.models.property.Property;
 import io.kestra.core.models.tasks.RunnableTask;
 import io.kestra.core.runners.RunContext;
-import io.kestra.plugin.azure.storage.blob.abstracts.AbstractBlobStorageWithSas;
 import io.kestra.plugin.azure.storage.blob.abstracts.AbstractBlobStorageContainerInterface;
+import io.kestra.plugin.azure.storage.blob.abstracts.AbstractBlobStorageWithSas;
 import io.kestra.plugin.azure.storage.blob.abstracts.ListInterface;
 import io.kestra.plugin.azure.storage.blob.models.Blob;
 import io.kestra.plugin.azure.storage.blob.services.BlobService;
@@ -71,18 +71,18 @@ public class List extends AbstractBlobStorageWithSas implements RunnableTask<Lis
     public Output run(RunContext runContext) throws Exception {
         BlobServiceClient client = this.client(runContext);
         BlobContainerClient containerClient = client
-                .getBlobContainerClient(runContext.render(this.container).as(String.class).orElse(null));
+            .getBlobContainerClient(runContext.render(this.container).as(String.class).orElse(null));
 
         java.util.List<Blob> list = BlobService.list(runContext, containerClient, this);
 
         runContext.metric(Counter.of("blobs.count", list.size()));
 
         runContext.logger().debug(
-                "Found '{}' keys on {} with regexp='{}', prefix={}",
-                list.size(),
-                runContext.render(containerClient.getBlobContainerName()),
-                runContext.render(regexp).as(String.class).orElse(null),
-                runContext.render(prefix).as(String.class).orElse(null));
+            "Found '{}' keys on {} with regexp='{}', prefix={}",
+            list.size(),
+            runContext.render(containerClient.getBlobContainerName()),
+            runContext.render(regexp).as(String.class).orElse(null),
+            runContext.render(prefix).as(String.class).orElse(null));
 
         if (this.maxFiles != null) {
             Integer rMaxFiles = runContext.render(this.maxFiles).as(Integer.class).orElse(null);
@@ -101,8 +101,8 @@ public class List extends AbstractBlobStorageWithSas implements RunnableTask<Lis
         }
 
         return Output.builder()
-                .blobs(list)
-                .build();
+            .blobs(list)
+            .build();
     }
 
     @Builder

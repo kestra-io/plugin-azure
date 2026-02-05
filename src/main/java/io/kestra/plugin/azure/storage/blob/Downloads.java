@@ -9,8 +9,8 @@ import io.kestra.core.models.annotations.Plugin;
 import io.kestra.core.models.property.Property;
 import io.kestra.core.models.tasks.RunnableTask;
 import io.kestra.core.runners.RunContext;
-import io.kestra.plugin.azure.storage.blob.abstracts.AbstractBlobStorageWithSas;
 import io.kestra.plugin.azure.storage.blob.abstracts.AbstractBlobStorageContainerInterface;
+import io.kestra.plugin.azure.storage.blob.abstracts.AbstractBlobStorageWithSas;
 import io.kestra.plugin.azure.storage.blob.abstracts.ActionInterface;
 import io.kestra.plugin.azure.storage.blob.abstracts.ListInterface;
 import io.kestra.plugin.azure.storage.blob.models.Blob;
@@ -80,20 +80,20 @@ public class Downloads extends AbstractBlobStorageWithSas implements RunnableTas
     @Override
     public Output run(RunContext runContext) throws Exception {
         List task = List.builder()
-                .id(this.id)
-                .type(List.class.getName())
-                .endpoint(this.endpoint)
-                .connectionString(this.connectionString)
-                .sharedKeyAccountName(this.sharedKeyAccountName)
-                .sharedKeyAccountAccessKey(this.sharedKeyAccountAccessKey)
-                .sasToken(this.sasToken)
-                .container(this.container)
-                .prefix(this.prefix)
-                .delimiter(this.delimiter)
-                .regexp(this.regexp)
-                .delimiter(this.delimiter)
-                .maxFiles(this.maxFiles)
-                .build();
+            .id(this.id)
+            .type(List.class.getName())
+            .endpoint(this.endpoint)
+            .connectionString(this.connectionString)
+            .sharedKeyAccountName(this.sharedKeyAccountName)
+            .sharedKeyAccountAccessKey(this.sharedKeyAccountAccessKey)
+            .sasToken(this.sasToken)
+            .container(this.container)
+            .prefix(this.prefix)
+            .delimiter(this.delimiter)
+            .regexp(this.regexp)
+            .delimiter(this.delimiter)
+            .maxFiles(this.maxFiles)
+            .build();
         List.Output run = task.run(runContext);
 
         BlobServiceClient client = this.client(runContext);
@@ -105,7 +105,7 @@ public class Downloads extends AbstractBlobStorageWithSas implements RunnableTas
             .map(throwFunction(object -> {
                 BlobClient blobClient = containerClient.getBlobClient(object.getName());
 
-                    Pair<BlobProperties, URI> download = BlobService.download(runContext, blobClient);
+                Pair<BlobProperties, URI> download = BlobService.download(runContext, blobClient);
 
                 return Blob.of(blobClient, download.getLeft())
                     .withUri(download.getRight());
@@ -113,17 +113,17 @@ public class Downloads extends AbstractBlobStorageWithSas implements RunnableTas
             .collect(Collectors.toList());
 
         Map<String, URI> outputFiles = list.stream()
-                .filter(blob -> !blob.getName().endsWith("/"))
-                .map(blob -> new AbstractMap.SimpleEntry<>(blob.getName(), blob.getUri()))
-                .collect(Collectors.toMap(AbstractMap.SimpleEntry::getKey, AbstractMap.SimpleEntry::getValue));
+            .filter(blob -> !blob.getName().endsWith("/"))
+            .map(blob -> new AbstractMap.SimpleEntry<>(blob.getName(), blob.getUri()))
+            .collect(Collectors.toMap(AbstractMap.SimpleEntry::getKey, AbstractMap.SimpleEntry::getValue));
 
         BlobService.archive(
-                run.getBlobs(),
-                runContext.render(this.action).as(ActionInterface.Action.class).orElseThrow(),
-                this.moveTo,
-                runContext,
-                this,
-                this);
+            run.getBlobs(),
+            runContext.render(this.action).as(ActionInterface.Action.class).orElseThrow(),
+            this.moveTo,
+            runContext,
+            this,
+            this);
 
         return Output
             .builder()

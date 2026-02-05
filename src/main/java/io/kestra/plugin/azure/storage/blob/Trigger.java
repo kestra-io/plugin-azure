@@ -170,20 +170,20 @@ public class Trigger extends AbstractTrigger implements PollingTriggerInterface,
         var rStateTtl = runContext.render(stateTtl).as(Duration.class);
 
         List task = List.builder()
-                .id(this.id)
-                .type(List.class.getName())
-                .endpoint(this.endpoint)
-                .connectionString(this.connectionString)
-                .sharedKeyAccountName(this.sharedKeyAccountName)
-                .sharedKeyAccountAccessKey(this.sharedKeyAccountAccessKey)
-                .sasToken(this.sasToken)
-                .container(this.container)
-                .prefix(this.prefix)
-                .delimiter(this.delimiter)
-                .regexp(this.regexp)
-                .delimiter(this.delimiter)
-                .maxFiles(this.maxFiles)
-                .build();
+            .id(this.id)
+            .type(List.class.getName())
+            .endpoint(this.endpoint)
+            .connectionString(this.connectionString)
+            .sharedKeyAccountName(this.sharedKeyAccountName)
+            .sharedKeyAccountAccessKey(this.sharedKeyAccountAccessKey)
+            .sasToken(this.sasToken)
+            .container(this.container)
+            .prefix(this.prefix)
+            .delimiter(this.delimiter)
+            .regexp(this.regexp)
+            .delimiter(this.delimiter)
+            .maxFiles(this.maxFiles)
+            .build();
         List.Output run = task.run(runContext);
 
         if (run.getBlobs().isEmpty()) {

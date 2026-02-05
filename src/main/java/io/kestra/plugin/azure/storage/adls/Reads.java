@@ -67,17 +67,17 @@ public class Reads extends AbstractDataLakeConnection implements RunnableTask<Re
     @Override
     public Reads.Output run(RunContext runContext) throws Exception {
         List task = List.builder()
-                .id(this.id)
-                .type(io.kestra.plugin.azure.storage.adls.List.class.getName())
-                .endpoint(this.endpoint)
-                .fileSystem(this.fileSystem)
-                .directoryPath(this.directoryPath)
-                .sasToken(this.sasToken)
-                .connectionString(this.connectionString)
-                .sharedKeyAccountName(this.sharedKeyAccountName)
-                .sharedKeyAccountAccessKey(this.sharedKeyAccountAccessKey)
-                .maxFiles(this.maxFiles)
-                .build();
+            .id(this.id)
+            .type(io.kestra.plugin.azure.storage.adls.List.class.getName())
+            .endpoint(this.endpoint)
+            .fileSystem(this.fileSystem)
+            .directoryPath(this.directoryPath)
+            .sasToken(this.sasToken)
+            .connectionString(this.connectionString)
+            .sharedKeyAccountName(this.sharedKeyAccountName)
+            .sharedKeyAccountAccessKey(this.sharedKeyAccountAccessKey)
+            .maxFiles(this.maxFiles)
+            .build();
         List.Output run = task.run(runContext);
 
         DataLakeServiceClient client = this.dataLakeServiceClient(runContext);

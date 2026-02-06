@@ -72,7 +72,7 @@ dependencies {
     api(group: 'com.azure', name: 'azure-storage-file-datalake', kestraProvidedJackson)
     api(group: 'com.azure', name: 'azure-monitor-query-metrics', kestraProvidedJackson)
 
-    implementation("com.azure:azure-cosmos:4.76.0", kestraProvidedJackson)
+    implementation("com.azure:azure-cosmos:4.77.0", kestraProvidedJackson)
     implementation ("com.azure:azure-messaging-servicebus:7.17.16", kestraProvidedJackson)
 
     // Azure resource manager

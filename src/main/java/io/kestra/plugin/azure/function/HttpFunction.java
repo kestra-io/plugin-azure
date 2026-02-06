@@ -31,8 +31,8 @@ import java.util.Map;
 @Getter
 @NoArgsConstructor
 @Schema(
-    title = "Trigger an Azure Function.",
-    description = "Use this task to trigger an Azure Function and collect the result."
+    title = "Invoke an Azure Function over HTTP",
+    description = "Sends an HTTP request to an Azure Function endpoint and returns the response. Supports JSON body payloads and enforces a read timeout (maxDuration) that defaults to 60 minutes."
 )
 @Plugin(examples = {
     @Example(
@@ -51,24 +51,24 @@ import java.util.Map;
     )
 })
 public class HttpFunction extends Task implements RunnableTask<HttpFunction.Output> {
-    @Schema(title = "HTTP method")
+    @Schema(title = "HTTP method", description = "Verb used for the request (e.g., GET, POST, PUT)")
     @NotNull
     protected Property<String> httpMethod;
 
-    @Schema(title = "Azure Function URL")
+    @Schema(title = "Azure Function URL", description = "Full function URL including function key if required")
     @NotNull
     protected Property<String> url;
 
     @Schema(
             title = "HTTP body",
-            description = "JSON body of the Azure Function"
+            description = "JSON payload sent to the function; defaults to empty object"
     )
     @Builder.Default
     protected Property<Map<String, Object>> httpBody = Property.ofValue(new HashMap<>());
 
     @Schema(
             title = "Max duration",
-            description = "The maximum duration the task should wait until the Azure Function completes."
+            description = "Read timeout for the HTTP call; defaults to PT60M"
     )
     @Builder.Default
     @PluginProperty(dynamic = true)
@@ -124,7 +124,7 @@ public class HttpFunction extends Task implements RunnableTask<HttpFunction.Outp
     @Builder
     @Getter
     static class Output implements io.kestra.core.models.tasks.Output {
-        @Schema(title = "Response body")
+        @Schema(title = "Function response body", description = "Parsed JSON if valid; otherwise raw string")
         private Object repsonseBody;
     }
 }

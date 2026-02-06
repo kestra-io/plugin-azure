@@ -52,8 +52,8 @@ import java.util.Optional;
     )
 })
 @Schema(
-    title = "Trigger a flow on message consumption periodically from Azure Event Hubs.",
-    description = "If you would like to consume each message from Azure Event Hubs in real-time and create one execution per message, you can use the [io.kestra.plugin.azure.eventhubs.RealtimeTrigger](https://kestra.io/plugins/plugin-azure/triggers/io.kestra.plugin.azure.eventhubs.realtimetrigger) instead."
+    title = "Poll Azure Event Hubs and trigger flows",
+    description = "Periodically consumes events in batches, checkpoints to Blob Storage, and triggers one execution per batch. Defaults: interval=PT60S, consumerGroup=$Default, partitionStartingPosition=EARLIEST, maxBatchSizePerPartition=50, maxWaitTimePerPartition=PT5S, maxDuration=PT10S. Use RealtimeTrigger for per-event executions."
 )
 
 @NoArgsConstructor
@@ -65,6 +65,7 @@ public class Trigger extends AbstractTrigger implements EventHubConsumerInterfac
 
     // TRIGGER'S PROPERTIES
     @Builder.Default
+    @Schema(title = "Polling interval", description = "Time between poll cycles; defaults to PT60S")
     private Duration interval = Duration.ofSeconds(60);
 
     // TASK'S PARAMETERS
@@ -83,29 +84,38 @@ public class Trigger extends AbstractTrigger implements EventHubConsumerInterfac
     protected Property<Long> clientRetryDelay = Property.ofValue(500L);
 
     @Builder.Default
+    @Schema(title = "Body deserializer", description = "Serde used to decode event bodies; defaults to STRING")
     private Property<Serdes> bodyDeserializer = Property.ofValue(Serdes.STRING);
 
     @Builder.Default
+    @Schema(title = "Deserializer properties", description = "Key/value options passed to the selected serde")
     private Property<Map<String, Object>> bodyDeserializerProperties = Property.ofValue(new HashMap<>());
 
     @Builder.Default
+    @Schema(title = "Consumer group", description = "Event Hubs consumer group; defaults to $Default")
     private Property<String> consumerGroup = Property.ofValue("$Default");
 
     @Builder.Default
+    @Schema(title = "Starting position", description = "Initial position strategy per partition; defaults to EARLIEST")
     private Property<StartingPosition> partitionStartingPosition = Property.ofValue(StartingPosition.EARLIEST);
 
+    @Schema(title = "Start from enqueue time", description = "Optional enqueue time filter (ISO-8601); overrides starting position")
     private Property<String> enqueueTime;
 
     @Builder.Default
+    @Schema(title = "Max batch size per partition", description = "Maximum events pulled per partition read; defaults to 50")
     private Property<Integer> maxBatchSizePerPartition = Property.ofValue(50);
 
     @Builder.Default
+    @Schema(title = "Max wait per partition", description = "Maximum wait for a partition batch before returning; defaults to PT5S")
     private Property<Duration> maxWaitTimePerPartition = Property.ofValue(Duration.ofSeconds(5));
 
     @Builder.Default
+    @Schema(title = "Overall max duration", description = "Stop consuming after this duration each poll; defaults to PT10S")
     private Property<Duration> maxDuration = Property.ofValue(Duration.ofSeconds(10));
 
     @NotNull
+    @Schema(title = "Checkpoint store properties", description = "Blob container config for checkpoints (connectionString, containerName required)")
     private Property<Map<String, String>> checkpointStoreProperties;
 
     private Property<String> namespace;

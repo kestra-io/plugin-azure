@@ -41,24 +41,28 @@ import jakarta.validation.constraints.NotNull;
     }
 )
 @Schema(
-    title = "Resize an Azure Batch pool."
+    title = "Resize an Azure Batch pool",
+    description = "Adjusts dedicated and low-priority node counts for an active pool. Fails if pool is not ACTIVE."
 )
 public class Resize extends AbstractBatch implements RunnableTask<Resize.Output> {
     @Schema(
-        title = "The ID of the pool."
+        title = "Pool ID",
+        description = "Existing pool to resize; must be active"
     )
     @NotNull
     private Property<String> poolId;
 
     @Schema(
-        title = "The desired number of dedicated compute nodes in the pool."
+        title = "Target dedicated nodes",
+        description = "Desired dedicated node count; defaults to 0"
     )
     @NotNull
     @Builder.Default
     private Property<Integer> targetDedicatedNodes = Property.ofValue(0);
 
     @Schema(
-        title = "The desired number of low-priority compute nodes in the pool."
+        title = "Target low-priority nodes",
+        description = "Desired spot/low-priority node count; defaults to 0"
     )
     @NotNull
     @Builder.Default
@@ -106,7 +110,7 @@ public class Resize extends AbstractBatch implements RunnableTask<Resize.Output>
     @NoArgsConstructor
     public static class Output implements io.kestra.core.models.tasks.Output {
         @Schema(
-            title = "The pool that has been resized."
+            title = "Resized pool state"
         )
         private Pool pool;
     }

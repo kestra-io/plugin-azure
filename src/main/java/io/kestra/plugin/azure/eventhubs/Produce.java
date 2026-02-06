@@ -84,7 +84,8 @@ import java.util.Map;
     }
 )
 @Schema(
-    title = "Publish events to Azure Event Hubs."
+    title = "Publish events to Azure Event Hubs",
+    description = "Reads records from a file or list, serializes bodies, batches by size/count, and sends to a single Event Hub. Defaults: bodySerializer=STRING, maxEventsPerBatch=1000. Optionally set partitionKey or maxBatchSizeInBytes."
 )
 @SuperBuilder
 @Getter
@@ -96,11 +97,7 @@ public class Produce extends AbstractEventHubTask implements RunnableTask<Produc
     private static final String METRIC_SENT_BATCHES_NAME = "batches.sent.count";
 
     // TASK'S PARAMETERS
-    @Schema(
-        title = "The event properties",
-        description = "The event properties which may be used for passing metadata associated with the event" +
-            " body during Event Hubs operations."
-    )
+    @Schema(title = "Event properties", description = "Metadata properties applied to each event body")
     @Builder.Default
     private Property<Map<String, String>> eventProperties = Property.ofValue(new HashMap<>());
 
@@ -112,41 +109,27 @@ public class Produce extends AbstractEventHubTask implements RunnableTask<Produc
     @NotNull
     private Object from;
 
-    @Schema(
-        title = "The hashing key to be provided for the batches of events.",
-        description = "Events with the same `partitionKey` are hashed and sent to the same partition. The provided " +
-            "`partitionKey` will be used for all the events sent by the `Produce` task."
-    )
+    @Schema(title = "Partition key", description = "Routes all events in this run to the same partition using hash")
     private Property<String> partitionKey;
 
-    @Schema(
-        title = "The maximum size for batches of events, in bytes."
-    )
+    @Schema(title = "Max batch size (bytes)", description = "Maximum batch payload size; optional")
     private Property<Integer> maxBatchSizeInBytes;
 
-    @Schema(
-        title = "The maximum number of events per batches."
-    )
+    @Schema(title = "Max events per batch", description = "Cap on events per batch; defaults to 1000")
     @Builder.Default
     private Property<Integer> maxEventsPerBatch = Property.ofValue(1000);
 
     @Schema(
-        title = "The MIME type describing the event data",
-        description = "The MIME type describing the data contained in event body allowing consumers to make informed" +
-            " decisions for inspecting and processing the event."
+        title = "Body content type",
+        description = "MIME type placed on each event for downstream consumers"
     )
     private Property<String> bodyContentType;
 
-    @Schema(
-        title = "The Serializer to be used for serializing the event value."
-    )
+    @Schema(title = "Body serializer", description = "Serde used to serialize event bodies; defaults to STRING")
     @Builder.Default
     private Property<Serdes> bodySerializer = Property.ofValue(Serdes.STRING);
 
-    @Schema(
-        title = "The config properties to be passed to the Serializer.",
-        description = "Configs in key/value pairs."
-    )
+    @Schema(title = "Serializer properties", description = "Key/value options passed to the serializer")
     @Builder.Default
     private Property<Map<String, Object>> bodySerializerProperties = Property.ofValue(new HashMap<>());
 
@@ -239,12 +222,12 @@ public class Produce extends AbstractEventHubTask implements RunnableTask<Produc
     @Getter
     public static final class Output implements io.kestra.core.models.tasks.Output {
         @Schema(
-            title = "Total number of events processed by the task."
+            title = "Events sent"
         )
         private final Integer eventsCount;
 
         @Schema(
-            title = "Total number of batches sent to an Azure EventHubs."
+            title = "Batches sent"
         )
         private final Integer sendBatchesCount;
     }

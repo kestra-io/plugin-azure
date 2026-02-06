@@ -9,8 +9,8 @@ import io.kestra.core.models.annotations.Plugin;
 import io.kestra.core.models.property.Property;
 import io.kestra.core.models.tasks.RunnableTask;
 import io.kestra.core.runners.RunContext;
-import io.kestra.plugin.azure.storage.blob.abstracts.AbstractBlobStorageWithSas;
 import io.kestra.plugin.azure.storage.blob.abstracts.AbstractBlobStorageContainerInterface;
+import io.kestra.plugin.azure.storage.blob.abstracts.AbstractBlobStorageWithSas;
 import io.kestra.plugin.azure.storage.blob.abstracts.ActionInterface;
 import io.kestra.plugin.azure.storage.blob.abstracts.ListInterface;
 import io.kestra.plugin.azure.storage.blob.models.Blob;
@@ -79,6 +79,12 @@ public class Downloads extends AbstractBlobStorageWithSas implements RunnableTas
     @Schema(title = "List filter", description = "FILES or DIRECTORIES filter for listing; defaults to FILES")
     private Property<Filter> filter = Property.ofValue(Filter.FILES);
 
+    @Schema(
+        title = "The maximum number of files to download",
+        description = "Limits the number of blobs downloaded. If not specified, all matching blobs will be downloaded."
+    )
+    private Property<Integer> maxFiles;
+
     @Override
     public Output run(RunContext runContext) throws Exception {
         List task = List.builder()
@@ -94,6 +100,7 @@ public class Downloads extends AbstractBlobStorageWithSas implements RunnableTas
             .delimiter(this.delimiter)
             .regexp(this.regexp)
             .delimiter(this.delimiter)
+            .maxFiles(this.maxFiles)
             .build();
         List.Output run = task.run(runContext);
 
@@ -116,7 +123,7 @@ public class Downloads extends AbstractBlobStorageWithSas implements RunnableTas
         Map<String, URI> outputFiles = list.stream()
             .filter(blob -> !blob.getName().endsWith("/"))
             .map(blob -> new AbstractMap.SimpleEntry<>(blob.getName(), blob.getUri()))
-            .collect(Collectors.toMap(entry -> entry.getKey(), entry -> entry.getValue()));
+            .collect(Collectors.toMap(AbstractMap.SimpleEntry::getKey, AbstractMap.SimpleEntry::getValue));
 
         BlobService.archive(
             run.getBlobs(),

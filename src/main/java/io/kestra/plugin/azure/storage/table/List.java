@@ -3,9 +3,8 @@ package io.kestra.plugin.azure.storage.table;
 import com.azure.data.tables.TableClient;
 import com.azure.data.tables.models.ListEntitiesOptions;
 import io.kestra.core.models.annotations.Example;
-import io.kestra.core.models.annotations.Plugin;
 import io.kestra.core.models.annotations.Metric;
-import io.kestra.core.models.annotations.PluginProperty;
+import io.kestra.core.models.annotations.Plugin;
 import io.kestra.core.models.executions.metrics.Counter;
 import io.kestra.core.models.property.Property;
 import io.kestra.core.models.tasks.RunnableTask;
@@ -22,7 +21,9 @@ import lombok.experimental.SuperBuilder;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
-import java.io.*;
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileWriter;
 import java.net.URI;
 
 @SuperBuilder
@@ -74,6 +75,12 @@ public class List extends AbstractTableStorage implements RunnableTask<List.Outp
     )
     private Property<Integer> top;
 
+    @Schema(
+        title = "The maximum number of entities to return",
+        description = "Limits the number of entities returned by the list operation. If not specified, all matching entities will be returned."
+    )
+    private Property<Integer> maxFiles;
+
     @Override
     public List.Output run(RunContext runContext) throws Exception {
         TableClient tableClient = this.tableClient(runContext);
@@ -84,7 +91,7 @@ public class List extends AbstractTableStorage implements RunnableTask<List.Outp
             options.setFilter(runContext.render(this.filter).as(String.class).orElseThrow());
         }
 
-        var renderedSelect= runContext.render(this.select).asList(String.class);
+        var renderedSelect = runContext.render(this.select).asList(String.class);
         if (!renderedSelect.isEmpty()) {
             options.setSelect(renderedSelect);
         }
@@ -96,8 +103,25 @@ public class List extends AbstractTableStorage implements RunnableTask<List.Outp
         File tempFile = runContext.workingDir().createTempFile(".ion").toFile();
         try (var output = new BufferedWriter(new FileWriter(tempFile))) {
             var flux = Flux.fromIterable(tableClient.listEntities(options, null, null)).map(Entity::to);
+
+            Integer rMaxFiles = null;
+            if (this.maxFiles != null) {
+                rMaxFiles = runContext.render(this.maxFiles).as(Integer.class).orElse(null);
+                if (rMaxFiles != null) {
+                    flux = flux.take(rMaxFiles);
+                }
+            }
+
             Mono<Long> longMono = FileSerde.writeAll(output, flux);
             Long count = longMono.block();
+
+            if (rMaxFiles != null && count >= rMaxFiles) {
+                runContext.logger().warn(
+                    "Listing was limited to {} entities by maxFiles property. "
+                        + "Increase the maxFiles property if you need more entities.",
+                    rMaxFiles
+                );
+            }
 
             runContext.metric(Counter.of("records.count", count, "table", tableClient.getTableName()));
 

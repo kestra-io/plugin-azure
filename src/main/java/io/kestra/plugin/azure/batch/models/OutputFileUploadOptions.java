@@ -17,7 +17,8 @@ import jakarta.validation.constraints.NotNull;
 @Jacksonized
 public class OutputFileUploadOptions {
     @Schema(
-        title = "The conditions under which the Task output file or set of files should be uploaded."
+        title = "Upload condition",
+        description = "When to upload files (e.g., TASK_COMPLETION, TASK_SUCCESS); defaults to TASK_COMPLETION"
     )
     @NotNull
     @Builder.Default

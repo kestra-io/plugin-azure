@@ -11,9 +11,7 @@ import lombok.Value;
 @Builder
 @Value
 public class ComputeNodeIdentityReference {
-    @Schema(
-        title = "The ARM resource ID of the user assigned identity."
-    )
+    @Schema(title = "User-assigned identity resource ID", description = "ARM resource ID of the managed identity used for storage access")
     Property<String> resourceId;
 
     public com.microsoft.azure.batch.protocol.models.ComputeNodeIdentityReference to(RunContext runContext) throws IllegalVariableEvaluationException {

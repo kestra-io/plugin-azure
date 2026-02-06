@@ -132,55 +132,58 @@ import static io.kestra.core.utils.Rethrow.throwRunnable;
     }
 )
 @Schema(
-    title = "Create an Azure Batch job with tasks."
+    title = "Run tasks in an Azure Batch job",
+    description = "Creates or resumes a job on a target pool, uploads task definitions, waits for completion, and optionally deletes the job afterwards. Defaults: resume=true, delete=true, completionCheckInterval=PT1S; set maxDuration to cap wait time."
 )
 public class Create extends AbstractBatch implements RunnableTask<Create.Output>, RemoteRunnerInterface {
     public static final String DIRECTORY_MARKER = ".kestradirectory";
     @Schema(
-        title = "The ID of the pool."
+        title = "Pool ID",
+        description = "Existing Batch pool where the job runs; must be active"
     )
     @NotNull
     private Property<String> poolId;
 
     @Schema(
-        title = "The job to create."
+        title = "Job definition",
+        description = "Job metadata and scheduling limits passed to Azure"
     )
     @PluginProperty(dynamic = true)
     @NotNull
     private Job job;
 
     @Schema(
-        title = "The list of tasks to be run."
+        title = "Tasks to run",
+        description = "Ordered list of task definitions executed within the job"
     )
     @PluginProperty
     @NotNull
     private List<Task> tasks;
 
     @Schema(
-        title = "The maximum total wait duration.",
-        description = "If null, there is no timeout and the task is delegated to Azure Batch."
+        title = "Maximum wait duration",
+        description = "Timeout while waiting for all tasks to finish; null means wait indefinitely"
     )
     private Property<Duration> maxDuration;
 
     @Builder.Default
     private Property<Boolean> syncWorkingDirectory = Property.ofValue(false);
 
-    @Schema(
-        title = "The frequency with which the task checks whether the job is completed."
-    )
+    @Schema(title = "Completion check interval", description = "Poll interval for job status while waiting; defaults to PT1S")
     @Builder.Default
     private final Property<Duration> completionCheckInterval = Property.ofValue(Duration.ofSeconds(1));
 
     @Schema(
-        title = "Whether the job should be deleted upon completion.",
-        description = "Warning, if the job is not deleted, a retry of the task could resume an old failed attempt of the job."
+        title = "Delete job on completion",
+        description = "If true (default), the job is deleted after tasks finish; keep false to inspect failures but retries may reuse the old job"
     )
     @NotNull
     @Builder.Default
     private final Property<Boolean> delete = Property.ofValue(true);
 
     @Schema(
-        title = "Whether to reconnect to the current job if it already exists."
+        title = "Resume existing job if found",
+        description = "When true (default), reuses a matching in-progress job instead of creating a new one"
     )
     @NotNull
     @Builder.Default
@@ -422,12 +425,12 @@ public class Create extends AbstractBatch implements RunnableTask<Create.Output>
     @NoArgsConstructor
     public static class Output implements io.kestra.core.models.tasks.Output {
         @Schema(
-            title = "The values from the output of the commands."
+            title = "Captured outputs from task logs"
         )
         private Map<String, Object> vars;
 
         @Schema(
-            title = "The output files' URIs in Kestra's internal storage."
+            title = "Output files stored in internal storage"
         )
         @PluginProperty(additionalProperties = URI.class)
         private Map<String, URI> outputFiles;

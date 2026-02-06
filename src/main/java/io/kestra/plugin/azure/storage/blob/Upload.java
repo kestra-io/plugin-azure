@@ -157,29 +157,21 @@ public class Upload extends AbstractBlobStorageWithSasObject implements Runnable
     @NotNull
     private Property<Object> from;
 
-    @Schema(
-        title = "Metadata for the blob."
-    )
+    @Schema(title = "Blob metadata", description = "Key/value metadata to set on the blob")
     private Property<Map<String, String>> metadata;
 
-    @Schema(
-        title = "User defined tags."
-    )
+    @Schema(title = "Blob tags", description = "User-defined tags to apply")
     private Property<Map<String, String>> tags;
 
     @Schema(
-        title = "The access tier of the uploaded blob.",
-        description = "The operation is allowed on a page blob in a premium Storage Account or a block blob in a blob " +
-            "Storage Account or GPV2 Account. A premium page blob's tier determines the allowed size, IOPS, and bandwidth " +
-            "of the blob. A block blob's tier determines the Hot/Cool/Archive storage type. " +
-            "This does not update the blob's etag."
+        title = "Access tier",
+        description = "Hot/Cool/Archive for block blobs or premium tiers for page blobs; does not change etag"
     )
     private Property<AccessTier> accessTier;
 
     @Schema(
-        title = "Sets a legal hold on the blob.",
-        description = "NOTE: Blob Versioning must be enabled on your storage account and the blob must be in a container" +
-            " with immutable storage with versioning enabled to call this API."
+        title = "Legal hold",
+        description = "Sets legal hold; requires container immutable storage with versioning enabled"
     )
     private Property<Boolean> legalHold;
 

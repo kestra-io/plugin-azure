@@ -57,8 +57,8 @@ import static io.kestra.core.utils.Rethrow.throwFunction;
     }
 )
 @Schema(
-    title = "Insert or update entities in an Azure Table Storage table.",
-    description = "Make sure to pass either a list of entities or a file with a list of entities."
+    title = "Batch upsert Azure Table entities",
+    description = "Buffers entities in groups of 100 and submits transactional table batches. Each batch action must share a partition key; rows without a type use defaultType."
 )
 public class Bulk extends AbstractTableStorage implements RunnableTask<Bulk.Output>, Data.From {
     @Schema(
@@ -70,7 +70,8 @@ public class Bulk extends AbstractTableStorage implements RunnableTask<Bulk.Outp
     private Object from;
 
     @Schema(
-        title = "The default operation type to be applied to the entity."
+        title = "Set default action type",
+        description = "Applied when a row omits `type`; defaults to UPSERT_REPLACE."
     )
     @NotNull
     @Builder.Default
@@ -122,7 +123,7 @@ public class Bulk extends AbstractTableStorage implements RunnableTask<Bulk.Outp
     @Getter
     public static class Output implements io.kestra.core.models.tasks.Output {
         @Schema(
-            title = "Number of entities created."
+            title = "Number of entities processed"
         )
         private final Integer count;
     }

@@ -41,10 +41,11 @@ import java.util.List;
     }
 )
 @Schema(
-    title = "Fetch an Azure OAuth access token."
+    title = "Request Azure AD access token",
+    description = "Fetches an access token using the configured tenant/client credentials. Defaults scopes to https://management.azure.com/.default and returns the token encrypted in outputs."
 )
 public class OauthAccessToken extends AbstractAzureIdentityConnection implements RunnableTask<OauthAccessToken.Output> {
-    @Schema(title = "The Azure scopes to be used")
+    @Schema(title = "OAuth scopes", description = "Space-separated scopes sent to Azure AD; defaults to https://management.azure.com/.default")
     @Builder.Default
     Property<List<String>> scopes = Property.ofValue(Collections.singletonList("https://management.azure.com/.default"));
 
@@ -75,7 +76,7 @@ public class OauthAccessToken extends AbstractAzureIdentityConnection implements
     @Getter
     public static class Output implements io.kestra.core.models.tasks.Output {
         @NotNull
-        @Schema(title = "An OAuth access token for the current user.")
+        @Schema(title = "OAuth access token payload")
         private final AccessTokenOutput accessToken;
     }
 

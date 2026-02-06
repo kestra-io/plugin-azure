@@ -66,24 +66,23 @@ import java.net.URI;
     }
 )
 @Schema(
-    title = "Upload a file to Azure Data Lake Storage."
+    title = "Upload a file to Azure Data Lake Storage",
+    description = "Uploads a Kestra internal file to ADLS; optionally acquires a short lease via Blob API to avoid concurrent writes. Lease duration defaults to 15s and is clamped to Azure's 15–60s limits."
 )
 public class Upload extends AbstractDataLakeWithFile implements RunnableTask<Upload.Output> {
 
     public static final int AZURE_LEASE_MIN_DURATION = 15;
     public static final int AZURE_LEASE_MAX_DURATION = 60;
 
-    @Schema(
-        title = "The file from the internal storage to upload to the Azure Data Lake Storage."
-    )
+    @Schema(title = "Source file", description = "kestra:// URI from internal storage to upload")
     @PluginProperty(internalStorageURI = true)
     @NotNull
     private Property<String> from;
 
-    @Schema(title = "Enable blob lease before upload to prevent concurrent writes.")
+    @Schema(title = "Use lease", description = "Acquire blob lease before upload to prevent concurrent writers")
     private Property<Boolean> useLease;
 
-    @Schema(title = "Lease duration in seconds (between 15 and 60).")
+    @Schema(title = "Lease duration (s)", description = "Lease duration between 15 and 60 seconds; values are clamped")
     private Property<Integer> leaseDurationSeconds;
 
     @Override
@@ -170,7 +169,7 @@ public class Upload extends AbstractDataLakeWithFile implements RunnableTask<Upl
     @Getter
     public static class Output implements io.kestra.core.models.tasks.Output {
         @Schema(
-            title = "The uploaded file."
+            title = "Uploaded file"
         )
         private final AdlsFile file;
     }

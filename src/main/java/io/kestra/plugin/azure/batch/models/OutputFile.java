@@ -14,31 +14,21 @@ import jakarta.validation.constraints.NotNull;
 @Value
 public class OutputFile {
     @Schema(
-        title = "A pattern indicating which file(s) to upload.",
-        description = "Both relative and absolute paths are supported. Relative paths are relative to the Task working " +
-            "directory. The following wildcards are supported: `*` matches 0 or more characters (for example, pattern " +
-            "`abc*` would match `abc` or `abcdef`), `**` matches any directory, `?` matches any single character, " +
-            "`[abc]` matches one character in the brackets, and `[a-c]` matches one character in the range. " +
-            "Brackets can include a negation to match any character not specified (for example, `[!abc]` matches any " +
-            "character but `a`, `b`, or `c`). If a file name starts with `\".\"` it is ignored by default but may be " +
-            "matched by specifying it explicitly (for example `*.gif` will not match `.a.gif`, but `.*.gif` will). " +
-            "A simple example: `**\\*.txt` matches any file that does not start in '.' and ends with `.txt` in the " +
-            "Task working directory or any subdirectory. If the filename contains a wildcard character it can be " +
-            "escaped using brackets (for example, `abc[*]` would match a file named `abc*`). Note that both `\\` and `/` " +
-            "are treated as directory separators on Windows, but only `/` is on Linux." +
-            "Environment variables (`%var%` on Windows or `$var` on Linux) are expanded prior to the pattern being applied."
+        title = "File pattern to upload",
+        description = "Supports absolute or task-relative paths with wildcards (*, **, ?, [set]); env vars expanded before matching; dotfiles require explicit match"
     )
     Property<String> filePattern;
 
     @Schema(
-        title = "The destination for the output file(s)."
+        title = "Upload destination"
     )
     @PluginProperty(dynamic = false)
     @NotNull
     OutputFileDestination destination;
 
     @Schema(
-        title = "Additional options for the upload operation, including the conditions under which to perform the upload."
+        title = "Upload options",
+        description = "Controls when the upload runs and other transfer settings"
     )
     @PluginProperty(dynamic = false)
     @NotNull

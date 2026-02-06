@@ -12,9 +12,7 @@ import jakarta.validation.constraints.NotNull;
 @Builder
 @Value
 public class OutputFileDestination {
-    @Schema(
-        title = "A location in Azure Blob Storage to which the files are uploaded."
-    )
+    @Schema(title = "Azure Blob destination")
     @PluginProperty(dynamic = true)
     @NotNull
     OutputFileBlobContainerDestination container;

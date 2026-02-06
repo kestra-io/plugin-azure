@@ -81,12 +81,11 @@ public class Consume extends AbstractServiceBusTask implements RunnableTask<Cons
     private static final ServiceBusReceiveMode DEFAULT_RECEIVE_MODE = ServiceBusReceiveMode.PEEK_LOCK;
     private static final int DEFAULT_PULL_BATCH_SIZE = 100;
 
-    public static final String RECEIVE_MODE_DESCRIPTION = "The receive mode for the receiver.";
-    public static final String SUB_QUEUE_DESCRIPTION = "The type of the SubQueue to connect to";
-    public static final String MAX_MESSAGES_DESCRIPTION ="The maximum amount of messages this tax will consume.";
-    public static final String MAX_RECEIVE_DURATION_DESCRIPTION= """
-        The maximum amount of time this task will wait before \
-        returning all consumed messages
+    public static final String RECEIVE_MODE_DESCRIPTION = "Service Bus receive mode; defaults to PEEK_LOCK";
+    public static final String SUB_QUEUE_DESCRIPTION = "SubQueue type to connect to (e.g., DEAD_LETTER_QUEUE)";
+    public static final String MAX_MESSAGES_DESCRIPTION = "Maximum messages to consume before returning; leave empty for no cap";
+    public static final String MAX_RECEIVE_DURATION_DESCRIPTION = """
+        Maximum time to wait for messages before returning; Consume defaults to PT10S and Trigger must provide a value
         """;
 
     @Override

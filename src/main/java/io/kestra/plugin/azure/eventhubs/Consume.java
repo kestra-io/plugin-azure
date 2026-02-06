@@ -77,7 +77,8 @@ import java.util.concurrent.atomic.AtomicReference;
     }
 )
 @Schema(
-    title = "Consume events from Azure Event Hubs."
+    title = "Consume events from Azure Event Hubs",
+    description = "Polls Event Hubs partitions in batches, checkpoints to Azure Blob Storage, and writes events to internal storage as Ion. Defaults: consumerGroup=$Default, partitionStartingPosition=EARLIEST, maxBatchSizePerPartition=50, maxWaitTimePerPartition=PT5S, maxDuration=PT10S. Requires checkpointStoreProperties.connectionString and .containerName."
 )
 @SuperBuilder
 @NoArgsConstructor
@@ -87,29 +88,38 @@ import java.util.concurrent.atomic.AtomicReference;
 public class Consume extends AbstractEventHubTask implements EventHubConsumerInterface, EventHubBatchConsumerInterface, RunnableTask<Consume.Output> {
     // TASK'S PARAMETERS
     @Builder.Default
+    @Schema(title = "Body deserializer", description = "Serde used to decode event bodies; defaults to STRING")
     private Property<Serdes> bodyDeserializer = Property.ofValue(Serdes.STRING);
 
     @Builder.Default
+    @Schema(title = "Deserializer properties", description = "Key/value options passed to the selected serde")
     private Property<Map<String, Object>> bodyDeserializerProperties = Property.ofValue(new HashMap<>());
 
     @Builder.Default
+    @Schema(title = "Consumer group", description = "Event Hubs consumer group name; defaults to $Default")
     private Property<String> consumerGroup = Property.ofValue("$Default");
 
     @Builder.Default
+    @Schema(title = "Starting position", description = "Initial position strategy per partition; defaults to EARLIEST")
     private Property<StartingPosition> partitionStartingPosition = Property.ofValue(StartingPosition.EARLIEST);
 
+    @Schema(title = "Start from enqueue time", description = "Optional enqueue time filter (ISO-8601); overrides starting position when set")
     private Property<String> enqueueTime;
 
     @Builder.Default
+    @Schema(title = "Max batch size per partition", description = "Maximum events pulled per partition read; defaults to 50")
     private Property<Integer> maxBatchSizePerPartition = Property.ofValue(50);
 
     @Builder.Default
+    @Schema(title = "Max wait per partition", description = "Maximum wait for a partition batch before returning; defaults to PT5S")
     private Property<Duration> maxWaitTimePerPartition = Property.ofValue(Duration.ofSeconds(5));
 
     @Builder.Default
+    @Schema(title = "Overall max duration", description = "Stop consuming after this duration; defaults to PT10S")
     private Property<Duration> maxDuration = Property.ofValue(Duration.ofSeconds(10));
 
     @NotNull
+    @Schema(title = "Checkpoint store properties", description = "Blob container config for checkpoints (connectionString, containerName required)")
     private Property<Map<String, String>> checkpointStoreProperties;
 
     // SERVICES
@@ -254,12 +264,13 @@ public class Consume extends AbstractEventHubTask implements EventHubConsumerInt
     @Getter
     public static class Output implements io.kestra.core.models.tasks.Output {
         @Schema(
-            title = "Number of events consumed from Azure Event Hubs."
+            title = "Events consumed"
         )
         private final Integer eventsCount;
 
         @Schema(
-            title = "URI of a kestra internal storage file containing the messages."
+            title = "Consumed events URI",
+            description = "kestra:// URI for Ion file containing consumed events"
         )
         private URI uri;
     }

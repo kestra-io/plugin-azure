@@ -34,12 +34,12 @@ import static io.kestra.core.utils.Rethrow.throwFunction;
 @Getter
 @NoArgsConstructor
 @Schema(
-        title = "Trigger a flow on new file arrival in Azure Data Lake Storage.",
-        description = "This trigger will poll the specified Azure Data Lake Storage file system every `interval`. " +
-            "Using the `from` and `regExp` properties, you can define which files' arrival will trigger the flow. " +
-            "Under the hood, we use the Azure Data Lake Storage API to list the files in a specified location and download them to the internal storage and process them with the declared `action`. " +
-            "You can use the `action` property to move or delete the files from the container after processing to avoid the trigger to be fired again for the same files during the next polling interval."
-    )
+    title = "Trigger a flow on new file arrival in Azure Data Lake Storage.",
+    description = "This trigger will poll the specified Azure Data Lake Storage file system every `interval`. " +
+        "Using the `from` and `regExp` properties, you can define which files' arrival will trigger the flow. " +
+        "Under the hood, we use the Azure Data Lake Storage API to list the files in a specified location and download them to the internal storage and process them with the declared `action`. " +
+        "You can use the `action` property to move or delete the files from the container after processing to avoid the trigger to be fired again for the same files during the next polling interval."
+)
 @Plugin(
     examples = {
         @Example(
@@ -103,13 +103,18 @@ public class Trigger extends AbstractTrigger implements PollingTriggerInterface,
     @PluginProperty(dynamic = true)
     DestinationObject moveTo;
 
+    @Schema(
+        title = "The maximum number of files to retrieve at once",
+        description = "Limits the number of files retrieved per polling interval. If not specified, all matching files will be retrieved."
+    )
+    private Property<Integer> maxFiles;
+
     @Builder.Default
     private final Property<On> on = Property.ofValue(On.CREATE_OR_UPDATE);
 
     private Property<String> stateKey;
 
     private Property<Duration> stateTtl;
-
 
     @Override
     public Optional<Execution> evaluate(ConditionContext conditionContext, TriggerContext context) throws Exception {
@@ -129,6 +134,7 @@ public class Trigger extends AbstractTrigger implements PollingTriggerInterface,
             .sasToken(this.sasToken)
             .fileSystem(this.fileSystem)
             .directoryPath(this.directoryPath)
+            .maxFiles(this.maxFiles)
             .build();
 
         List.Output run = task.run(runContext);

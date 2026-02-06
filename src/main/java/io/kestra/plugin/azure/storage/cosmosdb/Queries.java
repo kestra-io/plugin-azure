@@ -58,8 +58,8 @@ import java.util.Map;
     }
 )
 @Schema(
-    title = "Runs multiple queries on Cosmos items and returns their respective Cosmos query response outputs.",
-    description = "Runs multiple labeled Cosmos SQL queries in one task; each result set is returned under its label."
+    title = "Run multiple Cosmos queries",
+    description = "Executes labeled Cosmos SQL queries in one task; each label returns its own result set. Partition scoping and region exclusion are per-query."
 )
 public class Queries extends AbstractCosmosContainerTask<Queries.Output> implements RunnableTask<Queries.Output> {
     private static final Logger log = LoggerFactory.getLogger(Queries.class);
@@ -67,7 +67,7 @@ public class Queries extends AbstractCosmosContainerTask<Queries.Output> impleme
     @NotNull
     @Schema(
         title = "Named queries to execute",
-        description = "Map of label to query options. Each entry runs independently and returns under its label."
+        description = "Map of label to query options; entries run independently and return under the same label."
     )
     private Property<Map<String, QueriesOptions>> queries;
 
@@ -155,31 +155,26 @@ public class Queries extends AbstractCosmosContainerTask<Queries.Output> impleme
 
         @Schema(
             title = "Regions to exclude",
-            description = """
-                List of regions to be excluded for the request/retries. Example \"East US\" or \"East US, West US\" \
-                These regions will be excluded from the preferred regions list. If all the regions are excluded, the \
-                request will be sent to the primary region for the account. The primary region is the write region in a\
-                 single master account and the hub region in a multi-master account.
-            """
+            description = "Regions to avoid for this query (e.g. \"East US\"). If all preferred regions are excluded, Cosmos falls back to the account primary."
         )
         private List<String> excludeRegions;
 
         @Schema(
             title = "Partition key values",
-            description = "Map of partition key path to value (e.g. `{ \"country\": \"US\" }`). Requires partitionKeyDefinition.",
+            description = "Map of partition key path to value (e.g. {\"country\":\"US\"}); requires partitionKeyDefinition.",
             requiredProperties = "partitionKeyDefinition"
         )
         private Map<String, Object> partitionKey;
 
         @Schema(
             title = "Partition key definition (paths, kind, version)",
-            description = "Schema of the container partition key used to build PartitionKey objects."
+            description = "Container partition key schema used to build PartitionKey objects for partitionKey or feedRangePartitionKey."
         )
         private PartitionKeyDefinition partitionKeyDefinition;
 
         @Schema(
             title = "Feed range partition key values",
-            description = "Map of partition key path to value used to build a feed range; mutually exclusive with partitionKey.",
+            description = "Map of partition key path to value used to build a feed range; mutually exclusive with partitionKey and requires partitionKeyDefinition.",
             requiredProperties = "partitionKeyDefinition"
         )
         private Map<String, Object> feedRangePartitionKey;

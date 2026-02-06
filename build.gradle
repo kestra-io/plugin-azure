@@ -1,11 +1,11 @@
 plugins {
-    id "com.vanniktech.maven.publish" version "0.34.0"
+    id "com.vanniktech.maven.publish" version "0.36.0"
     id "io.kestra.gradle.inject-bom-versions" version "1.0.0"
     id 'java-library'
     id "idea"
     id 'jacoco'
     id "com.adarshr.test-logger" version "4.0.0"
-    id "com.gradleup.shadow" version "9.2.2"
+    id "com.gradleup.shadow" version "9.3.1"
     id 'signing'
     id "com.github.ben-manes.versions" version "0.53.0"
     id 'net.researchgate.release' version '3.1.0'
@@ -72,11 +72,13 @@ dependencies {
     api(group: 'com.azure', name: 'azure-storage-file-datalake', kestraProvidedJackson)
     api(group: 'com.azure', name: 'azure-monitor-query-metrics', kestraProvidedJackson)
 
-    implementation("com.azure:azure-cosmos:4.76.0", kestraProvidedJackson)
+    implementation("com.azure:azure-cosmos:4.77.0", kestraProvidedJackson)
     implementation ("com.azure:azure-messaging-servicebus:7.17.16", kestraProvidedJackson)
 
     // Azure resource manager
     implementation 'com.azure.resourcemanager:azure-resourcemanager-datafactory:1.2.0'
+    // Azure Synapse Spark (beta SDK - no GA version available)
+    api(group: 'com.azure', name: 'azure-analytics-synapse-spark', version: '1.0.0-beta.5', kestraProvidedJackson)
 }
 
 
@@ -152,7 +154,7 @@ configurations {
 }
 
 dependencies {
-    agent "org.aspectj:aspectjweaver:1.9.25"
+    agent "org.aspectj:aspectjweaver:1.9.25.1"
 }
 
 test {

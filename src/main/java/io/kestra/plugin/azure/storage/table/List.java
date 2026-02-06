@@ -3,9 +3,8 @@ package io.kestra.plugin.azure.storage.table;
 import com.azure.data.tables.TableClient;
 import com.azure.data.tables.models.ListEntitiesOptions;
 import io.kestra.core.models.annotations.Example;
-import io.kestra.core.models.annotations.Plugin;
 import io.kestra.core.models.annotations.Metric;
-import io.kestra.core.models.annotations.PluginProperty;
+import io.kestra.core.models.annotations.Plugin;
 import io.kestra.core.models.executions.metrics.Counter;
 import io.kestra.core.models.property.Property;
 import io.kestra.core.models.tasks.RunnableTask;
@@ -22,7 +21,9 @@ import lombok.experimental.SuperBuilder;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
-import java.io.*;
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileWriter;
 import java.net.URI;
 
 @SuperBuilder
@@ -52,27 +53,33 @@ import java.net.URI;
     }
 )
 @Schema(
-    title = "List entities from an Azure Table Storage table.",
-    description = "If the `filter` parameter in the options is set, only entities matching the filter will be returned.\n" +
-        "If the `select` parameter is set, only the properties included in the select parameter will be returned for each entity.\n" +
-        "If the `top` parameter is set, the maximum number of returned entities per page will be limited to that value."
+    title = "List Azure Table entities",
+    description = "Streams entities to Kestra storage and emits records.count. Supports server-side filter/select and page-size limits."
 )
 public class List extends AbstractTableStorage implements RunnableTask<List.Output> {
     @Schema(
-        title = "Returns only tables or entities that satisfy the specified filter.",
-        description = "You can specify the filter using [Filter Strings](https://docs.microsoft.com/en-us/visualstudio/azure/vs-azure-tools-table-designer-construct-filter-strings?view=vs-2022)."
+        title = "OData filter expression",
+        description = "Server-side [filter strings](https://docs.microsoft.com/en-us/visualstudio/azure/vs-azure-tools-table-designer-construct-filter-strings?view=vs-2022) using Azure Tables syntax."
     )
     private Property<String> filter;
 
     @Schema(
-        title = "The desired properties of an entity from the Azure Table Storage table."
+        title = "Properties to return per entity",
+        description = "List of property names to return; empty returns all properties."
     )
     private Property<java.util.List<String>> select;
 
     @Schema(
-        title = "List the top `n` tables or entities from the Azure Table Storage table."
+        title = "Max entities per page",
+        description = "Limits the number of entities per page; Azure may still paginate further."
     )
     private Property<Integer> top;
+
+    @Schema(
+        title = "The maximum number of entities to return",
+        description = "Limits the number of entities returned by the list operation. If not specified, all matching entities will be returned."
+    )
+    private Property<Integer> maxFiles;
 
     @Override
     public List.Output run(RunContext runContext) throws Exception {
@@ -84,7 +91,7 @@ public class List extends AbstractTableStorage implements RunnableTask<List.Outp
             options.setFilter(runContext.render(this.filter).as(String.class).orElseThrow());
         }
 
-        var renderedSelect= runContext.render(this.select).asList(String.class);
+        var renderedSelect = runContext.render(this.select).asList(String.class);
         if (!renderedSelect.isEmpty()) {
             options.setSelect(renderedSelect);
         }
@@ -96,8 +103,25 @@ public class List extends AbstractTableStorage implements RunnableTask<List.Outp
         File tempFile = runContext.workingDir().createTempFile(".ion").toFile();
         try (var output = new BufferedWriter(new FileWriter(tempFile))) {
             var flux = Flux.fromIterable(tableClient.listEntities(options, null, null)).map(Entity::to);
+
+            Integer rMaxFiles = null;
+            if (this.maxFiles != null) {
+                rMaxFiles = runContext.render(this.maxFiles).as(Integer.class).orElse(null);
+                if (rMaxFiles != null) {
+                    flux = flux.take(rMaxFiles);
+                }
+            }
+
             Mono<Long> longMono = FileSerde.writeAll(output, flux);
             Long count = longMono.block();
+
+            if (rMaxFiles != null && count >= rMaxFiles) {
+                runContext.logger().warn(
+                    "Listing was limited to {} entities by maxFiles property. "
+                        + "Increase the maxFiles property if you need more entities.",
+                    rMaxFiles
+                );
+            }
 
             runContext.metric(Counter.of("records.count", count, "table", tableClient.getTableName()));
 
@@ -112,12 +136,13 @@ public class List extends AbstractTableStorage implements RunnableTask<List.Outp
     @Getter
     public static class Output implements io.kestra.core.models.tasks.Output {
         @Schema(
-            title = "Number of listed entities."
+            title = "Total entities listed"
         )
         private final Long count;
 
         @Schema(
-            title = "URI of the Kestra internal storage file containing the output."
+            title = "Result file storage URI",
+            description = "kestra:// URI pointing to the ION file containing listed entities."
         )
         private URI uri;
     }

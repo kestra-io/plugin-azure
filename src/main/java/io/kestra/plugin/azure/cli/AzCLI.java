@@ -30,12 +30,8 @@ import java.util.Map;
 @Getter
 @NoArgsConstructor
 @Schema(
-    title = "Execute a command with the Azure CLI.",
-    description = "We recommend using a Service Principal and a Client Secret for authentication. " +
-        "To create a Service Principal and Client Secret, you can use the following " +
-        "[documentation](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/guides/service_principal_client_secret). " +
-        "Then, use the generated `appId` as the `username` and the generated `password` as the `password` in the Kestra task configuration. " +
-        "Finally, pass the returned `tenantId` to the `tenant` field in the Kestra task configuration and set `servicePrincipal` to `true`."
+    title = "Run Azure CLI commands in a container",
+    description = "Executes one or more az commands inside the task runner (defaults to Docker with image mcr.microsoft.com/azure-cli). If username is set, performs az login with optional password/client secret, tenant, and --service-principal flag. Prefer taskRunner over deprecated docker options."
 )
 @Plugin(
     examples = {
@@ -110,54 +106,43 @@ import java.util.Map;
 public class AzCLI extends Task implements RunnableTask<ScriptOutput>, NamespaceFilesInterface, InputFilesInterface, OutputFilesInterface {
     private static final String DEFAULT_IMAGE = "mcr.microsoft.com/azure-cli";
 
-    @Schema(
-        title = "The commands to run."
-    )
+    @Schema(title = "Commands", description = "List of az commands executed with /bin/sh -c inside the runner")
     @NotNull
     private Property<List<String>> commands;
 
-    @Schema(
-        title = "Account username. If set, it will use `az login` before running the commands."
-    )
+    @Schema(title = "Login username", description = "Triggers az login before commands; for Service Principal use appId/clientId")
     private Property<String> username;
 
-    @Schema(
-        title = "Account password."
-    )
+    @Schema(title = "Login password", description = "Password or client secret used with username")
     private Property<String> password;
 
-    @Schema(
-        title = "Tenant ID to use."
-    )
+    @Schema(title = "Tenant ID", description = "Tenant passed to az login --tenant")
     private Property<String> tenant;
 
-    @Schema(
-        title = "Is the account a service principal?"
-    )
+    @Schema(title = "Service principal login", description = "Adds --service-principal to az login when true")
     private Property<Boolean> servicePrincipal;
 
-    @Schema(
-        title = "Additional environment variables for the current process."
-    )
+    @Schema(title = "Environment variables", description = "Additional environment variables injected into the commands")
     protected Property<Map<String, String>> env;
 
     @Schema(
-        title = "Deprecated, use 'taskRunner' instead"
+        title = "Deprecated Docker options",
+        description = "Deprecated; use taskRunner instead"
     )
     @PluginProperty
     @Deprecated
     private DockerOptions docker;
 
     @Schema(
-        title = "The task runner to use.",
-        description = "Task runners are provided by plugins, each have their own properties."
+        title = "Task runner",
+        description = "Runner implementation (defaults to Docker) used to execute the commands"
     )
     @PluginProperty
     @Builder.Default
     @Valid
     protected TaskRunner<?> taskRunner = Docker.instance();
 
-    @Schema(title = "The task runner container image, only used if the task runner is container-based.")
+    @Schema(title = "Runner container image", description = "Container image used by container-based task runners; defaults to mcr.microsoft.com/azure-cli")
     @Builder.Default
     protected Property<String> containerImage = Property.ofValue(DEFAULT_IMAGE);
 
@@ -165,6 +150,7 @@ public class AzCLI extends Task implements RunnableTask<ScriptOutput>, Namespace
 
     private Object inputFiles;
 
+    @Schema(title = "Output files", description = "Paths from the container working directory to persist to outputs")
     private Property<List<String>> outputFiles;
 
     @Override

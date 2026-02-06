@@ -30,7 +30,10 @@ import java.util.concurrent.atomic.AtomicInteger;
 @EqualsAndHashCode
 @Getter
 @NoArgsConstructor
-@Schema(title = "Query metrics from Azure Monitor.")
+@Schema(
+    title = "Query metrics from Azure Monitor",
+    description = "Fetches metrics for one or more resource IDs using the regional Metrics endpoint. Supports windowed queries, aggregation, granularity, filters, ordering, and rollups. Defaults window to PT5M."
+)
 @Plugin(
     examples = {
         @Example(
@@ -59,52 +62,52 @@ import java.util.concurrent.atomic.AtomicInteger;
     }
 )
 public class Query extends AbstractMonitoringTask implements RunnableTask<Query.Output> {
-    @Schema(title = "List of Azure Resource IDs to query metrics from")
+    @Schema(title = "Resource IDs", description = "List of Azure resource IDs to query")
     @NotNull
     private Property<List<String>> resourceIds;
 
-    @Schema(title = "List of metric names to query")
+    @Schema(title = "Metric names", description = "Metrics to retrieve for the specified resources")
     @NotNull
     private Property<List<String>> metricNames;
 
     @Schema(
         title = "Metrics namespace",
-        description = "The namespace of the metrics, e.g., 'Microsoft.Compute/virtualMachines'"
+        description = "Namespace for the metrics, e.g., Microsoft.Compute/virtualMachines"
     )
     @NotNull
     private Property<String> metricsNamespace;
 
     @Schema(
-        title = "Time window for metrics",
-        description = "Duration looking back from now, e.g., PT5M for 5 minutes"
+        title = "Time window",
+        description = "Look-back duration ending at now; defaults to PT5M"
     )
     @Builder.Default
     private Property<Duration> window = Property.ofValue(Duration.ofMinutes(5));
 
     @Schema(
-        title = "Aggregation types",
-        description = "List of aggregation types: Average, Total, Maximum, Minimum, Count"
+        title = "Aggregations",
+        description = "Aggregation types to include (Average, Total, Maximum, Minimum, Count)"
     )
     private Property<List<String>> aggregations;
 
     @Schema(
-        title = "Time grain for data aggregation",
-        description = "ISO 8601 duration format, e.g., PT1M for 1 minute"
+        title = "Time grain",
+        description = "ISO-8601 duration for aggregation granularity, e.g., PT1M"
     )
     private Property<Duration> interval;
 
-    @Schema(title = "Filter expression to apply to the query")
+    @Schema(title = "Filter", description = "OData filter expression for the query")
     private Property<String> filter;
 
-    @Schema(title = "Top N time series to return")
+    @Schema(title = "Top", description = "Limit on number of time series returned")
     private Property<Integer> top;
 
-    @Schema(title = "Order by clause for sorting results")
+    @Schema(title = "Order by", description = "Sorting clause for results")
     private Property<String> orderBy;
 
     @Schema(
-        title = "Dimension name(s) to roll up results by",
-        description = "For example, 'City' to combine multiple city dimension values into one time series"
+        title = "Rollup by dimension",
+        description = "Dimension name(s) to roll up series (e.g., City)"
     )
     private Property<String> rollupBy;
 

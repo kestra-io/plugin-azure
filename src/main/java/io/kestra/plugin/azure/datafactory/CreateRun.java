@@ -82,41 +82,35 @@ import java.util.concurrent.atomic.AtomicReference;
     }
 )
 @Schema(
-        title = "Create a Pipeline run from an Azure Data Factory.",
-        description = "Launch an Azure Data Factory pipeline from Kestra. " +
-                "Data Factory contains a series of interconnected systems that provide a complete end-to-end platform for data engineers."
+    title = "Start an Azure Data Factory pipeline run",
+    description = "Triggers a Data Factory pipeline and optionally waits for completion, emitting run metrics and writing activity logs to internal storage. Defaults: wait=true, polling interval=PT5S, timeout=PT1H; task fails on Failed/Cancelled pipeline states."
 )
 public class CreateRun extends AbstractAzureIdentityConnection implements RunnableTask<CreateRun.Output> {
     private static final String PIPELINE_SUCCEEDED_STATUS = "Succeeded";
     private static final List<String> PIPELINE_FAILED_STATUS = List.of("Failed", "Canceling", "Cancelled");
 
-    @Schema(title = "Subscription ID")
+    @Schema(title = "Subscription ID", description = "Azure subscription GUID that owns the Data Factory")
     @NotNull
     protected Property<String> subscriptionId;
 
-    @Schema(title = "Factory name")
+    @Schema(title = "Factory name", description = "Azure Data Factory name")
     private Property<String> factoryName;
 
-    @Schema(title = "Pipeline name")
+    @Schema(title = "Pipeline name", description = "Pipeline to trigger inside the factory")
     private Property<String> pipelineName;
 
-    @Schema(title = "Resource Group name")
+    @Schema(title = "Resource group name", description = "Resource group containing the Data Factory")
     private Property<String> resourceGroupName;
 
-    @Schema(
-            title = "Pipeline parameters."
-    )
+    @Schema(title = "Pipeline parameters", description = "Key/value parameters passed to the pipeline run")
     @Builder.Default
     private Property<Map<String, Object>> parameters = Property.ofValue(new HashMap<>());
 
-    @Schema(
-            title = "Wait for the end of the run.",
-            description = "Allows you to capture job status and logs."
-    )
+    @Schema(title = "Wait for completion", description = "If true (default), poll pipeline status and collect activity logs; false returns runId immediately")
     @Builder.Default
     private Property<Boolean> wait = Property.ofValue(Boolean.TRUE);
 
-    @Schema(title = "Check the frequency configuration.")
+    @Schema(title = "Polling frequency", description = "Interval and max duration used when wait=true")
     @PluginProperty
     @Builder.Default
     private CheckFrequency checkFrequency = CheckFrequency.builder().build();
@@ -230,7 +224,8 @@ public class CreateRun extends AbstractAzureIdentityConnection implements Runnab
         private String runId;
 
         @Schema(
-                title = "URI of a kestra internal storage file containing the activities and their inputs/outputs."
+            title = "Activities log URI",
+            description = "kestra:// URI for an Ion file containing activity runs with inputs/outputs when wait=true"
         )
         private URI uri;
     }
@@ -239,13 +234,15 @@ public class CreateRun extends AbstractAzureIdentityConnection implements Runnab
     @Getter
     public static class CheckFrequency {
         @Schema(
-            title = "Maximum duration of the task until timing out the task."
+            title = "Max wait duration",
+            description = "Stop polling and fail after this duration; defaults to PT1H"
         )
         @Builder.Default
         private Property<Duration> maxDuration = Property.ofValue(Duration.ofHours(1));
 
         @Schema(
-            title = "Frequency at which Kestra checks if the pipeline has finished."
+            title = "Polling interval",
+            description = "Delay between status checks; defaults to PT5S"
         )
         @Builder.Default
         private Property<Duration> interval = Property.ofValue(Duration.ofSeconds(5));

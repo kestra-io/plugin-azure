@@ -32,8 +32,8 @@ import java.util.Map;
 @NoArgsConstructor
 public abstract class AbstractMonitoringTask extends AbstractAzureIdentityConnection {
     @Schema(
-        title = "Azure Monitor Metrics regional endpoint",
-        description = "Must be the regional endpoint (e.g. https://westeurope.metrics.monitor.azure.com)"
+        title = "Azure Monitor regional endpoint",
+        description = "Regional metrics endpoint, e.g. https://westeurope.metrics.monitor.azure.com"
     )
     @NotNull
     protected Property<String> endpoint;

@@ -47,26 +47,21 @@ import jakarta.validation.constraints.NotNull;
     }
 )
 @Schema(
-    title = "Copy a file within Azure Blob Storage."
+    title = "Copy a blob within Azure Storage",
+    description = "Copies a blob to another container/path using a short-lived SAS token; optionally deletes the source after copy."
 )
 public class Copy extends AbstractBlobStorageWithSas implements RunnableTask<Copy.Output> {
-    @Schema(
-        title = "The source from where the file should be copied."
-    )
+    @Schema(title = "Source blob", description = "Container and blob path to copy from")
     @PluginProperty(dynamic = true)
     @NotNull
     private CopyObject from;
 
-    @Schema(
-        title = "The destination to copy the file to."
-    )
+    @Schema(title = "Destination blob", description = "Container and blob path to copy to")
     @PluginProperty(dynamic = true)
     @NotNull
     private CopyObject to;
 
-    @Schema(
-        title = "Whether to delete the source file after copy."
-    )
+    @Schema(title = "Delete source after copy", description = "If true, removes the source blob when copy finishes; default false")
     @Builder.Default
     private Property<Boolean> delete = Property.ofValue(false);
     @Override
@@ -114,13 +109,14 @@ public class Copy extends AbstractBlobStorageWithSas implements RunnableTask<Cop
     @NoArgsConstructor
     public static class CopyObject {
         @Schema(
-            title = "The blob container."
+            title = "Source/destination container"
         )
         @NotNull
         Property<String> container;
 
         @Schema(
-            title = "The full blob path on the container."
+            title = "Blob path",
+            description = "Full blob name (virtual path) inside the container"
         )
         @NotNull
         Property<String> name;
@@ -130,7 +126,7 @@ public class Copy extends AbstractBlobStorageWithSas implements RunnableTask<Cop
     @NoArgsConstructor
     public static class Output implements io.kestra.core.models.tasks.Output {
         @Schema(
-            title = "The copied blob."
+            title = "Copied blob"
         )
         private Blob blob;
     }

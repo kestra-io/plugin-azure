@@ -5,7 +5,7 @@ plugins {
     id "idea"
     id 'jacoco'
     id "com.adarshr.test-logger" version "4.0.0"
-    id "com.gradleup.shadow" version "9.2.2"
+    id "com.gradleup.shadow" version "9.3.1"
     id 'signing'
     id "com.github.ben-manes.versions" version "0.53.0"
     id 'net.researchgate.release' version '3.1.0'
@@ -53,15 +53,6 @@ dependencies {
     annotationProcessor "org.projectlombok:lombok"
     compileOnly "org.projectlombok:lombok"
 
-    // Micronaut
-    compileOnly "io.micronaut:micronaut-http-client"
-    compileOnly "io.micronaut.reactor:micronaut-reactor"
-    compileOnly "io.micronaut:micronaut-jackson-databind"
-
-    compileOnly group: 'com.fasterxml.jackson.module', name: 'jackson-module-parameter-names'
-    compileOnly group: 'com.fasterxml.jackson.datatype', name: 'jackson-datatype-guava'
-    compileOnly group: 'com.fasterxml.jackson.datatype', name: 'jackson-datatype-jsr310'
-
     // Kestra
     annotationProcessor group: "io.kestra", name: "processor"
     compileOnly group: "io.kestra", name: "core"
@@ -81,8 +72,13 @@ dependencies {
     api(group: 'com.azure', name: 'azure-storage-file-datalake', kestraProvidedJackson)
     api(group: 'com.azure', name: 'azure-monitor-query-metrics', kestraProvidedJackson)
 
+    implementation("com.azure:azure-cosmos:4.76.0", kestraProvidedJackson)
+    implementation ("com.azure:azure-messaging-servicebus:7.17.16", kestraProvidedJackson)
+
     // Azure resource manager
     implementation 'com.azure.resourcemanager:azure-resourcemanager-datafactory:1.2.0'
+    // Azure Synapse Spark (beta SDK - no GA version available)
+    api(group: 'com.azure', name: 'azure-analytics-synapse-spark', version: '1.0.0-beta.5', kestraProvidedJackson)
 }
 
 
@@ -158,7 +154,7 @@ configurations {
 }
 
 dependencies {
-    agent "org.aspectj:aspectjweaver:1.9.25"
+    agent "org.aspectj:aspectjweaver:1.9.25.1"
 }
 
 test {

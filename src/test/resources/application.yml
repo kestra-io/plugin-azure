@@ -37,3 +37,10 @@ kestra:
           tenantId: ""
           resourceId: "/subscriptions/YOUR_SUB_ID/resourceGroups/YOUR_RG/providers/Microsoft.Compute/virtualMachines/YOUR_VM"
           metricsNamespace: "Microsoft.Compute/virtualMachines"
+        cosmos:
+          endpoint: "https://cosmos-unit-test.documents.azure.com"
+          database-id: "cosmos-database-unit-test"
+          container-id: "cosmos-container-unit-test"
+        servicebus:
+          queue-name: "unittest-queue"
+          topic-name: "unittest-topic"

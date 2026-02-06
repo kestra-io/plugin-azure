@@ -27,7 +27,7 @@ public interface AzureIdentityConnectionInterface {
             description = """
                 Your stored PEM certificate.
                 The tenantId, clientId and clientCertificate of the service principal are required for this credential to acquire an access token.
-            """
+                """
     )
     Property<String> getPemCertificate();
 

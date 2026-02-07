@@ -3,14 +3,14 @@ package io.kestra.plugin.azure.storage.blob;
 import com.azure.storage.blob.BlobContainerClient;
 import com.azure.storage.blob.BlobServiceClient;
 import io.kestra.core.models.annotations.Example;
-import io.kestra.core.models.annotations.Metric;
 import io.kestra.core.models.annotations.Plugin;
+import io.kestra.core.models.annotations.Metric;
 import io.kestra.core.models.executions.metrics.Counter;
 import io.kestra.core.models.property.Property;
 import io.kestra.core.models.tasks.RunnableTask;
 import io.kestra.core.runners.RunContext;
-import io.kestra.plugin.azure.storage.blob.abstracts.AbstractBlobStorageContainerInterface;
 import io.kestra.plugin.azure.storage.blob.abstracts.AbstractBlobStorageWithSas;
+import io.kestra.plugin.azure.storage.blob.abstracts.AbstractBlobStorageContainerInterface;
 import io.kestra.plugin.azure.storage.blob.abstracts.ListInterface;
 import io.kestra.plugin.azure.storage.blob.models.Blob;
 import io.kestra.plugin.azure.storage.blob.services.BlobService;
@@ -65,7 +65,8 @@ public class List extends AbstractBlobStorageWithSas implements RunnableTask<Lis
         title = "The maximum number of files to return",
         description = "Limits the number of blobs returned by the list operation. If not specified, all matching blobs will be returned."
     )
-    private Property<Integer> maxFiles;
+    @Builder.Default
+    private Property<Integer> maxFiles = Property.ofValue(25);
 
     @Override
     public Output run(RunContext runContext) throws Exception {
@@ -84,20 +85,18 @@ public class List extends AbstractBlobStorageWithSas implements RunnableTask<Lis
             runContext.render(prefix).as(String.class).orElse(null)
         );
 
-        if (this.maxFiles != null) {
-            Integer rMaxFiles = runContext.render(this.maxFiles).as(Integer.class).orElse(null);
+        Integer rMaxFiles = runContext.render(this.maxFiles).as(Integer.class).orElse(25);
 
-            if (rMaxFiles != null && list.size() > rMaxFiles) {
-                runContext.logger().warn(
-                    "Listing returned {} blobs but maxFiles limit is {}. "
-                        + "Only the first {} blobs will be returned. "
-                        + "Increase the maxFiles property if you need more blobs.",
-                    list.size(),
-                    rMaxFiles,
-                    rMaxFiles
-                );
-                list = list.subList(0, rMaxFiles);
-            }
+        if (list.size() > rMaxFiles) {
+            runContext.logger().warn(
+                "Listing returned {} blobs but maxFiles limit is {}. "
+                    + "Only the first {} blobs will be returned. "
+                    + "Increase the maxFiles property if you need more blobs.",
+                list.size(),
+                rMaxFiles,
+                rMaxFiles
+            );
+            list = list.subList(0, rMaxFiles);
         }
 
         return Output.builder()

@@ -153,7 +153,8 @@ public class Trigger extends AbstractTrigger implements PollingTriggerInterface,
         title = "The maximum number of files to retrieve at once",
         description = "Limits the number of blobs retrieved per polling interval. If not specified, all matching blobs will be retrieved."
     )
-    private Property<Integer> maxFiles;
+    @Builder.Default
+    private Property<Integer> maxFiles = Property.ofValue(25);
 
     @Builder.Default
     private final Property<On> on = Property.ofValue(On.CREATE_OR_UPDATE);

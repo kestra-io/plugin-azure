@@ -13,10 +13,7 @@ import io.kestra.core.serializers.FileSerde;
 import io.kestra.plugin.azure.storage.table.abstracts.AbstractTableStorage;
 import io.kestra.plugin.azure.storage.table.models.Entity;
 import io.swagger.v3.oas.annotations.media.Schema;
-import lombok.EqualsAndHashCode;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.ToString;
+import lombok.*;
 import lombok.experimental.SuperBuilder;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -79,7 +76,8 @@ public class List extends AbstractTableStorage implements RunnableTask<List.Outp
         title = "The maximum number of entities to return",
         description = "Limits the number of entities returned by the list operation. If not specified, all matching entities will be returned."
     )
-    private Property<Integer> maxFiles;
+    @Builder.Default
+    private Property<Integer> maxFiles = Property.ofValue(25);
 
     @Override
     public List.Output run(RunContext runContext) throws Exception {
@@ -104,18 +102,13 @@ public class List extends AbstractTableStorage implements RunnableTask<List.Outp
         try (var output = new BufferedWriter(new FileWriter(tempFile))) {
             var flux = Flux.fromIterable(tableClient.listEntities(options, null, null)).map(Entity::to);
 
-            Integer rMaxFiles = null;
-            if (this.maxFiles != null) {
-                rMaxFiles = runContext.render(this.maxFiles).as(Integer.class).orElse(null);
-                if (rMaxFiles != null) {
-                    flux = flux.take(rMaxFiles);
-                }
-            }
+            Integer rMaxFiles = runContext.render(this.maxFiles).as(Integer.class).orElse(25);
+            flux = flux.take(rMaxFiles);
 
             Mono<Long> longMono = FileSerde.writeAll(output, flux);
             Long count = longMono.block();
 
-            if (rMaxFiles != null && count >= rMaxFiles) {
+            if (count >= rMaxFiles) {
                 runContext.logger().warn(
                     "Listing was limited to {} entities by maxFiles property. "
                         + "Increase the maxFiles property if you need more entities.",

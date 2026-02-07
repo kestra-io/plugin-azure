@@ -83,7 +83,8 @@ public class Downloads extends AbstractBlobStorageWithSas implements RunnableTas
         title = "The maximum number of files to download",
         description = "Limits the number of blobs downloaded. If not specified, all matching blobs will be downloaded."
     )
-    private Property<Integer> maxFiles;
+    @Builder.Default
+    private Property<Integer> maxFiles = Property.ofValue(25);
 
     @Override
     public Output run(RunContext runContext) throws Exception {

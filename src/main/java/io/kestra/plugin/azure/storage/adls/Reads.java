@@ -62,7 +62,8 @@ public class Reads extends AbstractDataLakeConnection implements RunnableTask<Re
         title = "The maximum number of files to read",
         description = "Limits the number of files read. If not specified, all matching files will be read."
     )
-    private Property<Integer> maxFiles;
+    @Builder.Default
+    private Property<Integer> maxFiles = Property.ofValue(25);
 
     @Override
     public Reads.Output run(RunContext runContext) throws Exception {

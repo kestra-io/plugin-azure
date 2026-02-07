@@ -6,7 +6,9 @@ import io.kestra.core.utils.IdUtils;
 import io.kestra.plugin.azure.storage.adls.AbstractTest;
 import io.kestra.plugin.azure.storage.adls.Upload;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 
+@EnabledIfEnvironmentVariable(named = "AZURE_CONNECTION_STRING", matches = ".+")
 class SetAccessControlTest extends AbstractTest {
     @Test
     void run() throws Exception {

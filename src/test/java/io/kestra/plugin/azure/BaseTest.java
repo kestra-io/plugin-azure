@@ -10,6 +10,7 @@ import io.kestra.core.utils.TestsUtils;
 import io.micronaut.context.annotation.Value;
 import io.kestra.core.junit.annotations.KestraTest;
 import jakarta.inject.Inject;
+import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 
 import java.io.ByteArrayInputStream;
 import java.io.File;
@@ -23,6 +24,7 @@ import java.util.Objects;
 // FIXME Remove once Worker closing has been reworked (Micronaut 4 PR)
 //  We need to rebuild the context for each tests as currently Workers can't be closed properly (they keep listening to queues they shouldn't)
 @KestraTest(rebuildContext = true)
+@EnabledIfEnvironmentVariable(named = "AZURE_CONNECTION_STRING", matches = ".+")
 public abstract class BaseTest {
     @Inject
     protected RunContextFactory runContextFactory;

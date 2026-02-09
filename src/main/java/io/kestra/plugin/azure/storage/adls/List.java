@@ -13,10 +13,7 @@ import io.kestra.plugin.azure.storage.adls.models.AdlsFile;
 import io.kestra.plugin.azure.storage.adls.services.DataLakeService;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotNull;
-import lombok.EqualsAndHashCode;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.ToString;
+import lombok.*;
 import lombok.experimental.SuperBuilder;
 
 @SuperBuilder
@@ -67,7 +64,8 @@ public class List extends AbstractDataLakeConnection implements RunnableTask<Lis
         title = "The maximum number of files to return",
         description = "Limits the number of files returned by the list operation. If not specified, all matching files will be returned."
     )
-    private Property<Integer> maxFiles;
+    @Builder.Default
+    private Property<Integer> maxFiles = Property.ofValue(25);
 
     @Override
     public List.Output run(RunContext runContext) throws Exception {
@@ -76,20 +74,18 @@ public class List extends AbstractDataLakeConnection implements RunnableTask<Lis
 
         java.util.List<AdlsFile> fileList = DataLakeService.list(fileSystemClient, runContext.render(directoryPath).as(String.class).orElseThrow());
 
-        if (this.maxFiles != null) {
-            Integer rMaxFiles = runContext.render(this.maxFiles).as(Integer.class).orElse(null);
+        Integer rMaxFiles = runContext.render(this.maxFiles).as(Integer.class).orElse(25);
 
-            if (rMaxFiles != null && fileList.size() > rMaxFiles) {
-                runContext.logger().warn(
-                    "Listing returned {} files but maxFiles limit is {}. "
-                        + "Only the first {} files will be returned. "
-                        + "Increase the maxFiles property if you need more files.",
-                    fileList.size(),
-                    rMaxFiles,
-                    rMaxFiles
-                );
-                fileList = fileList.subList(0, rMaxFiles);
-            }
+        if (fileList.size() > rMaxFiles) {
+            runContext.logger().warn(
+                "Listing returned {} files but maxFiles limit is {}. "
+                    + "Only the first {} files will be returned. "
+                    + "Increase the maxFiles property if you need more files.",
+                fileList.size(),
+                rMaxFiles,
+                rMaxFiles
+            );
+            fileList = fileList.subList(0, rMaxFiles);
         }
 
         return Output.builder()

@@ -78,4 +78,41 @@ class AllTest extends AbstractTest {
 
         assertThat(blobStorageException.getStatusCode(), is(404));
     }
+
+    @Test
+    void maxFiles() throws Exception {
+        String prefix = IdUtils.create();
+
+        // Upload 30 files to test maxFiles property
+        for (int i = 0; i < 30; i++) {
+            upload("adls/azure/" + prefix);
+        }
+
+        // Test with explicit maxFiles set to 50 - should return all 30 files
+        List listWithHighLimit = List.builder()
+            .id(AllTest.class.getSimpleName())
+            .type(List.class.getName())
+            .endpoint(Property.ofValue(this.adlsEndpoint))
+            .connectionString(Property.ofValue(connectionString))
+            .fileSystem(Property.ofValue(this.fileSystem))
+            .directoryPath(Property.ofValue("adls/azure/" + prefix + "/"))
+            .maxFiles(Property.ofValue(50))
+            .build();
+
+        List.Output listWithHighLimitOutput = listWithHighLimit.run(runContext(listWithHighLimit));
+        assertThat(listWithHighLimitOutput.getFiles().size(), is(30));
+
+        // Test with default maxFiles (25) - should return only 25 files
+        List listWithDefaultLimit = List.builder()
+            .id(AllTest.class.getSimpleName())
+            .type(List.class.getName())
+            .endpoint(Property.ofValue(this.adlsEndpoint))
+            .connectionString(Property.ofValue(connectionString))
+            .fileSystem(Property.ofValue(this.fileSystem))
+            .directoryPath(Property.ofValue("adls/azure/" + prefix + "/"))
+            .build();
+
+        List.Output listWithDefaultLimitOutput = listWithDefaultLimit.run(runContext(listWithDefaultLimit));
+        assertThat(listWithDefaultLimitOutput.getFiles().size(), is(25));
+    }
 }

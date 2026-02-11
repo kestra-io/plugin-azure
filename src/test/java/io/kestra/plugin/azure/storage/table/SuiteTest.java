@@ -136,7 +136,7 @@ class SuiteTest {
 
         List.Output listOutputWithDefaultLimit = listWithDefaultLimit.run(runContext);
 
-        assertThat(listOutputWithDefaultLimit.getCount(),is(25));
+        assertThat(listOutputWithDefaultLimit.getCount(), is(25L));
 
         // delete
         Delete delete = Delete.builder()

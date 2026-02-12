@@ -1,0 +1,8 @@
+group: io.kestra.plugin.azure.servicebus
+name: "servicebus"
+title: "Service Bus"
+description: "Tasks that interact with Azure Service Bus."
+body: "Consume, Publish, Delete and Trigger tasks from Azure Service Bus using a connection string or or SAS/shared key and endpoint."
+videos: []
+createdBy: "Kestra Core Team"
+managedBy: "Kestra Core Team"

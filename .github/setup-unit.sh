@@ -9,3 +9,5 @@ echo "          username: $AZURE_CLIENT_ID" >> src/test/resources/application-sp
 echo "          secret: $AZURE_CLIENT_SECRET" >> src/test/resources/application-sp.yml
 echo "        blobs:" >> src/test/resources/application-sp.yml
 echo "          connection-string: $AZURE_CONNECTION_STRING" >> src/test/resources/application-sp.yml
+echo "        cosmos:" >> src/test/resources/application-sp.yml
+echo "          connection-string: $AZURE_COSMOS_CONNECTION_STRING" >> src/test/resources/application-sp.yml

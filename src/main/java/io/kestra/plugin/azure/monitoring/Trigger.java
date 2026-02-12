@@ -21,7 +21,10 @@ import java.util.Optional;
 @EqualsAndHashCode
 @Getter
 @NoArgsConstructor
-@Schema(title = "Trigger a flow when Azure Monitor metrics match a query condition.")
+@Schema(
+    title = "Trigger flows from Azure Monitor metrics",
+    description = "Polls Azure Monitor metrics on a schedule and starts an execution when the query returns datapoints. Interval defaults to 60s. Requires regional endpoint."
+)
 @Plugin(
     examples = {
         @Example(

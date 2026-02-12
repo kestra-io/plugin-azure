@@ -61,6 +61,13 @@ public class List extends AbstractBlobStorageWithSas implements RunnableTask<Lis
     @Builder.Default
     private Property<Filter> filter = Property.ofValue(Filter.FILES);
 
+    @Schema(
+        title = "The maximum number of files to return",
+        description = "Limits the number of blobs returned by the list operation. If not specified, all matching blobs will be returned."
+    )
+    @Builder.Default
+    private Property<Integer> maxFiles = Property.ofValue(25);
+
     @Override
     public Output run(RunContext runContext) throws Exception {
         BlobServiceClient client = this.client(runContext);
@@ -77,6 +84,20 @@ public class List extends AbstractBlobStorageWithSas implements RunnableTask<Lis
             runContext.render(regexp).as(String.class).orElse(null),
             runContext.render(prefix).as(String.class).orElse(null)
         );
+
+        Integer rMaxFiles = runContext.render(this.maxFiles).as(Integer.class).orElse(25);
+
+        if (list.size() > rMaxFiles) {
+            runContext.logger().warn(
+                "Listing returned {} blobs but maxFiles limit is {}. "
+                    + "Only the first {} blobs will be returned. "
+                    + "Increase the maxFiles property if you need more blobs.",
+                list.size(),
+                rMaxFiles,
+                rMaxFiles
+            );
+            list = list.subList(0, rMaxFiles);
+        }
 
         return Output.builder()
             .blobs(list)

@@ -44,17 +44,20 @@ import jakarta.validation.constraints.NotNull;
     }
 )
 @Schema(
-    title = "Delete an entity in an Azure Table Storage table."
+    title = "Delete one Table entity",
+    description = "Removes an entity by partitionKey and rowKey. Uses unconditional delete (no ETag check); fails if the entity is missing."
 )
 public class Delete extends AbstractTableStorage implements RunnableTask<VoidOutput> {
     @Schema(
-        title = "The partition key of the entity."
+        title = "Partition key to delete",
+        description = "Partition key of the entity to delete."
     )
     @NotNull
     private Property<String> partitionKey;
 
     @Schema(
-        title = "The row key of the entity."
+        title = "Row key to delete",
+        description = "Row key of the entity to delete."
     )
     @NotNull
     private Property<String> rowKey;

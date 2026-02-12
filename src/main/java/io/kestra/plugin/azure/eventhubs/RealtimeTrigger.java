@@ -97,8 +97,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
     )
 })
 @Schema(
-    title = "Trigger a flow on message consumption in real-time from Azure Event Hubs.",
-    description = "If you would like to consume multiple messages processed within a given time frame and process them in batch, you can use the [io.kestra.plugin.azure.eventhubs.Trigger](https://kestra.io/plugins/plugin-azure/triggers/io.kestra.plugin.azure.eventhubs.trigger) instead."
+    title = "Trigger flows from Azure Event Hubs in real time",
+    description = "Starts an EventProcessorClient that emits one execution per event and checkpoints to Blob Storage. Defaults: consumerGroup=$Default, partitionStartingPosition=EARLIEST. Requires checkpointStoreProperties.connectionString and .containerName. Use Trigger for batch polling."
 )
 @NoArgsConstructor
 @SuperBuilder
@@ -123,20 +123,26 @@ public class RealtimeTrigger extends AbstractTrigger implements EventHubConsumer
     protected Property<Long> clientRetryDelay = Property.ofValue(500L);
 
     @Builder.Default
+    @Schema(title = "Body deserializer", description = "Serde used to decode event bodies; defaults to STRING")
     private Property<Serdes> bodyDeserializer = Property.ofValue(Serdes.STRING);
 
     @Builder.Default
+    @Schema(title = "Deserializer properties", description = "Key/value options passed to the selected serde")
     private Property<Map<String, Object>> bodyDeserializerProperties = Property.ofValue(new HashMap<>());
 
     @Builder.Default
+    @Schema(title = "Consumer group", description = "Event Hubs consumer group; defaults to $Default")
     private Property<String> consumerGroup = Property.ofValue("$Default");
 
     @Builder.Default
+    @Schema(title = "Starting position", description = "Initial position strategy per partition; defaults to EARLIEST")
     private Property<StartingPosition> partitionStartingPosition = Property.ofValue(StartingPosition.EARLIEST);
 
+    @Schema(title = "Start from enqueue time", description = "Optional enqueue time filter (ISO-8601); overrides starting position")
     private Property<String> enqueueTime;
 
     @Builder.Default
+    @Schema(title = "Checkpoint store properties", description = "Blob container config for checkpoints (connectionString, containerName required)")
     private Property<Map<String, String>> checkpointStoreProperties = Property.ofValue(new HashMap<>());
 
     private Property<String> namespace;

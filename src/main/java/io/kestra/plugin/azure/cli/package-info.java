@@ -1,7 +1,7 @@
 @PluginSubGroup(
     title = "CLI",
     description = "This sub-group of plugins contains tasks to interact with Azure CLI. ",
-    categories = { PluginSubGroup.PluginCategory.CLOUD }
+        categories = { PluginSubGroup.PluginCategory.CLOUD, PluginSubGroup.PluginCategory.INFRASTRUCTURE }
 )
 package io.kestra.plugin.azure.cli;
 

@@ -5,6 +5,7 @@ import com.google.common.io.CharStreams;
 import io.kestra.core.models.property.Property;
 import io.kestra.core.tenant.TenantService;
 import io.kestra.core.utils.IdUtils;
+import io.micronaut.test.extensions.junit5.annotation.MicronautTest;
 import org.junit.jupiter.api.Test;
 
 import java.io.FileInputStream;
@@ -16,6 +17,7 @@ import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
+@MicronautTest
 class AllTest extends AbstractTest {
     @Test
     void run() throws Exception {

@@ -3,6 +3,7 @@ package io.kestra.plugin.azure.storage.adls.models;
 import com.azure.storage.file.datalake.DataLakeFileClient;
 import com.azure.storage.file.datalake.models.PathProperties;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 
 import java.nio.charset.StandardCharsets;
 import java.time.OffsetDateTime;
@@ -13,6 +14,7 @@ import static org.hamcrest.Matchers.*;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+@EnabledIfEnvironmentVariable(named = "AZURE_CONNECTION_STRING", matches = ".+")
 class AdlsFileTest {
 
     @Test

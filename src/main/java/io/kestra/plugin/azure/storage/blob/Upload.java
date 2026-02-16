@@ -30,6 +30,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.ToString;
 import lombok.experimental.SuperBuilder;
+import reactor.core.publisher.Flux;
 
 @SuperBuilder
 @ToString
@@ -147,8 +148,11 @@ public class Upload extends AbstractBlobStorageWithSasObject implements Runnable
             rFrom = runContext.render(fromProperty).as(Object.class).orElseThrow();
         }
 
-        // Use Data.from to handle the from parameter (String, Map, List, etc.)
-        Integer count = Data.from(rFrom).read(runContext)
+        var data = (rFrom instanceof String || rFrom instanceof URI)
+            ? Flux.just(Map.<String, Object>of("uri", rFrom))
+            : Data.from(rFrom).read(runContext);
+
+        data
             .map(throwFunction(row -> {
                 // row is Map<String, Object> - extract the URI
                 URI fileUri;

@@ -1,11 +1,8 @@
 package io.kestra.plugin.azure.storage.blob;
 
-import com.azure.storage.file.datalake.DataLakeDirectoryClient;
-import com.azure.storage.file.datalake.DataLakeServiceClient;
 import io.kestra.core.models.property.Property;
 import io.kestra.core.utils.IdUtils;
 import io.kestra.plugin.azure.BaseTest;
-import io.kestra.plugin.azure.storage.adls.services.DataLakeService;
 import org.junit.jupiter.api.AfterEach;
 
 import java.net.URI;

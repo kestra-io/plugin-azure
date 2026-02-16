@@ -139,9 +139,16 @@ public class Upload extends AbstractBlobStorageWithSasObject implements Runnable
     public Upload.Output run(RunContext runContext) throws Exception {
         BlobClient baseClient = this.blobClient(runContext);
         List<Blob> uploadedBlobs = new ArrayList<>();
-        
+
+        var rFrom = this.from;
+        if (rFrom instanceof Property<?> propertyFrom) {
+            @SuppressWarnings("unchecked")
+            var fromProperty = (Property<Object>) propertyFrom;
+            rFrom = runContext.render(fromProperty).as(Object.class).orElseThrow();
+        }
+
         // Use Data.from to handle the from parameter (String, Map, List, etc.)
-        Integer count = Data.from(from).read(runContext)
+        Integer count = Data.from(rFrom).read(runContext)
             .map(throwFunction(row -> {
                 // row is Map<String, Object> - extract the URI
                 URI fileUri;

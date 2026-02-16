@@ -28,13 +28,15 @@ class QueriesTest extends CosmosContainerBaseTest<Queries.QueriesBuilder<?, ?>> 
             "simple-queries-test-two",
             Map.of("secondId", "simple-queries-test-two")
         );
+        var itemOneId = itemOne.get("id");
+        var itemTwoId = itemTwo.get("id");
 
         Map<String, Queries.QueriesOptions> queries = Map.of(
             "queryOne", Queries.QueriesOptions.builder()
-                .query("SELECT * FROM c WHERE c.secondId = 'simple-queries-test-one'")
+                .query("SELECT * FROM c WHERE c.id = '%s'".formatted(itemOneId))
                 .build(),
             "queryTwo", Queries.QueriesOptions.builder()
-                .query("SELECT * FROM c WHERE c.secondId = 'simple-queries-test-two'")
+                .query("SELECT * FROM c WHERE c.id = '%s'".formatted(itemTwoId))
                 .build()
         );
 
@@ -66,10 +68,11 @@ class QueriesTest extends CosmosContainerBaseTest<Queries.QueriesBuilder<?, ?>> 
                 "pk", "test"
             )
         );
+        var itemOneId = itemOne.get("id");
 
         Map<String, Queries.QueriesOptions> queries = Map.of(
             "queryOne", Queries.QueriesOptions.builder()
-                .query("SELECT * FROM c WHERE c.secondId = 'partiton-key-queries-test-one'")
+                .query("SELECT * FROM c WHERE c.id = '%s'".formatted(itemOneId))
                     .partitionKey(Map.of("pk", "test"))
                     .partitionKeyDefinition(PARTITION_KEY_DEFINITION)
                 .build()
@@ -100,10 +103,11 @@ class QueriesTest extends CosmosContainerBaseTest<Queries.QueriesBuilder<?, ?>> 
                 "pk", "test"
             )
         );
+        var itemOneId = itemOne.get("id");
 
         Map<String, Queries.QueriesOptions> queries = Map.of(
             "queryOne", Queries.QueriesOptions.builder()
-                .query("SELECT * FROM c WHERE c.secondId = 'feed-range-queries-test-one'")
+                .query("SELECT * FROM c WHERE c.id = '%s'".formatted(itemOneId))
                 .feedRangePartitionKey(Map.of("pk", "test"))
                 .partitionKeyDefinition(PARTITION_KEY_DEFINITION)
                 .build()

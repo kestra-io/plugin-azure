@@ -146,10 +146,12 @@ public class Upload extends AbstractBlobStorageWithSasObject implements Runnable
             @SuppressWarnings("unchecked")
             var fromProperty = (Property<Object>) propertyFrom;
             rFrom = runContext.render(fromProperty).as(Object.class).orElseThrow();
+        } else if (rFrom instanceof String stringFrom) {
+            rFrom = runContext.render(stringFrom);
         }
 
         var data = (rFrom instanceof String || rFrom instanceof URI)
-            ? Flux.just(Map.<String, Object>of("uri", rFrom))
+            ? Flux.just(Map.of("uri", rFrom))
             : Data.from(rFrom).read(runContext);
 
         data
@@ -168,7 +170,7 @@ public class Upload extends AbstractBlobStorageWithSasObject implements Runnable
                     Object firstValue = row.values().iterator().next();
                     fileUri = firstValue instanceof URI ? (URI) firstValue : new URI(firstValue.toString());
                 }
-                
+
                 // Determine which blob client to use
                 BlobClient blobClient;
                 if (uploadedBlobs.isEmpty()) {
@@ -192,7 +194,7 @@ public class Upload extends AbstractBlobStorageWithSasObject implements Runnable
                     }
                     blobClient = containerClient.getBlobClient(targetBlobName);
                 }
-                
+
                 runContext.logger().debug("Upload from '{}' to '{}'", fileUri, blobClient.getBlobName());
 
                 try (var is = runContext.storage().getFile(fileUri)) {
@@ -239,7 +241,7 @@ public class Upload extends AbstractBlobStorageWithSasObject implements Runnable
 
                 Blob blob = Blob.of(blobClient, blobClient.getProperties());
                 uploadedBlobs.add(blob);
-                
+
                 return 1;
             }))
             .reduce(Integer::sum)

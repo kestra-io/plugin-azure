@@ -1,6 +1,6 @@
 group: io.kestra.plugin.azure.auth
 name: "auth"
-title: "Authentication"
+title: "Azure Authentication"
 description: "Tasks that obtain Azure access tokens for authenticated calls to other services."
 body: "Fetch Azure OAuth access tokens for downstream tasks using tenantId with either client secret, certificate, or DefaultAzureCredential. Configure scopes (defaults to https://management.azure.com/.default) and receive the encrypted token value with its expiration time in the outputs."
 videos: []

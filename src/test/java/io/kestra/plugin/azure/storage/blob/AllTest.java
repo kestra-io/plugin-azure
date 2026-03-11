@@ -1,15 +1,17 @@
 package io.kestra.plugin.azure.storage.blob;
 
-import com.azure.storage.blob.models.BlobStorageException;
-import com.google.common.io.CharStreams;
-import io.kestra.core.models.property.Property;
-import io.kestra.core.tenant.TenantService;
-import io.kestra.core.utils.IdUtils;
-import org.junit.jupiter.api.Test;
-
 import java.io.FileInputStream;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+
+import org.junit.jupiter.api.Test;
+
+import com.azure.storage.blob.models.BlobStorageException;
+import com.google.common.io.CharStreams;
+
+import io.kestra.core.models.property.Property;
+import io.kestra.core.tenant.TenantService;
+import io.kestra.core.utils.IdUtils;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
@@ -30,7 +32,7 @@ class AllTest extends AbstractTest {
             .endpoint(Property.ofValue(this.storageEndpoint))
             .connectionString(Property.ofValue(connectionString))
             .container(Property.ofValue(this.container))
-            .prefix(Property.ofValue("tasks/azure/" + prefix  + "/"))
+            .prefix(Property.ofValue("tasks/azure/" + prefix + "/"))
             .build();
 
         List.Output listOutput = list.run(runContext(list));

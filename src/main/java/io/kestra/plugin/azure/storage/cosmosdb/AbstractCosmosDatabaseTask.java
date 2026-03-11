@@ -1,18 +1,21 @@
 package io.kestra.plugin.azure.storage.cosmosdb;
 
+import java.util.Optional;
+
+import org.apache.commons.lang3.StringUtils;
+
 import com.azure.cosmos.*;
+
 import io.kestra.core.exceptions.IllegalVariableEvaluationException;
 import io.kestra.core.models.property.Property;
 import io.kestra.core.models.tasks.Output;
 import io.kestra.core.runners.RunContext;
 import io.kestra.plugin.azure.AbstractAzureIdentityConnection;
+
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotNull;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
-import org.apache.commons.lang3.StringUtils;
-
-import java.util.Optional;
 
 @SuperBuilder
 @ToString
@@ -78,7 +81,6 @@ public abstract class AbstractCosmosDatabaseTask<T extends Output> extends Abstr
 
         boolean rContentResponseOnWriteEnabled = runContext.render(contentResponseOnWriteEnabled).as(Boolean.class)
             .orElse(DEFAULT_CONTENT_RESPONSE_ON_WRITE_ENABLED);
-
 
         CosmosClientBuilder cosmosClientBuilder = new CosmosClientBuilder()
             .consistencyLevel(rConsistencyLevel)

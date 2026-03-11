@@ -1,6 +1,7 @@
 package io.kestra.plugin.azure.eventhubs.config;
 
 import com.azure.messaging.eventhubs.models.EventPosition;
+
 import io.kestra.core.exceptions.IllegalVariableEvaluationException;
 import io.kestra.core.runners.RunContext;
 import io.kestra.plugin.azure.eventhubs.EventHubConsumerInterface;
@@ -16,10 +17,10 @@ public final class EventHubConsumerConfig extends EventHubClientConfig<EventHubC
      * Creates a new {@link EventHubConsumerConfig} instance.
      *
      * @param runContext The context. Cannot be null.
-     * @param plugin     The plugin. Cannot be null.
+     * @param plugin The plugin. Cannot be null.
      */
     public EventHubConsumerConfig(final RunContext runContext,
-                                  final EventHubConsumerInterface plugin) {
+        final EventHubConsumerInterface plugin) {
         super(runContext, plugin);
     }
 

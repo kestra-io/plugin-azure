@@ -1,18 +1,20 @@
 package io.kestra.plugin.azure.servicebus;
 
+import java.util.Optional;
+
 import com.azure.messaging.servicebus.ServiceBusClientBuilder;
 import com.fasterxml.jackson.databind.ObjectMapper;
+
 import io.kestra.core.exceptions.IllegalVariableEvaluationException;
 import io.kestra.core.models.property.Property;
 import io.kestra.core.runners.RunContext;
 import io.kestra.core.serializers.JacksonMapper;
 import io.kestra.plugin.azure.AbstractAzureIdentityConnection;
+
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotNull;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
-
-import java.util.Optional;
 
 @SuperBuilder
 @ToString
@@ -55,7 +57,6 @@ public abstract class AbstractServiceBusTask extends AbstractAzureIdentityConnec
     public static final String SUBSCRIPTION_NAME_DESCRIPTION = "Subscription name when connecting to a topic";
 
     public static final String SERDE_TYPE_DESCRIPTION = "Serializer/deserializer for the message body; defaults to STRING";
-
 
     protected ServiceBusClientBuilder applyAuth(RunContext runContext, ServiceBusClientBuilder serviceBusClientBuilder) throws IllegalVariableEvaluationException {
         Optional<String> rConnectionString = runContext.render(this.connectionString).as(String.class);

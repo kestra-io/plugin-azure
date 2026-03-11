@@ -1,14 +1,15 @@
 package io.kestra.plugin.azure.servicebus;
 
-import io.kestra.core.exceptions.IllegalVariableEvaluationException;
-import io.kestra.core.models.property.Property;
-import io.kestra.core.utils.IdUtils;
+import java.time.Duration;
+import java.time.Instant;
+
 import org.assertj.core.api.AbstractThrowableAssert;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.parallel.ResourceLock;
 
-import java.time.Duration;
-import java.time.Instant;
+import io.kestra.core.exceptions.IllegalVariableEvaluationException;
+import io.kestra.core.models.property.Property;
+import io.kestra.core.utils.IdUtils;
 
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
@@ -18,9 +19,10 @@ class ConsumeTest extends BaseServiceBusTest {
     @ResourceLock("service-bus-comsumer-lock")
     void shouldConsumePublishedTextMessage() throws Exception {
         //region GIVEN
-        String subscriptionName = publishToTopic(Message.builder()
-            .body("example_message_body")
-            .timeToLive(Duration.ofSeconds(10))
+        String subscriptionName = publishToTopic(
+            Message.builder()
+                .body("example_message_body")
+                .timeToLive(Duration.ofSeconds(10))
         );
         Consume consume = Consume.builder()
             .topicName(Property.ofValue(topicName))
@@ -44,9 +46,10 @@ class ConsumeTest extends BaseServiceBusTest {
     @ResourceLock("service-bus-comsumer-lock")
     void shouldConsumePublishedJsonMessage() throws Exception {
         //region GIVEN
-        String subscriptionName = publishToTopic(Message.builder()
-            .body("{\"message\":\"example_message_body\"}")
-            .timeToLive(Duration.ofSeconds(10))
+        String subscriptionName = publishToTopic(
+            Message.builder()
+                .body("{\"message\":\"example_message_body\"}")
+                .timeToLive(Duration.ofSeconds(10))
         );
         Consume consume = Consume.builder()
             .topicName(Property.ofValue(topicName))
@@ -122,14 +125,16 @@ class ConsumeTest extends BaseServiceBusTest {
     void shouldReturnOutputWhenMaxMessagesReached() throws Exception {
         //region GIVEN
         String subscriptionName = this.createSubscription(topicName, IdUtils.create());
-        publishToTopic(Message.builder()
-            .body("{\"message\":\"example_message_body\"}")
-            .timeToLive(Duration.ofSeconds(10)),
+        publishToTopic(
+            Message.builder()
+                .body("{\"message\":\"example_message_body\"}")
+                .timeToLive(Duration.ofSeconds(10)),
             subscriptionName
         );
-        publishToTopic(Message.builder()
-            .body("{\"message\":\"example_message_body\"}")
-            .timeToLive(Duration.ofSeconds(10)),
+        publishToTopic(
+            Message.builder()
+                .body("{\"message\":\"example_message_body\"}")
+                .timeToLive(Duration.ofSeconds(10)),
             subscriptionName
         );
         Consume consume = Consume.builder()
@@ -163,8 +168,10 @@ class ConsumeTest extends BaseServiceBusTest {
         //endregion
 
         //region WHEN
-        AbstractThrowableAssert<?, ?> throwableAssert = assertThatThrownBy(() -> consume.run(
-            runContextFactory.of())
+        AbstractThrowableAssert<?, ?> throwableAssert = assertThatThrownBy(
+            () -> consume.run(
+                runContextFactory.of()
+            )
         );
         //endregion
 
@@ -184,8 +191,10 @@ class ConsumeTest extends BaseServiceBusTest {
         //endregion
 
         //region WHEN
-        AbstractThrowableAssert<?, ?> throwableAssert = assertThatThrownBy(() -> consume.run(
-            runContextFactory.of())
+        AbstractThrowableAssert<?, ?> throwableAssert = assertThatThrownBy(
+            () -> consume.run(
+                runContextFactory.of()
+            )
         );
         //endregion
 

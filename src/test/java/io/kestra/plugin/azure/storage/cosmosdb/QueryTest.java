@@ -1,22 +1,21 @@
 package io.kestra.plugin.azure.storage.cosmosdb;
 
-import io.kestra.core.exceptions.IllegalVariableEvaluationException;
-import io.kestra.core.junit.annotations.KestraTest;
-import io.kestra.core.models.property.Property;
-import io.kestra.core.runners.RunContext;
+import java.util.Map;
+
 import org.assertj.core.api.AbstractThrowableAssert;
 import org.junit.jupiter.api.Test;
 
-import java.util.Map;
+import io.kestra.core.exceptions.IllegalVariableEvaluationException;
+import io.kestra.core.models.property.Property;
+import io.kestra.core.runners.RunContext;
 
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 
-
 class QueryTest extends CosmosContainerBaseTest<Query.QueryBuilder<?, ?>> {
     @Override
     protected Query.QueryBuilder<?, ?> instantiateBaseTaskBuilder() {
-         return Query.builder();
+        return Query.builder();
     }
 
     @Test
@@ -43,10 +42,12 @@ class QueryTest extends CosmosContainerBaseTest<Query.QueryBuilder<?, ?>> {
     @Test
     void shouldReturnQueriedForItemsWhenPartitionKeySet() throws Exception {
         //region GIVEN
-        Map<String, Object> item = createItem("query-partiton-key-test", Map.of(
-            "key", "value",
-            "pk", "test"
-        ));
+        Map<String, Object> item = createItem(
+            "query-partiton-key-test", Map.of(
+                "key", "value",
+                "pk", "test"
+            )
+        );
 
         Query query = getBaseTaskBuilder()
             .query(Property.ofValue("SELECT * FROM c WHERE c.id = '" + item.get("id") + "'"))
@@ -69,10 +70,12 @@ class QueryTest extends CosmosContainerBaseTest<Query.QueryBuilder<?, ?>> {
     @Test
     void shouldReturnQueriedForItemsWhenFeedRangeSet() throws Exception {
         //region GIVEN
-        Map<String, Object> item = createItem("query-feed-range-test", Map.of(
-            "key", "value",
-            "pk", "test"
-        ));
+        Map<String, Object> item = createItem(
+            "query-feed-range-test", Map.of(
+                "key", "value",
+                "pk", "test"
+            )
+        );
 
         Query query = getBaseTaskBuilder()
             .query(Property.ofValue("SELECT * FROM c WHERE c.id = '" + item.get("id") + "'"))

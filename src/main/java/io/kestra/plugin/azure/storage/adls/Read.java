@@ -1,6 +1,9 @@
 package io.kestra.plugin.azure.storage.adls;
 
+import java.net.URI;
+
 import com.azure.storage.file.datalake.DataLakeFileClient;
+
 import io.kestra.core.models.annotations.Example;
 import io.kestra.core.models.annotations.Plugin;
 import io.kestra.core.models.tasks.RunnableTask;
@@ -8,14 +11,13 @@ import io.kestra.core.runners.RunContext;
 import io.kestra.plugin.azure.storage.adls.abstracts.AbstractDataLakeWithFile;
 import io.kestra.plugin.azure.storage.adls.models.AdlsFile;
 import io.kestra.plugin.azure.storage.adls.services.DataLakeService;
+
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.ToString;
 import lombok.experimental.SuperBuilder;
-
-import java.net.URI;
 
 @SuperBuilder
 @ToString

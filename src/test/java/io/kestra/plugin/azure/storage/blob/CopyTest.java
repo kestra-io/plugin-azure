@@ -1,8 +1,9 @@
 package io.kestra.plugin.azure.storage.blob;
 
+import org.junit.jupiter.api.Test;
+
 import io.kestra.core.models.property.Property;
 import io.kestra.core.utils.IdUtils;
-import org.junit.jupiter.api.Test;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
@@ -20,15 +21,17 @@ class CopyTest extends AbstractTest {
             .type(List.class.getName())
             .endpoint(Property.ofValue(this.storageEndpoint))
             .connectionString(Property.ofValue(connectionString))
-            .from(Copy.CopyObject.builder()
-                .container(Property.ofValue(this.container))
-                .name(Property.ofValue(upload.getBlob().getName()))
-                .build()
+            .from(
+                Copy.CopyObject.builder()
+                    .container(Property.ofValue(this.container))
+                    .name(Property.ofValue(upload.getBlob().getName()))
+                    .build()
             )
-            .to(Copy.CopyObject.builder()
-                .container(Property.ofValue(this.container))
-                .name(Property.ofValue(move.getBlob().getName()))
-                .build()
+            .to(
+                Copy.CopyObject.builder()
+                    .container(Property.ofValue(this.container))
+                    .name(Property.ofValue(move.getBlob().getName()))
+                    .build()
             )
             .delete(Property.ofValue(delete))
             .build();

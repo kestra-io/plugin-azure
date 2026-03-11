@@ -1,6 +1,11 @@
 package io.kestra.plugin.azure.auth;
 
+import java.time.OffsetDateTime;
+import java.util.Collections;
+import java.util.List;
+
 import com.azure.core.credential.*;
+
 import io.kestra.core.models.annotations.Example;
 import io.kestra.core.models.annotations.Plugin;
 import io.kestra.core.models.property.Property;
@@ -8,14 +13,11 @@ import io.kestra.core.models.tasks.RunnableTask;
 import io.kestra.core.models.tasks.common.EncryptedString;
 import io.kestra.core.runners.RunContext;
 import io.kestra.plugin.azure.AbstractAzureIdentityConnection;
+
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotNull;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
-
-import java.time.OffsetDateTime;
-import java.util.Collections;
-import java.util.List;
 
 @SuperBuilder
 @ToString

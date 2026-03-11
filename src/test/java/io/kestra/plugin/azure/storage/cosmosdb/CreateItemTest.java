@@ -1,12 +1,13 @@
 package io.kestra.plugin.azure.storage.cosmosdb;
 
-import io.kestra.core.exceptions.IllegalVariableEvaluationException;
-import io.kestra.core.models.property.Property;
-import io.kestra.core.utils.IdUtils;
+import java.util.Map;
+
 import org.assertj.core.api.AbstractThrowableAssert;
 import org.junit.jupiter.api.Test;
 
-import java.util.Map;
+import io.kestra.core.exceptions.IllegalVariableEvaluationException;
+import io.kestra.core.models.property.Property;
+import io.kestra.core.utils.IdUtils;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -52,8 +53,10 @@ class CreateItemTest extends CosmosContainerBaseTest<CreateItem.CreateItemBuilde
         //endregion
 
         //region WHEN
-        AbstractThrowableAssert<?, ?> throwableAssert = assertThatThrownBy(() -> createItem.run(
-            runContextFactory.of())
+        AbstractThrowableAssert<?, ?> throwableAssert = assertThatThrownBy(
+            () -> createItem.run(
+                runContextFactory.of()
+            )
         );
 
         //endregion

@@ -2,9 +2,9 @@ package io.kestra.plugin.azure.storage.adls.update;
 
 import com.azure.storage.file.datalake.DataLakeFileClient;
 import com.azure.storage.file.datalake.models.PathAccessControlEntry;
-import com.azure.storage.file.datalake.models.PathInfo;
 import com.azure.storage.file.datalake.models.PathPermissions;
 import com.azure.storage.file.datalake.models.RolePermissions;
+
 import io.kestra.core.models.annotations.Example;
 import io.kestra.core.models.annotations.Plugin;
 import io.kestra.core.models.property.Property;
@@ -12,12 +12,10 @@ import io.kestra.core.models.tasks.RunnableTask;
 import io.kestra.core.models.tasks.VoidOutput;
 import io.kestra.core.runners.RunContext;
 import io.kestra.plugin.azure.storage.adls.abstracts.AbstractDataLakeWithFile;
+
 import io.swagger.v3.oas.annotations.media.Schema;
-import jakarta.validation.constraints.NotNull;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
-
-import java.util.List;
 
 @SuperBuilder
 @ToString
@@ -92,7 +90,7 @@ public class SetAccessControl extends AbstractDataLakeWithFile implements Runnab
         }
 
         RolePermissions otherPermission = new RolePermissions();
-        if(this.otherPermissions != null) {
+        if (this.otherPermissions != null) {
             otherPermission
                 .setExecutePermission(runContext.render(otherPermissions.getExecutePermission()).as(Boolean.class).orElse(false))
                 .setWritePermission(runContext.render(otherPermissions.getWritePermission()).as(Boolean.class).orElse(false))

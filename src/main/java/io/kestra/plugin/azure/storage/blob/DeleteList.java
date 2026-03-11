@@ -1,32 +1,33 @@
 package io.kestra.plugin.azure.storage.blob;
 
+import java.util.NoSuchElementException;
+import java.util.function.Function;
+
+import org.apache.commons.lang3.tuple.Pair;
+import org.slf4j.Logger;
+
 import com.azure.storage.blob.BlobClient;
 import com.azure.storage.blob.BlobContainerClient;
 import com.azure.storage.blob.BlobServiceClient;
+
 import io.kestra.core.models.annotations.Example;
-import io.kestra.core.models.annotations.Plugin;
 import io.kestra.core.models.annotations.Metric;
+import io.kestra.core.models.annotations.Plugin;
 import io.kestra.core.models.annotations.PluginProperty;
 import io.kestra.core.models.executions.metrics.Counter;
 import io.kestra.core.models.property.Property;
 import io.kestra.core.models.tasks.RunnableTask;
 import io.kestra.core.runners.RunContext;
-import io.kestra.plugin.azure.storage.blob.abstracts.AbstractBlobStorageWithSas;
 import io.kestra.plugin.azure.storage.blob.abstracts.AbstractBlobStorageContainerInterface;
+import io.kestra.plugin.azure.storage.blob.abstracts.AbstractBlobStorageWithSas;
 import io.kestra.plugin.azure.storage.blob.abstracts.ListInterface;
 import io.kestra.plugin.azure.storage.blob.models.Blob;
 import io.kestra.plugin.azure.storage.blob.services.BlobService;
+
 import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.Min;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
-import org.apache.commons.lang3.tuple.Pair;
-
-
-import java.util.NoSuchElementException;
-import java.util.function.Function;
-
-import jakarta.validation.constraints.Min;
-import org.slf4j.Logger;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.FluxSink;
 import reactor.core.scheduler.Schedulers;
@@ -58,7 +59,7 @@ import static io.kestra.core.utils.Rethrow.throwConsumer;
         )
     },
     metrics = {
-        @Metric(name = "blobs.count", type = Counter.TYPE , description = "The total number of blobs deleted."),
+        @Metric(name = "blobs.count", type = Counter.TYPE, description = "The total number of blobs deleted."),
         @Metric(name = "blobs.size", type = Counter.TYPE, description = "The total size of all blobs deleted, in bytes.")
     }
 )
@@ -98,10 +99,11 @@ public class DeleteList extends AbstractBlobStorageWithSas implements RunnableTa
         BlobContainerClient containerClient = client.getBlobContainerClient(runContext.render(this.container).as(String.class).orElse(null));
 
         Flux<Blob> flowable = Flux
-            .create(throwConsumer(emitter -> {
+            .create(throwConsumer(emitter ->
+            {
                 BlobService
                     .list(runContext, containerClient, this)
-                        .forEach(emitter::next);
+                    .forEach(emitter::next);
 
                 emitter.complete();
             }), FluxSink.OverflowStrategy.BUFFER);
@@ -127,10 +129,11 @@ public class DeleteList extends AbstractBlobStorageWithSas implements RunnableTa
         runContext.metric(Counter.of("blobs.size", finalResult.getRight()));
 
         if (runContext.render(errorOnEmpty).as(Boolean.class).orElseThrow() && finalResult.getLeft() == 0) {
-            throw new NoSuchElementException("Unable to find any files to delete on " +
-                runContext.render(this.container).as(String.class).orElse(null) + " " +
-                "with regexp='" + runContext.render(this.regexp).as(String.class).orElse(null) + "', " +
-                "prefix='" + runContext.render(this.prefix).as(String.class).orElse(null) + "'"
+            throw new NoSuchElementException(
+                "Unable to find any files to delete on " +
+                    runContext.render(this.container).as(String.class).orElse(null) + " " +
+                    "with regexp='" + runContext.render(this.regexp).as(String.class).orElse(null) + "', " +
+                    "prefix='" + runContext.render(this.prefix).as(String.class).orElse(null) + "'"
             );
         }
 
@@ -144,7 +147,8 @@ public class DeleteList extends AbstractBlobStorageWithSas implements RunnableTa
     }
 
     private static Function<Blob, Long> delete(Logger logger, BlobContainerClient containerClient) {
-        return o -> {
+        return o ->
+        {
             logger.debug("Deleting '{}'", o.getName());
 
             BlobClient blobClient = containerClient.getBlobClient(o.getName());
@@ -155,7 +159,6 @@ public class DeleteList extends AbstractBlobStorageWithSas implements RunnableTa
             return blobSize;
         };
     }
-
 
     @Builder
     @Getter

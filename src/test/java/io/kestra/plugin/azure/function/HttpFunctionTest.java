@@ -1,19 +1,22 @@
 package io.kestra.plugin.azure.function;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.node.ArrayNode;
-import io.kestra.core.junit.annotations.KestraTest;
-import io.kestra.core.models.property.Property;
-import io.kestra.core.runners.RunContext;
-import io.kestra.core.runners.RunContextFactory;
-import jakarta.inject.Inject;
-import org.junit.jupiter.api.Disabled;
-import org.junit.jupiter.api.Test;
-
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
+
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.node.ArrayNode;
+
+import io.kestra.core.junit.annotations.KestraTest;
+import io.kestra.core.models.property.Property;
+import io.kestra.core.runners.RunContext;
+import io.kestra.core.runners.RunContextFactory;
+
+import jakarta.inject.Inject;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.*;
@@ -33,9 +36,9 @@ class HttpFunctionTest {
     @Test
     void testAzureFunctionWithStringOutput() throws Exception {
         HttpFunction httpFunction = HttpFunction.builder()
-                .url(Property.ofValue(AZURE_FUNCTION_URI_STRING_OUTPUT + "&firstName=John&name=Doe"))
-                .httpMethod(Property.ofValue("GET"))
-                .build();
+            .url(Property.ofValue(AZURE_FUNCTION_URI_STRING_OUTPUT + "&firstName=John&name=Doe"))
+            .httpMethod(Property.ofValue("GET"))
+            .build();
 
         RunContext runContext = runContextFactory.of(Collections.emptyMap());
 
@@ -70,7 +73,7 @@ class HttpFunctionTest {
     @Test
     void testAzureFunctionWithBodyAndJsonObjectOutput() throws Exception {
         HttpFunction httpFunction = HttpFunction.builder()
-            .url(Property.ofValue(AZURE_FUNCTION_URI_OBJECT_OUTPUT ))
+            .url(Property.ofValue(AZURE_FUNCTION_URI_OBJECT_OUTPUT))
             .httpBody(Property.ofValue(Map.of("text", "Hello, Kestra")))
             .httpMethod(Property.ofValue("POST"))
             .build();

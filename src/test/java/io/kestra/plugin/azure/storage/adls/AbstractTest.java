@@ -1,15 +1,17 @@
 package io.kestra.plugin.azure.storage.adls;
 
+import java.net.URI;
+import java.util.ArrayList;
+
+import org.junit.jupiter.api.AfterEach;
+
 import com.azure.storage.file.datalake.DataLakeDirectoryClient;
 import com.azure.storage.file.datalake.DataLakeServiceClient;
+
 import io.kestra.core.models.property.Property;
 import io.kestra.core.utils.IdUtils;
 import io.kestra.plugin.azure.BaseTest;
 import io.kestra.plugin.azure.storage.adls.services.DataLakeService;
-import org.junit.jupiter.api.AfterEach;
-
-import java.net.URI;
-import java.util.ArrayList;
 
 public class AbstractTest extends BaseTest {
     public java.util.List<String> directoryToClean = new ArrayList<>();
@@ -95,7 +97,7 @@ public class AbstractTest extends BaseTest {
 
         for (String dirName : directoryToClean) {
             DataLakeDirectoryClient directoryClient = client.getFileSystemClient(fileSystem).getDirectoryClient(dirName);
-            if(directoryClient.exists()) {
+            if (directoryClient.exists()) {
                 directoryClient.deleteRecursively();
             }
         }

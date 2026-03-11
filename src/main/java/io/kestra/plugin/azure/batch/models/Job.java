@@ -1,24 +1,21 @@
 package io.kestra.plugin.azure.batch.models;
 
+import java.util.Map;
+
 import com.microsoft.azure.batch.protocol.models.JobAddParameter;
 import com.microsoft.azure.batch.protocol.models.MetadataItem;
 import com.microsoft.azure.batch.protocol.models.PoolInformation;
+
 import io.kestra.core.exceptions.IllegalVariableEvaluationException;
 import io.kestra.core.models.annotations.PluginProperty;
 import io.kestra.core.models.property.Property;
 import io.kestra.core.runners.RunContext;
-import io.swagger.v3.oas.annotations.media.Schema;
-import lombok.Builder;
-import lombok.Value;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
-
-import java.util.Collection;
-import java.util.Map;
-import java.util.Optional;
-
-import static io.kestra.core.utils.Rethrow.throwFunction;
+import lombok.Builder;
+import lombok.Value;
 
 @Builder
 @Value
@@ -29,7 +26,7 @@ public class Job {
     )
     @PluginProperty(dynamic = true)
     @NotNull
-    @Size(max=64)
+    @Size(max = 64)
     private String id;
 
     @Schema(
@@ -37,7 +34,7 @@ public class Job {
         description = "Optional friendly name (up to 1024 Unicode chars); not required to be unique"
     )
     @PluginProperty(dynamic = true)
-    @Size(max=1024)
+    @Size(max = 1024)
     private String displayName;
 
     @Schema(
@@ -57,7 +54,6 @@ public class Job {
         description = "Key/value metadata applied to the job"
     )
     private Property<Map<String, String>> labels;
-
 
     public JobAddParameter to(RunContext runContext, PoolInformation poolInformation) throws IllegalVariableEvaluationException {
         return new JobAddParameter()

@@ -1,13 +1,19 @@
 package io.kestra.plugin.azure.storage.cosmosdb;
 
+import java.time.Duration;
+import java.util.Map;
+import java.util.Objects;
+
 import com.azure.cosmos.CosmosAsyncContainer;
 import com.azure.cosmos.CosmosDiagnostics;
+
 import io.kestra.core.exceptions.IllegalVariableEvaluationException;
 import io.kestra.core.models.annotations.Example;
 import io.kestra.core.models.annotations.Plugin;
 import io.kestra.core.models.property.Property;
 import io.kestra.core.models.tasks.RunnableTask;
 import io.kestra.core.runners.RunContext;
+
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotNull;
 import lombok.EqualsAndHashCode;
@@ -15,10 +21,6 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.ToString;
 import lombok.experimental.SuperBuilder;
-
-import java.time.Duration;
-import java.util.Map;
-import java.util.Objects;
 
 @SuperBuilder
 @ToString
@@ -84,8 +86,7 @@ public class CreateItem extends AbstractCosmosContainerTask<CreateItem.Output> i
         Map<String, String> responseHeaders,
         CosmosDiagnostics diagnostics,
         Duration duration,
-        String eTag
-    ) implements io.kestra.core.models.tasks.Output {
+        String eTag) implements io.kestra.core.models.tasks.Output {
         public static Output from(com.azure.cosmos.models.CosmosItemResponse<Map<String, Object>> r) {
             return new Output(
                 r.getItem(),

@@ -1,9 +1,8 @@
 package io.kestra.plugin.azure.storage.blob.abstracts;
 
-import io.kestra.core.models.annotations.PluginProperty;
 import io.kestra.core.models.property.Property;
-import io.swagger.v3.oas.annotations.media.Schema;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotNull;
 
 public interface ListInterface {
@@ -14,8 +13,8 @@ public interface ListInterface {
 
     @Schema(
         title = "A regular expression to filter on the full key.",
-        description = "ex:\n"+
-            "`regExp: .*` to match all files\n"+
+        description = "ex:\n" +
+            "`regExp: .*` to match all files\n" +
             "`regExp: .*2020-01-0.\\\\.csv` to match files between 01 and 09 of January ending with `.csv`"
     )
     Property<String> getRegexp();

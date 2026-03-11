@@ -1,11 +1,11 @@
 package io.kestra.plugin.azure.batch.models;
 
 import io.kestra.core.models.annotations.PluginProperty;
+
 import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.NotNull;
 import lombok.Builder;
 import lombok.Value;
-
-import jakarta.validation.constraints.NotNull;
 
 @Builder
 @Value

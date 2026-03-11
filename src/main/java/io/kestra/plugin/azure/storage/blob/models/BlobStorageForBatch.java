@@ -1,13 +1,14 @@
 package io.kestra.plugin.azure.storage.blob.models;
 
 import com.azure.storage.blob.BlobContainerClient;
+
 import io.kestra.core.exceptions.IllegalVariableEvaluationException;
-import io.kestra.core.models.annotations.PluginProperty;
 import io.kestra.core.models.property.Property;
 import io.kestra.core.runners.RunContext;
 import io.kestra.plugin.azure.AbstractConnectionInterface;
 import io.kestra.plugin.azure.AzureClientInterface;
 import io.kestra.plugin.azure.storage.blob.services.BlobService;
+
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotNull;
 import lombok.EqualsAndHashCode;
@@ -36,10 +37,8 @@ public class BlobStorageForBatch implements AzureClientInterface, AbstractConnec
 
     public boolean valid() {
         return this.containerName != null &&
-            (
-                this.connectionString != null ||
-                    (this.endpoint != null && this.sharedKeyAccountName != null && this.sharedKeyAccountAccessKey != null)
-            );
+            (this.connectionString != null ||
+                (this.endpoint != null && this.sharedKeyAccountName != null && this.sharedKeyAccountAccessKey != null));
     }
 
     public BlobContainerClient blobContainerClient(RunContext runContext) throws IllegalVariableEvaluationException {

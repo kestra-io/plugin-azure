@@ -1,8 +1,5 @@
 package io.kestra.plugin.azure.eventhubs.internal;
 
-import io.kestra.core.runners.RunContext;
-import io.kestra.core.serializers.FileSerde;
-
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -10,6 +7,9 @@ import java.io.InputStream;
 import java.net.URI;
 import java.util.List;
 import java.util.Map;
+
+import io.kestra.core.runners.RunContext;
+import io.kestra.core.serializers.FileSerde;
 
 /**
  * Class for getting input data as ION InputStream.

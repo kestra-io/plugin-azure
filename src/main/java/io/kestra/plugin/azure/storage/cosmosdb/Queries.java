@@ -1,26 +1,29 @@
 package io.kestra.plugin.azure.storage.cosmosdb;
 
+import java.util.List;
+import java.util.Map;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.azure.cosmos.CosmosAsyncContainer;
 import com.azure.cosmos.models.CosmosQueryRequestOptions;
 import com.azure.cosmos.models.FeedRange;
 import com.azure.cosmos.models.PartitionKey;
+
 import io.kestra.core.exceptions.IllegalVariableEvaluationException;
 import io.kestra.core.models.annotations.Example;
 import io.kestra.core.models.annotations.Plugin;
 import io.kestra.core.models.property.Property;
 import io.kestra.core.models.tasks.RunnableTask;
 import io.kestra.core.runners.RunContext;
+
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotNull;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
-
-import java.util.List;
-import java.util.Map;
 
 @SuperBuilder
 @ToString
@@ -76,12 +79,13 @@ public class Queries extends AbstractCosmosContainerTask<Queries.Output> impleme
         Map<String, QueriesOptions> rQueries = runContext.render(queries).asMap(String.class, QueriesOptions.class);
 
         Mono<Map<String, List<Map>>> results = Flux.fromIterable(rQueries.entrySet())
-            .flatMap(entry ->
-                Mono.fromCallable(() -> getRequestOptions(entry.getValue()))
-                    .flatMap(opts -> cosmosContainer
-                        .queryItems(entry.getValue().getQuery(), opts, Map.class)
-                        .collectList()
-                        .map(list -> Map.entry(entry.getKey(), list))
+            .flatMap(
+                entry -> Mono.fromCallable(() -> getRequestOptions(entry.getValue()))
+                    .flatMap(
+                        opts -> cosmosContainer
+                            .queryItems(entry.getValue().getQuery(), opts, Map.class)
+                            .collectList()
+                            .map(list -> Map.entry(entry.getKey(), list))
                     )
             )
             .collectMap(Map.Entry::getKey, Map.Entry::getValue);
@@ -117,14 +121,17 @@ public class Queries extends AbstractCosmosContainerTask<Queries.Output> impleme
         }
 
         if (hasPartitionKeyDefinition && hasPartitionKey) {
-            queryRequestOptions.setPartitionKey(PartitionKey.fromItem(
-                options.partitionKey,
-                options.partitionKeyDefinition.toAzurePartitionKeyDefinition())
+            queryRequestOptions.setPartitionKey(
+                PartitionKey.fromItem(
+                    options.partitionKey,
+                    options.partitionKeyDefinition.toAzurePartitionKeyDefinition()
+                )
             );
         }
 
         if (hasFeedRangePartitionKey && hasPartitionKeyDefinition) {
-            queryRequestOptions.setFeedRange(FeedRange.forLogicalPartition(
+            queryRequestOptions.setFeedRange(
+                FeedRange.forLogicalPartition(
                     PartitionKey.fromItem(
                         options.feedRangePartitionKey,
                         options.partitionKeyDefinition.toAzurePartitionKeyDefinition()
@@ -181,6 +188,6 @@ public class Queries extends AbstractCosmosContainerTask<Queries.Output> impleme
     }
 
     public record Output(
-        Map<String, List<Map>> results
-    ) implements io.kestra.core.models.tasks.Output { }
+        Map<String, List<Map>> results) implements io.kestra.core.models.tasks.Output {
+    }
 }

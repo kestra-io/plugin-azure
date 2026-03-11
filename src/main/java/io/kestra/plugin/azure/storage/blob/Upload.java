@@ -18,11 +18,11 @@ import io.kestra.core.models.property.Data;
 import io.kestra.core.models.property.Property;
 import io.kestra.core.models.tasks.RunnableTask;
 import io.kestra.core.runners.RunContext;
-import static io.kestra.core.utils.Rethrow.throwFunction;
 import io.kestra.plugin.azure.storage.blob.abstracts.AbstractBlobStorageWithSasObject;
 import io.kestra.plugin.azure.storage.blob.models.AccessTier;
 import io.kestra.plugin.azure.storage.blob.models.Blob;
 import io.kestra.plugin.azure.storage.blob.models.BlobImmutabilityPolicy;
+
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotNull;
 import lombok.EqualsAndHashCode;
@@ -31,6 +31,8 @@ import lombok.NoArgsConstructor;
 import lombok.ToString;
 import lombok.experimental.SuperBuilder;
 import reactor.core.publisher.Flux;
+
+import static io.kestra.core.utils.Rethrow.throwFunction;
 
 @SuperBuilder
 @ToString
@@ -64,39 +66,39 @@ import reactor.core.publisher.Flux;
             full = true,
             title = "Extract data via an HTTP API call and upload it as a file to Azure Blob Storage",
             code = """
-                id: azure_blob_upload
-                namespace: company.team
+                    id: azure_blob_upload
+                    namespace: company.team
 
-                tasks:
-                  - id: extract
-                    type: io.kestra.plugin.core.http.Download
-                    uri: https://huggingface.co/datasets/kestra/datasets/raw/main/csv/salaries.csv
+                    tasks:
+                      - id: extract
+                        type: io.kestra.plugin.core.http.Download
+                        uri: https://huggingface.co/datasets/kestra/datasets/raw/main/csv/salaries.csv
 
-                  - id: load
-                    type: io.kestra.plugin.azure.storage.blob.Upload
-                    endpoint: https://kestra.blob.core.windows.net
-                    connectionString: "{{ secret('AZURE_CONNECTION_STRING') }}"
-                    container: kestra
-                    from: "{{ outputs.extract.uri }}"
-                    name: data.csv
-            """
+                      - id: load
+                        type: io.kestra.plugin.azure.storage.blob.Upload
+                        endpoint: https://kestra.blob.core.windows.net
+                        connectionString: "{{ secret('AZURE_CONNECTION_STRING') }}"
+                        container: kestra
+                        from: "{{ outputs.extract.uri }}"
+                        name: data.csv
+                """
         ),
         @Example(
             full = true,
             title = "Upload multiple files to Azure Blob Storage",
             code = """
-                id: azure_blob_upload_multiple
-                namespace: company.team
+                    id: azure_blob_upload_multiple
+                    namespace: company.team
 
-                tasks:
-                  - id: upload
-                    type: io.kestra.plugin.azure.storage.blob.Upload
-                    endpoint: https://kestra.blob.core.windows.net
-                    connectionString: "{{ secret('AZURE_CONNECTION_STRING') }}"
-                    container: kestra
-                    from: "{{ outputs.previous_task.outputFiles }}"
-                    name: "uploads/"
-            """
+                    tasks:
+                      - id: upload
+                        type: io.kestra.plugin.azure.storage.blob.Upload
+                        endpoint: https://kestra.blob.core.windows.net
+                        connectionString: "{{ secret('AZURE_CONNECTION_STRING') }}"
+                        container: kestra
+                        from: "{{ outputs.previous_task.outputFiles }}"
+                        name: "uploads/"
+                """
         )
     },
     metrics = {
@@ -155,7 +157,8 @@ public class Upload extends AbstractBlobStorageWithSasObject implements Runnable
             : Data.from(rFrom).read(runContext);
 
         data
-            .map(throwFunction(row -> {
+            .map(throwFunction(row ->
+            {
                 // row is Map<String, Object> - extract the URI
                 URI fileUri;
                 if (row.containsKey("uri")) {
@@ -202,26 +205,36 @@ public class Upload extends AbstractBlobStorageWithSasObject implements Runnable
                 }
 
                 if (this.metadata != null) {
-                    blobClient.setMetadata(runContext.render(this.metadata).asMap(String.class, String.class)
-                        .entrySet()
-                        .stream()
-                        .map(throwFunction(flow -> new AbstractMap.SimpleEntry<>(
-                            runContext.render(flow.getKey()),
-                            runContext.render(flow.getValue())
-                        )))
-                        .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue))
+                    blobClient.setMetadata(
+                        runContext.render(this.metadata).asMap(String.class, String.class)
+                            .entrySet()
+                            .stream()
+                            .map(
+                                throwFunction(
+                                    flow -> new AbstractMap.SimpleEntry<>(
+                                        runContext.render(flow.getKey()),
+                                        runContext.render(flow.getValue())
+                                    )
+                                )
+                            )
+                            .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue))
                     );
                 }
 
                 if (this.tags != null) {
-                    blobClient.setTags(runContext.render(this.tags).asMap(String.class, String.class)
-                        .entrySet()
-                        .stream()
-                        .map(throwFunction(flow -> new AbstractMap.SimpleEntry<>(
-                            runContext.render(flow.getKey()),
-                            runContext.render(flow.getValue())
-                        )))
-                        .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue))
+                    blobClient.setTags(
+                        runContext.render(this.tags).asMap(String.class, String.class)
+                            .entrySet()
+                            .stream()
+                            .map(
+                                throwFunction(
+                                    flow -> new AbstractMap.SimpleEntry<>(
+                                        runContext.render(flow.getKey()),
+                                        runContext.render(flow.getValue())
+                                    )
+                                )
+                            )
+                            .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue))
                     );
                 }
 

@@ -1,5 +1,12 @@
 package io.kestra.plugin.azure.eventhubs.client;
 
+import java.time.Duration;
+import java.util.Objects;
+import java.util.Optional;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.azure.core.amqp.AmqpRetryMode;
 import com.azure.core.amqp.AmqpRetryOptions;
 import com.azure.core.credential.AzureNamedKeyCredential;
@@ -10,22 +17,15 @@ import com.azure.messaging.eventhubs.EventHubProducerAsyncClient;
 import com.azure.messaging.eventhubs.EventProcessorClientBuilder;
 import com.azure.storage.blob.BlobContainerAsyncClient;
 import com.azure.storage.blob.BlobContainerClientBuilder;
+
 import io.kestra.core.exceptions.IllegalVariableEvaluationException;
 import io.kestra.plugin.azure.client.AzureClientConfig;
 import io.kestra.plugin.azure.eventhubs.config.BlobContainerClientConfig;
 import io.kestra.plugin.azure.eventhubs.config.EventHubClientConfig;
 import io.kestra.plugin.azure.eventhubs.config.EventHubConsumerConfig;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import java.time.Duration;
-import java.util.Objects;
-import java.util.Optional;
-
 public class EventHubClientFactory {
     private static final Logger log = LoggerFactory.getLogger(EventHubClientFactory.class);
-
 
     /**
      * Factory method for constructing a new {@link EventHubClientBuilder} for the given config.
@@ -150,20 +150,26 @@ public class EventHubClientFactory {
     }
 
     private Optional<String> connectionString(final AzureClientConfig<?> config,
-                                              final String clientName) throws IllegalVariableEvaluationException {
+        final String clientName) throws IllegalVariableEvaluationException {
         Optional<String> optionalConnectionString = config.connectionString();
         if (optionalConnectionString.isPresent()) {
-            log.debug("Creating new {} using the `connectionString` that was passed "
-                + "through the task's configuration", clientName);
+            log.debug(
+                "Creating new {} using the `connectionString` that was passed "
+                    + "through the task's configuration",
+                clientName
+            );
         }
         return optionalConnectionString;
     }
 
     private Optional<AzureSasCredential> sasCredential(final AzureClientConfig<?> config,
-                                                       final String clientName) throws IllegalVariableEvaluationException {
+        final String clientName) throws IllegalVariableEvaluationException {
         if (config.sasToken().isPresent()) {
-            log.debug("Creating new {} using the `sasToken`" +
-                " that was passed through the task's configuration", clientName);
+            log.debug(
+                "Creating new {} using the `sasToken`" +
+                    " that was passed through the task's configuration",
+                clientName
+            );
             AzureSasCredential credential = new AzureSasCredential(config.sasToken().get());
             return Optional.of(credential);
         }
@@ -171,10 +177,13 @@ public class EventHubClientFactory {
     }
 
     private Optional<AzureNamedKeyCredential> namedKeyCredential(final AzureClientConfig<?> config,
-                                                                 final String clientName) throws IllegalVariableEvaluationException {
+        final String clientName) throws IllegalVariableEvaluationException {
         if (config.sharedKeyAccountAccessKey().isPresent() && config.sharedKeyAccountName().isPresent()) {
-            log.debug("Creating new {} using the `sharedKeyAccountName` and `sharedKeyAccountAccessKey`" +
-                " that was passed through the task's configuration", clientName);
+            log.debug(
+                "Creating new {} using the `sharedKeyAccountName` and `sharedKeyAccountAccessKey`" +
+                    " that was passed through the task's configuration",
+                clientName
+            );
             AzureNamedKeyCredential credential = new AzureNamedKeyCredential(
                 config.sharedKeyAccountName().get(),
                 config.sharedKeyAccountAccessKey().get()

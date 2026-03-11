@@ -1,10 +1,22 @@
 package io.kestra.plugin.azure.batch.job;
 
+import java.io.File;
+import java.io.IOException;
+import java.net.URI;
+import java.time.Duration;
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
+
+import org.slf4j.Logger;
+
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.microsoft.azure.PagedList;
 import com.microsoft.azure.batch.BatchClient;
 import com.microsoft.azure.batch.DetailLevel;
 import com.microsoft.azure.batch.protocol.models.*;
+
 import io.kestra.core.exceptions.IllegalVariableEvaluationException;
 import io.kestra.core.models.annotations.Example;
 import io.kestra.core.models.annotations.Metric;
@@ -23,20 +35,11 @@ import io.kestra.plugin.azure.batch.AbstractBatch;
 import io.kestra.plugin.azure.batch.BatchService;
 import io.kestra.plugin.azure.batch.models.Job;
 import io.kestra.plugin.azure.batch.models.Task;
+
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotNull;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
-import org.slf4j.Logger;
-
-import java.io.File;
-import java.io.IOException;
-import java.net.URI;
-import java.time.Duration;
-import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicReference;
 
 import static io.kestra.core.utils.Rethrow.throwRunnable;
 
@@ -309,12 +312,14 @@ public class Create extends AbstractBatch implements RunnableTask<Create.Output>
                 }
 
                 // log
-                TaskService.readRemoteLog(runContext, client, jobId, task, "stdout.txt", msg -> {
+                TaskService.readRemoteLog(runContext, client, jobId, task, "stdout.txt", msg ->
+                {
                     logConsumer.accept(msg, false);
                     outputs.putAll(logConsumer.getOutputs());
                 });
 
-                TaskService.readRemoteLog(runContext, client, jobId, task, "stderr.txt", msg -> {
+                TaskService.readRemoteLog(runContext, client, jobId, task, "stderr.txt", msg ->
+                {
                     logConsumer.accept(msg, true);
                     outputs.putAll(logConsumer.getOutputs());
                 });
@@ -395,8 +400,8 @@ public class Create extends AbstractBatch implements RunnableTask<Create.Output>
     }
 
     private void safelyKillJobTask(final RunContext runContext,
-                                   final BatchClient client,
-                                   final String jobId) throws IllegalVariableEvaluationException {
+        final BatchClient client,
+        final String jobId) throws IllegalVariableEvaluationException {
         if (runContext.render(delete).as(Boolean.class).orElse(true)) {
             try {
                 client.jobOperations().deleteJob(jobId);

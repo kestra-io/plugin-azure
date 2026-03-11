@@ -1,6 +1,7 @@
 package io.kestra.plugin.azure.batch.job;
 
 import io.kestra.plugin.azure.BaseTest;
+
 import io.micronaut.context.annotation.Value;
 
 abstract class AbstractTest extends BaseTest {

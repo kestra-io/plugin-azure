@@ -1,22 +1,23 @@
 package io.kestra.plugin.azure.batch.models;
 
+import java.util.*;
+import java.util.stream.Collectors;
+
 import com.microsoft.azure.batch.protocol.models.EnvironmentSetting;
 import com.microsoft.azure.batch.protocol.models.TaskAddParameter;
+
 import io.kestra.core.exceptions.IllegalVariableEvaluationException;
 import io.kestra.core.models.annotations.PluginProperty;
 import io.kestra.core.models.property.Property;
 import io.kestra.core.runners.RunContext;
 import io.kestra.core.utils.IdUtils;
+
 import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 import lombok.Builder;
 import lombok.Value;
 import lombok.extern.jackson.Jacksonized;
-
-import java.util.*;
-import java.util.stream.Collectors;
-import jakarta.validation.constraints.NotEmpty;
-import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Size;
 
 import static io.kestra.core.utils.Rethrow.throwFunction;
 
@@ -30,7 +31,7 @@ public class Task {
     )
     @PluginProperty(dynamic = true)
     @NotNull
-    @Size(max=64)
+    @Size(max = 64)
     String id;
 
     @Schema(
@@ -38,7 +39,7 @@ public class Task {
         description = "Optional friendly name (<=1024 Unicode chars); not required to be unique"
     )
     @PluginProperty(dynamic = true)
-    @Size(max=1024)
+    @Size(max = 1024)
     String displayName;
 
     @Builder.Default
@@ -56,7 +57,7 @@ public class Task {
         description = "Arguments prepended to the command; defaults to ['-c']"
     )
     @PluginProperty
-    String[] interpreterArgs = {"-c"};
+    String[] interpreterArgs = { "-c" };
 
     @Schema(
         title = "Commands",
@@ -122,39 +123,48 @@ public class Task {
             .withDisplayName(runContext.render(this.displayName))
             .withCommandLine(runContext.render(this.commandLine(runContext)))
             .withContainerSettings(this.containerSettings == null ? null : this.containerSettings.to(runContext))
-            .withEnvironmentSettings(this.environments == null ? null : runContext.render(this.environments).asMap(String.class, String.class)
-                .entrySet()
-                .stream()
-                .map(throwFunction(e -> new EnvironmentSetting()
-                    .withName(runContext.render(e.getKey()))
-                    .withValue(runContext.render(e.getValue()))
-                ))
-                .collect(Collectors.toList())
+            .withEnvironmentSettings(
+                this.environments == null ? null
+                    : runContext.render(this.environments).asMap(String.class, String.class)
+                        .entrySet()
+                        .stream()
+                        .map(
+                            throwFunction(
+                                e -> new EnvironmentSetting()
+                                    .withName(runContext.render(e.getKey()))
+                                    .withValue(runContext.render(e.getValue()))
+                            )
+                        )
+                        .collect(Collectors.toList())
             )
-            .withResourceFiles(this.resourceFiles == null ? null : this.resourceFiles
-                .stream()
-                .map(throwFunction(s -> s.to(runContext)))
-                .collect(Collectors.toList())
+            .withResourceFiles(
+                this.resourceFiles == null ? null
+                    : this.resourceFiles
+                        .stream()
+                        .map(throwFunction(s -> s.to(runContext)))
+                        .collect(Collectors.toList())
             )
-            .withOutputFiles(this.uploadFiles == null ? null : this.uploadFiles
-                .stream()
-                .map(throwFunction(s -> s.to(runContext)))
-                .collect(Collectors.toList()))
+            .withOutputFiles(
+                this.uploadFiles == null ? null
+                    : this.uploadFiles
+                        .stream()
+                        .map(throwFunction(s -> s.to(runContext)))
+                        .collect(Collectors.toList())
+            )
             .withConstraints(this.constraints == null ? null : this.constraints.to(runContext))
-            .withRequiredSlots(runContext.render(this.requiredSlots).as(Integer.class).orElse(null))
-        ;
+            .withRequiredSlots(runContext.render(this.requiredSlots).as(Integer.class).orElse(null));
     }
 
     private String commandLine(RunContext runContext) throws IllegalVariableEvaluationException {
         // renderer command
         List<String> renderer = new ArrayList<>();
 
-
         for (String command : runContext.render(this.commands).asList(String.class)) {
-            renderer.add(runContext
-                .render(command)
-                .replace("\\", "\\\\")
-                .replace("\"", "\\\"")
+            renderer.add(
+                runContext
+                    .render(command)
+                    .replace("\\", "\\\\")
+                    .replace("\"", "\\\"")
                 // already escape by az batch
                 // .replace("$", "\\$")
                 // .replace("`", "\\`")

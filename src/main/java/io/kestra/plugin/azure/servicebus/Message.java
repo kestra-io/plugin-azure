@@ -1,11 +1,11 @@
 package io.kestra.plugin.azure.servicebus;
 
+import java.time.Duration;
+import java.util.Map;
+
 import lombok.Builder;
 import lombok.Getter;
 import lombok.extern.jackson.Jacksonized;
-
-import java.time.Duration;
-import java.util.Map;
 
 @Builder
 @Getter

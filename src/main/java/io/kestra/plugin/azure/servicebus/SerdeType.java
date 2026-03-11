@@ -1,11 +1,12 @@
 package io.kestra.plugin.azure.servicebus;
 
-import com.azure.core.util.BinaryData;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import io.kestra.core.serializers.JacksonMapper;
-
 import java.io.IOException;
 import java.util.List;
+
+import com.azure.core.util.BinaryData;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
+import io.kestra.core.serializers.JacksonMapper;
 
 import static io.kestra.core.utils.Rethrow.throwFunction;
 
@@ -21,8 +22,6 @@ public enum SerdeType {
         ).toList();
     }
 
-
-
     public Object deserialize(BinaryData message) {
         return switch (this) {
             case STRING -> message.toString();
@@ -35,7 +34,6 @@ public enum SerdeType {
             }
         };
     }
-
 
     public BinaryData serialize(Object message) throws IOException {
         return BinaryData.fromString(

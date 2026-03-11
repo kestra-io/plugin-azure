@@ -3,12 +3,14 @@ package io.kestra.plugin.azure.storage.adls.update;
 import com.azure.storage.file.datalake.DataLakeFileClient;
 import com.azure.storage.file.datalake.specialized.DataLakeLeaseClient;
 import com.azure.storage.file.datalake.specialized.DataLakeLeaseClientBuilder;
+
 import io.kestra.core.models.annotations.Example;
 import io.kestra.core.models.annotations.Plugin;
 import io.kestra.core.models.property.Property;
 import io.kestra.core.models.tasks.RunnableTask;
 import io.kestra.core.runners.RunContext;
 import io.kestra.plugin.azure.storage.adls.abstracts.AbstractDataLakeWithFile;
+
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotNull;
 import lombok.*;
@@ -77,8 +79,8 @@ public class Lease extends AbstractDataLakeWithFile implements RunnableTask<Leas
         DataLakeLeaseClientBuilder dataLakeLeaseClientBuilder = new DataLakeLeaseClientBuilder()
             .fileClient(client);
 
-        if(!renderedAction.equals(LeaseAction.ACQUIRE)) {
-            if(resultLeaseId == null) {
+        if (!renderedAction.equals(LeaseAction.ACQUIRE)) {
+            if (resultLeaseId == null) {
                 throw new IllegalArgumentException("Lease ID must be provided for action RENEW, BREAK or RELEASE.");
             }
             dataLakeLeaseClientBuilder.leaseId(resultLeaseId);

@@ -1,11 +1,11 @@
 package io.kestra.plugin.azure.eventhubs.config;
 
+import java.util.Optional;
+
 import io.kestra.core.exceptions.IllegalVariableEvaluationException;
 import io.kestra.core.runners.RunContext;
 import io.kestra.plugin.azure.client.AzureClientConfig;
 import io.kestra.plugin.azure.eventhubs.EventHubClientInterface;
-
-import java.util.Optional;
 
 /**
  * Configuration that uses the {@link RunContext} to render configuration.
@@ -16,10 +16,10 @@ public class EventHubClientConfig<T extends EventHubClientInterface> extends Azu
      * Creates a new {@link EventHubClientConfig} instance.
      *
      * @param runContext The context. Cannot be null.
-     * @param plugin     The plugin. Cannot be null.
+     * @param plugin The plugin. Cannot be null.
      */
     public EventHubClientConfig(final RunContext runContext,
-                                final T plugin) {
+        final T plugin) {
         super(runContext, plugin);
     }
 

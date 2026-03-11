@@ -1,9 +1,21 @@
 package io.kestra.plugin.azure.eventhubs;
 
+import java.util.Map;
+
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
+import org.mockito.Mockito;
+import org.mockito.junit.jupiter.MockitoExtension;
+
 import com.azure.messaging.eventhubs.EventDataBatch;
 import com.azure.messaging.eventhubs.EventHubProducerAsyncClient;
 import com.azure.messaging.eventhubs.models.CreateBatchOptions;
+
 import io.kestra.core.exceptions.IllegalVariableEvaluationException;
+import io.kestra.core.junit.annotations.KestraTest;
 import io.kestra.core.models.property.Property;
 import io.kestra.core.runners.RunContext;
 import io.kestra.core.runners.RunContextFactory;
@@ -13,18 +25,9 @@ import io.kestra.plugin.azure.eventhubs.serdes.StringSerde;
 import io.kestra.plugin.azure.eventhubs.service.EventDataObjectConverter;
 import io.kestra.plugin.azure.eventhubs.service.producer.EventDataBatchFactory;
 import io.kestra.plugin.azure.eventhubs.service.producer.EventHubProducerService;
-import io.kestra.core.junit.annotations.KestraTest;
-import jakarta.inject.Inject;
-import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.Mock;
-import org.mockito.Mockito;
-import org.mockito.junit.jupiter.MockitoExtension;
-import reactor.core.publisher.Mono;
 
-import java.util.Map;
+import jakarta.inject.Inject;
+import reactor.core.publisher.Mono;
 
 @KestraTest
 @ExtendWith(MockitoExtension.class)
@@ -67,7 +70,8 @@ class ProduceTest {
             factory,
             EMPTY_CONFIG,
             converter,
-            new EventDataBatchFactory.Default(new CreateBatchOptions())) {
+            new EventDataBatchFactory.Default(new CreateBatchOptions())
+        ) {
         };
 
         // When
@@ -96,7 +100,8 @@ class ProduceTest {
             factory,
             EMPTY_CONFIG,
             converter,
-            new EventDataBatchFactory.Default(new CreateBatchOptions())) {
+            new EventDataBatchFactory.Default(new CreateBatchOptions())
+        ) {
         };
 
         // When

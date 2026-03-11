@@ -1,11 +1,12 @@
 package io.kestra.plugin.azure.storage.cosmosdb;
 
-import io.kestra.core.exceptions.IllegalVariableEvaluationException;
-import io.kestra.core.models.property.Property;
+import java.util.Map;
+
 import org.assertj.core.api.AbstractThrowableAssert;
 import org.junit.jupiter.api.Test;
 
-import java.util.Map;
+import io.kestra.core.exceptions.IllegalVariableEvaluationException;
+import io.kestra.core.models.property.Property;
 
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
@@ -46,7 +47,7 @@ class QueriesTest extends CosmosContainerBaseTest<Queries.QueriesBuilder<?, ?>> 
         //endregion
 
         //region WHEN
-        Queries.Output queriesTaskOutput =  queriesTask.run(runContextFactory.of());
+        Queries.Output queriesTaskOutput = queriesTask.run(runContextFactory.of());
         //endregion
 
         //region THEN
@@ -73,8 +74,8 @@ class QueriesTest extends CosmosContainerBaseTest<Queries.QueriesBuilder<?, ?>> 
         Map<String, Queries.QueriesOptions> queries = Map.of(
             "queryOne", Queries.QueriesOptions.builder()
                 .query("SELECT * FROM c WHERE c.id = '%s'".formatted(itemOneId))
-                    .partitionKey(Map.of("pk", "test"))
-                    .partitionKeyDefinition(PARTITION_KEY_DEFINITION)
+                .partitionKey(Map.of("pk", "test"))
+                .partitionKeyDefinition(PARTITION_KEY_DEFINITION)
                 .build()
         );
 
@@ -84,7 +85,7 @@ class QueriesTest extends CosmosContainerBaseTest<Queries.QueriesBuilder<?, ?>> 
         //endregion
 
         //region WHEN
-        Queries.Output queriesTaskOutput =  queriesTask.run(runContextFactory.of());
+        Queries.Output queriesTaskOutput = queriesTask.run(runContextFactory.of());
         //endregion
 
         //region THEN
@@ -119,7 +120,7 @@ class QueriesTest extends CosmosContainerBaseTest<Queries.QueriesBuilder<?, ?>> 
         //endregion
 
         //region WHEN
-        Queries.Output queriesTaskOutput =  queriesTask.run(runContextFactory.of());
+        Queries.Output queriesTaskOutput = queriesTask.run(runContextFactory.of());
         //endregion
 
         //region THEN

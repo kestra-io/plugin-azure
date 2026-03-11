@@ -1,18 +1,19 @@
 package io.kestra.plugin.azure.batch.pool;
 
-import com.microsoft.azure.batch.BatchClient;
-import com.microsoft.azure.batch.DetailLevel;
-import com.microsoft.azure.batch.protocol.models.AllocationState;
-import com.microsoft.azure.batch.protocol.models.CloudPool;
-import com.microsoft.azure.batch.protocol.models.ComputeNode;
-import io.kestra.core.runners.RunContext;
-
 import java.io.IOException;
 import java.time.Duration;
 import java.util.Date;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+
+import com.microsoft.azure.batch.BatchClient;
+import com.microsoft.azure.batch.DetailLevel;
+import com.microsoft.azure.batch.protocol.models.AllocationState;
+import com.microsoft.azure.batch.protocol.models.CloudPool;
+import com.microsoft.azure.batch.protocol.models.ComputeNode;
+
+import io.kestra.core.runners.RunContext;
 
 public class PoolService {
     public static CloudPool waitForReady(RunContext runContext, BatchClient client, CloudPool pool) throws TimeoutException, InterruptedException, IOException {

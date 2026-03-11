@@ -2,6 +2,7 @@ package io.kestra.plugin.azure.batch;
 
 import io.kestra.core.models.property.Property;
 import io.kestra.plugin.azure.AbstractConnection;
+
 import jakarta.validation.constraints.NotNull;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;

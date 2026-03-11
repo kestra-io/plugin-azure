@@ -3,6 +3,7 @@ package io.kestra.plugin.azure.servicebus;
 import com.azure.messaging.servicebus.*;
 import com.azure.messaging.servicebus.models.ServiceBusReceiveMode;
 import com.azure.messaging.servicebus.models.SubQueue;
+
 import io.kestra.core.models.annotations.Example;
 import io.kestra.core.models.annotations.Plugin;
 import io.kestra.core.models.conditions.ConditionContext;
@@ -10,6 +11,7 @@ import io.kestra.core.models.executions.Execution;
 import io.kestra.core.models.property.Property;
 import io.kestra.core.models.triggers.*;
 import io.kestra.core.runners.RunContext;
+
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotNull;
 import lombok.*;
@@ -19,7 +21,6 @@ import reactor.core.publisher.Flux;
 import static io.kestra.plugin.azure.servicebus.AbstractServiceBusTask.*;
 import static io.kestra.plugin.azure.servicebus.Consume.RECEIVE_MODE_DESCRIPTION;
 import static io.kestra.plugin.azure.servicebus.Consume.SUB_QUEUE_DESCRIPTION;
-
 
 @SuperBuilder
 @ToString
@@ -87,7 +88,6 @@ public class RealTimeTrigger extends AbstractTrigger implements RealtimeTriggerI
     private Property<String> pemCertificate;
 
     private static final ServiceBusReceiveMode DEFAULT_RECEIVE_MODE = ServiceBusReceiveMode.PEEK_LOCK;
-
 
     @Override
     public Flux<Execution> evaluate(ConditionContext conditionContext, TriggerContext context) throws Exception {

@@ -1,8 +1,12 @@
 package io.kestra.plugin.azure.storage.table;
 
+import java.util.List;
+import java.util.Map;
+
 import com.azure.data.tables.TableClient;
 import com.azure.data.tables.models.TableTransactionAction;
 import com.azure.data.tables.models.TableTransactionActionType;
+
 import io.kestra.core.exceptions.IllegalVariableEvaluationException;
 import io.kestra.core.models.annotations.Example;
 import io.kestra.core.models.annotations.Metric;
@@ -14,13 +18,11 @@ import io.kestra.core.models.tasks.RunnableTask;
 import io.kestra.core.runners.RunContext;
 import io.kestra.plugin.azure.storage.table.abstracts.AbstractTableStorage;
 import io.kestra.plugin.azure.storage.table.models.Entity;
+
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotNull;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
-
-import java.util.List;
-import java.util.Map;
 
 import static io.kestra.core.utils.Rethrow.throwFunction;
 
@@ -64,7 +66,7 @@ public class Bulk extends AbstractTableStorage implements RunnableTask<Bulk.Outp
     @Schema(
         title = Data.From.TITLE,
         description = Data.From.DESCRIPTION,
-        anyOf = {String.class, List.class, Map.class}
+        anyOf = { String.class, List.class, Map.class }
     )
     @NotNull
     private Object from;
@@ -83,13 +85,15 @@ public class Bulk extends AbstractTableStorage implements RunnableTask<Bulk.Outp
 
         Integer count = Data.from(this.from)
             .read(runContext)
-            .map(throwFunction(row -> {
+            .map(throwFunction(row ->
+            {
                 Entity entity = this.createEntity(runContext, row);
 
                 return new TableTransactionAction(entity.getType() != null ? entity.getType() : runContext.render(defaultType).as(TableTransactionActionType.class).orElseThrow(), entity.to());
             }))
             .buffer(100, 100)
-            .map(o -> {
+            .map(o ->
+            {
                 tableClient.submitTransaction(o);
 
                 return o.size();

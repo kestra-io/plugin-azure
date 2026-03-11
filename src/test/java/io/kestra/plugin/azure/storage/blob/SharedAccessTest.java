@@ -1,13 +1,14 @@
 package io.kestra.plugin.azure.storage.blob;
 
-import io.kestra.core.models.property.Property;
-import io.kestra.core.utils.IdUtils;
-import org.apache.commons.io.IOUtils;
-import org.junit.jupiter.api.Test;
-
 import java.io.FileReader;
 import java.nio.charset.StandardCharsets;
 import java.util.Set;
+
+import org.apache.commons.io.IOUtils;
+import org.junit.jupiter.api.Test;
+
+import io.kestra.core.models.property.Property;
+import io.kestra.core.utils.IdUtils;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;

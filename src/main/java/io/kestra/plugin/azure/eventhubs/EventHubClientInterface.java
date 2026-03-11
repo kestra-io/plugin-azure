@@ -1,10 +1,9 @@
 package io.kestra.plugin.azure.eventhubs;
 
-import io.kestra.core.models.annotations.PluginProperty;
 import io.kestra.core.models.property.Property;
 import io.kestra.plugin.azure.AzureClientWithSasInterface;
-import io.swagger.v3.oas.annotations.media.Schema;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotNull;
 
 public interface EventHubClientInterface extends AzureClientWithSasInterface {
@@ -36,4 +35,3 @@ public interface EventHubClientInterface extends AzureClientWithSasInterface {
     )
     Property<Long> getClientRetryDelay();
 }
-

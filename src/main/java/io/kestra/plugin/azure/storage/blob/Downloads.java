@@ -1,9 +1,17 @@
 package io.kestra.plugin.azure.storage.blob;
 
+import java.net.URI;
+import java.util.AbstractMap;
+import java.util.Map;
+import java.util.stream.Collectors;
+
+import org.apache.commons.lang3.tuple.Pair;
+
 import com.azure.storage.blob.BlobClient;
 import com.azure.storage.blob.BlobContainerClient;
 import com.azure.storage.blob.BlobServiceClient;
 import com.azure.storage.blob.models.BlobProperties;
+
 import io.kestra.core.models.annotations.Example;
 import io.kestra.core.models.annotations.Plugin;
 import io.kestra.core.models.property.Property;
@@ -15,15 +23,10 @@ import io.kestra.plugin.azure.storage.blob.abstracts.ActionInterface;
 import io.kestra.plugin.azure.storage.blob.abstracts.ListInterface;
 import io.kestra.plugin.azure.storage.blob.models.Blob;
 import io.kestra.plugin.azure.storage.blob.services.BlobService;
+
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
-import org.apache.commons.lang3.tuple.Pair;
-
-import java.net.URI;
-import java.util.AbstractMap;
-import java.util.Map;
-import java.util.stream.Collectors;
 
 import static io.kestra.core.utils.Rethrow.throwFunction;
 
@@ -111,7 +114,8 @@ public class Downloads extends AbstractBlobStorageWithSas implements RunnableTas
         java.util.List<Blob> list = run
             .getBlobs()
             .stream()
-            .map(throwFunction(object -> {
+            .map(throwFunction(object ->
+            {
                 BlobClient blobClient = containerClient.getBlobClient(object.getName());
 
                 Pair<BlobProperties, URI> download = BlobService.download(runContext, blobClient);

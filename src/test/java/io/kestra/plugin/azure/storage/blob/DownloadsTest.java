@@ -1,9 +1,10 @@
 package io.kestra.plugin.azure.storage.blob;
 
+import org.junit.jupiter.api.Test;
+
 import io.kestra.core.models.property.Property;
 import io.kestra.core.utils.IdUtils;
 import io.kestra.plugin.azure.storage.blob.abstracts.ActionInterface;
-import org.junit.jupiter.api.Test;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.endsWith;
@@ -53,10 +54,11 @@ class DownloadsTest extends AbstractTest {
             .container(Property.ofValue(this.container))
             .prefix(Property.ofValue("/tasks/" + prefix + "/abs-from/"))
             .action(Property.ofValue(ActionInterface.Action.MOVE))
-            .moveTo(Copy.CopyObject.builder()
-                .container(Property.ofValue(this.container))
-                .name(Property.ofValue("/tasks/" + prefix + "/blobs-move"))
-                .build()
+            .moveTo(
+                Copy.CopyObject.builder()
+                    .container(Property.ofValue(this.container))
+                    .name(Property.ofValue("/tasks/" + prefix + "/blobs-move"))
+                    .build()
             )
             .build();
 

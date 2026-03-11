@@ -14,10 +14,10 @@ public class BlobContainerClientConfig extends AzureClientConfig<BlobContainerCl
      * Creates a new {@link BlobContainerClientConfig} instance.
      *
      * @param runContext The context. Cannot be null.
-     * @param plugin     The plugin. Cannot be null.
+     * @param plugin The plugin. Cannot be null.
      */
     public BlobContainerClientConfig(final RunContext runContext,
-                                     final BlobContainerClientInterface plugin) {
+        final BlobContainerClientInterface plugin) {
         super(runContext, plugin);
     }
 

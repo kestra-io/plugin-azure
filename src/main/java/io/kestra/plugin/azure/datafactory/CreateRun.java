@@ -1,5 +1,19 @@
 package io.kestra.plugin.azure.datafactory;
 
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileWriter;
+import java.net.URI;
+import java.time.Duration;
+import java.time.temporal.ChronoUnit;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicReference;
+
+import org.slf4j.Logger;
+
 import com.azure.core.management.AzureEnvironment;
 import com.azure.core.management.profile.AzureProfile;
 import com.azure.core.util.Context;
@@ -13,10 +27,11 @@ import com.fasterxml.jackson.annotation.PropertyAccessor;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+
 import io.kestra.core.exceptions.IllegalVariableEvaluationException;
 import io.kestra.core.models.annotations.Example;
-import io.kestra.core.models.annotations.Plugin;
 import io.kestra.core.models.annotations.Metric;
+import io.kestra.core.models.annotations.Plugin;
 import io.kestra.core.models.annotations.PluginProperty;
 import io.kestra.core.models.executions.metrics.Counter;
 import io.kestra.core.models.executions.metrics.Timer;
@@ -27,28 +42,14 @@ import io.kestra.core.serializers.FileSerde;
 import io.kestra.core.serializers.JacksonMapper;
 import io.kestra.core.utils.Await;
 import io.kestra.plugin.azure.AbstractAzureIdentityConnection;
+
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotNull;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
-
-import org.slf4j.Logger;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
-
-import java.io.BufferedWriter;
-import java.io.File;
-import java.io.FileWriter;
-import java.net.URI;
-import java.time.Duration;
-import java.time.temporal.ChronoUnit;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.TimeoutException;
-import java.util.concurrent.atomic.AtomicReference;
-
 
 @SuperBuilder
 @ToString
@@ -129,18 +130,19 @@ public class CreateRun extends AbstractAzureIdentityConnection implements Runnab
         final String pipelineName = runContext.render(this.pipelineName).as(String.class).orElse(null);
 
         final var pipelineRunResponse = manager.pipelines()
-                .createRunWithResponse(resourceGroupName,
-                        factoryName,
-                        pipelineName,
-                        null,
-                        null,
-                        null,
-                        null,
-                        runContext.render(this.parameters).asMap(String.class, Object.class),
-                        Context.NONE
-                );
+            .createRunWithResponse(
+                resourceGroupName,
+                factoryName,
+                pipelineName,
+                null,
+                null,
+                null,
+                null,
+                runContext.render(this.parameters).asMap(String.class, Object.class),
+                Context.NONE
+            );
 
-        if(pipelineRunResponse.getStatusCode() != HttpResponseStatus.OK.code()) {
+        if (pipelineRunResponse.getStatusCode() != HttpResponseStatus.OK.code()) {
             throw new RuntimeException("Pipeline run creation failed with status code: " + pipelineRunResponse.getStatusCode());
         }
         logger.info("Created run for pipeline '{}'", pipelineName);
@@ -148,18 +150,19 @@ public class CreateRun extends AbstractAzureIdentityConnection implements Runnab
         // Get running pipeline and wait until completion
         final String runId = pipelineRunResponse.getValue().runId();
 
-        if(!Boolean.TRUE.equals(runContext.render(this.wait).as(Boolean.class).orElseThrow())) {
+        if (!Boolean.TRUE.equals(runContext.render(this.wait).as(Boolean.class).orElseThrow())) {
             return Output.builder()
-                    .runId(runId)
-                    .build();
+                .runId(runId)
+                .build();
         }
 
         final Duration checkInterval = runContext.render(this.checkFrequency.getInterval()).as(Duration.class).orElseThrow();
         final Duration maxDuration = runContext.render(this.checkFrequency.getMaxDuration()).as(Duration.class).orElseThrow();
         final AtomicReference<PipelineRun> runningPipelineResponse = new AtomicReference<>();
         try {
-            Await.until(() -> {
-                runningPipelineResponse.set(runningPipeline(resourceGroupName,factoryName, runId, manager));
+            Await.until(() ->
+            {
+                runningPipelineResponse.set(runningPipeline(resourceGroupName, factoryName, runId, manager));
                 String runStatus = runningPipelineResponse.get().status();
 
                 if (PIPELINE_FAILED_STATUS.contains(runStatus)) {
@@ -179,22 +182,24 @@ public class CreateRun extends AbstractAzureIdentityConnection implements Runnab
 
         //Get all the logs for each activity in the pipeline
         final var activitiesResponse = manager.activityRuns().queryByPipelineRunWithResponse(
-                resourceGroupName,
-                factoryName,
-                runId,
-                new RunFilterParameters()
-                        .withLastUpdatedAfter(pipelineRun.runStart())
-                        .withLastUpdatedBefore(pipelineRun.runEnd()),
-                com.azure.core.util.Context.NONE);
+            resourceGroupName,
+            factoryName,
+            runId,
+            new RunFilterParameters()
+                .withLastUpdatedAfter(pipelineRun.runStart())
+                .withLastUpdatedBefore(pipelineRun.runEnd()),
+            com.azure.core.util.Context.NONE
+        );
 
-        if(activitiesResponse.getStatusCode() != HttpResponseStatus.OK.code()) {
+        if (activitiesResponse.getStatusCode() != HttpResponseStatus.OK.code()) {
             throw new RuntimeException("Query pipeline run activities failed with status code: " + activitiesResponse.getStatusCode());
         }
 
         List<ActivityRun> activities = activitiesResponse.getValue().value();
         logger.info("Logging pipeline activities");
-        activities.forEach(activityRun -> {
-            if(activityRun.status().equals(PIPELINE_SUCCEEDED_STATUS)) {
+        activities.forEach(activityRun ->
+        {
+            if (activityRun.status().equals(PIPELINE_SUCCEEDED_STATUS)) {
                 logger.info("Activity '{}' finished with status '{}'", activityRun.activityName(), activityRun.status());
             } else {
                 logger.error("Activity '{}' finished with status '{}'", activityRun.activityName(), activityRun.status());
@@ -211,9 +216,9 @@ public class CreateRun extends AbstractAzureIdentityConnection implements Runnab
             runContext.metric(Counter.of("activities.count", count));
 
             return Output.builder()
-                    .runId(runId)
-                    .uri(runContext.storage().putFile(tempFile))
-                    .build();
+                .runId(runId)
+                .uri(runContext.storage().putFile(tempFile))
+                .build();
         }
     }
 
@@ -257,7 +262,7 @@ public class CreateRun extends AbstractAzureIdentityConnection implements Runnab
         final String tenantId = runContext.render(this.tenantId).as(String.class).orElse(null);
         final String subscriptionId = runContext.render(this.subscriptionId).as(String.class).orElse(null);
 
-        return  new AzureProfile(
+        return new AzureProfile(
             tenantId,
             subscriptionId,
             AzureEnvironment.AZURE

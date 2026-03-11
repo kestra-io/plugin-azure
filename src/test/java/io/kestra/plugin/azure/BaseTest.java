@@ -1,16 +1,5 @@
 package io.kestra.plugin.azure;
 
-import io.kestra.core.models.tasks.Task;
-import io.kestra.core.runners.RunContext;
-import io.kestra.core.runners.RunContextFactory;
-import io.kestra.core.storages.StorageInterface;
-import io.kestra.core.tenant.TenantService;
-import io.kestra.core.utils.IdUtils;
-import io.kestra.core.utils.TestsUtils;
-import io.micronaut.context.annotation.Value;
-import io.kestra.core.junit.annotations.KestraTest;
-import jakarta.inject.Inject;
-
 import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.FileInputStream;
@@ -19,6 +8,18 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.Map;
 import java.util.Objects;
+
+import io.kestra.core.junit.annotations.KestraTest;
+import io.kestra.core.models.tasks.Task;
+import io.kestra.core.runners.RunContext;
+import io.kestra.core.runners.RunContextFactory;
+import io.kestra.core.storages.StorageInterface;
+import io.kestra.core.tenant.TenantService;
+import io.kestra.core.utils.IdUtils;
+import io.kestra.core.utils.TestsUtils;
+
+import io.micronaut.context.annotation.Value;
+import jakarta.inject.Inject;
 
 // FIXME Remove once Worker closing has been reworked (Micronaut 4 PR)
 //  We need to rebuild the context for each tests as currently Workers can't be closed properly (they keep listening to queues they shouldn't)
@@ -47,9 +48,13 @@ public abstract class BaseTest {
 
     @Inject
     protected static File file(String testFilePath) throws URISyntaxException {
-        return new File(Objects.requireNonNull(BaseTest.class.getClassLoader()
-                .getResource(testFilePath))
-            .toURI());
+        return new File(
+            Objects.requireNonNull(
+                BaseTest.class.getClassLoader()
+                    .getResource(testFilePath)
+            )
+                .toURI()
+        );
     }
 
     protected URI upload() throws URISyntaxException, IOException {

@@ -12,7 +12,8 @@ public class ByteArraySerde implements Serde {
      **/
     @Override
     public byte[] serialize(Object data) {
-        if (data == null) return null;
+        if (data == null)
+            return null;
 
         if (data instanceof ByteBuffer buffer)
             return buffer.array();
@@ -29,7 +30,8 @@ public class ByteArraySerde implements Serde {
      **/
     @Override
     public ByteBuffer deserialize(byte[] data) {
-        if (data == null) return null;
+        if (data == null)
+            return null;
         return ByteBuffer.wrap(data);
     }
 }

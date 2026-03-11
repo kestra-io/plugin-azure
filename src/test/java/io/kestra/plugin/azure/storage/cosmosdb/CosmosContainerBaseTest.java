@@ -1,16 +1,7 @@
 package io.kestra.plugin.azure.storage.cosmosdb;
 
-import com.azure.cosmos.models.PartitionKeyDefinitionVersion;
-import com.azure.cosmos.models.PartitionKind;
-import io.kestra.core.exceptions.IllegalVariableEvaluationException;
-import io.kestra.core.junit.annotations.KestraTest;
-import io.kestra.core.models.property.Property;
-import io.kestra.core.runners.RunContext;
-import io.kestra.core.runners.RunContextFactory;
-import io.kestra.core.utils.IdUtils;
-import io.micronaut.context.annotation.Value;
-import jakarta.inject.Inject;
-import lombok.SneakyThrows;
+import java.util.*;
+
 import org.assertj.core.api.AbstractThrowableAssert;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Test;
@@ -18,13 +9,25 @@ import org.junit.jupiter.api.TestInstance;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.*;
+import com.azure.cosmos.models.PartitionKeyDefinitionVersion;
+import com.azure.cosmos.models.PartitionKind;
+
+import io.kestra.core.exceptions.IllegalVariableEvaluationException;
+import io.kestra.core.junit.annotations.KestraTest;
+import io.kestra.core.models.property.Property;
+import io.kestra.core.runners.RunContext;
+import io.kestra.core.runners.RunContextFactory;
+import io.kestra.core.utils.IdUtils;
+
+import io.micronaut.context.annotation.Value;
+import jakarta.inject.Inject;
+import lombok.SneakyThrows;
 
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @KestraTest(startRunner = true, environments = "sp")
-public abstract class CosmosContainerBaseTest<T extends AbstractCosmosContainerTask.AbstractCosmosContainerTaskBuilder<?,?,?>> {
+public abstract class CosmosContainerBaseTest<T extends AbstractCosmosContainerTask.AbstractCosmosContainerTaskBuilder<?, ?, ?>> {
     @Value("${kestra.variables.globals.azure.cosmos.connection-string}")
     protected String connectionString;
 
@@ -46,7 +49,6 @@ public abstract class CosmosContainerBaseTest<T extends AbstractCosmosContainerT
         PartitionKeyDefinitionVersion.V2
     );
 
-
     private static final Logger log = LoggerFactory.getLogger(CosmosContainerBaseTest.class);
 
     private final List<Map<String, Object>> createdItemsToRemove = new ArrayList<>();
@@ -62,8 +64,7 @@ public abstract class CosmosContainerBaseTest<T extends AbstractCosmosContainerT
     @Test
     void shouldThrowErrorWhenDatabaseIdNotSet() {
         //region GIVEN
-        AbstractCosmosContainerTask.AbstractCosmosDatabaseTaskBuilder<?,?,?> cosmosContainerTaskBuilder =
-            this.getBaseTaskBuilder().databaseId(Property.ofValue(null));
+        AbstractCosmosContainerTask.AbstractCosmosDatabaseTaskBuilder<?, ?, ?> cosmosContainerTaskBuilder = this.getBaseTaskBuilder().databaseId(Property.ofValue(null));
 
         //endregion
 
@@ -82,8 +83,7 @@ public abstract class CosmosContainerBaseTest<T extends AbstractCosmosContainerT
     @Test
     void shouldThrowErrorWhenContainerIdNotSet() {
         //region GIVEN
-        AbstractCosmosContainerTask.AbstractCosmosDatabaseTaskBuilder<?,?,?> cosmosContainerTaskBuilder =
-            this.getBaseTaskBuilder().containerId(Property.ofValue(null));
+        AbstractCosmosContainerTask.AbstractCosmosDatabaseTaskBuilder<?, ?, ?> cosmosContainerTaskBuilder = this.getBaseTaskBuilder().containerId(Property.ofValue(null));
 
         //endregion
 
@@ -99,20 +99,20 @@ public abstract class CosmosContainerBaseTest<T extends AbstractCosmosContainerT
         //endregion
     }
 
-
     protected abstract T instantiateBaseTaskBuilder();
 
     protected T getBaseTaskBuilder() {
-        return applyAuth(instantiateBaseTaskBuilder()
-            .id(this.getClass().getSimpleName())
-            .databaseId(Property.ofValue(databaseId))
-            .containerId(Property.ofValue(containerId))
-            .endpoint(Property.ofValue(endpoint))
+        return applyAuth(
+            instantiateBaseTaskBuilder()
+                .id(this.getClass().getSimpleName())
+                .databaseId(Property.ofValue(databaseId))
+                .containerId(Property.ofValue(containerId))
+                .endpoint(Property.ofValue(endpoint))
         );
     }
 
     @SuppressWarnings("unchecked")
-    protected T applyAuth(AbstractCosmosContainerTask.AbstractCosmosContainerTaskBuilder<?,?,?> containerTask) {
+    protected T applyAuth(AbstractCosmosContainerTask.AbstractCosmosContainerTaskBuilder<?, ?, ?> containerTask) {
         return (T) containerTask.connectionString(Property.ofValue(connectionString));
     }
 
@@ -147,12 +147,13 @@ public abstract class CosmosContainerBaseTest<T extends AbstractCosmosContainerT
     }
 
     @SuppressWarnings("unchecked")
-    private <C extends AbstractCosmosContainerTask.AbstractCosmosContainerTaskBuilder<?,?,?>> C cosmosContainerTaskBuilder(C builder) {
-        return (C) applyAuth(builder
-            .id(this.getClass().getSimpleName())
-            .endpoint(Property.ofValue(endpoint))
-            .databaseId(Property.ofValue(databaseId))
-            .containerId(Property.ofValue(containerId))
+    private <C extends AbstractCosmosContainerTask.AbstractCosmosContainerTaskBuilder<?, ?, ?>> C cosmosContainerTaskBuilder(C builder) {
+        return (C) applyAuth(
+            builder
+                .id(this.getClass().getSimpleName())
+                .endpoint(Property.ofValue(endpoint))
+                .databaseId(Property.ofValue(databaseId))
+                .containerId(Property.ofValue(containerId))
         );
     }
 }

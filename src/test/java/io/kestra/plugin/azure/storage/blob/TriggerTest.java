@@ -1,27 +1,5 @@
 package io.kestra.plugin.azure.storage.blob;
 
-import io.kestra.core.models.conditions.ConditionContext;
-import io.kestra.core.models.executions.Execution;
-import io.kestra.core.models.property.Property;
-import io.kestra.core.models.triggers.StatefulTriggerInterface;
-import io.kestra.core.queues.QueueFactoryInterface;
-import io.kestra.core.queues.QueueInterface;
-import io.kestra.core.repositories.LocalFlowRepositoryLoader;
-import io.kestra.core.runners.FlowListeners;
-import io.kestra.core.runners.Worker;
-import io.kestra.core.utils.IdUtils;
-import io.kestra.plugin.azure.storage.blob.abstracts.ActionInterface;
-import io.kestra.scheduler.AbstractScheduler;
-import io.kestra.core.utils.TestsUtils;
-import io.kestra.jdbc.runner.JdbcScheduler;
-import io.kestra.plugin.azure.storage.blob.models.Blob;
-import io.kestra.worker.DefaultWorker;
-import io.micronaut.context.ApplicationContext;
-import jakarta.inject.Inject;
-import jakarta.inject.Named;
-import org.junit.jupiter.api.Test;
-import reactor.core.publisher.Flux;
-
 import java.time.Duration;
 import java.util.Map;
 import java.util.Objects;
@@ -30,6 +8,29 @@ import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
+
+import org.junit.jupiter.api.Test;
+
+import io.kestra.core.models.conditions.ConditionContext;
+import io.kestra.core.models.executions.Execution;
+import io.kestra.core.models.property.Property;
+import io.kestra.core.models.triggers.StatefulTriggerInterface;
+import io.kestra.core.queues.QueueFactoryInterface;
+import io.kestra.core.queues.QueueInterface;
+import io.kestra.core.repositories.LocalFlowRepositoryLoader;
+import io.kestra.core.runners.FlowListeners;
+import io.kestra.core.utils.IdUtils;
+import io.kestra.core.utils.TestsUtils;
+import io.kestra.jdbc.runner.JdbcScheduler;
+import io.kestra.plugin.azure.storage.blob.abstracts.ActionInterface;
+import io.kestra.plugin.azure.storage.blob.models.Blob;
+import io.kestra.scheduler.AbstractScheduler;
+import io.kestra.worker.DefaultWorker;
+
+import io.micronaut.context.ApplicationContext;
+import jakarta.inject.Inject;
+import jakarta.inject.Named;
+import reactor.core.publisher.Flux;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
@@ -64,14 +65,14 @@ class TriggerTest extends AbstractTest {
             AtomicReference<Execution> last = new AtomicReference<>();
 
             // wait for execution
-            Flux<Execution> receive = TestsUtils.receive(executionQueue, executionWithError -> {
+            Flux<Execution> receive = TestsUtils.receive(executionQueue, executionWithError ->
+            {
                 Execution execution = executionWithError.getLeft();
                 if (execution.getFlowId().equals("blob-storage-listen")) {
                     last.set(execution);
                     queueCount.countDown();
                 }
             });
-
 
             String toUploadDir = "trigger/storage-listen";
             upload(toUploadDir);
@@ -120,14 +121,14 @@ class TriggerTest extends AbstractTest {
             AtomicReference<Execution> last = new AtomicReference<>();
 
             // wait for execution
-            Flux<Execution> receive = TestsUtils.receive(executionQueue, executionWithError -> {
+            Flux<Execution> receive = TestsUtils.receive(executionQueue, executionWithError ->
+            {
                 Execution execution = executionWithError.getLeft();
                 if (execution.getFlowId().equals("blob-storage-listen-none-action")) {
                     last.set(execution);
                     queueCount.countDown();
                 }
             });
-
 
             upload("trigger/none-action-storage-listen");
             upload("trigger/none-action-storage-listen");

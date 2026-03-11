@@ -1,11 +1,11 @@
 package io.kestra.plugin.azure.eventhubs.model;
 
+import java.util.Map;
+
 import io.kestra.core.models.tasks.Output;
-import lombok.AllArgsConstructor;
+
 import lombok.Builder;
 import lombok.Getter;
-
-import java.util.Map;
 
 /**
  * A serializable entity class representing an Event Data
@@ -17,41 +17,41 @@ import java.util.Map;
 @Builder
 public final class EventDataOutput implements Output {
 
-	/**
-	 * the event data partitionKey.
-	 */
-	private final String partitionKey;
+    /**
+     * the event data partitionKey.
+     */
+    private final String partitionKey;
 
-	/**
-	 * the event data body.
-	 */
-	private final Object body;
+    /**
+     * the event data body.
+     */
+    private final Object body;
 
-	/**
-	 * the event data content-type.
-	 */
-	private final String contentType;
+    /**
+     * the event data content-type.
+     */
+    private final String contentType;
 
-	/**
-	 * The event correlation ID.
-	 */
-	private final String correlationId;
+    /**
+     * The event correlation ID.
+     */
+    private final String correlationId;
 
-	/**
-	 * the event message ID.
-	 */
-	private final String messageId;
+    /**
+     * the event message ID.
+     */
+    private final String messageId;
 
-	private final Long enqueuedTimestamp;
+    private final Long enqueuedTimestamp;
 
-	private final Long offset;
+    private final Long offset;
 
-	private final Long sequenceNumber;
+    private final Long sequenceNumber;
 
-	/**
-	 * the event properties.
-	 */
-	private final Map<String, Object> properties;
+    /**
+     * the event properties.
+     */
+    private final Map<String, Object> properties;
 
     public static EventDataOutput of(final EventDataObject event) {
         return EventDataOutput.builder()

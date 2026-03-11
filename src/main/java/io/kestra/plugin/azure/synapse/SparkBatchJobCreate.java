@@ -1,23 +1,26 @@
 package io.kestra.plugin.azure.synapse;
 
+import java.util.List;
+import java.util.Map;
+
+import org.slf4j.Logger;
+
 import com.azure.analytics.synapse.spark.SparkBatchClient;
 import com.azure.analytics.synapse.spark.SparkClientBuilder;
 import com.azure.analytics.synapse.spark.models.SparkBatchJob;
 import com.azure.analytics.synapse.spark.models.SparkBatchJobOptions;
+
 import io.kestra.core.models.annotations.Example;
 import io.kestra.core.models.annotations.Plugin;
 import io.kestra.core.models.property.Property;
 import io.kestra.core.models.tasks.RunnableTask;
 import io.kestra.core.runners.RunContext;
 import io.kestra.plugin.azure.AbstractAzureIdentityConnection;
+
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotNull;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
-import org.slf4j.Logger;
-
-import java.util.List;
-import java.util.Map;
 
 @SuperBuilder
 @ToString

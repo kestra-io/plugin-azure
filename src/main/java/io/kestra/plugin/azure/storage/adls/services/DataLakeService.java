@@ -1,5 +1,12 @@
 package io.kestra.plugin.azure.storage.adls.services;
 
+import java.io.File;
+import java.io.IOException;
+import java.net.URI;
+import java.time.Duration;
+import java.util.ArrayList;
+import java.util.List;
+
 import com.azure.core.credential.AzureNamedKeyCredential;
 import com.azure.core.http.rest.PagedIterable;
 import com.azure.identity.DefaultAzureCredentialBuilder;
@@ -10,18 +17,12 @@ import com.azure.storage.file.datalake.DataLakeServiceClientBuilder;
 import com.azure.storage.file.datalake.models.ListPathsOptions;
 import com.azure.storage.file.datalake.models.PathItem;
 import com.azure.storage.file.datalake.models.PathProperties;
+
 import io.kestra.core.exceptions.IllegalVariableEvaluationException;
 import io.kestra.core.models.executions.metrics.Counter;
 import io.kestra.core.runners.RunContext;
 import io.kestra.core.utils.FileUtils;
 import io.kestra.plugin.azure.storage.adls.models.AdlsFile;
-
-import java.io.File;
-import java.io.IOException;
-import java.net.URI;
-import java.time.Duration;
-import java.util.ArrayList;
-import java.util.List;
 
 public class DataLakeService {
     public static URI read(RunContext runContext, DataLakeFileClient client) throws IOException {
@@ -56,8 +57,7 @@ public class DataLakeService {
         String sharedKeyAccountName,
         String sharedKeyAccountAccessKey,
         String sasToken,
-        RunContext runContext
-    ) throws IllegalVariableEvaluationException {
+        RunContext runContext) throws IllegalVariableEvaluationException {
         DataLakeServiceClientBuilder builder = new DataLakeServiceClientBuilder();
 
         if (endpoint != null) {
@@ -67,16 +67,17 @@ public class DataLakeService {
         if (connectionString != null) {
             builder.connectionString(connectionString);
         } else if (sharedKeyAccountName != null && sharedKeyAccountAccessKey != null) {
-            builder.credential(new AzureNamedKeyCredential(
-                sharedKeyAccountName,
-                sharedKeyAccountAccessKey
-            ));
-        } else if (sasToken != null ) {
+            builder.credential(
+                new AzureNamedKeyCredential(
+                    sharedKeyAccountName,
+                    sharedKeyAccountAccessKey
+                )
+            );
+        } else if (sasToken != null) {
             builder.sasToken(sasToken);
         } else {
             builder.credential(new DefaultAzureCredentialBuilder().build());
         }
-
 
         return builder.buildClient();
     }

@@ -1,14 +1,12 @@
 package io.kestra.plugin.azure.client;
 
+import java.util.Optional;
+import java.util.function.Supplier;
+
 import io.kestra.core.exceptions.IllegalVariableEvaluationException;
 import io.kestra.core.models.property.Property;
 import io.kestra.core.runners.RunContext;
 import io.kestra.plugin.azure.AzureClientWithSasInterface;
-
-import java.util.Optional;
-import java.util.function.Supplier;
-
-import static io.kestra.core.utils.Rethrow.throwFunction;
 
 /**
  * Configuration for creating a new Azure Client.
@@ -22,10 +20,10 @@ public class AzureClientConfig<T extends AzureClientWithSasInterface> {
      * Creates a new {@link AzureClientConfig} instance.
      *
      * @param runContext The context.
-     * @param plugin     The plugin.
+     * @param plugin The plugin.
      */
     public AzureClientConfig(final RunContext runContext,
-                             final T plugin) {
+        final T plugin) {
         this.runContext = runContext;
         this.plugin = plugin;
     }

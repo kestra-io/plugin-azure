@@ -1,29 +1,29 @@
 package io.kestra.plugin.azure.monitoring;
 
-import com.azure.core.http.rest.Response;
-import com.azure.core.util.Context;
-import com.azure.monitor.query.metrics.MetricsClient;
-import com.azure.monitor.query.metrics.models.AggregationType;
-import com.azure.monitor.query.metrics.models.MetricsQueryResourcesOptions;
-import com.azure.monitor.query.metrics.models.MetricsQueryResourcesResult;
-import com.azure.monitor.query.metrics.models.MetricsQueryResult;
-import com.azure.monitor.query.metrics.models.MetricsQueryTimeInterval;
-import com.fasterxml.jackson.core.type.TypeReference;
-import io.kestra.core.models.annotations.*;
-import io.kestra.core.models.property.Property;
-import io.kestra.core.models.tasks.RunnableTask;
-import io.kestra.core.runners.RunContext;
-import io.kestra.core.serializers.JacksonMapper;
-import io.swagger.v3.oas.annotations.media.Schema;
-import jakarta.validation.constraints.NotNull;
-import lombok.*;
-import lombok.experimental.SuperBuilder;
-
 import java.time.Duration;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
+
+import com.azure.core.http.rest.Response;
+import com.azure.core.util.Context;
+import com.azure.monitor.query.metrics.models.AggregationType;
+import com.azure.monitor.query.metrics.models.MetricsQueryResourcesOptions;
+import com.azure.monitor.query.metrics.models.MetricsQueryResourcesResult;
+import com.azure.monitor.query.metrics.models.MetricsQueryTimeInterval;
+import com.fasterxml.jackson.core.type.TypeReference;
+
+import io.kestra.core.models.annotations.*;
+import io.kestra.core.models.property.Property;
+import io.kestra.core.models.tasks.RunnableTask;
+import io.kestra.core.runners.RunContext;
+import io.kestra.core.serializers.JacksonMapper;
+
+import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.NotNull;
+import lombok.*;
+import lombok.experimental.SuperBuilder;
 
 @SuperBuilder
 @ToString
@@ -166,15 +166,16 @@ public class Query extends AbstractMonitoringTask implements RunnableTask<Query.
         List<Map<String, Object>> metricsResults = result.getValue()
             .getMetricsQueryResults()
             .stream()
-            .peek(r -> {
+            .peek(r ->
+            {
                 for (var m : r.getMetrics()) {
                     metrics.incrementAndGet();
                     m.getTimeSeries().forEach(ts -> datapoints.addAndGet(ts.getValues().size()));
                 }
             })
-            .map(r -> JacksonMapper.ofJson().convertValue(r, new TypeReference<Map<String, Object>>() {}))
+            .map(r -> JacksonMapper.ofJson().convertValue(r, new TypeReference<Map<String, Object>>() {
+            }))
             .toList();
-
 
         runContext.logger().info("Fetched {} datapoints across {} metrics from {} resources", datapoints.get(), metrics.get(), result.getValue().getMetricsQueryResults().size());
 

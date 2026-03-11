@@ -1,19 +1,4 @@
 package io.kestra.plugin.azure.eventhubs.service.consumer;
-import org.slf4j.Logger;
-
-import com.azure.messaging.eventhubs.CheckpointStore;
-import com.azure.messaging.eventhubs.EventData;
-import com.azure.messaging.eventhubs.EventProcessorClient;
-import com.azure.messaging.eventhubs.EventProcessorClientBuilder;
-import com.azure.messaging.eventhubs.models.Checkpoint;
-import com.azure.messaging.eventhubs.models.EventBatchContext;
-import com.azure.messaging.eventhubs.models.EventPosition;
-import com.azure.messaging.eventhubs.models.PartitionContext;
-import io.kestra.core.exceptions.IllegalVariableEvaluationException;
-import io.kestra.plugin.azure.eventhubs.client.EventHubClientFactory;
-import io.kestra.plugin.azure.eventhubs.config.EventHubConsumerConfig;
-import io.kestra.plugin.azure.eventhubs.model.EventDataObject;
-
 
 import java.util.Collection;
 import java.util.Collections;
@@ -29,6 +14,22 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
+import org.slf4j.Logger;
+
+import com.azure.messaging.eventhubs.CheckpointStore;
+import com.azure.messaging.eventhubs.EventData;
+import com.azure.messaging.eventhubs.EventProcessorClient;
+import com.azure.messaging.eventhubs.EventProcessorClientBuilder;
+import com.azure.messaging.eventhubs.models.Checkpoint;
+import com.azure.messaging.eventhubs.models.EventBatchContext;
+import com.azure.messaging.eventhubs.models.EventPosition;
+import com.azure.messaging.eventhubs.models.PartitionContext;
+
+import io.kestra.core.exceptions.IllegalVariableEvaluationException;
+import io.kestra.plugin.azure.eventhubs.client.EventHubClientFactory;
+import io.kestra.plugin.azure.eventhubs.config.EventHubConsumerConfig;
+import io.kestra.plugin.azure.eventhubs.model.EventDataObject;
+
 import static io.kestra.core.utils.Rethrow.throwFunction;
 
 public final class EventHubConsumerService {
@@ -40,13 +41,13 @@ public final class EventHubConsumerService {
     /**
      * Creates a new {@link EventHubConsumerService} instance.
      *
-     * @param clientFactory   The {@link EventHubClientFactory} - Cannot be {@code null}.
-     * @param consumerConfig  The {@link EventHubConsumerConfig} - Cannot be {@code null}.
+     * @param clientFactory The {@link EventHubClientFactory} - Cannot be {@code null}.
+     * @param consumerConfig The {@link EventHubConsumerConfig} - Cannot be {@code null}.
      * @param checkpointStore The {@link CheckpointStore}.
      */
     public EventHubConsumerService(final EventHubClientFactory clientFactory,
-                                   final EventHubConsumerConfig consumerConfig,
-                                   final CheckpointStore checkpointStore) {
+        final EventHubConsumerConfig consumerConfig,
+        final CheckpointStore checkpointStore) {
         this.clientFactory = Objects.requireNonNull(clientFactory, "clientFactory cannot be null");
         this.config = Objects.requireNonNull(consumerConfig, "consumerConfig cannot be null");
         this.checkpointStore = Objects.requireNonNull(checkpointStore, "checkpointStoreSupplier cannot be null");
@@ -58,10 +59,12 @@ public final class EventHubConsumerService {
             .consumerGroup(config.consumerGroup())
             .checkpointStore(checkpointStore)
             // Set the offset reset strategy
-            .initialPartitionEventPosition(throwFunction(partition -> {
+            .initialPartitionEventPosition(throwFunction(partition ->
+            {
                 EventPosition position = config.partitionStartingPosition();
                 if (logger.isInfoEnabled()) {
-                    logger.info("Initializing partitionId {} with offset={}, sequenceNumber={}, enqueuedDateTime={} if no checkpoint exist.",
+                    logger.info(
+                        "Initializing partitionId {} with offset={}, sequenceNumber={}, enqueuedDateTime={} if no checkpoint exist.",
                         partition,
                         position.getOffset(),
                         position.getSequenceNumber(),
@@ -73,7 +76,7 @@ public final class EventHubConsumerService {
     }
 
     public Map<EventHubNamePartition, Integer> poll(final ConsumerContext consumerContext,
-                                                    final EventProcessorListener listener) throws Exception {
+        final EventProcessorListener listener) throws Exception {
 
         final Logger logger = consumerContext.logger();
 
@@ -90,11 +93,13 @@ public final class EventHubConsumerService {
         // Create single EventProcessorClient.
         EventProcessorClient client = createEventProcessorClientBuilder(logger)
             // Capture the partition to process.
-            .processPartitionInitialization(context -> {
+            .processPartitionInitialization(context ->
+            {
                 partitions.add(context.getPartitionContext().getPartitionId());
             })
             // Process Events
-            .processEventBatch(context -> {
+            .processEventBatch(context ->
+            {
                 PartitionContext partitionContext = context.getPartitionContext();
                 if (!partitions.remove(partitionContext.getPartitionId())) {
                     if (logger.isTraceEnabled()) {
@@ -138,13 +143,16 @@ public final class EventHubConsumerService {
 
             }, consumerContext.maxPollEvents(), consumerContext.maxBatchPartitionWait())
             // Handle errors
-            .processError(errorContext -> {
+            .processError(errorContext ->
+            {
                 PartitionContext partitionContext = errorContext.getPartitionContext();
-                logger.error("Failed to process eventHub: {}, partitionId: {} with consumerGroup: {}",
+                logger.error(
+                    "Failed to process eventHub: {}, partitionId: {} with consumerGroup: {}",
                     partitionContext.getEventHubName(),
                     partitionContext.getPartitionId(),
                     partitionContext.getConsumerGroup(),
-                    errorContext.getThrowable());
+                    errorContext.getThrowable()
+                );
                 latch.countDown(); // stop processing immediately.
             })
             .buildEventProcessorClient();
@@ -152,9 +160,11 @@ public final class EventHubConsumerService {
         try {
             client.start();
             if (!latch.await(consumerContext.maxDuration().toMillis(), TimeUnit.MILLISECONDS)) {
-                logger.debug("Reached `maxDuration`({}ms) before receiving events from EventHub {}.",
+                logger.debug(
+                    "Reached `maxDuration`({}ms) before receiving events from EventHub {}.",
                     consumerContext.maxDuration().toMillis(),
-                    config.eventHubName());
+                    config.eventHubName()
+                );
             }
         } finally {
             client.stop();
@@ -169,10 +179,11 @@ public final class EventHubConsumerService {
     }
 
     private void updateCheckpoints(CheckpointStore store,
-                                   Collection<Checkpoint> checkpoints,
-                                   Logger logger) {
+        Collection<Checkpoint> checkpoints,
+        Logger logger) {
         for (Checkpoint checkpoint : checkpoints) {
-            logger.debug("Checkpointing position for consumerGroup={}, eventHubName={}, partitionId={}, sequenceNumber={}, and offset={}.",
+            logger.debug(
+                "Checkpointing position for consumerGroup={}, eventHubName={}, partitionId={}, sequenceNumber={}, and offset={}.",
                 checkpoint.getConsumerGroup(),
                 checkpoint.getEventHubName(),
                 checkpoint.getPartitionId(),
@@ -190,13 +201,14 @@ public final class EventHubConsumerService {
         }
         PartitionContext partitionContext = context.getPartitionContext();
 
-        return Optional.of(new Checkpoint()
-            .setFullyQualifiedNamespace(partitionContext.getFullyQualifiedNamespace())
-            .setEventHubName(partitionContext.getEventHubName())
-            .setConsumerGroup(partitionContext.getConsumerGroup())
-            .setPartitionId(partitionContext.getPartitionId())
-            .setSequenceNumber(events.get(events.size() - 1).getSequenceNumber())
-            .setOffset(events.get(events.size() - 1).getOffset())
+        return Optional.of(
+            new Checkpoint()
+                .setFullyQualifiedNamespace(partitionContext.getFullyQualifiedNamespace())
+                .setEventHubName(partitionContext.getEventHubName())
+                .setConsumerGroup(partitionContext.getConsumerGroup())
+                .setPartitionId(partitionContext.getPartitionId())
+                .setSequenceNumber(events.get(events.size() - 1).getSequenceNumber())
+                .setOffset(events.get(events.size() - 1).getOffset())
         );
     }
 

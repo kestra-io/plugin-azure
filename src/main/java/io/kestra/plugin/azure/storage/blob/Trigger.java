@@ -1,6 +1,13 @@
 package io.kestra.plugin.azure.storage.blob;
 
+import java.time.Duration;
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.Optional;
+import java.util.stream.Stream;
+
 import com.fasterxml.jackson.annotation.JsonUnwrapped;
+
 import io.kestra.core.models.annotations.Example;
 import io.kestra.core.models.annotations.Plugin;
 import io.kestra.core.models.conditions.ConditionContext;
@@ -15,15 +22,10 @@ import io.kestra.plugin.azure.storage.blob.abstracts.ActionInterface;
 import io.kestra.plugin.azure.storage.blob.abstracts.ListInterface;
 import io.kestra.plugin.azure.storage.blob.models.Blob;
 import io.kestra.plugin.azure.storage.blob.services.BlobService;
+
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
-
-import java.time.Duration;
-import java.time.Instant;
-import java.util.ArrayList;
-import java.util.Optional;
-import java.util.stream.Stream;
 
 import static io.kestra.core.models.triggers.StatefulTriggerService.*;
 import static io.kestra.core.utils.Rethrow.throwFunction;
@@ -119,7 +121,8 @@ import static io.kestra.core.utils.Rethrow.throwFunction;
         )
     }
 )
-public class Trigger extends AbstractTrigger implements PollingTriggerInterface, TriggerOutput<Trigger.Output>, AbstractConnectionInterface, ListInterface, ActionInterface, AbstractBlobStorageContainerInterface, AzureClientWithSasInterface, StatefulTriggerInterface {
+public class Trigger extends AbstractTrigger implements PollingTriggerInterface, TriggerOutput<Trigger.Output>, AbstractConnectionInterface, ListInterface, ActionInterface,
+    AbstractBlobStorageContainerInterface, AzureClientWithSasInterface, StatefulTriggerInterface {
 
     @Builder.Default
     private final Duration interval = Duration.ofSeconds(60);
@@ -196,7 +199,8 @@ public class Trigger extends AbstractTrigger implements PollingTriggerInterface,
         var actionBlobs = new ArrayList<Blob>();
 
         var toFire = run.getBlobs().stream()
-            .flatMap(throwFunction(blob -> {
+            .flatMap(throwFunction(blob ->
+            {
                 var uri = String.format("az://%s/%s", runContext.render(container).as(String.class).orElse(""), blob.getName());
                 var modifiedAt = Optional.ofNullable(blob.getLastModified()).map(java.time.OffsetDateTime::toInstant).orElse(Instant.now());
                 var version = Optional.ofNullable(blob.getETag()).orElse(String.valueOf(modifiedAt.toEpochMilli()));
@@ -224,10 +228,12 @@ public class Trigger extends AbstractTrigger implements PollingTriggerInterface,
                     Blob downloadedBlob = blob.withUri(downloadOutput.getBlob().getUri());
                     actionBlobs.add(blob);
 
-                    return Stream.of(TriggeredBlob.builder()
-                        .blob(downloadedBlob)
-                        .changeType(changeType)
-                        .build());
+                    return Stream.of(
+                        TriggeredBlob.builder()
+                            .blob(downloadedBlob)
+                            .changeType(changeType)
+                            .build()
+                    );
                 }
 
                 return Stream.empty();

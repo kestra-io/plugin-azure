@@ -1,9 +1,13 @@
 package io.kestra.plugin.azure.servicebus;
 
+import java.util.List;
+import java.util.Optional;
+
 import com.azure.core.util.BinaryData;
 import com.azure.messaging.servicebus.ServiceBusClientBuilder;
 import com.azure.messaging.servicebus.ServiceBusMessage;
 import com.azure.messaging.servicebus.ServiceBusSenderClient;
+
 import io.kestra.core.exceptions.IllegalVariableEvaluationException;
 import io.kestra.core.models.annotations.Example;
 import io.kestra.core.models.annotations.Metric;
@@ -14,13 +18,11 @@ import io.kestra.core.models.property.Property;
 import io.kestra.core.models.tasks.RunnableTask;
 import io.kestra.core.runners.RunContext;
 import io.kestra.core.serializers.JacksonMapper;
+
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotNull;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
-
-import java.util.List;
-import java.util.Optional;
 
 import static io.kestra.core.utils.Rethrow.throwFunction;
 
@@ -70,7 +72,7 @@ public class Publish extends AbstractServiceBusTask implements RunnableTask<Publ
     @Schema(
         title = Data.From.TITLE,
         description = Data.From.DESCRIPTION,
-        anyOf = {String.class, List.class, Message.class}
+        anyOf = { String.class, List.class, Message.class }
     )
     Property<Object> from;
 
@@ -83,7 +85,6 @@ public class Publish extends AbstractServiceBusTask implements RunnableTask<Publ
         Object rFrom = runContext.render(this.from).as(Object.class).orElseThrow(
             () -> new IllegalVariableEvaluationException("Message cannot be null or empty")
         );
-
 
         if (rQueueName.isPresent() == rTopicName.isPresent()) {
             throw new IllegalVariableEvaluationException("Exactly one of queueName or topicName must be specified.");
@@ -98,7 +99,8 @@ public class Publish extends AbstractServiceBusTask implements RunnableTask<Publ
         try (ServiceBusSenderClient sender = senderClientBuilder.buildClient()) {
             int count = Data.from(rFrom)
                 .readAs(runContext, Message.class, msg -> JacksonMapper.toMap(msg, Message.class))
-                .map(throwFunction(message -> {
+                .map(throwFunction(message ->
+                {
                     BinaryData binaryData = rSerdeType.serialize(
                         message.getBody()
                     );
@@ -121,18 +123,21 @@ public class Publish extends AbstractServiceBusTask implements RunnableTask<Publ
                     return 1;
                 })).reduce(Integer::sum).blockOptional().orElse(0);
 
-
-            rQueueName.ifPresent(queueName -> runContext.metric(
-                Counter.of("servicebus.publish.queue.messages", count, "queue", queueName)
-            ));
-            rTopicName.ifPresent(topicName -> runContext.metric(
-                Counter.of("servicebus.publish.topic.messages", count, "topic", rTopicName.get())
-            ));
+            rQueueName.ifPresent(
+                queueName -> runContext.metric(
+                    Counter.of("servicebus.publish.queue.messages", count, "queue", queueName)
+                )
+            );
+            rTopicName.ifPresent(
+                topicName -> runContext.metric(
+                    Counter.of("servicebus.publish.topic.messages", count, "topic", rTopicName.get())
+                )
+            );
             return new Output(count);
         }
     }
 
     public record Output(
-        Integer messagesCount
-    ) implements io.kestra.core.models.tasks.Output {}
+        Integer messagesCount) implements io.kestra.core.models.tasks.Output {
+    }
 }

@@ -3,20 +3,20 @@ package io.kestra.plugin.azure.batch.pool;
 import com.microsoft.azure.batch.BatchClient;
 import com.microsoft.azure.batch.protocol.models.CloudPool;
 import com.microsoft.azure.batch.protocol.models.PoolState;
+
 import io.kestra.core.models.annotations.Example;
 import io.kestra.core.models.annotations.Plugin;
-import io.kestra.core.models.annotations.PluginProperty;
 import io.kestra.core.models.property.Property;
 import io.kestra.core.models.tasks.RunnableTask;
 import io.kestra.core.runners.RunContext;
 import io.kestra.plugin.azure.batch.AbstractBatch;
 import io.kestra.plugin.azure.batch.BatchService;
 import io.kestra.plugin.azure.batch.models.Pool;
+
 import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.NotNull;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
-
-import jakarta.validation.constraints.NotNull;
 
 @SuperBuilder
 @ToString
@@ -96,11 +96,12 @@ public class Resize extends AbstractBatch implements RunnableTask<Resize.Output>
 
         return Output
             .builder()
-            .pool(Pool.builder()
-                .id(cloudPool.id())
-                .targetDedicatedNodes(cloudPool.targetDedicatedNodes())
-                .targetLowPriorityNodes(cloudPool.targetLowPriorityNodes())
-                .build()
+            .pool(
+                Pool.builder()
+                    .id(cloudPool.id())
+                    .targetDedicatedNodes(cloudPool.targetDedicatedNodes())
+                    .targetLowPriorityNodes(cloudPool.targetLowPriorityNodes())
+                    .build()
             )
             .build();
     }

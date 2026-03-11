@@ -1,13 +1,25 @@
 package io.kestra.plugin.azure.eventhubs;
 
+import java.io.BufferedOutputStream;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.net.URI;
+import java.time.Duration;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.concurrent.atomic.AtomicReference;
+
+import org.slf4j.Logger;
+
 import com.azure.messaging.eventhubs.CheckpointStore;
 import com.azure.messaging.eventhubs.checkpointstore.blob.BlobCheckpointStore;
 import com.azure.messaging.eventhubs.models.PartitionContext;
 import com.azure.storage.blob.BlobContainerAsyncClient;
+
 import io.kestra.core.exceptions.IllegalVariableEvaluationException;
 import io.kestra.core.models.annotations.Example;
-import io.kestra.core.models.annotations.Plugin;
 import io.kestra.core.models.annotations.Metric;
+import io.kestra.core.models.annotations.Plugin;
 import io.kestra.core.models.executions.metrics.Counter;
 import io.kestra.core.models.property.Property;
 import io.kestra.core.models.tasks.RunnableTask;
@@ -24,6 +36,7 @@ import io.kestra.plugin.azure.eventhubs.service.consumer.ConsumerContext;
 import io.kestra.plugin.azure.eventhubs.service.consumer.EventHubConsumerService;
 import io.kestra.plugin.azure.eventhubs.service.consumer.EventHubNamePartition;
 import io.kestra.plugin.azure.eventhubs.service.consumer.StartingPosition;
+
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotNull;
 import lombok.AccessLevel;
@@ -33,17 +46,6 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.ToString;
 import lombok.experimental.SuperBuilder;
-import org.slf4j.Logger;
-
-
-import java.io.BufferedOutputStream;
-import java.io.File;
-import java.io.FileOutputStream;
-import java.net.URI;
-import java.time.Duration;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * The {@link RunnableTask} can be used for consuming batches of events from Azure Event Hubs.
@@ -139,7 +141,7 @@ public class Consume extends AbstractEventHubTask implements EventHubConsumerInt
      * Runs the consumer task using the specified context and plugin interface.
      *
      * @param runContext The context.
-     * @param task       The plugin interface.
+     * @param task The plugin interface.
      * @return The output.
      * @throws Exception if something wrong happens.
      */
@@ -191,10 +193,12 @@ public class Consume extends AbstractEventHubTask implements EventHubConsumerInt
                         contextLogger.debug("Copy on storage completed.");
 
                     }
-                });
+                }
+            );
 
             int numEvents = result.entrySet().stream()
-                .peek(entry -> {
+                .peek(entry ->
+                {
                     Counter counter = Counter.of(
                         "records.consumed",
                         entry.getValue(),
@@ -220,7 +224,7 @@ public class Consume extends AbstractEventHubTask implements EventHubConsumerInt
     }
 
     public EventHubConsumerService newEventHubConsumerService(final RunContext runContext,
-                                                              final EventHubConsumerInterface task) throws IllegalVariableEvaluationException {
+        final EventHubConsumerInterface task) throws IllegalVariableEvaluationException {
         return new EventHubConsumerService(
             clientFactory,
             new EventHubConsumerConfig(runContext, task),
@@ -229,8 +233,8 @@ public class Consume extends AbstractEventHubTask implements EventHubConsumerInt
     }
 
     private CheckpointStore getBlobCheckpointStore(final RunContext runContext,
-                                                   final EventHubConsumerInterface pluginConfig,
-                                                   final EventHubClientFactory factory) throws IllegalVariableEvaluationException {
+        final EventHubConsumerInterface pluginConfig,
+        final EventHubClientFactory factory) throws IllegalVariableEvaluationException {
         var renderedMap = runContext.render(pluginConfig.getCheckpointStoreProperties()).asMap(String.class, String.class);
 
         var connectionString = renderedMap.get("connectionString");

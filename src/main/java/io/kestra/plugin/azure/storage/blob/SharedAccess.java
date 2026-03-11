@@ -1,8 +1,15 @@
 package io.kestra.plugin.azure.storage.blob;
 
+import java.net.URI;
+import java.time.OffsetDateTime;
+import java.time.ZonedDateTime;
+import java.util.Set;
+import java.util.stream.Collectors;
+
 import com.azure.storage.blob.BlobClient;
 import com.azure.storage.blob.sas.BlobContainerSasPermission;
 import com.azure.storage.blob.sas.BlobServiceSasSignatureValues;
+
 import io.kestra.core.models.annotations.Example;
 import io.kestra.core.models.annotations.Plugin;
 import io.kestra.core.models.annotations.PluginProperty;
@@ -10,19 +17,14 @@ import io.kestra.core.models.property.Property;
 import io.kestra.core.models.tasks.RunnableTask;
 import io.kestra.core.runners.RunContext;
 import io.kestra.plugin.azure.storage.blob.abstracts.AbstractBlobStorageObject;
+
 import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.NotNull;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.ToString;
 import lombok.experimental.SuperBuilder;
-
-import java.net.URI;
-import java.time.OffsetDateTime;
-import java.time.ZonedDateTime;
-import java.util.Set;
-import java.util.stream.Collectors;
-import jakarta.validation.constraints.NotNull;
 
 @SuperBuilder
 @ToString
@@ -76,10 +78,12 @@ public class SharedAccess extends AbstractBlobStorageObject implements RunnableT
 
         BlobServiceSasSignatureValues blobServiceSasSignatureValues = new BlobServiceSasSignatureValues(
             offsetDateTime,
-            BlobContainerSasPermission.parse(this.permissions
-                .stream()
-                .map(Enum::toString)
-                .collect(Collectors.joining()))
+            BlobContainerSasPermission.parse(
+                this.permissions
+                    .stream()
+                    .map(Enum::toString)
+                    .collect(Collectors.joining())
+            )
         );
 
         String sas = blobClient.generateSas(blobServiceSasSignatureValues);

@@ -1,6 +1,12 @@
 package io.kestra.plugin.azure.eventhubs;
 
+import java.io.*;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
 import com.azure.messaging.eventhubs.models.CreateBatchOptions;
+
 import io.kestra.core.exceptions.IllegalVariableEvaluationException;
 import io.kestra.core.models.annotations.Example;
 import io.kestra.core.models.annotations.Metric;
@@ -18,16 +24,11 @@ import io.kestra.plugin.azure.eventhubs.service.EventDataObjectConverter;
 import io.kestra.plugin.azure.eventhubs.service.producer.EventDataBatchFactory;
 import io.kestra.plugin.azure.eventhubs.service.producer.EventHubProducerService;
 import io.kestra.plugin.azure.eventhubs.service.producer.ProducerContext;
+
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotNull;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
-
-
-import java.io.*;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
 
 /**
  * The {@link RunnableTask} can be used for producing batches of events to Azure Event Hubs.
@@ -104,7 +105,7 @@ public class Produce extends AbstractEventHubTask implements RunnableTask<Produc
     @Schema(
         title = Data.From.TITLE,
         description = Data.From.DESCRIPTION,
-        anyOf = {String.class, List.class, Map.class}
+        anyOf = { String.class, List.class, Map.class }
     )
     @NotNull
     private Object from;
@@ -146,8 +147,9 @@ public class Produce extends AbstractEventHubTask implements RunnableTask<Produc
         EventHubProducerService service = new EventHubProducerService(
             clientFactory,
             new EventHubClientConfig<>(runContext, this),
-            new EventDataObjectConverter(runContext.render(getBodySerializer()).as(Serdes.class).orElseThrow()
-                .create(runContext.render(getBodySerializerProperties()).asMap(String.class, Object.class))
+            new EventDataObjectConverter(
+                runContext.render(getBodySerializer()).as(Serdes.class).orElseThrow()
+                    .create(runContext.render(getBodySerializerProperties()).asMap(String.class, Object.class))
             ),
             new EventDataBatchFactory.Default(getCreateBatchOptions(runContext))
         );
@@ -161,7 +163,8 @@ public class Produce extends AbstractEventHubTask implements RunnableTask<Produc
         InputStream is = Data.from(this.from)
             .read(runContext)
             .collectList()
-            .<ByteArrayInputStream>handle((items, sink) -> {
+            .<ByteArrayInputStream> handle((items, sink) ->
+            {
                 try {
                     ByteArrayOutputStream os = new ByteArrayOutputStream();
                     for (Map<String, Object> item : items) {
@@ -178,8 +181,8 @@ public class Produce extends AbstractEventHubTask implements RunnableTask<Produc
     }
 
     private Output send(final RunContext runContext,
-                        final EventHubProducerService service,
-                        final InputStream is) throws IllegalVariableEvaluationException {
+        final EventHubProducerService service,
+        final InputStream is) throws IllegalVariableEvaluationException {
         try (BufferedReader reader = new BufferedReader(new InputStreamReader(is))) {
             // Sends
             ProducerContext options = new ProducerContext(

@@ -1,11 +1,11 @@
 package io.kestra.plugin.azure.eventhubs.serdes;
 
+import java.io.IOException;
+
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.json.JsonMapper;
-
-import java.io.IOException;
 
 /**
  * A {@link Serde} for JSON.
@@ -25,7 +25,8 @@ public class JsonSerde implements Serde {
      **/
     @Override
     public byte[] serialize(Object data) {
-        if (data == null) return null;
+        if (data == null)
+            return null;
         try {
             return OBJECT_MAPPER.writeValueAsBytes(data);
         } catch (JsonProcessingException e) {
@@ -38,7 +39,8 @@ public class JsonSerde implements Serde {
      **/
     @Override
     public JsonNode deserialize(byte[] data) {
-        if (data == null) return null;
+        if (data == null)
+            return null;
         try {
             return OBJECT_MAPPER.readTree(data);
         } catch (IOException e) {

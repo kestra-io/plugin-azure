@@ -1,12 +1,13 @@
 package io.kestra.plugin.azure.storage.adls.models;
 
-import com.azure.storage.file.datalake.DataLakeFileClient;
-import com.azure.storage.file.datalake.models.PathProperties;
-import org.junit.jupiter.api.Test;
-
 import java.nio.charset.StandardCharsets;
 import java.time.OffsetDateTime;
 import java.util.Base64;
+
+import org.junit.jupiter.api.Test;
+
+import com.azure.storage.file.datalake.DataLakeFileClient;
+import com.azure.storage.file.datalake.models.PathProperties;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.*;
@@ -54,8 +55,10 @@ class AdlsFileTest {
         AdlsFile file = AdlsFile.of(mockClient);
 
         // Check that the contentMd5 returned is exactly the safe Base64 string
-        assertThat("AdlsFile.of() should return the correct Base64 string",
-            file.getContentMd5(), is("n04CAIckGYorAyKVufEhMg=="));
+        assertThat(
+            "AdlsFile.of() should return the correct Base64 string",
+            file.getContentMd5(), is("n04CAIckGYorAyKVufEhMg==")
+        );
 
         // Double-check safety again
         assertThat(file.getContentMd5(), not(containsString("\u0000")));

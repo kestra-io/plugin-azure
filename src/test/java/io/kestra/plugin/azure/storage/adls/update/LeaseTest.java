@@ -1,10 +1,11 @@
 package io.kestra.plugin.azure.storage.adls.update;
 
+import org.junit.jupiter.api.Test;
+
 import io.kestra.core.models.property.Property;
 import io.kestra.core.utils.IdUtils;
 import io.kestra.plugin.azure.storage.adls.AbstractTest;
 import io.kestra.plugin.azure.storage.adls.Upload;
-import org.junit.jupiter.api.Test;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.*;

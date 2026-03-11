@@ -1,5 +1,8 @@
 package io.kestra.plugin.azure.storage.adls;
 
+import java.io.InputStream;
+import java.net.URI;
+
 import com.azure.core.util.BinaryData;
 import com.azure.core.util.FluxUtil;
 import com.azure.storage.blob.BlobClient;
@@ -10,9 +13,10 @@ import com.azure.storage.blob.specialized.BlobLeaseClient;
 import com.azure.storage.blob.specialized.BlobLeaseClientBuilder;
 import com.azure.storage.common.implementation.Constants;
 import com.azure.storage.file.datalake.DataLakeFileClient;
+
 import io.kestra.core.models.annotations.Example;
-import io.kestra.core.models.annotations.Plugin;
 import io.kestra.core.models.annotations.Metric;
+import io.kestra.core.models.annotations.Plugin;
 import io.kestra.core.models.annotations.PluginProperty;
 import io.kestra.core.models.executions.metrics.Counter;
 import io.kestra.core.models.property.Property;
@@ -20,6 +24,7 @@ import io.kestra.core.models.tasks.RunnableTask;
 import io.kestra.core.runners.RunContext;
 import io.kestra.plugin.azure.storage.adls.abstracts.AbstractDataLakeWithFile;
 import io.kestra.plugin.azure.storage.adls.models.AdlsFile;
+
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotNull;
 import lombok.EqualsAndHashCode;
@@ -28,9 +33,6 @@ import lombok.NoArgsConstructor;
 import lombok.ToString;
 import lombok.experimental.SuperBuilder;
 import reactor.core.scheduler.Schedulers;
-
-import java.io.InputStream;
-import java.net.URI;
 
 @SuperBuilder
 @ToString
@@ -111,11 +113,10 @@ public class Upload extends AbstractDataLakeWithFile implements RunnableTask<Upl
                 String fileSystem = runContext.render(this.getFileSystem()).as(String.class).orElseThrow();
                 String connectionString = runContext.render(this.getConnectionString()).as(String.class).orElseThrow();
 
-                BlobServiceClient blobServiceClient =
-                    new BlobServiceClientBuilder()
-                        .connectionString(connectionString)
-                        .endpoint(endpoint)
-                        .buildClient();
+                BlobServiceClient blobServiceClient = new BlobServiceClientBuilder()
+                    .connectionString(connectionString)
+                    .endpoint(endpoint)
+                    .buildClient();
 
                 BlobContainerClient containerClient = blobServiceClient.getBlobContainerClient(fileSystem);
                 blobClient = containerClient.getBlobClient(filePath);

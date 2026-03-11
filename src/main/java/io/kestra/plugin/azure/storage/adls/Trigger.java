@@ -1,8 +1,14 @@
 package io.kestra.plugin.azure.storage.adls;
 
+import java.time.Duration;
+import java.time.Instant;
+import java.util.Optional;
+import java.util.stream.Stream;
+
 import com.azure.storage.file.datalake.DataLakeFileClient;
 import com.azure.storage.file.datalake.DataLakeServiceClient;
 import com.fasterxml.jackson.annotation.JsonUnwrapped;
+
 import io.kestra.core.models.annotations.Example;
 import io.kestra.core.models.annotations.Plugin;
 import io.kestra.core.models.annotations.PluginProperty;
@@ -15,15 +21,11 @@ import io.kestra.plugin.azure.AbstractConnectionInterface;
 import io.kestra.plugin.azure.AzureClientWithSasInterface;
 import io.kestra.plugin.azure.storage.adls.models.AdlsFile;
 import io.kestra.plugin.azure.storage.adls.services.DataLakeService;
+
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotNull;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
-
-import java.time.Duration;
-import java.time.Instant;
-import java.util.Optional;
-import java.util.stream.Stream;
 
 import static io.kestra.core.models.triggers.StatefulTriggerService.*;
 import static io.kestra.core.utils.Rethrow.throwFunction;
@@ -37,7 +39,8 @@ import static io.kestra.core.utils.Rethrow.throwFunction;
     title = "Trigger a flow on new file arrival in Azure Data Lake Storage.",
     description = "This trigger will poll the specified Azure Data Lake Storage file system every `interval`. " +
         "Using the `from` and `regExp` properties, you can define which files' arrival will trigger the flow. " +
-        "Under the hood, we use the Azure Data Lake Storage API to list the files in a specified location and download them to the internal storage and process them with the declared `action`. " +
+        "Under the hood, we use the Azure Data Lake Storage API to list the files in a specified location and download them to the internal storage and process them with the declared `action`. "
+        +
         "You can use the `action` property to move or delete the files from the container after processing to avoid the trigger to be fired again for the same files during the next polling interval."
 )
 @Plugin(
@@ -71,7 +74,8 @@ import static io.kestra.core.utils.Rethrow.throwFunction;
         )
     }
 )
-public class Trigger extends AbstractTrigger implements PollingTriggerInterface, TriggerOutput<Trigger.Output>, AbstractConnectionInterface, AzureClientWithSasInterface, StatefulTriggerInterface {
+public class Trigger extends AbstractTrigger
+    implements PollingTriggerInterface, TriggerOutput<Trigger.Output>, AbstractConnectionInterface, AzureClientWithSasInterface, StatefulTriggerInterface {
 
     @Builder.Default
     private final Duration interval = Duration.ofSeconds(60);
@@ -147,7 +151,8 @@ public class Trigger extends AbstractTrigger implements PollingTriggerInterface,
         var state = readState(runContext, rStateKey, rStateTtl);
 
         var toFire = run.getFiles().stream()
-            .flatMap(throwFunction(file -> {
+            .flatMap(throwFunction(file ->
+            {
                 var uri = String.format("adls://%s/%s", runContext.render(fileSystem).as(String.class).orElse(""), file.getName());
                 var modifiedAt = Optional.ofNullable(file.getLastModifed()).orElse(Instant.now());
                 var version = Optional.ofNullable(file.getETag()).orElse(String.valueOf(modifiedAt.toEpochMilli()));
@@ -174,10 +179,12 @@ public class Trigger extends AbstractTrigger implements PollingTriggerInterface,
                     Read.Output readOutput = read.run(runContext);
                     AdlsFile downloadedFile = readOutput.getFile();
 
-                    return Stream.of(TriggeredFile.builder()
-                        .file(downloadedFile)
-                        .changeType(changeType)
-                        .build());
+                    return Stream.of(
+                        TriggeredFile.builder()
+                            .file(downloadedFile)
+                            .changeType(changeType)
+                            .build()
+                    );
                 }
                 return Stream.empty();
             }))
@@ -189,7 +196,8 @@ public class Trigger extends AbstractTrigger implements PollingTriggerInterface,
             runContext.render(sharedKeyAccountName).as(String.class).orElse(null),
             runContext.render(sharedKeyAccountAccessKey).as(String.class).orElse(null),
             runContext.render(sasToken).as(String.class).orElse(null),
-            runContext);
+            runContext
+        );
 
         //Create the target directory in the target fileSystem for MOVE action
         if (Action.MOVE.equals(runContext.render(this.action).as(Action.class).orElseThrow())) {

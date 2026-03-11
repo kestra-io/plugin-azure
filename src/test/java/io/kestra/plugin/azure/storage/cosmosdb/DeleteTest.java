@@ -1,9 +1,10 @@
 package io.kestra.plugin.azure.storage.cosmosdb;
 
-import io.kestra.core.models.property.Property;
+import java.util.Map;
+
 import org.junit.jupiter.api.Test;
 
-import java.util.Map;
+import io.kestra.core.models.property.Property;
 
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 
@@ -19,14 +20,13 @@ class DeleteTest extends CosmosContainerBaseTest<Delete.DeleteBuilder<?, ?>> {
         //region GIVEN
         Map<String, Object> item = createItem("delete-item-test", Map.of(), false);
 
-
         final Delete delete = getBaseTaskBuilder()
             .item(Property.ofValue(item))
             .build();
         //endregion
 
         //region WHEN
-        Delete.Output deleteItemResponseOutput =  delete.run(
+        Delete.Output deleteItemResponseOutput = delete.run(
             runContextFactory.of()
         );
         //endregion
@@ -35,6 +35,5 @@ class DeleteTest extends CosmosContainerBaseTest<Delete.DeleteBuilder<?, ?>> {
         assertThat(deleteItemResponseOutput.statusCode()).isEqualTo(204);
         //endregion
     }
-
 
 }

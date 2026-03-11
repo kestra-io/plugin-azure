@@ -1,12 +1,18 @@
 package io.kestra.plugin.azure.storage.adls;
+
+import java.util.NoSuchElementException;
+import java.util.function.Function;
+
+import org.apache.commons.lang3.tuple.Pair;
 import org.slf4j.Logger;
 
 import com.azure.storage.file.datalake.DataLakeFileClient;
 import com.azure.storage.file.datalake.DataLakeFileSystemClient;
 import com.azure.storage.file.datalake.DataLakeServiceClient;
+
 import io.kestra.core.models.annotations.Example;
-import io.kestra.core.models.annotations.Plugin;
 import io.kestra.core.models.annotations.Metric;
+import io.kestra.core.models.annotations.Plugin;
 import io.kestra.core.models.annotations.PluginProperty;
 import io.kestra.core.models.executions.metrics.Counter;
 import io.kestra.core.models.property.Property;
@@ -16,19 +22,15 @@ import io.kestra.plugin.azure.storage.adls.abstracts.AbstractDataLakeConnection;
 import io.kestra.plugin.azure.storage.adls.abstracts.AbstractDataLakeStorageInterface;
 import io.kestra.plugin.azure.storage.adls.models.AdlsFile;
 import io.kestra.plugin.azure.storage.adls.services.DataLakeService;
+
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
-import org.apache.commons.lang3.tuple.Pair;
-
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.FluxSink;
 import reactor.core.scheduler.Schedulers;
-
-import java.util.NoSuchElementException;
-import java.util.function.Function;
 
 import static io.kestra.core.utils.Rethrow.throwConsumer;
 
@@ -114,10 +116,11 @@ public class DeleteFiles extends AbstractDataLakeConnection implements RunnableT
         DataLakeFileSystemClient fileSystemClient = client.getFileSystemClient(runContext.render(this.fileSystem).as(String.class).orElse(null));
 
         Flux<AdlsFile> flowable = Flux
-            .create(throwConsumer(emitter -> {
+            .create(throwConsumer(emitter ->
+            {
                 DataLakeService
                     .list(fileSystemClient, runContext.render(directoryPath).as(String.class).orElseThrow())
-                        .forEach(emitter::next);
+                    .forEach(emitter::next);
 
                 emitter.complete();
             }), FluxSink.OverflowStrategy.BUFFER);
@@ -144,9 +147,10 @@ public class DeleteFiles extends AbstractDataLakeConnection implements RunnableT
         runContext.metric(Counter.of("files.size", finalResult.getRight()));
 
         if (Boolean.TRUE.equals(runContext.render(errorOnEmpty).as(Boolean.class).orElseThrow()) && finalResult.getLeft() == 0) {
-            throw new NoSuchElementException("Unable to find any files to delete on " +
-                runContext.render(this.fileSystem).as(String.class).orElse(null) + " " +
-                "with directoryPath='" + runContext.render(this.directoryPath).as(String.class).orElseThrow()
+            throw new NoSuchElementException(
+                "Unable to find any files to delete on " +
+                    runContext.render(this.fileSystem).as(String.class).orElse(null) + " " +
+                    "with directoryPath='" + runContext.render(this.directoryPath).as(String.class).orElseThrow()
             );
         }
 
@@ -160,7 +164,8 @@ public class DeleteFiles extends AbstractDataLakeConnection implements RunnableT
     }
 
     private static Function<AdlsFile, Long> delete(Logger logger, DataLakeFileSystemClient fileSystemClient) {
-        return o -> {
+        return o ->
+        {
             logger.info("Deleting '{}'", o.getName());
 
             DataLakeFileClient fileClient = fileSystemClient.getFileClient(o.getName());
@@ -171,7 +176,6 @@ public class DeleteFiles extends AbstractDataLakeConnection implements RunnableT
             return fileSize;
         };
     }
-
 
     @Builder
     @Getter

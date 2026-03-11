@@ -1,16 +1,16 @@
 package io.kestra.plugin.azure.storage.adls.models;
 
-import com.azure.storage.file.datalake.DataLakeFileClient;
-import com.azure.storage.file.datalake.models.*;
-import lombok.Builder;
-import lombok.Value;
-import lombok.With;
-
 import java.net.URI;
-import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.Base64;
 import java.util.List;
+
+import com.azure.storage.file.datalake.DataLakeFileClient;
+import com.azure.storage.file.datalake.models.*;
+
+import lombok.Builder;
+import lombok.Value;
+import lombok.With;
 
 @Builder
 @Value
@@ -42,8 +42,6 @@ public class AdlsFile {
     String permissions;
     List<String> accessControlList;
 
-
-
     public static AdlsFile of(DataLakeFileClient dataLakeFileClient) {
         return AdlsFile.builder()
             .fileSystem(dataLakeFileClient.getFileSystemName())
@@ -53,9 +51,11 @@ public class AdlsFile {
             .contentType(dataLakeFileClient.getProperties().getContentType())
             .contentEncoding(dataLakeFileClient.getProperties().getContentEncoding())
             .contentLanguage(dataLakeFileClient.getProperties().getContentLanguage())
-            .contentMd5(dataLakeFileClient.getProperties().getContentMd5() != null
-                ? Base64.getEncoder().encodeToString(dataLakeFileClient.getProperties().getContentMd5())
-                : null)
+            .contentMd5(
+                dataLakeFileClient.getProperties().getContentMd5() != null
+                    ? Base64.getEncoder().encodeToString(dataLakeFileClient.getProperties().getContentMd5())
+                    : null
+            )
             .lastModifed(dataLakeFileClient.getProperties().getCreationTime().toInstant())
             .lastModifed(dataLakeFileClient.getProperties().getLastModified().toInstant())
             .eTag(dataLakeFileClient.getProperties().getETag())

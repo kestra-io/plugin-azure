@@ -1,22 +1,5 @@
 package io.kestra.plugin.azure.servicebus;
 
-import com.azure.messaging.servicebus.ServiceBusClientBuilder;
-import com.azure.messaging.servicebus.ServiceBusReceivedMessage;
-import com.azure.messaging.servicebus.ServiceBusReceiverClient;
-import com.azure.messaging.servicebus.models.ServiceBusReceiveMode;
-import com.azure.messaging.servicebus.models.SubQueue;
-import io.kestra.core.exceptions.IllegalVariableEvaluationException;
-import io.kestra.core.models.annotations.Example;
-import io.kestra.core.models.annotations.Plugin;
-import io.kestra.core.models.property.Property;
-import io.kestra.core.models.tasks.RunnableTask;
-import io.kestra.core.runners.RunContext;
-import io.kestra.core.serializers.FileSerde;
-import io.swagger.v3.oas.annotations.media.Schema;
-import jakarta.validation.constraints.NotNull;
-import lombok.*;
-import lombok.experimental.SuperBuilder;
-
 import java.io.BufferedOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
@@ -28,6 +11,25 @@ import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+
+import com.azure.messaging.servicebus.ServiceBusClientBuilder;
+import com.azure.messaging.servicebus.ServiceBusReceivedMessage;
+import com.azure.messaging.servicebus.ServiceBusReceiverClient;
+import com.azure.messaging.servicebus.models.ServiceBusReceiveMode;
+import com.azure.messaging.servicebus.models.SubQueue;
+
+import io.kestra.core.exceptions.IllegalVariableEvaluationException;
+import io.kestra.core.models.annotations.Example;
+import io.kestra.core.models.annotations.Plugin;
+import io.kestra.core.models.property.Property;
+import io.kestra.core.models.tasks.RunnableTask;
+import io.kestra.core.runners.RunContext;
+import io.kestra.core.serializers.FileSerde;
+
+import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.NotNull;
+import lombok.*;
+import lombok.experimental.SuperBuilder;
 
 import static io.kestra.core.utils.Rethrow.throwConsumer;
 
@@ -129,8 +131,6 @@ public class Consume extends AbstractServiceBusTask implements RunnableTask<Cons
             .orElse(DEFAULT_RECEIVE_MODE);
         Optional<SubQueue> rSubQueue = runContext.render(this.subQueue).as(SubQueue.class);
 
-
-
         ServiceBusClientBuilder.ServiceBusReceiverClientBuilder receiverBuilder = applyAuth(
             runContext,
             new ServiceBusClientBuilder()
@@ -177,9 +177,11 @@ public class Consume extends AbstractServiceBusTask implements RunnableTask<Cons
         try (var outputFile = new BufferedOutputStream(new FileOutputStream(tempFile))) {
             serdeType.deserialize(
                 messages.stream().map(ServiceBusReceivedMessage::getBody).toList()
-            ).forEach((throwConsumer(
-                msg -> FileSerde.write(outputFile, msg)
-            )));
+            ).forEach(
+                (throwConsumer(
+                    msg -> FileSerde.write(outputFile, msg)
+                ))
+            );
             outputFile.flush();
             return runContext.storage().putFile(tempFile);
         }

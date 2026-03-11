@@ -1,11 +1,12 @@
 package io.kestra.plugin.azure.eventhubs.service.consumer;
 
-import com.azure.messaging.eventhubs.models.EventPosition;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
+
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
-import java.time.Instant;
-import java.time.temporal.ChronoUnit;
+import com.azure.messaging.eventhubs.models.EventPosition;
 
 class EventPositionStrategyTest {
 

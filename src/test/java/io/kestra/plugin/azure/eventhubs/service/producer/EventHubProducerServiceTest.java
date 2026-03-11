@@ -1,15 +1,15 @@
 package io.kestra.plugin.azure.eventhubs.service.producer;
 
-import com.azure.messaging.eventhubs.EventData;
-import com.azure.messaging.eventhubs.EventDataBatch;
-import com.azure.messaging.eventhubs.EventHubProducerAsyncClient;
-import io.kestra.core.exceptions.IllegalVariableEvaluationException;
-import io.kestra.core.serializers.FileSerde;
-import io.kestra.plugin.azure.eventhubs.client.EventHubClientFactory;
-import io.kestra.plugin.azure.eventhubs.config.EventHubConsumerConfig;
-import io.kestra.plugin.azure.eventhubs.model.EventDataObject;
-import io.kestra.plugin.azure.eventhubs.serdes.StringSerde;
-import io.kestra.plugin.azure.eventhubs.service.EventDataObjectConverter;
+import java.io.BufferedReader;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
+
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -22,17 +22,20 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.stubbing.Answer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import reactor.core.publisher.Mono;
 
-import java.io.BufferedReader;
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.util.List;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.stream.Collectors;
-import java.util.stream.IntStream;
+import com.azure.messaging.eventhubs.EventData;
+import com.azure.messaging.eventhubs.EventDataBatch;
+import com.azure.messaging.eventhubs.EventHubProducerAsyncClient;
+
+import io.kestra.core.exceptions.IllegalVariableEvaluationException;
+import io.kestra.core.serializers.FileSerde;
+import io.kestra.plugin.azure.eventhubs.client.EventHubClientFactory;
+import io.kestra.plugin.azure.eventhubs.config.EventHubConsumerConfig;
+import io.kestra.plugin.azure.eventhubs.model.EventDataObject;
+import io.kestra.plugin.azure.eventhubs.serdes.StringSerde;
+import io.kestra.plugin.azure.eventhubs.service.EventDataObjectConverter;
+
+import reactor.core.publisher.Mono;
 
 @ExtendWith(MockitoExtension.class)
 class EventHubProducerServiceTest {
@@ -153,7 +156,8 @@ class EventHubProducerServiceTest {
                     final AtomicInteger counter = new AtomicInteger(0);
                     final AtomicInteger batchSize = new AtomicInteger(0);
                     Mockito.when(batch.tryAdd(eventDataArgumentCaptor.capture()))
-                        .then((Answer<Boolean>) invocation -> {
+                        .then((Answer<Boolean>) invocation ->
+                        {
                             EventData value = eventDataArgumentCaptor.getValue();
                             int currentBatchSize = batchSize.accumulateAndGet(value.getBody().length, Integer::sum);
                             if (currentBatchSize < maxBatchSize) {

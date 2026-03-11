@@ -1,18 +1,20 @@
 package io.kestra.plugin.azure.cli;
 
+import java.util.List;
+import java.util.Map;
+
+import org.junit.jupiter.api.Test;
+
+import io.kestra.core.junit.annotations.KestraTest;
 import io.kestra.core.models.property.Property;
 import io.kestra.core.runners.RunContext;
 import io.kestra.core.runners.RunContextFactory;
 import io.kestra.core.utils.IdUtils;
 import io.kestra.core.utils.TestsUtils;
 import io.kestra.plugin.scripts.exec.scripts.models.ScriptOutput;
-import io.micronaut.context.annotation.Value;
-import io.kestra.core.junit.annotations.KestraTest;
-import jakarta.inject.Inject;
-import org.junit.jupiter.api.Test;
 
-import java.util.List;
-import java.util.Map;
+import io.micronaut.context.annotation.Value;
+import jakarta.inject.Inject;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.*;
@@ -39,16 +41,22 @@ public class AzCLITest {
             .id(IdUtils.create())
             .type(AzCLI.class.getName())
             .env(Property.ofValue(Map.of(envKey, envValue)))
-            .commands(TestsUtils.propertyFromList(List.of(
-                "echo \"::{\\\"outputs\\\":{\\\"{{ inputs.outputName }}\\\":\\\"$" + envKey + "\\\"}}::\""
-            )))
+            .commands(
+                TestsUtils.propertyFromList(
+                    List.of(
+                        "echo \"::{\\\"outputs\\\":{\\\"{{ inputs.outputName }}\\\":\\\"$" + envKey + "\\\"}}::\""
+                    )
+                )
+            )
             .build();
 
-        RunContext runContext = TestsUtils.mockRunContext(runContextFactory, execute, Map.of(
-            "envKey", envKey,
-            "envValue", envValue,
-            "outputName", "customEnv"
-        ));
+        RunContext runContext = TestsUtils.mockRunContext(
+            runContextFactory, execute, Map.of(
+                "envKey", envKey,
+                "envValue", envValue,
+                "outputName", "customEnv"
+            )
+        );
 
         ScriptOutput runOutput = execute.run(runContext);
 
@@ -66,18 +74,24 @@ public class AzCLITest {
             .commands(Property.ofValue(List.of("az keyvault list")))
             .build();
 
-        runContext = TestsUtils.mockRunContext(runContextFactory, execute, Map.of(
-            "myUser", username,
-            "myPassword", secret,
-            "myTenant", tenant
-        ));
-        assertThat(execute.getLoginCommands(runContext), allOf(
-            iterableWithSize(1),
-            hasItem("az login -u " + username +
-                " -p " + secret +
-                " --tenant " + tenant +
-                " --service-principal")
-        ));
+        runContext = TestsUtils.mockRunContext(
+            runContextFactory, execute, Map.of(
+                "myUser", username,
+                "myPassword", secret,
+                "myTenant", tenant
+            )
+        );
+        assertThat(
+            execute.getLoginCommands(runContext), allOf(
+                iterableWithSize(1),
+                hasItem(
+                    "az login -u " + username +
+                        " -p " + secret +
+                        " --tenant " + tenant +
+                        " --service-principal"
+                )
+            )
+        );
 
         runOutput = execute.run(runContext);
 

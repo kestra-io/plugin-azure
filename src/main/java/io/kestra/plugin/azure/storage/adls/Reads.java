@@ -1,8 +1,14 @@
 package io.kestra.plugin.azure.storage.adls;
 
+import java.net.URI;
+import java.util.AbstractMap;
+import java.util.Map;
+import java.util.stream.Collectors;
+
 import com.azure.storage.file.datalake.DataLakeFileClient;
 import com.azure.storage.file.datalake.DataLakeFileSystemClient;
 import com.azure.storage.file.datalake.DataLakeServiceClient;
+
 import io.kestra.core.models.annotations.Example;
 import io.kestra.core.models.annotations.Plugin;
 import io.kestra.core.models.property.Property;
@@ -12,15 +18,11 @@ import io.kestra.plugin.azure.storage.adls.abstracts.AbstractDataLakeConnection;
 import io.kestra.plugin.azure.storage.adls.abstracts.AbstractDataLakeStorageInterface;
 import io.kestra.plugin.azure.storage.adls.models.AdlsFile;
 import io.kestra.plugin.azure.storage.adls.services.DataLakeService;
+
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotNull;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
-
-import java.net.URI;
-import java.util.AbstractMap;
-import java.util.Map;
-import java.util.stream.Collectors;
 
 import static io.kestra.core.utils.Rethrow.throwFunction;
 
@@ -87,7 +89,8 @@ public class Reads extends AbstractDataLakeConnection implements RunnableTask<Re
         java.util.List<AdlsFile> list = run
             .getFiles()
             .stream()
-            .map(throwFunction(object -> {
+            .map(throwFunction(object ->
+            {
                 DataLakeFileClient fileClient = fileSystemClient.getFileClient(object.getName());
                 URI readFileUri = DataLakeService.read(runContext, fileClient);
 

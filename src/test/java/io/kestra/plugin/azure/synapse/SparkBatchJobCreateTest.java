@@ -1,15 +1,17 @@
 package io.kestra.plugin.azure.synapse;
 
+import java.util.List;
+
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
+
 import io.kestra.core.junit.annotations.KestraTest;
 import io.kestra.core.models.property.Property;
 import io.kestra.core.runners.RunContext;
 import io.kestra.core.runners.RunContextFactory;
 import io.kestra.core.utils.IdUtils;
-import jakarta.inject.Inject;
-import org.junit.jupiter.api.Disabled;
-import org.junit.jupiter.api.Test;
 
-import java.util.List;
+import jakarta.inject.Inject;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.*;
@@ -23,7 +25,7 @@ class SparkBatchJobCreateTest {
     @Test
     void run() throws Exception {
         String jobName = "test-spark-job-" + IdUtils.create();
-        
+
         SparkBatchJobCreate task = SparkBatchJobCreate.builder()
             .id(SparkBatchJobCreateTest.class.getSimpleName())
             .type(SparkBatchJobCreate.class.getName())
@@ -53,7 +55,7 @@ class SparkBatchJobCreateTest {
     @Test
     void runWithMinimalConfig() throws Exception {
         String jobName = "test-minimal-job-" + IdUtils.create();
-        
+
         SparkBatchJobCreate task = SparkBatchJobCreate.builder()
             .id(SparkBatchJobCreateTest.class.getSimpleName())
             .type(SparkBatchJobCreate.class.getName())

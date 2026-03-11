@@ -1,11 +1,17 @@
 package io.kestra.plugin.azure.monitoring;
 
+import java.io.IOException;
+import java.net.URI;
+import java.util.Collections;
+import java.util.Map;
+
 import com.azure.core.credential.AccessToken;
 import com.azure.core.credential.TokenCredential;
 import com.azure.core.credential.TokenRequestContext;
 import com.azure.monitor.query.metrics.MetricsClient;
 import com.azure.monitor.query.metrics.MetricsClientBuilder;
 import com.azure.monitor.query.metrics.MetricsServiceVersion;
+
 import io.kestra.core.exceptions.IllegalVariableEvaluationException;
 import io.kestra.core.http.HttpRequest;
 import io.kestra.core.http.HttpResponse;
@@ -15,15 +21,11 @@ import io.kestra.core.http.client.configurations.HttpConfiguration;
 import io.kestra.core.models.property.Property;
 import io.kestra.core.runners.RunContext;
 import io.kestra.plugin.azure.AbstractAzureIdentityConnection;
+
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotNull;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
-
-import java.io.IOException;
-import java.net.URI;
-import java.util.Collections;
-import java.util.Map;
 
 @SuperBuilder
 @ToString
@@ -41,7 +43,8 @@ public abstract class AbstractMonitoringTask extends AbstractAzureIdentityConnec
     protected MetricsClient queryClient(RunContext runContext) throws IllegalVariableEvaluationException {
         TokenCredential baseCredential = this.credentials(runContext);
 
-        TokenCredential scopedCredential = requestContext -> {
+        TokenCredential scopedCredential = requestContext ->
+        {
             requestContext.setScopes(Collections.singletonList("https://metrics.monitor.azure.com/.default"));
             return baseCredential.getToken(requestContext);
         };

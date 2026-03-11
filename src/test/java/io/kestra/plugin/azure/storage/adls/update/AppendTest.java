@@ -1,17 +1,19 @@
 package io.kestra.plugin.azure.storage.adls.update;
 
+import java.io.FileInputStream;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+
+import org.junit.jupiter.api.Test;
+
 import com.google.common.io.CharStreams;
+
 import io.kestra.core.models.property.Property;
 import io.kestra.core.tenant.TenantService;
 import io.kestra.core.utils.IdUtils;
 import io.kestra.plugin.azure.storage.adls.AbstractTest;
 import io.kestra.plugin.azure.storage.adls.Read;
 import io.kestra.plugin.azure.storage.adls.Upload;
-import org.junit.jupiter.api.Test;
-
-import java.io.FileInputStream;
-import java.io.InputStream;
-import java.io.InputStreamReader;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;

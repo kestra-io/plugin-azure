@@ -39,7 +39,8 @@ public class StringSerde implements Serde {
      **/
     @Override
     public byte[] serialize(Object data) {
-        if (data == null) return null;
+        if (data == null)
+            return null;
         return data.toString().getBytes(encoding);
     }
 
@@ -48,7 +49,8 @@ public class StringSerde implements Serde {
      **/
     @Override
     public String deserialize(byte[] data) {
-        if (data == null) return null;
+        if (data == null)
+            return null;
         return new String(data, encoding);
     }
 }

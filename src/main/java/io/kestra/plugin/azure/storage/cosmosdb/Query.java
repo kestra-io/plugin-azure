@@ -1,7 +1,12 @@
 package io.kestra.plugin.azure.storage.cosmosdb;
 
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+
 import com.azure.cosmos.CosmosAsyncContainer;
 import com.azure.cosmos.models.*;
+
 import io.kestra.core.exceptions.IllegalVariableEvaluationException;
 import io.kestra.core.models.annotations.Example;
 import io.kestra.core.models.annotations.Metric;
@@ -10,15 +15,11 @@ import io.kestra.core.models.executions.metrics.Counter;
 import io.kestra.core.models.property.Property;
 import io.kestra.core.models.tasks.RunnableTask;
 import io.kestra.core.runners.RunContext;
+
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotNull;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
-
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-
 
 @SuperBuilder
 @ToString
@@ -141,7 +142,8 @@ public class Query extends AbstractCosmosContainerTask<Query.Output> implements 
             );
         }
 
-        rPartitionKeyDefinition.ifPresent(partitionKeyDefinition -> {
+        rPartitionKeyDefinition.ifPresent(partitionKeyDefinition ->
+        {
             if (!rPartitionKey.isEmpty()) {
                 options.setPartitionKey(
                     PartitionKey.fromItem(rPartitionKey, partitionKeyDefinition.toAzurePartitionKeyDefinition())
@@ -149,9 +151,11 @@ public class Query extends AbstractCosmosContainerTask<Query.Output> implements 
             }
 
             if (!rFeedRangePartitionKey.isEmpty()) {
-                options.setFeedRange(FeedRange.forLogicalPartition(
-                    PartitionKey.fromItem(rFeedRangePartitionKey, partitionKeyDefinition.toAzurePartitionKeyDefinition())
-                ));
+                options.setFeedRange(
+                    FeedRange.forLogicalPartition(
+                        PartitionKey.fromItem(rFeedRangePartitionKey, partitionKeyDefinition.toAzurePartitionKeyDefinition())
+                    )
+                );
             }
 
         });
@@ -165,6 +169,6 @@ public class Query extends AbstractCosmosContainerTask<Query.Output> implements 
     }
 
     public record Output(
-        List<Map> queryResults
-    ) implements io.kestra.core.models.tasks.Output {}
+        List<Map> queryResults) implements io.kestra.core.models.tasks.Output {
+    }
 }

@@ -1,21 +1,24 @@
 package io.kestra.plugin.azure.eventhubs;
 
+import java.time.Duration;
+import java.util.List;
+import java.util.Map;
+
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
+
 import com.google.common.collect.ImmutableMap;
+
+import io.kestra.core.junit.annotations.KestraTest;
 import io.kestra.core.models.property.Property;
 import io.kestra.core.runners.RunContext;
 import io.kestra.core.runners.RunContextFactory;
 import io.kestra.core.utils.TestsUtils;
 import io.kestra.plugin.azure.eventhubs.serdes.Serdes;
-import io.micronaut.context.annotation.Value;
-import io.kestra.core.junit.annotations.KestraTest;
-import jakarta.inject.Inject;
-import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.Disabled;
-import org.junit.jupiter.api.Test;
 
-import java.time.Duration;
-import java.util.List;
-import java.util.Map;
+import io.micronaut.context.annotation.Value;
+import jakarta.inject.Inject;
 
 @KestraTest
 class ConsumeTest {
@@ -45,11 +48,14 @@ class ConsumeTest {
             .bodyDeserializer(Property.ofValue(Serdes.STRING))
             .eventHubName(Property.ofValue(eventHubName))
             .connectionString(Property.ofValue(connectionString))
-            .checkpointStoreProperties(Property.ofValue(Map.of(
-                    "connectionString", checkPointStoreConnectionString,
-                    "containerName", checkPointStoreContainerName
+            .checkpointStoreProperties(
+                Property.ofValue(
+                    Map.of(
+                        "connectionString", checkPointStoreConnectionString,
+                        "containerName", checkPointStoreContainerName
+                    )
                 )
-            ))
+            )
             .consumerGroup(Property.ofValue("$Default"))
             .maxBatchSizePerPartition(Property.ofValue(10))
             .maxWaitTimePerPartition(Property.ofValue(Duration.ofSeconds(5)))
@@ -71,14 +77,16 @@ class ConsumeTest {
             .bodySerializer(Property.ofValue(Serdes.STRING))
             .eventHubName(Property.ofValue(eventHubName))
             .connectionString(Property.ofValue(connectionString))
-            .from(List.of(
-                ImmutableMap.builder()
-                    .put("body", "event-1")
-                    .build(),
-                ImmutableMap.builder()
-                    .put("body", "event-2")
-                    .build()
-            ))
+            .from(
+                List.of(
+                    ImmutableMap.builder()
+                        .put("body", "event-1")
+                        .build(),
+                    ImmutableMap.builder()
+                        .put("body", "event-2")
+                        .build()
+                )
+            )
             .build();
         task.run(TestsUtils.mockRunContext(runContextFactory, task, ImmutableMap.of()));
     }

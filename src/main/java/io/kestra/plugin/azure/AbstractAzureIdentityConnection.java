@@ -1,19 +1,22 @@
 package io.kestra.plugin.azure;
 
+import java.io.ByteArrayInputStream;
+import java.nio.charset.StandardCharsets;
+
+import org.apache.commons.lang3.StringUtils;
+
 import com.azure.core.credential.TokenCredential;
 import com.azure.identity.*;
+
 import io.kestra.core.exceptions.IllegalVariableEvaluationException;
 import io.kestra.core.models.property.Property;
 import io.kestra.core.models.tasks.Task;
 import io.kestra.core.runners.RunContext;
+
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotNull;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
-import org.apache.commons.lang3.StringUtils;
-
-import java.io.ByteArrayInputStream;
-import java.nio.charset.StandardCharsets;
 
 /**
  * This class enables the creation of Azure credentials from different sources.
@@ -52,14 +55,14 @@ public abstract class AbstractAzureIdentityConnection extends Task implements Az
 
         //Create client/secret credentials
         final String clientSecret = runContext.render(this.clientSecret).as(String.class).orElse(null);
-        if(StringUtils.isNotBlank(clientSecret)) {
+        if (StringUtils.isNotBlank(clientSecret)) {
             runContext.logger().info("Authentication is using Client Secret Credentials");
             return getClientSecretCredential(tenantId, clientId, clientSecret);
         }
 
         //Create client/certificate credentials
         final String pemCertificate = runContext.render(this.pemCertificate).as(String.class).orElse(null);
-        if(StringUtils.isNotBlank(pemCertificate)) {
+        if (StringUtils.isNotBlank(pemCertificate)) {
             runContext.logger().info("Authentication is using Client Certificate Credentials");
             return getClientCertificateCredential(tenantId, clientId, pemCertificate);
         }
@@ -71,17 +74,17 @@ public abstract class AbstractAzureIdentityConnection extends Task implements Az
 
     private ClientCertificateCredential getClientCertificateCredential(String tenantId, String clientId, String pemCertificate) {
         return new ClientCertificateCredentialBuilder()
-                .clientId(clientId)
-                .tenantId(tenantId)
-                .pemCertificate(new ByteArrayInputStream(StandardCharsets.UTF_8.encode(pemCertificate).array()))
-                .build();
+            .clientId(clientId)
+            .tenantId(tenantId)
+            .pemCertificate(new ByteArrayInputStream(StandardCharsets.UTF_8.encode(pemCertificate).array()))
+            .build();
     }
 
     private ClientSecretCredential getClientSecretCredential(String tenantId, String clientId, String clientSecret) {
         return new ClientSecretCredentialBuilder()
-                .clientId(clientId)
-                .tenantId(tenantId)
-                .clientSecret(clientSecret)
-                .build();
+            .clientId(clientId)
+            .tenantId(tenantId)
+            .clientSecret(clientSecret)
+            .build();
     }
 }

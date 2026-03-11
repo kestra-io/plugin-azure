@@ -1,7 +1,12 @@
 package io.kestra.plugin.azure.storage.blob;
 
+import java.net.URI;
+
+import org.apache.commons.lang3.tuple.Pair;
+
 import com.azure.storage.blob.BlobClient;
 import com.azure.storage.blob.models.BlobProperties;
+
 import io.kestra.core.models.annotations.Example;
 import io.kestra.core.models.annotations.Plugin;
 import io.kestra.core.models.tasks.RunnableTask;
@@ -9,15 +14,13 @@ import io.kestra.core.runners.RunContext;
 import io.kestra.plugin.azure.storage.blob.abstracts.AbstractBlobStorageWithSasObject;
 import io.kestra.plugin.azure.storage.blob.models.Blob;
 import io.kestra.plugin.azure.storage.blob.services.BlobService;
+
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.ToString;
 import lombok.experimental.SuperBuilder;
-import org.apache.commons.lang3.tuple.Pair;
-
-import java.net.URI;
 
 @SuperBuilder
 @ToString
@@ -55,8 +58,9 @@ public class Download extends AbstractBlobStorageWithSasObject implements Runnab
 
         return Output
             .builder()
-            .blob(Blob.of(blobClient, download.getLeft())
-                .withUri(download.getRight())
+            .blob(
+                Blob.of(blobClient, download.getLeft())
+                    .withUri(download.getRight())
             )
             .build();
     }

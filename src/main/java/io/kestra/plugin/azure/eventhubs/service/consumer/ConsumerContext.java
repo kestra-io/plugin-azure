@@ -1,10 +1,10 @@
 package io.kestra.plugin.azure.eventhubs.service.consumer;
+
+import java.time.Duration;
+
 import org.slf4j.Logger;
 
 import io.kestra.plugin.azure.eventhubs.service.EventDataObjectConverter;
-
-
-import java.time.Duration;
 
 /**
  * Context for consuming events from Azure Event Hubs.
@@ -16,8 +16,8 @@ import java.time.Duration;
  * @param logger
  */
 public record ConsumerContext(int maxPollEvents,
-                              Duration maxBatchPartitionWait,
-                              Duration maxDuration,
-                              EventDataObjectConverter converter,
-                              Logger logger) {
+    Duration maxBatchPartitionWait,
+    Duration maxDuration,
+    EventDataObjectConverter converter,
+    Logger logger) {
 }

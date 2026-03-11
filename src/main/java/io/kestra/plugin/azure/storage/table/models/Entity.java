@@ -1,13 +1,14 @@
 package io.kestra.plugin.azure.storage.table.models;
 
-import com.azure.data.tables.models.TableEntity;
-import com.azure.data.tables.models.TableTransactionActionType;
-import lombok.Builder;
-import lombok.Getter;
-
 import java.time.OffsetDateTime;
 import java.util.Map;
 import java.util.stream.Collectors;
+
+import com.azure.data.tables.models.TableEntity;
+import com.azure.data.tables.models.TableTransactionActionType;
+
+import lombok.Builder;
+import lombok.Getter;
 
 @Getter
 @Builder
@@ -25,17 +26,19 @@ public class Entity {
             .rowKey(tableEntity.getRowKey())
             .timestamp(tableEntity.getTimestamp())
             .etag(tableEntity.getETag())
-            .properties(tableEntity
-                .getProperties()
-                .entrySet()
-                .stream()
-                .filter(e -> !e.getKey().startsWith("odata") &&
-                    !e.getKey().startsWith("Timestamp") &&
-                    !e.getKey().equals("PartitionKey") &&
-                    !e.getKey().equals("RowKey") &&
-                    !e.getKey().contains("@odata")
-                )
-                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue))
+            .properties(
+                tableEntity
+                    .getProperties()
+                    .entrySet()
+                    .stream()
+                    .filter(
+                        e -> !e.getKey().startsWith("odata") &&
+                            !e.getKey().startsWith("Timestamp") &&
+                            !e.getKey().equals("PartitionKey") &&
+                            !e.getKey().equals("RowKey") &&
+                            !e.getKey().contains("@odata")
+                    )
+                    .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue))
             )
             .build();
     }

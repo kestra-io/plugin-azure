@@ -1,14 +1,15 @@
 package io.kestra.plugin.azure.eventhubs.service;
 
-import com.azure.messaging.eventhubs.EventData;
-import io.kestra.plugin.azure.eventhubs.model.EventDataObject;
-import io.kestra.plugin.azure.eventhubs.serdes.Serde;
-
 import java.time.Instant;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
+
+import com.azure.messaging.eventhubs.EventData;
+
+import io.kestra.plugin.azure.eventhubs.model.EventDataObject;
+import io.kestra.plugin.azure.eventhubs.serdes.Serde;
 
 /**
  * Converts {@link EventData} into {@link EventDataObject} and vice versa.
@@ -38,7 +39,8 @@ public final class EventDataObjectConverter {
      * @return the new {@link EventData}, or {@code null} if the given data is null.
      */
     public EventData convertToEventData(final EventDataObject data) {
-        if (data == null) return null;
+        if (data == null)
+            return null;
 
         byte[] value = serde.serialize(data.body());
 
@@ -57,7 +59,8 @@ public final class EventDataObjectConverter {
      * @return the new {@link EventData}, or {@code null} if the given data is null.
      */
     public EventDataObject convertFromEventData(final EventData data) {
-        if (data == null) return null;
+        if (data == null)
+            return null;
 
         return new EventDataObject(
             data.getPartitionKey(),

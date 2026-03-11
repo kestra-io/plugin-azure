@@ -1,6 +1,19 @@
 package io.kestra.plugin.azure.batch.job;
 
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.net.URI;
+import java.nio.charset.StandardCharsets;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
+import org.slf4j.event.Level;
+
 import com.google.common.io.CharStreams;
+
 import io.kestra.core.models.executions.LogEntry;
 import io.kestra.core.models.property.Property;
 import io.kestra.core.queues.QueueFactoryInterface;
@@ -11,20 +24,10 @@ import io.kestra.core.utils.TestsUtils;
 import io.kestra.plugin.azure.batch.models.*;
 import io.kestra.plugin.azure.storage.blob.SharedAccess;
 import io.kestra.plugin.azure.storage.blob.Upload;
+
 import jakarta.inject.Inject;
 import jakarta.inject.Named;
-import org.junit.jupiter.api.Disabled;
-import org.junit.jupiter.api.Test;
-import org.slf4j.event.Level;
 import reactor.core.publisher.Flux;
-
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.net.URI;
-import java.nio.charset.StandardCharsets;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
@@ -76,9 +79,10 @@ class CreateTest extends AbstractTest {
             .account(Property.ofValue(this.account))
             .accessKey(Property.ofValue(this.accessKey))
             .poolId(Property.ofValue(this.poolId))
-            .job(Job.builder()
-                .id(IdUtils.create())
-                .build()
+            .job(
+                Job.builder()
+                    .id(IdUtils.create())
+                    .build()
             )
             .tasks(tasks)
             .build();
@@ -117,43 +121,61 @@ class CreateTest extends AbstractTest {
                     .build(),
                 Task.builder()
                     .id("vars")
-                    .resourceFiles(List.of(
-                        ResourceFile.builder()
-                            .filePath(Property.ofValue("files/in/in.txt"))
-                            .httpUrl(Property.ofValue(uploadToContainer(random).toString()))
-                            .build()
-                    ))
-                    .uploadFiles(List.of(
-                        OutputFile.builder()
-                            .filePattern(Property.ofValue("files/in/*"))
-                            .destination(OutputFileDestination.builder()
-                                .container(OutputFileBlobContainerDestination.builder()
-                                    .containerUrl(Property.ofValue(outputs.getUri().toString()))
-                                    .build()
+                    .resourceFiles(
+                        List.of(
+                            ResourceFile.builder()
+                                .filePath(Property.ofValue("files/in/in.txt"))
+                                .httpUrl(Property.ofValue(uploadToContainer(random).toString()))
+                                .build()
+                        )
+                    )
+                    .uploadFiles(
+                        List.of(
+                            OutputFile.builder()
+                                .filePattern(Property.ofValue("files/in/*"))
+                                .destination(
+                                    OutputFileDestination.builder()
+                                        .container(
+                                            OutputFileBlobContainerDestination.builder()
+                                                .containerUrl(Property.ofValue(outputs.getUri().toString()))
+                                                .build()
+                                        )
+                                        .build()
                                 )
                                 .build()
-                            )
-                            .build()
-                    ))
+                        )
+                    )
                     .interpreter(Property.ofValue("/bin/bash"))
                     .commands(Property.ofValue(List.of("echo '::{\"outputs\": {\"extract\":\"'$(cat files/in/in.txt)'\"}}::' | tee files/in/tee.txt")))
                     .containerSettings(TaskContainerSettings.builder().imageName(Property.ofValue("ubuntu")).build())
                     .build(),
                 Task.builder()
                     .id("output")
-                    .outputFiles(Property.ofValue(List.of(
-                        "outs/1.txt"
-                    )))
-                    .outputDirs(Property.ofValue(List.of(
-                        "outs/child"
-                    )))
+                    .outputFiles(
+                        Property.ofValue(
+                            List.of(
+                                "outs/1.txt"
+                            )
+                        )
+                    )
+                    .outputDirs(
+                        Property.ofValue(
+                            List.of(
+                                "outs/child"
+                            )
+                        )
+                    )
                     .interpreter(Property.ofValue("/bin/bash"))
-                    .commands(Property.ofValue(List.of(
-                        "mkdir -p outs/child/sub",
-                        "echo 1 > outs/1.txt",
-                        "echo 2 > outs/child/2.txt",
-                        "echo 3 > outs/child/sub/3.txt"
-                    )))
+                    .commands(
+                        Property.ofValue(
+                            List.of(
+                                "mkdir -p outs/child/sub",
+                                "echo 1 > outs/1.txt",
+                                "echo 2 > outs/child/2.txt",
+                                "echo 3 > outs/child/sub/3.txt"
+                            )
+                        )
+                    )
                     .containerSettings(TaskContainerSettings.builder().imageName(Property.ofValue("ubuntu")).build())
                     .build()
             ),
@@ -183,21 +205,23 @@ class CreateTest extends AbstractTest {
     void errors() throws Exception {
         Flux<LogEntry> receive = TestsUtils.receive(logQueue);
 
-        Exception exception = assertThrows(Exception.class, () -> create(
-            List.of(
-                Task.builder()
-                    .id("echo")
-                    .commands(Property.ofValue(List.of(("echo ok"))))
-                    .containerSettings(TaskContainerSettings.builder().imageName(Property.ofValue("ubuntu")).build())
-                    .build(),
-                Task.builder()
-                    .id("failed")
-                    .commands(Property.ofValue(List.of(("cat failed"))))
-                    .containerSettings(TaskContainerSettings.builder().imageName(Property.ofValue("ubuntu")).build())
-                    .build()
-            ),
-            Map.of()
-        ));
+        Exception exception = assertThrows(
+            Exception.class, () -> create(
+                List.of(
+                    Task.builder()
+                        .id("echo")
+                        .commands(Property.ofValue(List.of(("echo ok"))))
+                        .containerSettings(TaskContainerSettings.builder().imageName(Property.ofValue("ubuntu")).build())
+                        .build(),
+                    Task.builder()
+                        .id("failed")
+                        .commands(Property.ofValue(List.of(("cat failed"))))
+                        .containerSettings(TaskContainerSettings.builder().imageName(Property.ofValue("ubuntu")).build())
+                        .build()
+                ),
+                Map.of()
+            )
+        );
         Thread.sleep(100);
 
         assertThat(exception.getMessage(), containsString("1/2 task(s) failed"));

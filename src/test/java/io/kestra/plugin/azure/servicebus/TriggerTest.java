@@ -1,18 +1,19 @@
 package io.kestra.plugin.azure.servicebus;
 
+import java.time.Duration;
+import java.util.Map;
+import java.util.Optional;
+
+import org.assertj.core.api.AbstractThrowableAssert;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.parallel.ResourceLock;
+
 import io.kestra.core.exceptions.IllegalVariableEvaluationException;
 import io.kestra.core.models.conditions.ConditionContext;
 import io.kestra.core.models.executions.Execution;
 import io.kestra.core.models.property.Property;
 import io.kestra.core.utils.IdUtils;
 import io.kestra.core.utils.TestsUtils;
-import org.assertj.core.api.AbstractThrowableAssert;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.parallel.ResourceLock;
-
-import java.time.Duration;
-import java.util.Map;
-import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
@@ -22,9 +23,10 @@ class TriggerTest extends BaseServiceBusTest {
     @ResourceLock("service-bus-comsumer-lock")
     void shouldConsumePublishedTextMessage() throws Exception {
         //region GIVEN
-        String subscriptionName = publishToTopic(Message.builder()
-            .body("example_message_body")
-            .timeToLive(Duration.ofSeconds(10))
+        String subscriptionName = publishToTopic(
+            Message.builder()
+                .body("example_message_body")
+                .timeToLive(Duration.ofSeconds(10))
         );
         Trigger trigger = Trigger.builder()
             .id(TriggerTest.class.getSimpleName())
@@ -58,9 +60,10 @@ class TriggerTest extends BaseServiceBusTest {
     @ResourceLock("service-bus-comsumer-lock")
     void shouldConsumePublishedJsonMessage() throws Exception {
         //region GIVEN
-        String subscriptionName = publishToTopic(Message.builder()
-            .body("{\"message\":\"example_message_body\"}")
-            .timeToLive(Duration.ofSeconds(10))
+        String subscriptionName = publishToTopic(
+            Message.builder()
+                .body("{\"message\":\"example_message_body\"}")
+                .timeToLive(Duration.ofSeconds(10))
         );
 
         Trigger trigger = Trigger.builder()
@@ -137,7 +140,8 @@ class TriggerTest extends BaseServiceBusTest {
 
         //region WHEN
 
-        AbstractThrowableAssert<?, ?> throwableAssert = assertThatThrownBy(() -> trigger.evaluate(
+        AbstractThrowableAssert<?, ?> throwableAssert = assertThatThrownBy(
+            () -> trigger.evaluate(
                 context.getKey(),
                 context.getValue()
             )
@@ -164,7 +168,8 @@ class TriggerTest extends BaseServiceBusTest {
         //endregion
 
         //region WHEN
-        AbstractThrowableAssert<?, ?> throwableAssert = assertThatThrownBy(() -> trigger.evaluate(
+        AbstractThrowableAssert<?, ?> throwableAssert = assertThatThrownBy(
+            () -> trigger.evaluate(
                 context.getKey(),
                 context.getValue()
             )

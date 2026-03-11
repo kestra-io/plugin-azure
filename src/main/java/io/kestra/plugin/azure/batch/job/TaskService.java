@@ -1,14 +1,5 @@
 package io.kestra.plugin.azure.batch.job;
 
-import com.microsoft.azure.batch.BatchClient;
-import com.microsoft.azure.batch.DetailLevel;
-import com.microsoft.azure.batch.protocol.models.BatchErrorException;
-import com.microsoft.azure.batch.protocol.models.CloudTask;
-import com.microsoft.azure.batch.protocol.models.TaskState;
-import io.kestra.core.runners.RunContext;
-import org.apache.commons.io.FileUtils;
-import org.apache.commons.io.IOUtils;
-
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -22,6 +13,18 @@ import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.function.Consumer;
+
+import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.IOUtils;
+
+import com.microsoft.azure.batch.BatchClient;
+import com.microsoft.azure.batch.DetailLevel;
+import com.microsoft.azure.batch.protocol.models.BatchErrorException;
+import com.microsoft.azure.batch.protocol.models.CloudTask;
+import com.microsoft.azure.batch.protocol.models.TaskState;
+
+import io.kestra.core.runners.RunContext;
+
 import jakarta.annotation.Nullable;
 
 public class TaskService {
@@ -30,8 +33,7 @@ public class TaskService {
         BatchClient client,
         String jobId,
         @Nullable Duration timeout,
-        Duration completionCheckInterval
-    ) throws BatchErrorException, IOException, InterruptedException, TimeoutException {
+        Duration completionCheckInterval) throws BatchErrorException, IOException, InterruptedException, TimeoutException {
         long startTime = System.currentTimeMillis();
         long elapsedTime = 0L;
         ArrayList<String> ended = new ArrayList<>();
@@ -80,8 +82,7 @@ public class TaskService {
         String jobId,
         CloudTask task,
         String remoteFileName,
-        Boolean copy
-    ) throws IOException {
+        Boolean copy) throws IOException {
         return readRemoteFile(runContext, client, jobId, task, remoteFileName, null, copy);
     }
 
@@ -92,8 +93,7 @@ public class TaskService {
         CloudTask task,
         String remoteFileName,
         String localFileName,
-        Boolean copy
-    ) throws IOException {
+        Boolean copy) throws IOException {
         File file = localFileName == null
             ? runContext.workingDir().createTempFile().toFile()
             : runContext.workingDir().resolve(Path.of(localFileName)).toFile();
@@ -116,8 +116,7 @@ public class TaskService {
         String jobId,
         CloudTask task,
         String fileName,
-        Consumer<String> consumer
-    ) throws IOException {
+        Consumer<String> consumer) throws IOException {
         File file = TaskService.readRemoteFile(runContext, client, jobId, task, fileName, false);
 
         IOUtils.lineIterator(new FileInputStream(file), StandardCharsets.UTF_8)

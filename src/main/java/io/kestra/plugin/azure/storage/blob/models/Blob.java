@@ -1,14 +1,15 @@
 package io.kestra.plugin.azure.storage.blob.models;
 
+import java.net.URI;
+import java.time.OffsetDateTime;
+
 import com.azure.storage.blob.BlobClient;
 import com.azure.storage.blob.models.BlobItem;
 import com.azure.storage.blob.models.BlobProperties;
+
 import lombok.Builder;
 import lombok.Value;
 import lombok.With;
-
-import java.net.URI;
-import java.time.OffsetDateTime;
 
 @Builder
 @Value

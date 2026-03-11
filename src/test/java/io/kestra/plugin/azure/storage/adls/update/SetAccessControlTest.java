@@ -1,11 +1,11 @@
 package io.kestra.plugin.azure.storage.adls.update;
 
+import org.junit.jupiter.api.Test;
 
 import io.kestra.core.models.property.Property;
 import io.kestra.core.utils.IdUtils;
 import io.kestra.plugin.azure.storage.adls.AbstractTest;
 import io.kestra.plugin.azure.storage.adls.Upload;
-import org.junit.jupiter.api.Test;
 
 class SetAccessControlTest extends AbstractTest {
     @Test
@@ -22,14 +22,16 @@ class SetAccessControlTest extends AbstractTest {
             .connectionString(Property.ofValue(connectionString))
             .fileSystem(Property.ofValue(this.fileSystem))
             .filePath(Property.ofValue(upload.getFile().getName()))
-            .groupPermissions(SetAccessControl.Permission.builder()
-                .readPermission(Property.ofValue(true))
-                .build()
+            .groupPermissions(
+                SetAccessControl.Permission.builder()
+                    .readPermission(Property.ofValue(true))
+                    .build()
             )
-            .ownerPermissions(SetAccessControl.Permission.builder()
-                .readPermission(Property.ofValue(true))
-                .writePermission(Property.ofValue(true))
-                .build()
+            .ownerPermissions(
+                SetAccessControl.Permission.builder()
+                    .readPermission(Property.ofValue(true))
+                    .writePermission(Property.ofValue(true))
+                    .build()
             )
             .otherPermissions(null)
             .build();

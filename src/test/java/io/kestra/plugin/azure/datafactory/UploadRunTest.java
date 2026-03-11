@@ -1,5 +1,17 @@
 package io.kestra.plugin.azure.datafactory;
 
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
+import java.time.Duration;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
+
 import io.kestra.core.junit.annotations.KestraTest;
 import io.kestra.core.models.property.Property;
 import io.kestra.core.runners.RunContext;
@@ -7,19 +19,9 @@ import io.kestra.core.runners.RunContextFactory;
 import io.kestra.core.serializers.FileSerde;
 import io.kestra.core.storages.StorageInterface;
 import io.kestra.core.tenant.TenantService;
+
 import io.micronaut.context.annotation.Value;
 import jakarta.inject.Inject;
-import org.junit.jupiter.api.Disabled;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.ValueSource;
-
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
-import java.time.Duration;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.notNullValue;
@@ -40,10 +42,9 @@ class UploadRunTest {
     @Value("${kestra.variables.globals.azure.datafactory.subscriptionId}")
     protected String subscriptionId;
 
-
     @Disabled
     @ParameterizedTest
-    @ValueSource(booleans = {true, false})
+    @ValueSource(booleans = { true, false })
     void testRunPipeline(boolean useCustomDuration) throws Exception {
         final var tenantId = Property.ofValue(this.tenantId);
         final var subscriptionId = Property.ofValue(this.subscriptionId);
@@ -61,10 +62,12 @@ class UploadRunTest {
             .pipelineName(pipelineName);
 
         if (useCustomDuration) {
-            createRunBuilder.checkFrequency(CreateRun.CheckFrequency.builder()
-                .maxDuration(Property.ofValue(Duration.ofMinutes(1)))
-                .interval(Property.ofValue(Duration.ofSeconds(30)))
-                .build());
+            createRunBuilder.checkFrequency(
+                CreateRun.CheckFrequency.builder()
+                    .maxDuration(Property.ofValue(Duration.ofMinutes(1)))
+                    .interval(Property.ofValue(Duration.ofSeconds(30)))
+                    .build()
+            );
         }
 
         CreateRun createRun = createRunBuilder.build();
@@ -87,7 +90,6 @@ class UploadRunTest {
         assertThat(outputActivity.get("id"), is(1));
     }
 
-
     @Disabled
     @Test
     void testRunPipelineWithParameter() throws Exception {
@@ -101,13 +103,13 @@ class UploadRunTest {
         RunContext runContext = runContextFactory.of();
 
         CreateRun createRun = CreateRun.builder()
-                .tenantId(tenantId)
-                .subscriptionId(subscriptionId)
-                .factoryName(factoryName)
-                .resourceGroupName(resourceGroupName)
-                .pipelineName(pipelineName)
-                .parameters(parameters)
-                .build();
+            .tenantId(tenantId)
+            .subscriptionId(subscriptionId)
+            .factoryName(factoryName)
+            .resourceGroupName(resourceGroupName)
+            .pipelineName(pipelineName)
+            .parameters(parameters)
+            .build();
 
         CreateRun.Output output = createRun.run(runContext);
 
@@ -139,13 +141,13 @@ class UploadRunTest {
         RunContext runContext = runContextFactory.of();
 
         CreateRun createRun = CreateRun.builder()
-                .tenantId(tenantId)
-                .subscriptionId(subscriptionId)
-                .factoryName(factoryName)
-                .resourceGroupName(resourceGroupName)
-                .wait(Property.ofValue(Boolean.FALSE))
-                .pipelineName(pipelineName)
-                .build();
+            .tenantId(tenantId)
+            .subscriptionId(subscriptionId)
+            .factoryName(factoryName)
+            .resourceGroupName(resourceGroupName)
+            .wait(Property.ofValue(Boolean.FALSE))
+            .pipelineName(pipelineName)
+            .build();
 
         CreateRun.Output output = createRun.run(runContext);
 

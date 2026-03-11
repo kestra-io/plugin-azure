@@ -1,6 +1,6 @@
 @PluginSubGroup(
-        description = "Tasks for Azure Synapse Analytics.",
-        categories = { PluginSubGroup.PluginCategory.CLOUD }
+    description = "Tasks for Azure Synapse Analytics.",
+    categories = { PluginSubGroup.PluginCategory.CLOUD }
 )
 package io.kestra.plugin.azure.synapse;
 

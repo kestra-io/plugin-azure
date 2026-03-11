@@ -1,8 +1,18 @@
 package io.kestra.plugin.azure.eventhubs;
 
+import java.time.Duration;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.atomic.AtomicBoolean;
+
+import org.reactivestreams.Publisher;
+import org.slf4j.Logger;
+
 import com.azure.messaging.eventhubs.EventData;
 import com.azure.messaging.eventhubs.EventProcessorClient;
 import com.azure.messaging.eventhubs.models.PartitionContext;
+
 import io.kestra.core.models.annotations.Example;
 import io.kestra.core.models.annotations.Plugin;
 import io.kestra.core.models.conditions.ConditionContext;
@@ -16,86 +26,81 @@ import io.kestra.plugin.azure.eventhubs.serdes.Serdes;
 import io.kestra.plugin.azure.eventhubs.service.EventDataObjectConverter;
 import io.kestra.plugin.azure.eventhubs.service.consumer.EventHubConsumerService;
 import io.kestra.plugin.azure.eventhubs.service.consumer.StartingPosition;
+
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
-import org.reactivestreams.Publisher;
-import org.slf4j.Logger;
 import reactor.core.publisher.Flux;
-
-import java.time.Duration;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * The {@link RealtimeTrigger} can be used for triggering flow based on events received from Azure Event Hubs.
  */
-@Plugin(examples = {
-    @Example(
-        full = true,
-        title = "Trigger flow based on events received from Azure Event Hubs in real-time.",
-        code = """
-            id: azure_eventhubs_realtime_trigger
-            namespace: company.team
+@Plugin(
+    examples = {
+        @Example(
+            full = true,
+            title = "Trigger flow based on events received from Azure Event Hubs in real-time.",
+            code = """
+                id: azure_eventhubs_realtime_trigger
+                namespace: company.team
 
-            tasks:
-              - id: log
-                type: io.kestra.plugin.core.log.Log
-                message: Hello there! I received {{ trigger.body }} from Azure EventHubs!
+                tasks:
+                  - id: log
+                    type: io.kestra.plugin.core.log.Log
+                    message: Hello there! I received {{ trigger.body }} from Azure EventHubs!
 
-            triggers:
-              - id: read_from_eventhub
-                type: io.kestra.plugin.azure.eventhubs.RealtimeTrigger
-                eventHubName: my_eventhub
-                namespace: my_eventhub_namespace
-                connectionString: "{{ secret('EVENTHUBS_CONNECTION') }}"
-                bodyDeserializer: JSON
-                consumerGroup: "$Default"
-                checkpointStoreProperties:
-                  containerName: kestra
-                  connectionString: "{{ secret('BLOB_CONNECTION') }}"
-            """
-    ),
-    @Example(
-        full = true,
-        title = "Use the Azure Event Hubs Realtime Trigger to push events into Azure Table Storage",
-        code = """
-            id: eventhubs_realtime_trigger
-            namespace: company.team
+                triggers:
+                  - id: read_from_eventhub
+                    type: io.kestra.plugin.azure.eventhubs.RealtimeTrigger
+                    eventHubName: my_eventhub
+                    namespace: my_eventhub_namespace
+                    connectionString: "{{ secret('EVENTHUBS_CONNECTION') }}"
+                    bodyDeserializer: JSON
+                    consumerGroup: "$Default"
+                    checkpointStoreProperties:
+                      containerName: kestra
+                      connectionString: "{{ secret('BLOB_CONNECTION') }}"
+                """
+        ),
+        @Example(
+            full = true,
+            title = "Use the Azure Event Hubs Realtime Trigger to push events into Azure Table Storage",
+            code = """
+                    id: eventhubs_realtime_trigger
+                    namespace: company.team
 
-            tasks:
-              - id: insert_into_storagetable
-                type: io.kestra.plugin.azure.storage.table.Bulk
-                endpoint: https://yourstorageaccount.blob.core.windows.net
-                connectionString: "{{ secret('STORAGETABLE_CONNECTION') }}"
-                table: orders
-                from:
-                  - partitionKey: order_id
-                    rowKey: "{{ trigger.body | jq('.order_id') | first }}"
-                    properties:
-                      customer_name: "{{ trigger.body | jq('.customer_name') | first }}"
-                      customer_email: "{{ trigger.body | jq('.customer_email') | first }}"
-                      product_id: "{{ trigger.body | jq('.product_id') | first }}"
-                      price: "{{ trigger.body | jq('.price') | first }}"
-                      quantity: "{{ trigger.body | jq('.quantity') | first }}"
-                      total: "{{ trigger.body | jq('.total') | first }}"
+                    tasks:
+                      - id: insert_into_storagetable
+                        type: io.kestra.plugin.azure.storage.table.Bulk
+                        endpoint: https://yourstorageaccount.blob.core.windows.net
+                        connectionString: "{{ secret('STORAGETABLE_CONNECTION') }}"
+                        table: orders
+                        from:
+                          - partitionKey: order_id
+                            rowKey: "{{ trigger.body | jq('.order_id') | first }}"
+                            properties:
+                              customer_name: "{{ trigger.body | jq('.customer_name') | first }}"
+                              customer_email: "{{ trigger.body | jq('.customer_email') | first }}"
+                              product_id: "{{ trigger.body | jq('.product_id') | first }}"
+                              price: "{{ trigger.body | jq('.price') | first }}"
+                              quantity: "{{ trigger.body | jq('.quantity') | first }}"
+                              total: "{{ trigger.body | jq('.total') | first }}"
 
-            triggers:
-              - id: realtime_trigger
-                type: io.kestra.plugin.azure.eventhubs.RealtimeTrigger
-                eventHubName: orders
-                namespace: kestra
-                connectionString: "{{ secret('EVENTHUBS_CONNECTION') }}"
-                bodyDeserializer: JSON
-                consumerGroup: $Default
-                checkpointStoreProperties:
-                  containerName: kestra
-                  connectionString: "{{ secret('BLOB_CONNECTION') }}"
-        """
-    )
-})
+                    triggers:
+                      - id: realtime_trigger
+                        type: io.kestra.plugin.azure.eventhubs.RealtimeTrigger
+                        eventHubName: orders
+                        namespace: kestra
+                        connectionString: "{{ secret('EVENTHUBS_CONNECTION') }}"
+                        bodyDeserializer: JSON
+                        consumerGroup: $Default
+                        checkpointStoreProperties:
+                          containerName: kestra
+                          connectionString: "{{ secret('BLOB_CONNECTION') }}"
+                """
+        )
+    }
+)
 @Schema(
     title = "Trigger flows from Azure Event Hubs in real time",
     description = "Starts an EventProcessorClient that emits one execution per event and checkpoints to Blob Storage. Defaults: consumerGroup=$Default, partitionStartingPosition=EARLIEST. Requires checkpointStoreProperties.connectionString and .containerName. Use Trigger for batch polling."
@@ -188,66 +193,72 @@ public class RealtimeTrigger extends AbstractTrigger implements EventHubConsumer
     }
 
     public Publisher<EventDataOutput> publisher(final Consume task,
-                                                final RunContext runContext) throws Exception {
+        final RunContext runContext) throws Exception {
 
         final EventHubConsumerService service = task.newEventHubConsumerService(runContext, task);
         final EventDataObjectConverter converter = task.newConverter(task, runContext);
 
-        return Flux.create(emitter -> {
-                Logger contextLogger = runContext.logger();
-                try {
-                    EventProcessorClient client = service.createEventProcessorClientBuilder(contextLogger)
-                        .processEvent(eventContext -> {
-                            if (!isActive.get()) {
-                                return; // return immediately if the trigger is not active (checkpoint will not be updated)
-                            }
+        return Flux.create(emitter ->
+        {
+            Logger contextLogger = runContext.logger();
+            try {
+                EventProcessorClient client = service.createEventProcessorClientBuilder(contextLogger)
+                    .processEvent(eventContext ->
+                    {
+                        if (!isActive.get()) {
+                            return; // return immediately if the trigger is not active (checkpoint will not be updated)
+                        }
 
-                            final EventData eventData = eventContext.getEventData();
-                            if (eventData == null) return;
+                        final EventData eventData = eventContext.getEventData();
+                        if (eventData == null)
+                            return;
 
-                            final EventDataObject dataObject = converter.convertFromEventData(eventData);
+                        final EventDataObject dataObject = converter.convertFromEventData(eventData);
 
-                            PartitionContext partitionContext = eventContext.getPartitionContext();
-                            if (contextLogger.isTraceEnabled()) {
-                                contextLogger.trace(
-                                    "Received new event from eventHub {} and partitionId={} [offset={}, sequenceId={}]",
-                                    partitionContext.getEventHubName(),
-                                    partitionContext.getPartitionId(),
-                                    dataObject.offset(),
-                                    dataObject.sequenceNumber()
-                                );
-                            }
-                            emitter.next(EventDataOutput.of(dataObject));
-                            eventContext.updateCheckpoint();
-
-                        }, Duration.ofMillis(500))
-                        .processError(context -> {
-                            PartitionContext partitionContext = context.getPartitionContext();
-                            contextLogger.error("Failed to process eventHub: {}, partitionId: {} with consumerGroup: {}",
+                        PartitionContext partitionContext = eventContext.getPartitionContext();
+                        if (contextLogger.isTraceEnabled()) {
+                            contextLogger.trace(
+                                "Received new event from eventHub {} and partitionId={} [offset={}, sequenceId={}]",
                                 partitionContext.getEventHubName(),
                                 partitionContext.getPartitionId(),
-                                partitionContext.getConsumerGroup(),
-                                context.getThrowable()
+                                dataObject.offset(),
+                                dataObject.sequenceNumber()
                             );
-                            emitter.error(context.getThrowable());
-                        })
-                        .buildEventProcessorClient();
-
-                    // handle dispose - invoked after complete/error.
-                    emitter.onDispose(() -> {
-                        try {
-                            client.stop(); // cannot be invoked from EventProcessorClient thread.
-                        } finally {
-                            waitForTermination.countDown();
                         }
-                    });
-                    client.start();
-                    busyWait();
-                    emitter.complete();
-                } catch (Exception throwable) {
-                    emitter.error(throwable);
-                }
-            });
+                        emitter.next(EventDataOutput.of(dataObject));
+                        eventContext.updateCheckpoint();
+
+                    }, Duration.ofMillis(500))
+                    .processError(context ->
+                    {
+                        PartitionContext partitionContext = context.getPartitionContext();
+                        contextLogger.error(
+                            "Failed to process eventHub: {}, partitionId: {} with consumerGroup: {}",
+                            partitionContext.getEventHubName(),
+                            partitionContext.getPartitionId(),
+                            partitionContext.getConsumerGroup(),
+                            context.getThrowable()
+                        );
+                        emitter.error(context.getThrowable());
+                    })
+                    .buildEventProcessorClient();
+
+                // handle dispose - invoked after complete/error.
+                emitter.onDispose(() ->
+                {
+                    try {
+                        client.stop(); // cannot be invoked from EventProcessorClient thread.
+                    } finally {
+                        waitForTermination.countDown();
+                    }
+                });
+                client.start();
+                busyWait();
+                emitter.complete();
+            } catch (Exception throwable) {
+                emitter.error(throwable);
+            }
+        });
     }
 
     private void busyWait() {

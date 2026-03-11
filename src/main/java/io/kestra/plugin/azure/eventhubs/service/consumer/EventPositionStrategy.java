@@ -1,12 +1,13 @@
 package io.kestra.plugin.azure.eventhubs.service.consumer;
 
-import com.azure.messaging.eventhubs.models.EventPosition;
-
-import jakarta.validation.constraints.NotNull;
 import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
+
+import com.azure.messaging.eventhubs.models.EventPosition;
+
+import jakarta.validation.constraints.NotNull;
 
 /**
  * Strategies to initialize an Event Hub consumer if no offsets are stored.
@@ -24,7 +25,7 @@ public interface EventPositionStrategy {
 
         /**
          * @return an {@link EventPosition} that corresponds to the location of
-         * the first event present in the partition.
+         *         the first event present in the partition.
          */
         @Override
         public EventPosition get() {
@@ -41,7 +42,7 @@ public interface EventPositionStrategy {
 
         /**
          * @return an {@link EventPosition} that corresponds to the end of the partition,
-         * where no more events are currently enqueued.
+         *         where no more events are currently enqueued.
          */
         @Override
         public EventPosition get() {

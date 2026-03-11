@@ -1,12 +1,13 @@
 package io.kestra.plugin.azure.servicebus;
 
-import io.kestra.core.exceptions.IllegalVariableEvaluationException;
-import io.kestra.core.models.property.Property;
+import java.util.List;
+
 import org.assertj.core.api.AbstractThrowableAssert;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.parallel.ResourceLock;
 
-import java.util.List;
+import io.kestra.core.exceptions.IllegalVariableEvaluationException;
+import io.kestra.core.models.property.Property;
 
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
@@ -104,8 +105,10 @@ class PublishTest extends BaseServiceBusTest {
         //endregion
 
         //region WHEN
-        AbstractThrowableAssert<?, ?> throwableAssert = assertThatThrownBy(() -> publish.run(
-            runContextFactory.of())
+        AbstractThrowableAssert<?, ?> throwableAssert = assertThatThrownBy(
+            () -> publish.run(
+                runContextFactory.of()
+            )
         );
         //endregion
 
@@ -125,8 +128,10 @@ class PublishTest extends BaseServiceBusTest {
         //endregion
 
         //region WHEN
-        AbstractThrowableAssert<?, ?> throwableAssert = assertThatThrownBy(() -> publish.run(
-            runContextFactory.of())
+        AbstractThrowableAssert<?, ?> throwableAssert = assertThatThrownBy(
+            () -> publish.run(
+                runContextFactory.of()
+            )
         );
         //endregion
 

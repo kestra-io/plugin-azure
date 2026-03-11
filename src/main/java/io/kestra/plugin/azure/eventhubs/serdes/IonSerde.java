@@ -1,11 +1,12 @@
 package io.kestra.plugin.azure.eventhubs.serdes;
 
+import java.io.IOException;
+
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import io.kestra.core.serializers.JacksonMapper;
 
-import java.io.IOException;
+import io.kestra.core.serializers.JacksonMapper;
 
 /**
  * A {@link Serde} for serializing/deserializing objects from and to Amazon Ion format.
@@ -26,7 +27,8 @@ public class IonSerde implements Serde {
      **/
     @Override
     public byte[] serialize(Object data) {
-        if (data == null) return null;
+        if (data == null)
+            return null;
         try {
             return OBJECT_MAPPER.writeValueAsBytes(data);
         } catch (JsonProcessingException e) {
@@ -39,7 +41,8 @@ public class IonSerde implements Serde {
      **/
     @Override
     public Object deserialize(byte[] data) {
-        if (data == null) return null;
+        if (data == null)
+            return null;
         try {
             return OBJECT_MAPPER.readTree(data);
         } catch (IOException e) {

@@ -1,13 +1,14 @@
 package io.kestra.plugin.azure.storage.adls;
-import org.slf4j.Logger;
 
 import com.azure.storage.file.datalake.DataLakeFileClient;
+
 import io.kestra.core.models.annotations.Example;
 import io.kestra.core.models.annotations.Plugin;
 import io.kestra.core.models.tasks.RunnableTask;
 import io.kestra.core.runners.RunContext;
 import io.kestra.plugin.azure.storage.adls.abstracts.AbstractDataLakeWithFile;
 import io.kestra.plugin.azure.storage.adls.models.AdlsFile;
+
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
@@ -28,7 +29,7 @@ import lombok.experimental.SuperBuilder;
             code = """
                 id: azure_storage_datalake_delete
                 namespace: company.team
-                      
+
                 tasks:
                   - id: delete_file
                     type: io.kestra.plugin.azure.storage.adls.Delete

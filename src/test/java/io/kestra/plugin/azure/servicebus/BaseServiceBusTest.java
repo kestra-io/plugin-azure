@@ -1,20 +1,22 @@
 package io.kestra.plugin.azure.servicebus;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+
+import org.junit.jupiter.api.*;
+
 import com.azure.messaging.servicebus.administration.ServiceBusAdministrationClient;
 import com.azure.messaging.servicebus.administration.ServiceBusAdministrationClientBuilder;
 import com.azure.messaging.servicebus.administration.models.*;
+
 import io.kestra.core.junit.annotations.KestraTest;
 import io.kestra.core.models.property.Property;
 import io.kestra.core.runners.RunContextFactory;
 import io.kestra.core.utils.IdUtils;
+
 import io.micronaut.context.annotation.Value;
 import jakarta.inject.Inject;
-import org.junit.jupiter.api.*;
-
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.atomic.AtomicInteger;
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @KestraTest(startRunner = true)
@@ -58,9 +60,13 @@ public class BaseServiceBusTest {
 
     protected String publishToTopic(List<Message.MessageBuilder> messageBuilders, String subscriptionName) throws Exception {
         List<Message> messages = messageBuilders.stream()
-            .map((messageBuilder) -> messageBuilder.applicationProperties(Map.of(
-                "targetSubscription", subscriptionName
-            )))
+            .map(
+                (messageBuilder) -> messageBuilder.applicationProperties(
+                    Map.of(
+                        "targetSubscription", subscriptionName
+                    )
+                )
+            )
             .map(Message.MessageBuilder::build)
             .toList();
 
@@ -87,7 +93,8 @@ public class BaseServiceBusTest {
             new CreateSubscriptionOptions(),
             new CreateRuleOptions().setFilter(
                 new SqlRuleFilter(
-                    String.format("targetSubscription = '%s'", subscriptionName))
+                    String.format("targetSubscription = '%s'", subscriptionName)
+                )
             )
         );
         subscriptions.add(subscriptionName);

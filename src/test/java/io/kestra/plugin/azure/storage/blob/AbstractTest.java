@@ -1,12 +1,13 @@
 package io.kestra.plugin.azure.storage.blob;
 
+import java.net.URI;
+import java.util.ArrayList;
+
+import org.junit.jupiter.api.AfterEach;
+
 import io.kestra.core.models.property.Property;
 import io.kestra.core.utils.IdUtils;
 import io.kestra.plugin.azure.BaseTest;
-import org.junit.jupiter.api.AfterEach;
-
-import java.net.URI;
-import java.util.ArrayList;
 
 abstract class AbstractTest extends BaseTest {
     private java.util.List<String> directoryToClean = new ArrayList<>();

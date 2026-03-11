@@ -1,18 +1,19 @@
 package io.kestra.plugin.azure.storage.cosmosdb;
 
-import io.kestra.core.exceptions.IllegalVariableEvaluationException;
-import io.kestra.core.models.property.Property;
+import java.util.List;
+import java.util.Map;
+
 import org.assertj.core.api.AbstractThrowableAssert;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Test;
 
-import java.util.List;
-import java.util.Map;
+import io.kestra.core.exceptions.IllegalVariableEvaluationException;
+import io.kestra.core.models.property.Property;
 
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 
-class BatchTest extends CosmosContainerBaseTest<Batch.BatchBuilder<?,?>> {
+class BatchTest extends CosmosContainerBaseTest<Batch.BatchBuilder<?, ?>> {
     List<Map<String, Object>> items = List.of(
         Map.of(
             "id", "batch-create-test-one" + testId,

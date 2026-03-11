@@ -1,14 +1,21 @@
 package io.kestra.plugin.azure.storage.cosmosdb;
 
+import java.time.Duration;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+
 import com.azure.cosmos.CosmosAsyncContainer;
 import com.azure.cosmos.CosmosDiagnostics;
 import com.azure.cosmos.models.*;
+
 import io.kestra.core.exceptions.IllegalVariableEvaluationException;
 import io.kestra.core.models.annotations.Example;
 import io.kestra.core.models.annotations.Plugin;
 import io.kestra.core.models.property.Property;
 import io.kestra.core.models.tasks.RunnableTask;
 import io.kestra.core.runners.RunContext;
+
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotNull;
 import lombok.EqualsAndHashCode;
@@ -16,11 +23,6 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.ToString;
 import lombok.experimental.SuperBuilder;
-
-import java.time.Duration;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
 
 @SuperBuilder
 @ToString
@@ -113,8 +115,7 @@ public class Batch extends AbstractCosmosContainerTask<Batch.BatchResponseOutput
         Duration retryAfterDuration,
         int responseLength,
         Duration duration,
-        boolean successStatusCode
-    ) implements io.kestra.core.models.tasks.Output {
+        boolean successStatusCode) implements io.kestra.core.models.tasks.Output {
         public static BatchResponseOutput from(CosmosBatchResponse r) {
             return new BatchResponseOutput(
                 r.getResponseHeaders(),

@@ -3,6 +3,7 @@ package io.kestra.plugin.azure.eventhubs.service.producer;
 import com.azure.messaging.eventhubs.EventDataBatch;
 import com.azure.messaging.eventhubs.EventHubProducerAsyncClient;
 import com.azure.messaging.eventhubs.models.CreateBatchOptions;
+
 import reactor.core.publisher.Mono;
 
 /**

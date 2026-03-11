@@ -1,20 +1,5 @@
 package io.kestra.plugin.azure.storage.table;
 
-import com.azure.data.tables.models.TableErrorCode;
-import com.azure.data.tables.models.TableServiceException;
-import com.google.common.collect.ImmutableMap;
-import io.kestra.core.models.property.Property;
-import io.kestra.core.runners.RunContext;
-import io.kestra.core.runners.RunContextFactory;
-import io.kestra.core.serializers.FileSerde;
-import io.kestra.core.storages.StorageInterface;
-import io.kestra.core.tenant.TenantService;
-import io.kestra.core.utils.IdUtils;
-import io.micronaut.context.annotation.Value;
-import io.kestra.core.junit.annotations.KestraTest;
-import jakarta.inject.Inject;
-import org.junit.jupiter.api.Test;
-
 import java.io.*;
 import java.math.BigInteger;
 import java.net.URI;
@@ -25,6 +10,24 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
+
+import org.junit.jupiter.api.Test;
+
+import com.azure.data.tables.models.TableErrorCode;
+import com.azure.data.tables.models.TableServiceException;
+import com.google.common.collect.ImmutableMap;
+
+import io.kestra.core.junit.annotations.KestraTest;
+import io.kestra.core.models.property.Property;
+import io.kestra.core.runners.RunContext;
+import io.kestra.core.runners.RunContextFactory;
+import io.kestra.core.serializers.FileSerde;
+import io.kestra.core.storages.StorageInterface;
+import io.kestra.core.tenant.TenantService;
+import io.kestra.core.utils.IdUtils;
+
+import io.micronaut.context.annotation.Value;
+import jakarta.inject.Inject;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
@@ -63,16 +66,18 @@ class SuiteTest {
             HashMap<Object, Object> data = new HashMap<>();
             data.put("partitionKey", partitionKey);
             data.put("rowKey", i == 0 ? rowKey : IdUtils.create());
-            data.put("properties", Map.of(
-                "int32", 123456789,
-                "int64", 123456789123456789L,
-                "string", "s",
-                "bool", true,
-                "double", 2147483645.1234d,
-                "guid", uuid,
-                "datetime", ZonedDateTime.parse("2007-05-08T12:35+02:00[Europe/Paris]"),
-                "binary", new BigInteger("DEADBEEF", 16).toByteArray()
-            ));
+            data.put(
+                "properties", Map.of(
+                    "int32", 123456789,
+                    "int64", 123456789123456789L,
+                    "string", "s",
+                    "bool", true,
+                    "double", 2147483645.1234d,
+                    "guid", uuid,
+                    "datetime", ZonedDateTime.parse("2007-05-08T12:35+02:00[Europe/Paris]"),
+                    "binary", new BigInteger("DEADBEEF", 16).toByteArray()
+                )
+            );
 
             FileSerde.write(output, data);
         }
@@ -104,7 +109,9 @@ class SuiteTest {
         assertThat(getOutput.getRow().getProperties().get("string"), is("s"));
         assertThat(getOutput.getRow().getProperties().get("bool"), is(true));
         assertThat(getOutput.getRow().getProperties().get("double"), is(2147483645.1234d));
-        assertThat(getOutput.getRow().getProperties().get("guid"), is(ByteBuffer.allocate(2 * Long.BYTES).putLong(uuid.getMostSignificantBits()).putLong(uuid.getLeastSignificantBits()).array()));
+        assertThat(
+            getOutput.getRow().getProperties().get("guid"), is(ByteBuffer.allocate(2 * Long.BYTES).putLong(uuid.getMostSignificantBits()).putLong(uuid.getLeastSignificantBits()).array())
+        );
         assertThat(getOutput.getRow().getProperties().get("datetime"), is(OffsetDateTime.parse("2007-05-08T10:35Z")));
         assertThat(getOutput.getRow().getProperties().get("binary"), is(new BigInteger("DEADBEEF", 16).toByteArray()));
 
@@ -150,7 +157,8 @@ class SuiteTest {
         delete.run(runContext);
 
         // is deleted
-        TableServiceException e = assertThrows(TableServiceException.class, () -> {
+        TableServiceException e = assertThrows(TableServiceException.class, () ->
+        {
             get.run(runContext);
         });
 

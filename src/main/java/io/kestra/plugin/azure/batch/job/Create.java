@@ -31,10 +31,11 @@ import io.kestra.core.models.tasks.runners.DefaultLogConsumer;
 import io.kestra.core.models.tasks.runners.RemoteRunnerInterface;
 import io.kestra.core.models.tasks.runners.ScriptService;
 import io.kestra.core.runners.RunContext;
-import io.kestra.plugin.azure.batch.AbstractBatch;
-import io.kestra.plugin.azure.batch.BatchService;
-import io.kestra.plugin.azure.batch.models.Job;
-import io.kestra.plugin.azure.batch.models.Task;
+import io.kestra.plugin.azure.shared.batch.AbstractBatch;
+import io.kestra.plugin.azure.shared.batch.BatchService;
+import io.kestra.plugin.azure.shared.batch.job.TaskService;
+import io.kestra.plugin.azure.shared.batch.models.Job;
+import io.kestra.plugin.azure.shared.batch.models.Task;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotNull;

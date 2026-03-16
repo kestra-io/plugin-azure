@@ -5,8 +5,8 @@ import com.azure.storage.blob.BlobContainerClient;
 import io.kestra.core.exceptions.IllegalVariableEvaluationException;
 import io.kestra.core.models.property.Property;
 import io.kestra.core.runners.RunContext;
-import io.kestra.plugin.azure.AbstractConnectionInterface;
-import io.kestra.plugin.azure.AzureClientInterface;
+import io.kestra.plugin.azure.shared.AbstractConnectionInterface;
+import io.kestra.plugin.azure.shared.AzureClientInterface;
 import io.kestra.plugin.azure.storage.blob.services.BlobService;
 
 import io.swagger.v3.oas.annotations.media.Schema;

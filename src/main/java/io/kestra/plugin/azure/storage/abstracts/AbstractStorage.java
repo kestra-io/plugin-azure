@@ -1,8 +1,8 @@
 package io.kestra.plugin.azure.storage.abstracts;
 
 import io.kestra.core.models.property.Property;
-import io.kestra.plugin.azure.AbstractConnection;
-import io.kestra.plugin.azure.AzureClientInterface;
+import io.kestra.plugin.azure.shared.AbstractConnection;
+import io.kestra.plugin.azure.shared.AzureClientInterface;
 
 import lombok.EqualsAndHashCode;
 import lombok.Getter;

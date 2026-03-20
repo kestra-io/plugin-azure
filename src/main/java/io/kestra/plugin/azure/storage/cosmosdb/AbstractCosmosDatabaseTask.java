@@ -10,7 +10,7 @@ import io.kestra.core.exceptions.IllegalVariableEvaluationException;
 import io.kestra.core.models.property.Property;
 import io.kestra.core.models.tasks.Output;
 import io.kestra.core.runners.RunContext;
-import io.kestra.plugin.azure.AbstractAzureIdentityConnection;
+import io.kestra.plugin.azure.shared.AbstractAzureIdentityConnection;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotNull;

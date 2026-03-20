@@ -1,7 +1,7 @@
 package io.kestra.plugin.azure.eventhubs;
 
 import io.kestra.core.models.property.Property;
-import io.kestra.plugin.azure.AzureClientWithSasInterface;
+import io.kestra.plugin.azure.shared.AzureClientWithSasInterface;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Getter;

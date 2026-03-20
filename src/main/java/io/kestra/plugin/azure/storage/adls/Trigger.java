@@ -17,8 +17,8 @@ import io.kestra.core.models.executions.Execution;
 import io.kestra.core.models.property.Property;
 import io.kestra.core.models.triggers.*;
 import io.kestra.core.runners.RunContext;
-import io.kestra.plugin.azure.AbstractConnectionInterface;
-import io.kestra.plugin.azure.AzureClientWithSasInterface;
+import io.kestra.plugin.azure.shared.AbstractConnectionInterface;
+import io.kestra.plugin.azure.shared.AzureClientWithSasInterface;
 import io.kestra.plugin.azure.storage.adls.models.AdlsFile;
 import io.kestra.plugin.azure.storage.adls.services.DataLakeService;
 

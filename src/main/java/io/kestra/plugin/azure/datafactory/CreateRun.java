@@ -41,7 +41,7 @@ import io.kestra.core.runners.RunContext;
 import io.kestra.core.serializers.FileSerde;
 import io.kestra.core.serializers.JacksonMapper;
 import io.kestra.core.utils.Await;
-import io.kestra.plugin.azure.AbstractAzureIdentityConnection;
+import io.kestra.plugin.azure.shared.AbstractAzureIdentityConnection;
 
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.swagger.v3.oas.annotations.media.Schema;

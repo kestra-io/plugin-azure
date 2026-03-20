@@ -6,7 +6,7 @@ import java.util.function.Supplier;
 import io.kestra.core.exceptions.IllegalVariableEvaluationException;
 import io.kestra.core.models.property.Property;
 import io.kestra.core.runners.RunContext;
-import io.kestra.plugin.azure.AzureClientWithSasInterface;
+import io.kestra.plugin.azure.shared.AzureClientWithSasInterface;
 
 /**
  * Configuration for creating a new Azure Client.

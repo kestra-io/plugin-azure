@@ -9,9 +9,9 @@ import io.kestra.core.models.annotations.Plugin;
 import io.kestra.core.models.property.Property;
 import io.kestra.core.models.tasks.RunnableTask;
 import io.kestra.core.runners.RunContext;
-import io.kestra.plugin.azure.batch.AbstractBatch;
-import io.kestra.plugin.azure.batch.BatchService;
-import io.kestra.plugin.azure.batch.models.Pool;
+import io.kestra.plugin.azure.shared.batch.AbstractBatch;
+import io.kestra.plugin.azure.shared.batch.BatchService;
+import io.kestra.plugin.azure.shared.batch.models.Pool;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotNull;

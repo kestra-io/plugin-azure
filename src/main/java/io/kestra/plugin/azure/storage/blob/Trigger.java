@@ -17,10 +17,10 @@ import io.kestra.core.models.triggers.*;
 import io.kestra.core.runners.RunContext;
 import io.kestra.plugin.azure.shared.AbstractConnectionInterface;
 import io.kestra.plugin.azure.shared.AzureClientWithSasInterface;
-import io.kestra.plugin.azure.storage.blob.abstracts.AbstractBlobStorageContainerInterface;
+import io.kestra.plugin.azure.shared.storage.blob.abstracts.AbstractBlobStorageContainerInterface;
 import io.kestra.plugin.azure.storage.blob.abstracts.ActionInterface;
-import io.kestra.plugin.azure.storage.blob.abstracts.ListInterface;
-import io.kestra.plugin.azure.storage.blob.models.Blob;
+import io.kestra.plugin.azure.shared.storage.blob.abstracts.ListInterface;
+import io.kestra.plugin.azure.shared.storage.blob.models.Blob;
 import io.kestra.plugin.azure.storage.blob.services.BlobService;
 
 import io.swagger.v3.oas.annotations.media.Schema;

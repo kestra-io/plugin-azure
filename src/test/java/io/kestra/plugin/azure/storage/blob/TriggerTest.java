@@ -9,6 +9,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
+import io.kestra.plugin.azure.shared.storage.blob.models.Blob;
 import org.junit.jupiter.api.Test;
 
 import io.kestra.core.models.conditions.ConditionContext;
@@ -23,7 +24,7 @@ import io.kestra.core.utils.IdUtils;
 import io.kestra.core.utils.TestsUtils;
 import io.kestra.jdbc.runner.JdbcScheduler;
 import io.kestra.plugin.azure.storage.blob.abstracts.ActionInterface;
-import io.kestra.plugin.azure.storage.blob.models.Blob;
+
 import io.kestra.scheduler.AbstractScheduler;
 import io.kestra.worker.DefaultWorker;
 

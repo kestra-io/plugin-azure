@@ -3,24 +3,18 @@ package io.kestra.plugin.azure.storage.blob.services;
 import java.io.File;
 import java.io.IOException;
 import java.net.URI;
-import java.time.Duration;
 import java.util.List;
-import java.util.stream.Collectors;
 
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
 
 import com.azure.core.credential.AzureNamedKeyCredential;
-import com.azure.core.http.rest.PagedIterable;
 import com.azure.identity.DefaultAzureCredentialBuilder;
 import com.azure.storage.blob.BlobClient;
-import com.azure.storage.blob.BlobContainerClient;
 import com.azure.storage.blob.BlobServiceClient;
 import com.azure.storage.blob.BlobServiceClientBuilder;
-import com.azure.storage.blob.models.BlobItem;
 import com.azure.storage.blob.models.BlobProperties;
-import com.azure.storage.blob.models.ListBlobsOptions;
 
 import io.kestra.core.exceptions.IllegalVariableEvaluationException;
 import io.kestra.core.models.executions.metrics.Counter;
@@ -32,8 +26,7 @@ import io.kestra.plugin.azure.shared.AzureClientWithSasInterface;
 import io.kestra.plugin.azure.storage.blob.Copy;
 import io.kestra.plugin.azure.storage.blob.Delete;
 import io.kestra.plugin.azure.storage.blob.abstracts.ActionInterface;
-import io.kestra.plugin.azure.storage.blob.abstracts.ListInterface;
-import io.kestra.plugin.azure.storage.blob.models.Blob;
+import io.kestra.plugin.azure.shared.storage.blob.models.Blob;
 
 public class BlobService {
     public static Pair<BlobProperties, URI> download(RunContext runContext, BlobClient client) throws IOException {
@@ -101,66 +94,36 @@ public class BlobService {
         }
     }
 
-    public static List<Blob> list(RunContext runContext, BlobContainerClient client, ListInterface list) throws IllegalVariableEvaluationException {
-        ListBlobsOptions listBlobsOptions = new ListBlobsOptions();
-
-        if (list.getPrefix() != null) {
-            listBlobsOptions.setPrefix(runContext.render(list.getPrefix()).as(String.class).orElseThrow());
-        }
-
-        String regExp = runContext.render(list.getRegexp()).as(String.class).orElse(null);
-
-        PagedIterable<BlobItem> blobItems;
-        if (list.getDelimiter() != null) {
-            blobItems = client.listBlobsByHierarchy(
-                runContext.render(
-                    list.getDelimiter()
-                ).as(String.class).orElseThrow(),
-                listBlobsOptions,
-                Duration.ofSeconds(30)
-            );
-        } else {
-            blobItems = client.listBlobs(listBlobsOptions, Duration.ofSeconds(30));
-        }
-
-        var filter = runContext.render(list.getFilter()).as(ListInterface.Filter.class).orElseThrow();
-        return blobItems
-            .stream()
-            .filter(blob -> BlobService.filter(blob, regExp, filter))
-            .map(blob -> Blob.of(client.getBlobContainerName(), blob))
-            .collect(Collectors.toList());
-    }
-
-    private static boolean filter(BlobItem object, String regExp, ListInterface.Filter filter) {
-        return (regExp == null || object.getName().matches(regExp)) &&
-            ((filter == ListInterface.Filter.BOTH) ||
-                (filter == ListInterface.Filter.DIRECTORY && object.getProperties() != null && object.getProperties().getContentType() == null) ||
-                (filter == ListInterface.Filter.FILES && object.getProperties() != null && object.getProperties().getContentType() != null));
-    }
-
     public static BlobServiceClient client(
-        String endpoint,
-        String connectionString,
-        String sharedKeyAccountName,
-        String sharedKeyAccountAccessKey,
-        String sasToken) {
+        Property<String> endpoint,
+        Property<String> connectionString,
+        Property<String> sharedKeyAccountName,
+        Property<String> sharedKeyAccountAccessKey,
+        Property<String> sasToken,
+        RunContext runContext) throws IllegalVariableEvaluationException {
         BlobServiceClientBuilder builder = new BlobServiceClientBuilder();
 
-        if (endpoint != null) {
-            builder.endpoint(endpoint);
+        String renderedEndpoint = endpoint != null ? runContext.render(endpoint).as(String.class).orElse(null) : null;
+        String renderedConnectionString = connectionString != null ? runContext.render(connectionString).as(String.class).orElse(null) : null;
+        String renderedSharedKeyAccountName = sharedKeyAccountName != null ? runContext.render(sharedKeyAccountName).as(String.class).orElse(null) : null;
+        String renderedSharedKeyAccountAccessKey = sharedKeyAccountAccessKey != null ? runContext.render(sharedKeyAccountAccessKey).as(String.class).orElse(null) : null;
+        String renderedSasToken = sasToken != null ? runContext.render(sasToken).as(String.class).orElse(null) : null;
+
+        if (renderedEndpoint != null) {
+            builder.endpoint(renderedEndpoint);
         }
 
-        if (connectionString != null) {
-            builder.connectionString(connectionString);
-        } else if (sharedKeyAccountName != null && sharedKeyAccountAccessKey != null) {
+        if (renderedConnectionString != null) {
+            builder.connectionString(renderedConnectionString);
+        } else if (renderedSharedKeyAccountName != null && renderedSharedKeyAccountAccessKey != null) {
             builder.credential(
                 new AzureNamedKeyCredential(
-                    sharedKeyAccountName,
-                    sharedKeyAccountAccessKey
+                    renderedSharedKeyAccountName,
+                    renderedSharedKeyAccountAccessKey
                 )
             );
-        } else if (sasToken != null) {
-            builder.sasToken(sasToken);
+        } else if (renderedSasToken != null) {
+            builder.sasToken(renderedSasToken);
         } else {
             builder.credential(new DefaultAzureCredentialBuilder().build());
         }

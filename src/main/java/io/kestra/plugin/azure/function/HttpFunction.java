@@ -14,6 +14,7 @@ import io.kestra.core.http.HttpResponse;
 import io.kestra.core.http.client.HttpClient;
 import io.kestra.core.http.client.HttpClientException;
 import io.kestra.core.http.client.configurations.HttpConfiguration;
+import io.kestra.core.http.client.configurations.TimeoutConfiguration;
 import io.kestra.core.models.annotations.Example;
 import io.kestra.core.models.annotations.Plugin;
 import io.kestra.core.models.annotations.PluginProperty;
@@ -90,7 +91,9 @@ public class HttpFunction extends Task implements RunnableTask<HttpFunction.Outp
                 .runContext(runContext)
                 .configuration(
                     HttpConfiguration.builder()
-                        .readTimeout(timeout)
+                        .timeout(TimeoutConfiguration.builder()
+                            .readIdleTimeout(Property.ofValue(timeout))
+                            .build())
                         .build()
                 )
                 .build()

@@ -24,6 +24,7 @@ import lombok.*;
 import lombok.experimental.SuperBuilder;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+import io.kestra.core.models.annotations.PluginProperty;
 
 @SuperBuilder
 @ToString
@@ -72,6 +73,7 @@ public class Queries extends AbstractCosmosContainerTask<Queries.Output> impleme
         title = "Named queries to execute",
         description = "Map of label to query options; entries run independently and return under the same label."
     )
+    @PluginProperty(group = "main")
     private Property<Map<String, QueriesOptions>> queries;
 
     @Override

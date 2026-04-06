@@ -21,6 +21,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotNull;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
+import io.kestra.core.models.annotations.PluginProperty;
 
 @SuperBuilder
 @ToString
@@ -69,6 +70,7 @@ public class SparkBatchJobCreate extends AbstractAzureIdentityConnection impleme
         description = "Workspace URL in the form `https://{workspace}.dev.azuresynapse.net`."
     )
     @NotNull
+    @PluginProperty(group = "main")
     private Property<String> endpoint;
 
     @Schema(
@@ -76,12 +78,14 @@ public class SparkBatchJobCreate extends AbstractAzureIdentityConnection impleme
         description = "Name of the Spark pool where the batch job will be submitted."
     )
     @NotNull
+    @PluginProperty(group = "main")
     private Property<String> sparkPoolName;
 
     @Schema(
         title = "Spark batch job name"
     )
     @NotNull
+    @PluginProperty(group = "main")
     private Property<String> name;
 
     @Schema(
@@ -89,84 +93,98 @@ public class SparkBatchJobCreate extends AbstractAzureIdentityConnection impleme
         description = "Path to the main application file (JAR, Python, etc.) in ADLS Gen2 storage in the form `abfss://{container}@{storage-account}.dfs.core.windows.net/path/to/file`."
     )
     @NotNull
+    @PluginProperty(group = "main")
     private Property<String> file;
 
     @Schema(
         title = "Main class name",
         description = "Fully qualified class name for Java/Scala Spark jobs."
     )
+    @PluginProperty(group = "advanced")
     private Property<String> className;
 
     @Schema(
         title = "Command line arguments",
         description = "Arguments passed to the main method."
     )
+    @PluginProperty(group = "advanced")
     private Property<List<String>> arguments;
 
     @Schema(
         title = "Additional JAR files",
         description = "Additional JARs to be used in the job."
     )
+    @PluginProperty(group = "advanced")
     private Property<List<String>> jars;
 
     @Schema(
         title = "Additional Python files",
         description = "Additional Python files to be used in the job."
     )
+    @PluginProperty(group = "source")
     private Property<List<String>> pyFiles;
 
     @Schema(
         title = "Additional files",
         description = "Additional files to be used in the job."
     )
+    @PluginProperty(group = "deprecated")
     private Property<List<String>> files;
 
     @Schema(
         title = "Archives",
         description = "Archives to be used in the job."
     )
+    @PluginProperty(group = "advanced")
     private Property<List<String>> archives;
 
     @Schema(
         title = "Spark configuration",
         description = "Spark configuration properties for the job."
     )
+    @PluginProperty(group = "advanced")
     private Property<Map<String, String>> conf;
 
     @Schema(
         title = "Driver memory",
         description = "Memory for the driver process (e.g., `28g`)."
     )
+    @PluginProperty(group = "execution")
     private Property<String> driverMemory;
 
     @Schema(
         title = "Driver cores",
         description = "Number of cores for the driver process."
     )
+    @PluginProperty(group = "advanced")
     private Property<Integer> driverCores;
 
     @Schema(
         title = "Executor memory",
         description = "Memory per executor process (e.g., `28g`)."
     )
+    @PluginProperty(group = "execution")
     private Property<String> executorMemory;
 
     @Schema(
         title = "Executor cores",
         description = "Number of cores per executor."
     )
+    @PluginProperty(group = "destination")
     private Property<Integer> executorCores;
 
     @Schema(
         title = "Executor count",
         description = "Number of executor processes to launch."
     )
+    @PluginProperty(group = "destination")
     private Property<Integer> executorCount;
 
     @Schema(
         title = "Tags",
         description = "Tags to associate with the job."
     )
+    @PluginProperty(group = "advanced")
     private Property<Map<String, String>> tags;
 
     @Override

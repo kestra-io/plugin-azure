@@ -84,12 +84,13 @@ public class SharedAccess extends AbstractDataLakeWithFile implements RunnableTa
         title = " The time after which the SAS will no longer work."
     )
     @NotNull
+    @PluginProperty(group = "main")
     private Property<String> expirationDate;
 
     @Schema(
         title = " The permissions to be set for the Shared Access."
     )
-    @PluginProperty(dynamic = true)
+    @PluginProperty(dynamic = true, group = "main")
     @NotNull
     private Set<Permission> permissions;
 

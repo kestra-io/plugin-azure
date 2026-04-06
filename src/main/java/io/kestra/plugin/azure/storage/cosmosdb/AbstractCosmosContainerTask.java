@@ -11,6 +11,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotNull;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
+import io.kestra.core.models.annotations.PluginProperty;
 
 @SuperBuilder
 @ToString
@@ -23,6 +24,7 @@ public abstract class AbstractCosmosContainerTask<T extends Output> extends Abst
         title = "Container ID",
         description = "Container (collection) name within the database; must already exist."
     )
+    @PluginProperty(group = "main")
     private Property<String> containerId;
 
     @Override

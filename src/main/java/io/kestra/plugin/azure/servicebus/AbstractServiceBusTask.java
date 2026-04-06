@@ -15,6 +15,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotNull;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
+import io.kestra.core.models.annotations.PluginProperty;
 
 @SuperBuilder
 @ToString
@@ -23,20 +24,25 @@ import lombok.experimental.SuperBuilder;
 @NoArgsConstructor
 public abstract class AbstractServiceBusTask extends AbstractAzureIdentityConnection {
     @Schema(description = QUEUE_NAME_DESCRIPTION)
+    @PluginProperty(group = "advanced")
     protected Property<String> queueName;
 
     @Schema(description = TOPIC_NAME_DESCRIPTION)
+    @PluginProperty(group = "advanced")
     protected Property<String> topicName;
 
     @Schema(description = CONNECTION_STRING_DESCRIPTION)
+    @PluginProperty(group = "connection")
     protected Property<String> connectionString;
 
     @Schema(description = SUBSCRIPTION_NAME_DESCRIPTION)
+    @PluginProperty(group = "advanced")
     protected Property<String> subscriptionName;
 
     @Builder.Default
     @NotNull
     @Schema(title = "Payload serializer", description = SERDE_TYPE_DESCRIPTION)
+    @PluginProperty(group = "main")
     protected Property<SerdeType> serdeType = Property.ofValue(DEFAULT_SERDE_TYPE);
 
     protected static final SerdeType DEFAULT_SERDE_TYPE = SerdeType.STRING;

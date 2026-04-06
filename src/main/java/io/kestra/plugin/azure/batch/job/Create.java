@@ -146,13 +146,14 @@ public class Create extends AbstractBatch implements RunnableTask<Create.Output>
         description = "Existing Batch pool where the job runs; must be active"
     )
     @NotNull
+    @PluginProperty(group = "main")
     private Property<String> poolId;
 
     @Schema(
         title = "Job definition",
         description = "Job metadata and scheduling limits passed to Azure"
     )
-    @PluginProperty(dynamic = true)
+    @PluginProperty(dynamic = true, group = "main")
     @NotNull
     private Job job;
 
@@ -160,7 +161,7 @@ public class Create extends AbstractBatch implements RunnableTask<Create.Output>
         title = "Tasks to run",
         description = "Ordered list of task definitions executed within the job"
     )
-    @PluginProperty
+    @PluginProperty(group = "main")
     @NotNull
     private List<Task> tasks;
 
@@ -168,13 +169,16 @@ public class Create extends AbstractBatch implements RunnableTask<Create.Output>
         title = "Maximum wait duration",
         description = "Timeout while waiting for all tasks to finish; null means wait indefinitely"
     )
+    @PluginProperty(group = "execution")
     private Property<Duration> maxDuration;
 
     @Builder.Default
+    @PluginProperty(group = "destination")
     private Property<Boolean> syncWorkingDirectory = Property.ofValue(false);
 
     @Schema(title = "Completion check interval", description = "Poll interval for job status while waiting; defaults to PT1S")
     @Builder.Default
+    @PluginProperty(group = "advanced")
     private final Property<Duration> completionCheckInterval = Property.ofValue(Duration.ofSeconds(1));
 
     @Schema(
@@ -183,6 +187,7 @@ public class Create extends AbstractBatch implements RunnableTask<Create.Output>
     )
     @NotNull
     @Builder.Default
+    @PluginProperty(group = "advanced")
     private final Property<Boolean> delete = Property.ofValue(true);
 
     @Schema(
@@ -191,6 +196,7 @@ public class Create extends AbstractBatch implements RunnableTask<Create.Output>
     )
     @NotNull
     @Builder.Default
+    @PluginProperty(group = "advanced")
     private final Property<Boolean> resume = Property.ofValue(true);
 
     @JsonIgnore

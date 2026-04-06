@@ -14,6 +14,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.ToString;
 import lombok.experimental.SuperBuilder;
+import io.kestra.core.models.annotations.PluginProperty;
 
 @SuperBuilder
 @ToString
@@ -24,6 +25,7 @@ public abstract class AbstractDataLakeWithFile extends AbstractDataLakeConnectio
 
     @Schema(title = "File path", description = "Full path of the file in its file system")
     @NotNull
+    @PluginProperty(group = "main")
     protected Property<String> filePath;
 
     protected Property<String> fileSystem;

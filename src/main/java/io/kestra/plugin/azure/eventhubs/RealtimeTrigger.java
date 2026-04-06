@@ -31,6 +31,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
 import reactor.core.publisher.Flux;
+import io.kestra.core.models.annotations.PluginProperty;
 
 /**
  * The {@link RealtimeTrigger} can be used for triggering flow based on events received from Azure Event Hubs.
@@ -129,25 +130,31 @@ public class RealtimeTrigger extends AbstractTrigger implements EventHubConsumer
 
     @Builder.Default
     @Schema(title = "Body deserializer", description = "Serde used to decode event bodies; defaults to STRING")
+    @PluginProperty(group = "advanced")
     private Property<Serdes> bodyDeserializer = Property.ofValue(Serdes.STRING);
 
     @Builder.Default
     @Schema(title = "Deserializer properties", description = "Key/value options passed to the selected serde")
+    @PluginProperty(group = "advanced")
     private Property<Map<String, Object>> bodyDeserializerProperties = Property.ofValue(new HashMap<>());
 
     @Builder.Default
     @Schema(title = "Consumer group", description = "Event Hubs consumer group; defaults to $Default")
+    @PluginProperty(group = "advanced")
     private Property<String> consumerGroup = Property.ofValue("$Default");
 
     @Builder.Default
     @Schema(title = "Starting position", description = "Initial position strategy per partition; defaults to EARLIEST")
+    @PluginProperty(group = "advanced")
     private Property<StartingPosition> partitionStartingPosition = Property.ofValue(StartingPosition.EARLIEST);
 
     @Schema(title = "Start from enqueue time", description = "Optional enqueue time filter (ISO-8601); overrides starting position")
+    @PluginProperty(group = "advanced")
     private Property<String> enqueueTime;
 
     @Builder.Default
     @Schema(title = "Checkpoint store properties", description = "Blob container config for checkpoints (connectionString, containerName required)")
+    @PluginProperty(group = "advanced")
     private Property<Map<String, String>> checkpointStoreProperties = Property.ofValue(new HashMap<>());
 
     private Property<String> namespace;

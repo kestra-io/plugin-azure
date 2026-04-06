@@ -16,6 +16,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotNull;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
+import io.kestra.core.models.annotations.PluginProperty;
 
 @SuperBuilder
 @ToString
@@ -28,12 +29,14 @@ public abstract class AbstractCosmosDatabaseTask<T extends Output> extends Abstr
         description = "Consistency level sent to Cosmos; defaults to SESSION."
     )
     @Builder.Default()
+    @PluginProperty(group = "advanced")
     private Property<ConsistencyLevel> consistencyLevel = Property.ofValue(ConsistencyLevel.SESSION);
 
     @Schema(
         title = "Cosmos account endpoint",
         description = "Base account URL (e.g. https://<account>.documents.azure.com). Required when connectionString is absent."
     )
+    @PluginProperty(group = "connection")
     private Property<String> endpoint;
 
     @Schema(
@@ -41,6 +44,7 @@ public abstract class AbstractCosmosDatabaseTask<T extends Output> extends Abstr
         description = "When true (default), write responses include the document body; set false to reduce payload size."
     )
     @Builder.Default()
+    @PluginProperty(group = "advanced")
     private Property<Boolean> contentResponseOnWriteEnabled = Property.ofValue(DEFAULT_CONTENT_RESPONSE_ON_WRITE_ENABLED);
 
     @Schema(
@@ -48,12 +52,14 @@ public abstract class AbstractCosmosDatabaseTask<T extends Output> extends Abstr
         description = "Target database name inside the account; required."
     )
     @NotNull
+    @PluginProperty(group = "main")
     private Property<String> databaseId;
 
     @Schema(
         title = "Cosmos connection string",
         description = "Full connection string from Azure portal; overrides endpoint and Azure AD credentials when set."
     )
+    @PluginProperty(group = "connection")
     protected Property<String> connectionString;
 
     private static final ConsistencyLevel DEFAULT_CONSISTENCY_LEVEL = ConsistencyLevel.SESSION;

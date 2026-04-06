@@ -89,23 +89,26 @@ import static io.kestra.core.utils.Rethrow.throwConsumer;
     title = "Delete a list of objects from Azure Data Lake Storage."
 )
 public class DeleteFiles extends AbstractDataLakeConnection implements RunnableTask<DeleteFiles.Output>, AbstractDataLakeStorageInterface {
+    @PluginProperty(group = "main")
     protected Property<String> fileSystem;
 
     @Schema(title = "Directory Name")
     @NotNull
+    @PluginProperty(group = "main")
     protected Property<String> directoryPath;
 
     @Min(2)
     @Schema(
         title = "Number of concurrent parallel deletions."
     )
-    @PluginProperty(dynamic = false)
+    @PluginProperty(dynamic = false, group = "execution")
     private Integer concurrent;
 
     @Schema(
         title = "Whether to raise an error if the file is not found."
     )
     @Builder.Default
+    @PluginProperty(group = "reliability")
     private final Property<Boolean> errorOnEmpty = Property.ofValue(false);
 
     @Override

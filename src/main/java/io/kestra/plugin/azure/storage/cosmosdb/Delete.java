@@ -21,6 +21,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.ToString;
 import lombok.experimental.SuperBuilder;
+import io.kestra.core.models.annotations.PluginProperty;
 
 @SuperBuilder
 @ToString
@@ -61,6 +62,7 @@ public class Delete extends AbstractCosmosContainerTask<Delete.Output> implement
         title = "Document identifier to delete",
         description = "JSON containing id and partition key fields identifying the document."
     )
+    @PluginProperty(group = "main")
     private Property<Map<String, Object>> item;
 
     @Override

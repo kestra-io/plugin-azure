@@ -17,6 +17,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.ToString;
 import lombok.experimental.SuperBuilder;
+import io.kestra.core.models.annotations.PluginProperty;
 
 @SuperBuilder
 @ToString
@@ -53,6 +54,7 @@ public class Delete extends AbstractTableStorage implements RunnableTask<VoidOut
         description = "Partition key of the entity to delete."
     )
     @NotNull
+    @PluginProperty(group = "main")
     private Property<String> partitionKey;
 
     @Schema(
@@ -60,6 +62,7 @@ public class Delete extends AbstractTableStorage implements RunnableTask<VoidOut
         description = "Row key of the entity to delete."
     )
     @NotNull
+    @PluginProperty(group = "main")
     private Property<String> rowKey;
 
     @Override

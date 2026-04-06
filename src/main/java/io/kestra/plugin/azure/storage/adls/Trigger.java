@@ -99,6 +99,7 @@ public class Trigger extends AbstractTrigger
     )
     @Builder.Default
     @NotNull
+    @PluginProperty(group = "main")
     private Property<Action> action = Property.ofValue(Action.NONE);
 
     @Schema(
@@ -112,6 +113,7 @@ public class Trigger extends AbstractTrigger
         description = "Limits the number of files retrieved per polling interval. If not specified, all matching files will be retrieved."
     )
     @Builder.Default
+    @PluginProperty(group = "execution")
     private Property<Integer> maxFiles = Property.ofValue(25);
 
     @Builder.Default

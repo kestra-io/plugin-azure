@@ -20,6 +20,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotNull;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
+import io.kestra.core.models.annotations.PluginProperty;
 
 @SuperBuilder
 @ToString
@@ -64,6 +65,7 @@ import lombok.experimental.SuperBuilder;
 public class Query extends AbstractCosmosContainerTask<Query.Output> implements RunnableTask<Query.Output> {
     @NotNull
     @Schema(title = "SQL query string")
+    @PluginProperty(group = "main")
     private Property<String> query;
 
     @Schema(
@@ -73,6 +75,7 @@ public class Query extends AbstractCosmosContainerTask<Query.Output> implements 
             to the account primary region.
             """
     )
+    @PluginProperty(group = "connection")
     private Property<List<String>> excludeRegions;
 
     @Schema(
@@ -82,6 +85,7 @@ public class Query extends AbstractCosmosContainerTask<Query.Output> implements 
             """,
         requiredProperties = "partitionKeyDefinition"
     )
+    @PluginProperty(group = "connection")
     private Property<Map<String, Object>> partitionKey;
 
     @Schema(
@@ -91,6 +95,7 @@ public class Query extends AbstractCosmosContainerTask<Query.Output> implements 
             the correct PartitionKey.
             """
     )
+    @PluginProperty(group = "connection")
     private Property<PartitionKeyDefinition> partitionKeyDefinition;
 
     @Schema(
@@ -101,6 +106,7 @@ public class Query extends AbstractCosmosContainerTask<Query.Output> implements 
             """,
         requiredProperties = "partitionKeyDefinition"
     )
+    @PluginProperty(group = "connection")
     private Property<Map<String, Object>> feedRangePartitionKey;
 
     @Override

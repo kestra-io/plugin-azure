@@ -12,6 +12,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotNull;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
+import io.kestra.core.models.annotations.PluginProperty;
 
 @SuperBuilder
 @ToString
@@ -52,10 +53,12 @@ import lombok.experimental.SuperBuilder;
 public class Push extends AbstractMonitoringTask implements RunnableTask<Push.Output> {
     @Schema(title = "DCR ingestion path", description = "Path portion of the Data Collection Rule ingestion URL (e.g., /dataCollectionRules/{id}/streams/{stream})")
     @NotNull
+    @PluginProperty(group = "main")
     private Property<String> path;
 
     @Schema(title = "Metric data body", description = "JSON payload formatted for Azure Monitor ingestion API")
     @NotNull
+    @PluginProperty(group = "main")
     private Property<Map<String, Object>> metrics;
 
     @Override

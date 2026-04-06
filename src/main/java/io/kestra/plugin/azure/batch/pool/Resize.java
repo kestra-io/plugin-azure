@@ -17,6 +17,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotNull;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
+import io.kestra.core.models.annotations.PluginProperty;
 
 @SuperBuilder
 @ToString
@@ -50,6 +51,7 @@ public class Resize extends AbstractBatch implements RunnableTask<Resize.Output>
         description = "Existing pool to resize; must be active"
     )
     @NotNull
+    @PluginProperty(group = "main")
     private Property<String> poolId;
 
     @Schema(
@@ -58,6 +60,7 @@ public class Resize extends AbstractBatch implements RunnableTask<Resize.Output>
     )
     @NotNull
     @Builder.Default
+    @PluginProperty(group = "destination")
     private Property<Integer> targetDedicatedNodes = Property.ofValue(0);
 
     @Schema(
@@ -66,6 +69,7 @@ public class Resize extends AbstractBatch implements RunnableTask<Resize.Output>
     )
     @NotNull
     @Builder.Default
+    @PluginProperty(group = "destination")
     private Property<Integer> targetLowPriorityNodes = Property.ofValue(0);
 
     @Override

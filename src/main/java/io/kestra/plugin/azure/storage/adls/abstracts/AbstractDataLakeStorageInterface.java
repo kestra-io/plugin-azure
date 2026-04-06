@@ -4,11 +4,13 @@ import io.kestra.core.models.property.Property;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotNull;
+import io.kestra.core.models.annotations.PluginProperty;
 
 public interface AbstractDataLakeStorageInterface {
     @Schema(
         title = "The name of the file systems. If the path name contains special characters, pass in the url encoded version of the path name."
     )
     @NotNull
+    @PluginProperty(group = "main")
     Property<String> getFileSystem();
 }

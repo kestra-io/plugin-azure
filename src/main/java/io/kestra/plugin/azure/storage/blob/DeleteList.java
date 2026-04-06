@@ -67,28 +67,34 @@ import static io.kestra.core.utils.Rethrow.throwConsumer;
     title = "Delete a list of objects from Azure Blob Storage."
 )
 public class DeleteList extends AbstractBlobStorageWithSas implements RunnableTask<DeleteList.Output>, ListInterface, AbstractBlobStorageContainerInterface {
+    @PluginProperty(group = "main")
     private Property<String> container;
 
+    @PluginProperty(group = "source")
     private Property<String> prefix;
 
+    @PluginProperty(group = "processing")
     protected Property<String> regexp;
 
+    @PluginProperty(group = "processing")
     protected Property<String> delimiter;
 
     @Builder.Default
+    @PluginProperty(group = "processing")
     private Property<Filter> filter = Property.ofValue(Filter.FILES);
 
     @Min(2)
     @Schema(
         title = "Number of concurrent parallel deletions."
     )
-    @PluginProperty(dynamic = false)
+    @PluginProperty(dynamic = false, group = "execution")
     private Integer concurrent;
 
     @Schema(
         title = "Whether to raise an error if the file is not found."
     )
     @Builder.Default
+    @PluginProperty(group = "reliability")
     private final Property<Boolean> errorOnEmpty = Property.ofValue(false);
 
     @Override

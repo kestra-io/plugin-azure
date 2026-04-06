@@ -16,6 +16,7 @@ import io.kestra.plugin.azure.storage.adls.abstracts.AbstractDataLakeWithFile;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
+import io.kestra.core.models.annotations.PluginProperty;
 
 @SuperBuilder
 @ToString
@@ -55,16 +56,19 @@ public class SetAccessControl extends AbstractDataLakeWithFile implements Runnab
     @Schema(
         title = "Group permissions."
     )
+    @PluginProperty(group = "advanced")
     private Permission groupPermissions;
 
     @Schema(
         title = "Owner permissions."
     )
+    @PluginProperty(group = "advanced")
     private Permission ownerPermissions;
 
     @Schema(
         title = "Other permissions."
     )
+    @PluginProperty(group = "advanced")
     private Permission otherPermissions;
 
     @Override

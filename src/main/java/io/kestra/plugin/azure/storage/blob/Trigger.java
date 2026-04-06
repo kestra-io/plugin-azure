@@ -29,6 +29,7 @@ import lombok.experimental.SuperBuilder;
 
 import static io.kestra.core.models.triggers.StatefulTriggerService.*;
 import static io.kestra.core.utils.Rethrow.throwFunction;
+import io.kestra.core.models.annotations.PluginProperty;
 
 @SuperBuilder
 @NoArgsConstructor
@@ -157,6 +158,7 @@ public class Trigger extends AbstractTrigger implements PollingTriggerInterface,
         description = "Limits the number of blobs retrieved per polling interval. If not specified, all matching blobs will be retrieved."
     )
     @Builder.Default
+    @PluginProperty(group = "execution")
     private Property<Integer> maxFiles = Property.ofValue(25);
 
     @Builder.Default

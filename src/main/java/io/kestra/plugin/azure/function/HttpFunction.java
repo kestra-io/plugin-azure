@@ -58,10 +58,12 @@ import lombok.experimental.SuperBuilder;
 public class HttpFunction extends Task implements RunnableTask<HttpFunction.Output> {
     @Schema(title = "HTTP method", description = "Verb used for the request (e.g., GET, POST, PUT)")
     @NotNull
+    @PluginProperty(group = "main")
     protected Property<String> httpMethod;
 
     @Schema(title = "Azure Function URL", description = "Full function URL including function key if required")
     @NotNull
+    @PluginProperty(group = "main")
     protected Property<String> url;
 
     @Schema(
@@ -69,6 +71,7 @@ public class HttpFunction extends Task implements RunnableTask<HttpFunction.Outp
         description = "JSON payload sent to the function; defaults to empty object"
     )
     @Builder.Default
+    @PluginProperty(group = "advanced")
     protected Property<Map<String, Object>> httpBody = Property.ofValue(new HashMap<>());
 
     @Schema(
@@ -76,7 +79,7 @@ public class HttpFunction extends Task implements RunnableTask<HttpFunction.Outp
         description = "Read timeout for the HTTP call; defaults to PT60M"
     )
     @Builder.Default
-    @PluginProperty(dynamic = true)
+    @PluginProperty(dynamic = true, group = "execution")
     protected Property<Duration> maxDuration = Property.ofValue(Duration.ofMinutes(60));
 
     @Override

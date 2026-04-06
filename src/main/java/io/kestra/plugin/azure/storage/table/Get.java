@@ -18,6 +18,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.ToString;
 import lombok.experimental.SuperBuilder;
+import io.kestra.core.models.annotations.PluginProperty;
 
 @SuperBuilder
 @ToString
@@ -53,11 +54,13 @@ public class Get extends AbstractTableStorage implements RunnableTask<Get.Output
         title = "Partition key to fetch"
     )
     @NotNull
+    @PluginProperty(group = "main")
     private Property<String> partitionKey;
 
     @Schema(
         title = "Row key to fetch"
     )
+    @PluginProperty(group = "connection")
     private Property<String> rowKey;
 
     @Override

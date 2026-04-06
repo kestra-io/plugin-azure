@@ -29,6 +29,7 @@ import lombok.*;
 import lombok.experimental.SuperBuilder;
 
 import static io.kestra.core.utils.Rethrow.throwFunction;
+import io.kestra.core.models.annotations.PluginProperty;
 
 @SuperBuilder
 @ToString
@@ -61,15 +62,19 @@ import static io.kestra.core.utils.Rethrow.throwFunction;
 )
 public class Downloads extends AbstractBlobStorageWithSas implements RunnableTask<Downloads.Output>, ListInterface, ActionInterface, AbstractBlobStorageContainerInterface {
     @Schema(title = "Container", description = "Target container to list and download from")
+    @PluginProperty(group = "main")
     private Property<String> container;
 
     @Schema(title = "Prefix", description = "Limits listing to blobs starting with this path")
+    @PluginProperty(group = "source")
     private Property<String> prefix;
 
     @Schema(title = "Regex filter", description = "Java regex applied to blob names after prefix")
+    @PluginProperty(group = "processing")
     protected Property<String> regexp;
 
     @Schema(title = "Delimiter", description = "Virtual folder delimiter for listing")
+    @PluginProperty(group = "processing")
     protected Property<String> delimiter;
 
     @Schema(title = "Post-action", description = "Action to apply after download (NONE, DELETE, MOVE)")
@@ -80,6 +85,7 @@ public class Downloads extends AbstractBlobStorageWithSas implements RunnableTas
 
     @Builder.Default
     @Schema(title = "List filter", description = "FILES or DIRECTORIES filter for listing; defaults to FILES")
+    @PluginProperty(group = "processing")
     private Property<Filter> filter = Property.ofValue(Filter.FILES);
 
     @Schema(
@@ -87,6 +93,7 @@ public class Downloads extends AbstractBlobStorageWithSas implements RunnableTas
         description = "Limits the number of blobs downloaded. If not specified, all matching blobs will be downloaded."
     )
     @Builder.Default
+    @PluginProperty(group = "processing")
     private Property<Integer> maxFiles = Property.ofValue(25);
 
     @Override

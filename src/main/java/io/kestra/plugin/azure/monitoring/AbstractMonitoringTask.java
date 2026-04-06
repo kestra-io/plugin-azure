@@ -26,6 +26,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotNull;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
+import io.kestra.core.models.annotations.PluginProperty;
 
 @SuperBuilder
 @ToString
@@ -38,6 +39,7 @@ public abstract class AbstractMonitoringTask extends AbstractAzureIdentityConnec
         description = "Regional metrics endpoint, e.g. https://westeurope.metrics.monitor.azure.com"
     )
     @NotNull
+    @PluginProperty(group = "main")
     protected Property<String> endpoint;
 
     protected MetricsClient queryClient(RunContext runContext) throws IllegalVariableEvaluationException {

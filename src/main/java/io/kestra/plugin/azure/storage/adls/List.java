@@ -17,6 +17,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotNull;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
+import io.kestra.core.models.annotations.PluginProperty;
 
 @SuperBuilder
 @ToString
@@ -58,8 +59,10 @@ import lombok.experimental.SuperBuilder;
 public class List extends AbstractDataLakeConnection implements RunnableTask<List.Output>, AbstractDataLakeStorageInterface {
     @Schema(title = "Directory path", description = "Full path to the directory")
     @NotNull
+    @PluginProperty(group = "main")
     protected Property<String> directoryPath;
 
+    @PluginProperty(group = "main")
     protected Property<String> fileSystem;
 
     @Schema(
@@ -67,6 +70,7 @@ public class List extends AbstractDataLakeConnection implements RunnableTask<Lis
         description = "Limits the number of files returned by the list operation. If not specified, all matching files will be returned."
     )
     @Builder.Default
+    @PluginProperty(group = "processing")
     private Property<Integer> maxFiles = Property.ofValue(25);
 
     @Override

@@ -15,6 +15,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotNull;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
+import io.kestra.core.models.annotations.PluginProperty;
 
 @SuperBuilder
 @ToString
@@ -53,6 +54,7 @@ public class Lease extends AbstractDataLakeWithFile implements RunnableTask<Leas
     )
     @NotNull
     @Builder.Default
+    @PluginProperty(group = "execution")
     protected Property<Integer> leaseDuration = Property.ofValue(-1); //Set to -1 for infinite lease duration by default
 
     @Schema(
@@ -61,12 +63,14 @@ public class Lease extends AbstractDataLakeWithFile implements RunnableTask<Leas
     )
     @NotNull
     @Builder.Default
+    @PluginProperty(group = "main")
     protected Property<LeaseAction> action = Property.ofValue(LeaseAction.ACQUIRE);
 
     @Schema(
         title = "Lease ID",
         description = "ID of the lease that must be provided for the following action : RENEW, BREAK, RELEASE"
     )
+    @PluginProperty(group = "advanced")
     protected Property<String> leaseId;
 
     @Override

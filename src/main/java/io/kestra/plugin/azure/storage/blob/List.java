@@ -19,6 +19,7 @@ import io.kestra.plugin.azure.shared.storage.blob.services.BlobService;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
+import io.kestra.core.models.annotations.PluginProperty;
 
 @SuperBuilder
 @ToString
@@ -52,15 +53,20 @@ import lombok.experimental.SuperBuilder;
     title = "List blob objects in an Azure Blob Storage container."
 )
 public class List extends AbstractBlobStorageWithSas implements RunnableTask<List.Output>, ListInterface, AbstractBlobStorageContainerInterface {
+    @PluginProperty(group = "main")
     private Property<String> container;
 
+    @PluginProperty(group = "source")
     private Property<String> prefix;
 
+    @PluginProperty(group = "processing")
     protected Property<String> regexp;
 
+    @PluginProperty(group = "processing")
     protected Property<String> delimiter;
 
     @Builder.Default
+    @PluginProperty(group = "processing")
     private Property<Filter> filter = Property.ofValue(Filter.FILES);
 
     @Schema(
@@ -68,6 +74,7 @@ public class List extends AbstractBlobStorageWithSas implements RunnableTask<Lis
         description = "Limits the number of blobs returned by the list operation. If not specified, all matching blobs will be returned."
     )
     @Builder.Default
+    @PluginProperty(group = "processing")
     private Property<Integer> maxFiles = Property.ofValue(25);
 
     @Override

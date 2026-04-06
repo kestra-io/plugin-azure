@@ -29,6 +29,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotNull;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
+import io.kestra.core.models.annotations.PluginProperty;
 
 /**
  * The {@link RunnableTask} can be used for producing batches of events to Azure Event Hubs.
@@ -100,6 +101,7 @@ public class Produce extends AbstractEventHubTask implements RunnableTask<Produc
     // TASK'S PARAMETERS
     @Schema(title = "Event properties", description = "Metadata properties applied to each event body")
     @Builder.Default
+    @PluginProperty(group = "advanced")
     private Property<Map<String, String>> eventProperties = Property.ofValue(new HashMap<>());
 
     @Schema(
@@ -108,30 +110,37 @@ public class Produce extends AbstractEventHubTask implements RunnableTask<Produc
         anyOf = { String.class, List.class, Map.class }
     )
     @NotNull
+    @PluginProperty(group = "main")
     private Object from;
 
     @Schema(title = "Partition key", description = "Routes all events in this run to the same partition using hash")
+    @PluginProperty(group = "connection")
     private Property<String> partitionKey;
 
     @Schema(title = "Max batch size (bytes)", description = "Maximum batch payload size; optional")
+    @PluginProperty(group = "advanced")
     private Property<Integer> maxBatchSizeInBytes;
 
     @Schema(title = "Max events per batch", description = "Cap on events per batch; defaults to 1000")
     @Builder.Default
+    @PluginProperty(group = "advanced")
     private Property<Integer> maxEventsPerBatch = Property.ofValue(1000);
 
     @Schema(
         title = "Body content type",
         description = "MIME type placed on each event for downstream consumers"
     )
+    @PluginProperty(group = "advanced")
     private Property<String> bodyContentType;
 
     @Schema(title = "Body serializer", description = "Serde used to serialize event bodies; defaults to STRING")
     @Builder.Default
+    @PluginProperty(group = "advanced")
     private Property<Serdes> bodySerializer = Property.ofValue(Serdes.STRING);
 
     @Schema(title = "Serializer properties", description = "Key/value options passed to the serializer")
     @Builder.Default
+    @PluginProperty(group = "advanced")
     private Property<Map<String, Object>> bodySerializerProperties = Property.ofValue(new HashMap<>());
 
     // SERVICES

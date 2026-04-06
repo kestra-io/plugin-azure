@@ -21,6 +21,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.ToString;
 import lombok.experimental.SuperBuilder;
+import io.kestra.core.models.annotations.PluginProperty;
 
 @SuperBuilder
 @ToString
@@ -62,6 +63,7 @@ public class CreateItem extends AbstractCosmosContainerTask<CreateItem.Output> i
         title = "Document body to create",
         description = "JSON payload must include id and partition key fields expected by the container."
     )
+    @PluginProperty(group = "main")
     private Property<Map<String, Object>> item;
 
     @Override

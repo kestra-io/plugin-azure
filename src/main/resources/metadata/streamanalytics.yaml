@@ -1,0 +1,8 @@
+group: io.kestra.plugin.azure.streamanalytics
+name: "streamanalytics"
+title: "Stream Analytics"
+description: "Tasks for interacting with Azure Stream Analytics jobs."
+body: "Provide Azure AD credentials (tenantId, clientId, clientSecret) along with the subscriptionId, resourceGroup, and jobName to retrieve details about an Azure Stream Analytics job including its provisioning state and runtime state."
+videos: []
+createdBy: "Kestra Core Team"
+managedBy: "Kestra Core Team"

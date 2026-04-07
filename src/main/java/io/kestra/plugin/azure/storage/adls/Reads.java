@@ -25,6 +25,7 @@ import lombok.*;
 import lombok.experimental.SuperBuilder;
 
 import static io.kestra.core.utils.Rethrow.throwFunction;
+import io.kestra.core.models.annotations.PluginProperty;
 
 @SuperBuilder
 @ToString
@@ -56,8 +57,10 @@ import static io.kestra.core.utils.Rethrow.throwFunction;
 public class Reads extends AbstractDataLakeConnection implements RunnableTask<Reads.Output>, AbstractDataLakeStorageInterface {
     @Schema(title = "Directory Name")
     @NotNull
+    @PluginProperty(group = "main")
     protected Property<String> directoryPath;
 
+    @PluginProperty(group = "main")
     protected Property<String> fileSystem;
 
     @Schema(
@@ -65,6 +68,7 @@ public class Reads extends AbstractDataLakeConnection implements RunnableTask<Re
         description = "Limits the number of files read. If not specified, all matching files will be read."
     )
     @Builder.Default
+    @PluginProperty(group = "processing")
     private Property<Integer> maxFiles = Property.ofValue(25);
 
     @Override

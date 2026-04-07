@@ -92,27 +92,33 @@ public class CreateRun extends AbstractAzureIdentityConnection implements Runnab
 
     @Schema(title = "Subscription ID", description = "Azure subscription GUID that owns the Data Factory")
     @NotNull
+    @PluginProperty(group = "main")
     protected Property<String> subscriptionId;
 
     @Schema(title = "Factory name", description = "Azure Data Factory name")
+    @PluginProperty(group = "destination")
     private Property<String> factoryName;
 
     @Schema(title = "Pipeline name", description = "Pipeline to trigger inside the factory")
+    @PluginProperty(group = "advanced")
     private Property<String> pipelineName;
 
     @Schema(title = "Resource group name", description = "Resource group containing the Data Factory")
+    @PluginProperty(group = "source")
     private Property<String> resourceGroupName;
 
     @Schema(title = "Pipeline parameters", description = "Key/value parameters passed to the pipeline run")
     @Builder.Default
+    @PluginProperty(group = "main")
     private Property<Map<String, Object>> parameters = Property.ofValue(new HashMap<>());
 
     @Schema(title = "Wait for completion", description = "If true (default), poll pipeline status and collect activity logs; false returns runId immediately")
     @Builder.Default
+    @PluginProperty(group = "execution")
     private Property<Boolean> wait = Property.ofValue(Boolean.TRUE);
 
     @Schema(title = "Polling frequency", description = "Interval and max duration used when wait=true")
-    @PluginProperty
+    @PluginProperty(group = "advanced")
     @Builder.Default
     private CheckFrequency checkFrequency = CheckFrequency.builder().build();
 

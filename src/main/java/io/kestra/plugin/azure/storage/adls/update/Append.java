@@ -20,6 +20,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.ToString;
 import lombok.experimental.SuperBuilder;
+import io.kestra.core.models.annotations.PluginProperty;
 
 @SuperBuilder
 @ToString
@@ -56,6 +57,7 @@ import lombok.experimental.SuperBuilder;
 public class Append extends AbstractDataLakeWithFile implements RunnableTask<VoidOutput> {
     @Schema(title = "Data")
     @NotNull
+    @PluginProperty(group = "main")
     protected Property<String> data;
 
     @Override

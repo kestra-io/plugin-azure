@@ -25,6 +25,7 @@ import lombok.*;
 import lombok.experimental.SuperBuilder;
 
 import static io.kestra.core.utils.Rethrow.throwFunction;
+import io.kestra.core.models.annotations.PluginProperty;
 
 @SuperBuilder
 @ToString
@@ -69,6 +70,7 @@ public class Bulk extends AbstractTableStorage implements RunnableTask<Bulk.Outp
         anyOf = { String.class, List.class, Map.class }
     )
     @NotNull
+    @PluginProperty(group = "main")
     private Object from;
 
     @Schema(
@@ -77,6 +79,7 @@ public class Bulk extends AbstractTableStorage implements RunnableTask<Bulk.Outp
     )
     @NotNull
     @Builder.Default
+    @PluginProperty(group = "advanced")
     private Property<TableTransactionActionType> defaultType = Property.ofValue(TableTransactionActionType.UPSERT_REPLACE);
 
     @Override

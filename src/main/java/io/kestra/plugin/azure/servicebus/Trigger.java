@@ -21,6 +21,7 @@ import lombok.experimental.SuperBuilder;
 
 import static io.kestra.plugin.azure.servicebus.AbstractServiceBusTask.*;
 import static io.kestra.plugin.azure.servicebus.Consume.*;
+import io.kestra.core.models.annotations.PluginProperty;
 
 @SuperBuilder
 @ToString
@@ -59,45 +60,58 @@ import static io.kestra.plugin.azure.servicebus.Consume.*;
 )
 public class Trigger extends AbstractTrigger implements PollingTriggerInterface, TriggerOutput<Consume.Output> {
     @Schema(description = QUEUE_NAME_DESCRIPTION)
+    @PluginProperty(group = "advanced")
     private Property<String> queueName;
 
     @Schema(description = TOPIC_NAME_DESCRIPTION)
+    @PluginProperty(group = "advanced")
     private Property<String> topicName;
 
     @Schema(description = CONNECTION_STRING_DESCRIPTION)
+    @PluginProperty(group = "connection")
     private Property<String> connectionString;
 
     @Schema(description = SUBSCRIPTION_NAME_DESCRIPTION)
+    @PluginProperty(group = "advanced")
     private Property<String> subscriptionName;
 
     @Schema(description = RECEIVE_MODE_DESCRIPTION)
+    @PluginProperty(group = "advanced")
     private Property<ServiceBusReceiveMode> receiveMode;
 
     @Schema(description = SUB_QUEUE_DESCRIPTION)
+    @PluginProperty(group = "advanced")
     private Property<SubQueue> subQueue;
 
     @Builder.Default
     @NotNull
     @Schema(description = SERDE_TYPE_DESCRIPTION)
+    @PluginProperty(group = "main")
     private Property<SerdeType> serdeType = Property.ofValue(SerdeType.STRING);
 
     @Schema(description = "Azure Active Directory tenant ID used when authenticating without a connection string")
+    @PluginProperty(group = "connection")
     private Property<String> tenantId;
 
     @Schema(description = "Client ID for the Azure app registration used with tenantId")
+    @PluginProperty(group = "connection")
     private Property<String> clientId;
 
     @Schema(description = "Client secret for the Azure app registration; not needed when using pemCertificate")
+    @PluginProperty(group = "connection")
     private Property<String> clientSecret;
 
     @Schema(description = "PEM certificate content for certificate-based authentication")
+    @PluginProperty(group = "advanced")
     private Property<String> pemCertificate;
 
     @Schema(description = MAX_MESSAGES_DESCRIPTION)
+    @PluginProperty(group = "execution")
     protected Property<Integer> maxMessages;
 
     @NotNull
     @Schema(description = MAX_RECEIVE_DURATION_DESCRIPTION)
+    @PluginProperty(group = "main")
     protected Property<Duration> maxReceiveDuration;
 
     @Builder.Default

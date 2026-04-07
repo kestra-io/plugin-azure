@@ -6,6 +6,7 @@ import io.kestra.plugin.azure.shared.AzureClientWithSasInterface;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Getter;
 import lombok.experimental.SuperBuilder;
+import io.kestra.core.models.annotations.PluginProperty;
 
 /**
  * This class is suffixed 'Interface' as it used to capture parameters from task properties.
@@ -21,5 +22,6 @@ public final class BlobContainerClientInterface implements AzureClientWithSasInt
     @Schema(
         title = "The blob container name."
     )
+    @PluginProperty(group = "advanced")
     private Property<String> containerName;
 }

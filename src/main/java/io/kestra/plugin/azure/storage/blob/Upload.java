@@ -114,28 +114,33 @@ public class Upload extends AbstractBlobStorageWithSasObject implements Runnable
         title = Data.From.TITLE,
         description = Data.From.DESCRIPTION
     )
-    @PluginProperty(internalStorageURI = true)
+    @PluginProperty(internalStorageURI = true, group = "main")
     @NotNull
     private Object from;
 
     @Schema(title = "Blob metadata", description = "Key/value metadata to set on the blob")
+    @PluginProperty(group = "advanced")
     private Property<Map<String, String>> metadata;
 
     @Schema(title = "Blob tags", description = "User-defined tags to apply")
+    @PluginProperty(group = "advanced")
     private Property<Map<String, String>> tags;
 
     @Schema(
         title = "Access tier",
         description = "Hot/Cool/Archive for block blobs or premium tiers for page blobs; does not change etag"
     )
+    @PluginProperty(group = "advanced")
     private Property<AccessTier> accessTier;
 
     @Schema(
         title = "Legal hold",
         description = "Sets legal hold; requires container immutable storage with versioning enabled"
     )
+    @PluginProperty(group = "advanced")
     private Property<Boolean> legalHold;
 
+    @PluginProperty(group = "advanced")
     private BlobImmutabilityPolicy immutabilityPolicy;
 
     @Override

@@ -32,6 +32,7 @@ import lombok.*;
 import lombok.experimental.SuperBuilder;
 
 import static io.kestra.core.utils.Rethrow.throwConsumer;
+import io.kestra.core.models.annotations.PluginProperty;
 
 @SuperBuilder
 @ToString
@@ -62,17 +63,21 @@ import static io.kestra.core.utils.Rethrow.throwConsumer;
 public class Consume extends AbstractServiceBusTask implements RunnableTask<Consume.Output> {
 
     @Schema(description = RECEIVE_MODE_DESCRIPTION)
+    @PluginProperty(group = "advanced")
     protected Property<ServiceBusReceiveMode> receiveMode;
 
     @Schema(description = SUB_QUEUE_DESCRIPTION)
+    @PluginProperty(group = "advanced")
     protected Property<SubQueue> subQueue;
 
     @Schema(description = MAX_MESSAGES_DESCRIPTION)
+    @PluginProperty(group = "advanced")
     protected Property<Integer> maxMessages;
 
     @NotNull
     @Builder.Default
     @Schema(description = MAX_RECEIVE_DURATION_DESCRIPTION)
+    @PluginProperty(group = "execution")
     protected Property<Duration> maxReceiveDuration = Property.ofValue(DEFAULT_MAX_RECEIVE_DURATION);
 
     @Builder.Default

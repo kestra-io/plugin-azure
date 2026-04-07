@@ -24,6 +24,7 @@ import lombok.*;
 import lombok.experimental.SuperBuilder;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+import io.kestra.core.models.annotations.PluginProperty;
 
 @SuperBuilder
 @ToString
@@ -60,6 +61,7 @@ public class List extends AbstractTableStorage implements RunnableTask<List.Outp
         title = "OData filter expression",
         description = "Server-side [filter strings](https://docs.microsoft.com/en-us/visualstudio/azure/vs-azure-tools-table-designer-construct-filter-strings?view=vs-2022) using Azure Tables syntax."
     )
+    @PluginProperty(group = "processing")
     private Property<String> filter;
 
     @Schema(
@@ -72,6 +74,7 @@ public class List extends AbstractTableStorage implements RunnableTask<List.Outp
         title = "Max entities per page",
         description = "Limits the number of entities per page; Azure may still paginate further."
     )
+    @PluginProperty(group = "destination")
     private Property<Integer> top;
 
     @Schema(
@@ -79,6 +82,7 @@ public class List extends AbstractTableStorage implements RunnableTask<List.Outp
         description = "Limits the number of entities returned by the list operation. If not specified, all matching entities will be returned."
     )
     @Builder.Default
+    @PluginProperty(group = "processing")
     private Property<Integer> maxFiles = Property.ofValue(25);
 
     @Override

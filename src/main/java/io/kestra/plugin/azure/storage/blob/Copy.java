@@ -54,17 +54,18 @@ import lombok.experimental.SuperBuilder;
 )
 public class Copy extends AbstractBlobStorageWithSas implements RunnableTask<Copy.Output> {
     @Schema(title = "Source blob", description = "Container and blob path to copy from")
-    @PluginProperty(dynamic = true)
+    @PluginProperty(dynamic = true, group = "main")
     @NotNull
     private CopyObject from;
 
     @Schema(title = "Destination blob", description = "Container and blob path to copy to")
-    @PluginProperty(dynamic = true)
+    @PluginProperty(dynamic = true, group = "main")
     @NotNull
     private CopyObject to;
 
     @Schema(title = "Delete source after copy", description = "If true, removes the source blob when copy finishes; default false")
     @Builder.Default
+    @PluginProperty(group = "advanced")
     private Property<Boolean> delete = Property.ofValue(false);
 
     @Override

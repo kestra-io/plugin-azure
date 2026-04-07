@@ -107,28 +107,34 @@ public class AzCLI extends Task implements RunnableTask<ScriptOutput>, Namespace
 
     @Schema(title = "Commands", description = "List of az commands executed with /bin/sh -c inside the runner")
     @NotNull
+    @PluginProperty(group = "main")
     private Property<List<String>> commands;
 
     @Schema(title = "Login username", description = "Triggers az login before commands; for Service Principal use appId/clientId")
+    @PluginProperty(group = "connection")
     private Property<String> username;
 
     @Schema(title = "Login password", description = "Password or client secret used with username")
+    @PluginProperty(group = "connection")
     private Property<String> password;
 
     @Schema(title = "Tenant ID", description = "Tenant passed to az login --tenant")
+    @PluginProperty(group = "connection")
     private Property<String> tenant;
 
     @Schema(title = "Service principal login", description = "Adds --service-principal to az login when true")
+    @PluginProperty(group = "advanced")
     private Property<Boolean> servicePrincipal;
 
     @Schema(title = "Environment variables", description = "Additional environment variables injected into the commands")
+    @PluginProperty(group = "execution")
     protected Property<Map<String, String>> env;
 
     @Schema(
         title = "Deprecated Docker options",
         description = "Deprecated; use taskRunner instead"
     )
-    @PluginProperty
+    @PluginProperty(group = "deprecated")
     @Deprecated
     private DockerOptions docker;
 
@@ -136,20 +142,24 @@ public class AzCLI extends Task implements RunnableTask<ScriptOutput>, Namespace
         title = "Task runner",
         description = "Runner implementation (defaults to Docker) used to execute the commands"
     )
-    @PluginProperty
+    @PluginProperty(group = "execution")
     @Builder.Default
     @Valid
     protected TaskRunner<?> taskRunner = Docker.instance();
 
     @Schema(title = "Runner container image", description = "Container image used by container-based task runners; defaults to mcr.microsoft.com/azure-cli")
     @Builder.Default
+    @PluginProperty(group = "execution")
     protected Property<String> containerImage = Property.ofValue(DEFAULT_IMAGE);
 
+    @PluginProperty(group = "source")
     private NamespaceFiles namespaceFiles;
 
+    @PluginProperty(group = "source")
     private Object inputFiles;
 
     @Schema(title = "Output files", description = "Paths from the container working directory to persist to outputs")
+    @PluginProperty(group = "destination")
     private Property<List<String>> outputFiles;
 
     @Override

@@ -24,6 +24,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotNull;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
+import io.kestra.core.models.annotations.PluginProperty;
 
 @SuperBuilder
 @ToString
@@ -64,10 +65,12 @@ import lombok.experimental.SuperBuilder;
 public class Query extends AbstractMonitoringTask implements RunnableTask<Query.Output> {
     @Schema(title = "Resource IDs", description = "List of Azure resource IDs to query")
     @NotNull
+    @PluginProperty(group = "main")
     private Property<List<String>> resourceIds;
 
     @Schema(title = "Metric names", description = "Metrics to retrieve for the specified resources")
     @NotNull
+    @PluginProperty(group = "main")
     private Property<List<String>> metricNames;
 
     @Schema(
@@ -75,6 +78,7 @@ public class Query extends AbstractMonitoringTask implements RunnableTask<Query.
         description = "Namespace for the metrics, e.g., Microsoft.Compute/virtualMachines"
     )
     @NotNull
+    @PluginProperty(group = "main")
     private Property<String> metricsNamespace;
 
     @Schema(
@@ -82,33 +86,40 @@ public class Query extends AbstractMonitoringTask implements RunnableTask<Query.
         description = "Look-back duration ending at now; defaults to PT5M"
     )
     @Builder.Default
+    @PluginProperty(group = "advanced")
     private Property<Duration> window = Property.ofValue(Duration.ofMinutes(5));
 
     @Schema(
         title = "Aggregations",
         description = "Aggregation types to include (Average, Total, Maximum, Minimum, Count)"
     )
+    @PluginProperty(group = "advanced")
     private Property<List<String>> aggregations;
 
     @Schema(
         title = "Time grain",
         description = "ISO-8601 duration for aggregation granularity, e.g., PT1M"
     )
+    @PluginProperty(group = "advanced")
     private Property<Duration> interval;
 
     @Schema(title = "Filter", description = "OData filter expression for the query")
+    @PluginProperty(group = "processing")
     private Property<String> filter;
 
     @Schema(title = "Top", description = "Limit on number of time series returned")
+    @PluginProperty(group = "destination")
     private Property<Integer> top;
 
     @Schema(title = "Order by", description = "Sorting clause for results")
+    @PluginProperty(group = "processing")
     private Property<String> orderBy;
 
     @Schema(
         title = "Rollup by dimension",
         description = "Dimension name(s) to roll up series (e.g., City)"
     )
+    @PluginProperty(group = "advanced")
     private Property<String> rollupBy;
 
     @Override

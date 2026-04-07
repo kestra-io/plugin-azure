@@ -21,6 +21,7 @@ import reactor.core.publisher.Flux;
 import static io.kestra.plugin.azure.servicebus.AbstractServiceBusTask.*;
 import static io.kestra.plugin.azure.servicebus.Consume.RECEIVE_MODE_DESCRIPTION;
 import static io.kestra.plugin.azure.servicebus.Consume.SUB_QUEUE_DESCRIPTION;
+import io.kestra.core.models.annotations.PluginProperty;
 
 @SuperBuilder
 @ToString
@@ -53,38 +54,49 @@ import static io.kestra.plugin.azure.servicebus.Consume.SUB_QUEUE_DESCRIPTION;
 )
 public class RealTimeTrigger extends AbstractTrigger implements RealtimeTriggerInterface, TriggerOutput<Message> {
     @Schema(description = QUEUE_NAME_DESCRIPTION)
+    @PluginProperty(group = "advanced")
     private Property<String> queueName;
 
     @Schema(description = TOPIC_NAME_DESCRIPTION)
+    @PluginProperty(group = "advanced")
     private Property<String> topicName;
 
     @Schema(description = CONNECTION_STRING_DESCRIPTION)
+    @PluginProperty(group = "connection")
     private Property<String> connectionString;
 
     @Schema(description = SUBSCRIPTION_NAME_DESCRIPTION)
+    @PluginProperty(group = "advanced")
     private Property<String> subscriptionName;
 
     @Schema(description = RECEIVE_MODE_DESCRIPTION)
+    @PluginProperty(group = "advanced")
     private Property<ServiceBusReceiveMode> receiveMode;
 
     @Schema(description = SUB_QUEUE_DESCRIPTION)
+    @PluginProperty(group = "advanced")
     private Property<SubQueue> subQueue;
 
     @Builder.Default
     @NotNull
     @Schema(title = SERDE_TYPE_DESCRIPTION)
+    @PluginProperty(group = "main")
     private Property<SerdeType> serdeType = Property.ofValue(SerdeType.STRING);
 
     @Schema
+    @PluginProperty(group = "connection")
     private Property<String> tenantId;
 
     @Schema
+    @PluginProperty(group = "connection")
     private Property<String> clientId;
 
     @Schema
+    @PluginProperty(group = "connection")
     private Property<String> clientSecret;
 
     @Schema
+    @PluginProperty(group = "advanced")
     private Property<String> pemCertificate;
 
     private static final ServiceBusReceiveMode DEFAULT_RECEIVE_MODE = ServiceBusReceiveMode.PEEK_LOCK;

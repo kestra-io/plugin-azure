@@ -77,14 +77,16 @@ public class Upload extends AbstractDataLakeWithFile implements RunnableTask<Upl
     public static final int AZURE_LEASE_MAX_DURATION = 60;
 
     @Schema(title = "Source file", description = "kestra:// URI from internal storage to upload")
-    @PluginProperty(internalStorageURI = true)
+    @PluginProperty(internalStorageURI = true, group = "main")
     @NotNull
     private Property<String> from;
 
     @Schema(title = "Use lease", description = "Acquire blob lease before upload to prevent concurrent writers")
+    @PluginProperty(group = "advanced")
     private Property<Boolean> useLease;
 
     @Schema(title = "Lease duration (s)", description = "Lease duration between 15 and 60 seconds; values are clamped")
+    @PluginProperty(group = "execution")
     private Property<Integer> leaseDurationSeconds;
 
     @Override

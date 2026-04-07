@@ -91,13 +91,9 @@ public class GetJob extends AbstractAzureIdentityConnection implements RunnableT
                 .jobState(job.jobState())
                 .build();
         } catch (Exception e) {
-            logger.error(
-                "Failed to retrieve Stream Analytics job '{}' in resource group '{}': {}",
-                rJobName, rResourceGroup, e.getMessage()
-            );
             throw new Exception(
                 "Failed to retrieve Stream Analytics job '" + rJobName +
-                    "' in resource group '" + rResourceGroup + "': " + e.getMessage(),
+                    "' in resource group '" + rResourceGroup + "'",
                 e
             );
         }

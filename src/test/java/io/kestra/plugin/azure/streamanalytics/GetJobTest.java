@@ -139,7 +139,8 @@ class GetJobTest {
             assertThat(exception.getMessage(), containsString("Failed to retrieve Stream Analytics job"));
             assertThat(exception.getMessage(), containsString("missing-job"));
             assertThat(exception.getMessage(), containsString("missing-rg"));
-            assertThat(exception.getCause(), is(notNullValue()));
+            assertThat(exception.getCause(), instanceOf(RuntimeException.class));
+            assertThat(exception.getCause().getMessage(), is("Job not found"));
         }
     }
 }

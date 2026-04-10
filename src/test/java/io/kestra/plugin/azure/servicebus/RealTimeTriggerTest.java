@@ -12,7 +12,6 @@ import io.kestra.core.exceptions.IllegalVariableEvaluationException;
 import io.kestra.core.models.conditions.ConditionContext;
 import io.kestra.core.models.executions.Execution;
 import io.kestra.core.models.property.Property;
-import io.kestra.core.models.triggers.Trigger;
 import io.kestra.core.utils.TestsUtils;
 
 import reactor.core.publisher.Flux;
@@ -42,7 +41,7 @@ class RealTimeTriggerTest extends BaseServiceBusTest {
             .subscriptionName(Property.ofValue(subscriptionName))
             .build();
 
-        Map.Entry<ConditionContext, Trigger> context = TestsUtils.mockTrigger(runContextFactory, realTimeTrigger);
+        Map.Entry<ConditionContext, io.kestra.core.scheduler.model.TriggerState> context = TestsUtils.mockTrigger(runContextFactory, realTimeTrigger);
 
         //endregion
 
@@ -83,7 +82,7 @@ class RealTimeTriggerTest extends BaseServiceBusTest {
             .subscriptionName(Property.ofValue(subscriptionName))
             .build();
 
-        Map.Entry<ConditionContext, Trigger> context = TestsUtils.mockTrigger(runContextFactory, realTimeTrigger);
+        Map.Entry<ConditionContext, io.kestra.core.scheduler.model.TriggerState> context = TestsUtils.mockTrigger(runContextFactory, realTimeTrigger);
 
         //endregion
 
@@ -116,7 +115,7 @@ class RealTimeTriggerTest extends BaseServiceBusTest {
             .connectionString(Property.ofValue(connectionString))
             .build();
 
-        Map.Entry<ConditionContext, Trigger> context = TestsUtils.mockTrigger(runContextFactory, realTimeTrigger);
+        Map.Entry<ConditionContext, io.kestra.core.scheduler.model.TriggerState> context = TestsUtils.mockTrigger(runContextFactory, realTimeTrigger);
 
         //endregion
 
@@ -145,7 +144,7 @@ class RealTimeTriggerTest extends BaseServiceBusTest {
             .connectionString(Property.ofValue(connectionString))
             .build();
 
-        Map.Entry<ConditionContext, Trigger> context = TestsUtils.mockTrigger(runContextFactory, realTimeTrigger);
+        Map.Entry<ConditionContext, io.kestra.core.scheduler.model.TriggerState> context = TestsUtils.mockTrigger(runContextFactory, realTimeTrigger);
         //endregion
 
         //region WHEN

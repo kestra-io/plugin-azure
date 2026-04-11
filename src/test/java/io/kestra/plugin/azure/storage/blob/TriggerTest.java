@@ -2,87 +2,94 @@ package io.kestra.plugin.azure.storage.blob;
 
 import java.time.Duration;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
+import java.util.UUID;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 
 import io.kestra.plugin.azure.shared.storage.blob.models.Blob;
 import org.junit.jupiter.api.Test;
 
-import io.kestra.core.junit.annotations.KestraTest;
 import io.kestra.core.models.conditions.ConditionContext;
 import io.kestra.core.models.executions.Execution;
 import io.kestra.core.models.property.Property;
 import io.kestra.core.models.triggers.StatefulTriggerInterface;
+import io.kestra.core.queues.DispatchQueueInterface;
+import io.kestra.core.repositories.LocalFlowRepositoryLoader;
+import io.kestra.core.runners.FlowListeners;
 import io.kestra.core.utils.IdUtils;
 import io.kestra.core.utils.TestsUtils;
+import io.kestra.jdbc.runner.JdbcScheduler;
 import io.kestra.plugin.azure.storage.blob.abstracts.ActionInterface;
+
+import io.kestra.scheduler.AbstractScheduler;
+import io.kestra.worker.DefaultWorker;
+
+import io.micronaut.context.ApplicationContext;
+import jakarta.inject.Inject;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 
-@KestraTest
 class TriggerTest extends AbstractTest {
+    @Inject
+    private ApplicationContext applicationContext;
+
+    @Inject
+    private FlowListeners flowListenersService;
+
+    @Inject
+    private DispatchQueueInterface<Execution> executionQueue;
+
+    @Inject
+    protected LocalFlowRepositoryLoader repositoryLoader;
 
     @Test
     void deleteAction() throws Exception {
-        String toUploadDir = "trigger/storage-listen";
-        upload(toUploadDir);
-        upload(toUploadDir);
+        // mock flow listeners
+        CountDownLatch queueCount = new CountDownLatch(1);
 
-        Trigger trigger = Trigger.builder()
-            .id("blob-delete-" + IdUtils.create())
-            .type(Trigger.class.getName())
-            .endpoint(Property.ofValue(storageEndpoint))
-            .connectionString(Property.ofValue(connectionString))
-            .container(Property.ofValue(container))
-            .prefix(Property.ofValue(toUploadDir))
-            .action(Property.ofValue(ActionInterface.Action.DELETE))
-            .interval(Duration.ofSeconds(10))
-            .build();
+        // scheduler
+        DefaultWorker worker = applicationContext.createBean(DefaultWorker.class, UUID.randomUUID().toString(), 8, null);
+        try (
+            AbstractScheduler scheduler = new JdbcScheduler(
+                this.applicationContext,
+                this.flowListenersService
+            );
+        ) {
+            AtomicReference<Execution> last = new AtomicReference<>();
 
-        Map.Entry<ConditionContext, io.kestra.core.models.triggers.Trigger> context = TestsUtils.mockTrigger(runContextFactory, trigger);
-        Optional<Execution> execution = trigger.evaluate(context.getKey(), context.getValue());
+            // wait for execution
+            executionQueue.addListener(executionWithError ->
+            {
+                Execution execution = executionWithError.getLeft();
+                if (execution.getFlowId().equals("blob-storage-listen")) {
+                    last.set(execution);
+                    queueCount.countDown();
+                }
+            });
 
-        assertThat(execution.isPresent(), is(true));
-
-        @SuppressWarnings("unchecked")
-        java.util.List<Blob> blobs = (java.util.List<Blob>) execution.get().getTrigger().getVariables().get("blobs");
-        assertThat(blobs.size(), is(2));
-
-        List listTask = list()
-            .prefix(Property.ofValue(toUploadDir))
-            .build();
-        int remainingFilesOnBucket = listTask.run(runContext(listTask))
-            .getBlobs()
-            .size();
-        assertThat(remainingFilesOnBucket, is(0));
-    }
-
-    @Test
-    void noneAction() throws Exception {
-        String toUploadDir = "trigger/none-action-storage-listen";
-        try {
+            String toUploadDir = "trigger/storage-listen";
             upload(toUploadDir);
             upload(toUploadDir);
 
-            Trigger trigger = Trigger.builder()
-                .id("blob-none-" + IdUtils.create())
-                .type(Trigger.class.getName())
-                .endpoint(Property.ofValue(storageEndpoint))
-                .connectionString(Property.ofValue(connectionString))
-                .container(Property.ofValue(container))
-                .prefix(Property.ofValue(toUploadDir))
-                .action(Property.ofValue(ActionInterface.Action.NONE))
-                .interval(Duration.ofSeconds(10))
-                .build();
+            worker.run();
+            scheduler.run();
+            repositoryLoader.load(Objects.requireNonNull(TriggerTest.class.getClassLoader().getResource("flows/blob-storage-listen.yaml")));
 
-            Map.Entry<ConditionContext, io.kestra.core.models.triggers.Trigger> context = TestsUtils.mockTrigger(runContextFactory, trigger);
-            Optional<Execution> execution = trigger.evaluate(context.getKey(), context.getValue());
-
-            assertThat(execution.isPresent(), is(true));
+            boolean await = queueCount.await(10, TimeUnit.SECONDS);
+            try {
+                assertThat(await, is(true));
+            } finally {
+                worker.shutdown();
+            }
 
             @SuppressWarnings("unchecked")
-            java.util.List<Blob> blobs = (java.util.List<Blob>) execution.get().getTrigger().getVariables().get("blobs");
-            assertThat(blobs.size(), is(2));
+            java.util.List<Blob> trigger = (java.util.List<Blob>) last.get().getTrigger().getVariables().get("blobs");
+
+            assertThat(trigger.size(), is(2));
 
             List listTask = list()
                 .prefix(Property.ofValue(toUploadDir))
@@ -90,9 +97,63 @@ class TriggerTest extends AbstractTest {
             int remainingFilesOnBucket = listTask.run(runContext(listTask))
                 .getBlobs()
                 .size();
+            assertThat(remainingFilesOnBucket, is(0));
+        }
+    }
+
+    @Test
+    void noneAction() throws Exception {
+        // mock flow listeners
+        CountDownLatch queueCount = new CountDownLatch(1);
+
+        // scheduler
+        DefaultWorker worker = applicationContext.createBean(DefaultWorker.class, UUID.randomUUID().toString(), 8, null);
+        try (
+            AbstractScheduler scheduler = new JdbcScheduler(
+                this.applicationContext,
+                this.flowListenersService
+            );
+        ) {
+            AtomicReference<Execution> last = new AtomicReference<>();
+
+            // wait for execution
+            executionQueue.addListener(executionWithError ->
+            {
+                Execution execution = executionWithError.getLeft();
+                if (execution.getFlowId().equals("blob-storage-listen-none-action")) {
+                    last.set(execution);
+                    queueCount.countDown();
+                }
+            });
+
+            upload("trigger/none-action-storage-listen");
+            upload("trigger/none-action-storage-listen");
+
+            worker.run();
+            scheduler.run();
+            repositoryLoader.load(Objects.requireNonNull(TriggerTest.class.getClassLoader().getResource("flows/blob-storage-listen-none-action.yaml")));
+
+            boolean await = queueCount.await(10, TimeUnit.SECONDS);
+            try {
+                assertThat(await, is(true));
+            } finally {
+                worker.shutdown();
+            }
+
+            @SuppressWarnings("unchecked")
+            java.util.List<Blob> trigger = (java.util.List<Blob>) last.get().getTrigger().getVariables().get("blobs");
+
+            assertThat(trigger.size(), is(2));
+
+            List listTask = list()
+                .prefix(Property.ofValue("trigger/none-action-storage-listen"))
+                .build();
+            int remainingFilesOnBucket = listTask.run(runContext(listTask))
+                .getBlobs()
+                .size();
             assertThat(remainingFilesOnBucket, is(2));
         } finally {
-            DeleteList cleaner = deleteDir(toUploadDir).build();
+            DeleteList cleaner = deleteDir("trigger/none-action-storage-listen").build();
             cleaner.run(runContext(cleaner));
         }
     }

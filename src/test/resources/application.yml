@@ -1,3 +1,10 @@
+worker:
+  controllers:
+    type: STATIC
+    static:
+      endpoints:
+        - host: localhost
+
 kestra:
   repository:
     type: memory

@@ -48,7 +48,9 @@ import lombok.experimental.SuperBuilder;
 )
 @Schema(
     title = "Get Azure Stream Analytics job details",
-    description = "Retrieves details of an Azure Stream Analytics job by resource group and job name."
+    description = "Fetch the current state and metadata of an Azure Stream Analytics job. " +
+        "Use this task to poll job status in conditional flows, verify a job is running before triggering downstream tasks, " +
+        "or surface provisioning errors. Authenticates using an Azure AD service principal."
 )
 public class GetJob extends AbstractAzureIdentityConnection implements RunnableTask<GetJob.Output> {
 
@@ -115,10 +117,12 @@ public class GetJob extends AbstractAzureIdentityConnection implements RunnableT
         @Schema(title = "Location", description = "Azure region where the job is deployed")
         private final String location;
 
-        @Schema(title = "Provisioning state", description = "Provisioning state of the job (e.g., Succeeded, Failed)")
+        @Schema(title = "Provisioning state", description = "Provisioning state of the job. " +
+            "Possible values: Succeeded, Failed, Canceled, Provisioning, Deleting.")
         private final String provisioningState;
 
-        @Schema(title = "Job state", description = "Runtime state of the job (e.g., Running, Stopped)")
+        @Schema(title = "Job state", description = "Runtime state of the job. " +
+            "Possible values: Created, Starting, Running, Stopping, Stopped, Deleting, Failed, Degraded, Disabled, Scaling.")
         private final String jobState;
     }
 }

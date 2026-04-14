@@ -2,7 +2,6 @@ package io.kestra.plugin.azure.eventhubs;
 
 import java.util.List;
 import java.util.Objects;
-import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
@@ -17,15 +16,9 @@ import io.kestra.core.models.property.Property;
 import io.kestra.core.queues.QueueFactoryInterface;
 import io.kestra.core.queues.QueueInterface;
 import io.kestra.core.repositories.LocalFlowRepositoryLoader;
-import io.kestra.core.runners.FlowListeners;
 import io.kestra.core.runners.RunContextFactory;
 import io.kestra.core.utils.TestsUtils;
-import io.kestra.jdbc.runner.JdbcScheduler;
 import io.kestra.plugin.azure.eventhubs.serdes.Serdes;
-import io.kestra.scheduler.AbstractScheduler;
-import io.kestra.worker.DefaultWorker;
-
-import io.micronaut.context.ApplicationContext;
 import io.micronaut.context.annotation.Value;
 import jakarta.inject.Inject;
 import jakarta.inject.Named;
@@ -35,14 +28,8 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.hamcrest.Matchers.is;
 
-@KestraTest
+@KestraTest(startRunner = true, startScheduler = true)
 class TriggerTest {
-
-    @Inject
-    private ApplicationContext applicationContext;
-
-    @Inject
-    private FlowListeners flowListenersService;
 
     @Inject
     @Named(QueueFactoryInterface.EXECUTION_NAMED)
@@ -63,38 +50,21 @@ class TriggerTest {
     @Disabled
     @Test
     void testTrigger() throws Exception {
-        // mock flow listeners
         CountDownLatch queueCount = new CountDownLatch(1);
+        Flux<Execution> receive = TestsUtils.receive(executionQueue, execution -> {
+            queueCount.countDown();
+            assertThat(execution.getLeft().getFlowId(), is("trigger"));
+        });
 
-        // scheduler
-        DefaultWorker worker = applicationContext.createBean(DefaultWorker.class, UUID.randomUUID().toString(), 8, null);
-        try (
-            AbstractScheduler scheduler = new JdbcScheduler(
-                this.applicationContext,
-                this.flowListenersService
-            );
-        ) {
-            // wait for execution
-            Flux<Execution> receive = TestsUtils.receive(executionQueue, execution ->
-            {
-                queueCount.countDown();
-                assertThat(execution.getLeft().getFlowId(), is("trigger"));
-            });
+        repositoryLoader.load(Objects.requireNonNull(TriggerTest.class.getClassLoader().getResource("flows/eventshubs-trigger.yaml")));
 
-            worker.run();
-            scheduler.run();
+        produceEvents();
 
-            repositoryLoader.load(Objects.requireNonNull(TriggerTest.class.getClassLoader().getResource("flows/eventshubs-trigger.yaml")));
+        boolean await = queueCount.await(1, TimeUnit.MINUTES);
+        assertThat(await, is(true));
 
-            produceEvents();
-
-            boolean await = queueCount.await(1, TimeUnit.MINUTES);
-            assertThat(await, is(true));
-
-            Integer trigger = (Integer) receive.blockLast().getTrigger().getVariables().get("eventsCount");
-
-            assertThat(trigger, greaterThanOrEqualTo(2));
-        }
+        Integer trigger = (Integer) receive.blockLast().getTrigger().getVariables().get("eventsCount");
+        assertThat(trigger, greaterThanOrEqualTo(2));
     }
 
     private void produceEvents() throws Exception {

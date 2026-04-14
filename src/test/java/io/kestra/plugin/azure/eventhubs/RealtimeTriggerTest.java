@@ -2,7 +2,6 @@ package io.kestra.plugin.azure.eventhubs;
 
 import java.util.List;
 import java.util.Objects;
-import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
@@ -17,15 +16,9 @@ import io.kestra.core.models.property.Property;
 import io.kestra.core.queues.QueueFactoryInterface;
 import io.kestra.core.queues.QueueInterface;
 import io.kestra.core.repositories.LocalFlowRepositoryLoader;
-import io.kestra.core.runners.FlowListeners;
 import io.kestra.core.runners.RunContextFactory;
 import io.kestra.core.utils.TestsUtils;
-import io.kestra.jdbc.runner.JdbcScheduler;
 import io.kestra.plugin.azure.eventhubs.serdes.Serdes;
-import io.kestra.scheduler.AbstractScheduler;
-import io.kestra.worker.DefaultWorker;
-
-import io.micronaut.context.ApplicationContext;
 import io.micronaut.context.annotation.Value;
 import jakarta.inject.Inject;
 import jakarta.inject.Named;
@@ -34,14 +27,8 @@ import reactor.core.publisher.Flux;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 
-@KestraTest
+@KestraTest(startRunner = true, startScheduler = true)
 class RealtimeTriggerTest {
-
-    @Inject
-    private ApplicationContext applicationContext;
-
-    @Inject
-    private FlowListeners flowListenersService;
 
     @Inject
     @Named(QueueFactoryInterface.EXECUTION_NAMED)
@@ -62,36 +49,20 @@ class RealtimeTriggerTest {
     @Test
     @Disabled
     void testTrigger() throws Exception {
-        // mock flow listeners
         CountDownLatch queueCount = new CountDownLatch(1);
+        Flux<Execution> receive = TestsUtils.receive(executionQueue, execution -> {
+            queueCount.countDown();
+            assertThat(execution.getLeft().getFlowId(), is("eventhubs-realtime-listen"));
+        });
 
-        // scheduler
-        try (
-            DefaultWorker worker = applicationContext.createBean(DefaultWorker.class, UUID.randomUUID().toString(), 8, null);
-            AbstractScheduler scheduler = new JdbcScheduler(
-                this.applicationContext,
-                this.flowListenersService
-            );
-        ) {
-            // wait for execution
-            Flux<Execution> receive = TestsUtils.receive(executionQueue, execution ->
-            {
-                queueCount.countDown();
-                assertThat(execution.getLeft().getFlowId(), is("eventhubs-realtime-listen"));
-            });
+        repositoryLoader.load(Objects.requireNonNull(RealtimeTriggerTest.class.getClassLoader().getResource("flows/eventshubs-realtime.yaml")));
 
-            worker.run();
-            scheduler.run();
+        produceEvents();
 
-            repositoryLoader.load(Objects.requireNonNull(RealtimeTriggerTest.class.getClassLoader().getResource("flows/eventshubs-realtime.yaml")));
+        boolean await = queueCount.await(1, TimeUnit.MINUTES);
+        assertThat(await, is(true));
 
-            produceEvents();
-
-            boolean await = queueCount.await(1, TimeUnit.MINUTES);
-            assertThat(await, is(true));
-
-            assertThat(receive.blockLast().getTrigger().getVariables().get("body"), is("event-1"));
-        }
+        assertThat(receive.blockLast().getTrigger().getVariables().get("body"), is("event-1"));
     }
 
     private void produceEvents() throws Exception {

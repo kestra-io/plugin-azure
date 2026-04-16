@@ -1,6 +1,6 @@
 group: io.kestra.plugin.azure.storage.blob
 name: "blob"
-title: "Blob"
+title: "Azure Blob Storage"
 description: "Tasks that manage data in Azure Blob Storage for object and file workflows."
 body: "Upload or download single files and collections, copy between locations, list and delete blobs, create SAS links, or trigger workflows on container events. Provide an endpoint with a connection string, shared key, or SAS token plus the container name and blob path."
 videos: []

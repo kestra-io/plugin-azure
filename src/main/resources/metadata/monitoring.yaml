@@ -1,6 +1,6 @@
 group: io.kestra.plugin.azure.monitoring
 name: "monitoring"
-title: "Monitoring"
+title: "Azure Monitoring"
 description: "Tasks that query or ingest metrics with Azure Monitor."
 body: "Configure the regional metrics endpoint plus Azure AD credentials; metric queries accept resourceIds, metricNames, namespace, time window, aggregations, filters, and intervals, while ingestion posts custom metrics using managed bearer-token acquisition."
 videos: []

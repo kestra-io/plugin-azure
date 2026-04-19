@@ -4,7 +4,6 @@ import java.time.Duration;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
@@ -12,6 +11,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
+import io.kestra.core.junit.annotations.KestraTest;
 import io.kestra.core.models.conditions.ConditionContext;
 import io.kestra.core.models.executions.Execution;
 import io.kestra.core.models.property.Property;
@@ -19,15 +19,9 @@ import io.kestra.core.models.triggers.StatefulTriggerInterface;
 import io.kestra.core.queues.QueueFactoryInterface;
 import io.kestra.core.queues.QueueInterface;
 import io.kestra.core.repositories.LocalFlowRepositoryLoader;
-import io.kestra.core.runners.FlowListeners;
 import io.kestra.core.utils.IdUtils;
 import io.kestra.core.utils.TestsUtils;
-import io.kestra.jdbc.runner.JdbcScheduler;
 import io.kestra.plugin.azure.storage.adls.models.AdlsFile;
-import io.kestra.scheduler.AbstractScheduler;
-import io.kestra.worker.DefaultWorker;
-
-import io.micronaut.context.ApplicationContext;
 import jakarta.inject.Inject;
 import jakarta.inject.Named;
 import reactor.core.publisher.Flux;
@@ -35,14 +29,9 @@ import reactor.core.publisher.Flux;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 
+@KestraTest(startRunner = true, startScheduler = true, rebuildContext = true)
 @Disabled("Unit tests works correctly locally but fail on the CI - temporary disable them")
 class TriggerTest extends AbstractTest {
-    @Inject
-    private ApplicationContext applicationContext;
-
-    @Inject
-    private FlowListeners flowListenersService;
-
     @Inject
     @Named(QueueFactoryInterface.EXECUTION_NAMED)
     private QueueInterface<Execution> executionQueue;
@@ -52,43 +41,25 @@ class TriggerTest extends AbstractTest {
 
     @Test
     void trigger() throws Exception {
-        // mock flow listeners
         CountDownLatch queueCount = new CountDownLatch(1);
+        AtomicReference<Execution> last = new AtomicReference<>();
+        Flux<Execution> receive = TestsUtils.receive(executionQueue, executionWithError -> {
+            Execution execution = executionWithError.getLeft();
+            if (execution.getFlowId().equals("adls-listen")) {
+                last.set(execution);
+                queueCount.countDown();
+            }
+        });
 
-        // scheduler
-        DefaultWorker worker = applicationContext.createBean(DefaultWorker.class, UUID.randomUUID().toString(), 8, null);
-        try (
-            AbstractScheduler scheduler = new JdbcScheduler(
-                this.applicationContext,
-                this.flowListenersService
-            );
-        ) {
-            AtomicReference<Execution> last = new AtomicReference<>();
-
-            // wait for execution
-            Flux<Execution> receive = TestsUtils.receive(executionQueue, executionWithError ->
-            {
-                Execution execution = executionWithError.getLeft();
-                if (execution.getFlowId().equals("adls-listen")) {
-                    last.set(execution);
-                    queueCount.countDown();
-                }
-            });
-
+        try {
             upload("adls/azure/trigger/adls-listen");
             upload("adls/azure/trigger/adls-listen");
 
-            worker.run();
-            scheduler.run();
             repositoryLoader.load(Objects.requireNonNull(TriggerTest.class.getClassLoader().getResource("flows/adls-listen.yaml")));
 
             boolean await = queueCount.await(10, TimeUnit.SECONDS);
-            try {
-                assertThat(await, is(true));
-            } finally {
-                worker.shutdown();
-                receive.blockLast();
-            }
+            assertThat(await, is(true));
+            receive.blockLast();
 
             @SuppressWarnings("unchecked")
             java.util.List<AdlsFile> trigger = (java.util.List<AdlsFile>) last.get().getTrigger().getVariables().get("files");
@@ -110,106 +81,67 @@ class TriggerTest extends AbstractTest {
 
     @Test
     void deleteAction() throws Exception {
-        // mock flow listeners
         CountDownLatch queueCount = new CountDownLatch(1);
-
-        // scheduler
-        DefaultWorker worker = applicationContext.createBean(DefaultWorker.class, UUID.randomUUID().toString(), 8, null);
-        try (
-            AbstractScheduler scheduler = new JdbcScheduler(
-                this.applicationContext,
-                this.flowListenersService
-            );
-        ) {
-            AtomicReference<Execution> last = new AtomicReference<>();
-
-            // wait for execution
-            Flux<Execution> receive = TestsUtils.receive(executionQueue, executionWithError ->
-            {
-                Execution execution = executionWithError.getLeft();
-                if (execution.getFlowId().equals("adls-listen-delete-action")) {
-                    last.set(execution);
-                    queueCount.countDown();
-                }
-            });
-
-            upload("adls/azure/trigger/adls-listen-delete-action");
-            upload("adls/azure/trigger/adls-listen-delete-action");
-
-            worker.run();
-            scheduler.run();
-            repositoryLoader.load(Objects.requireNonNull(TriggerTest.class.getClassLoader().getResource("flows/adls-listen-delete-action.yaml")));
-
-            boolean await = queueCount.await(10, TimeUnit.SECONDS);
-            try {
-                assertThat(await, is(true));
-            } finally {
-                worker.shutdown();
-                receive.blockLast();
+        AtomicReference<Execution> last = new AtomicReference<>();
+        Flux<Execution> receive = TestsUtils.receive(executionQueue, executionWithError -> {
+            Execution execution = executionWithError.getLeft();
+            if (execution.getFlowId().equals("adls-listen-delete-action")) {
+                last.set(execution);
+                queueCount.countDown();
             }
+        });
 
-            @SuppressWarnings("unchecked")
-            java.util.List<AdlsFile> trigger = (java.util.List<AdlsFile>) last.get().getTrigger().getVariables().get("files");
+        upload("adls/azure/trigger/adls-listen-delete-action");
+        upload("adls/azure/trigger/adls-listen-delete-action");
 
-            assertThat(trigger.size(), is(2));
+        repositoryLoader.load(Objects.requireNonNull(TriggerTest.class.getClassLoader().getResource("flows/adls-listen-delete-action.yaml")));
 
-            List listTask = list()
-                .directoryPath(Property.ofValue("adls/azure/trigger/adls-listen-delete-action"))
-                .build();
+        boolean await = queueCount.await(10, TimeUnit.SECONDS);
+        assertThat(await, is(true));
+        receive.blockLast();
 
-            int remainingFilesOnBucket = listTask.run(runContext(listTask))
-                .getFiles()
-                .size();
-            assertThat(remainingFilesOnBucket, is(0));
-        }
+        @SuppressWarnings("unchecked")
+        java.util.List<AdlsFile> trigger = (java.util.List<AdlsFile>) last.get().getTrigger().getVariables().get("files");
+
+        assertThat(trigger.size(), is(2));
+
+        List listTask = list()
+            .directoryPath(Property.ofValue("adls/azure/trigger/adls-listen-delete-action"))
+            .build();
+
+        int remainingFilesOnBucket = listTask.run(runContext(listTask))
+            .getFiles()
+            .size();
+        assertThat(remainingFilesOnBucket, is(0));
     }
 
     @Test
     void moveAction() throws Exception {
-        // mock flow listeners
         CountDownLatch queueCount = new CountDownLatch(1);
+        AtomicReference<Execution> last = new AtomicReference<>();
+        Flux<Execution> receive = TestsUtils.receive(executionQueue, executionWithError -> {
+            Execution execution = executionWithError.getLeft();
+            if (execution.getFlowId().equals("adls-listen-move-action")) {
+                last.set(execution);
+                queueCount.countDown();
+            }
+        });
 
-        // scheduler
-        DefaultWorker worker = applicationContext.createBean(DefaultWorker.class, UUID.randomUUID().toString(), 8, null);
-        try (
-            AbstractScheduler scheduler = new JdbcScheduler(
-                this.applicationContext,
-                this.flowListenersService
-            );
-        ) {
-            AtomicReference<Execution> last = new AtomicReference<>();
-
-            // wait for execution
-            Flux<Execution> receive = TestsUtils.receive(executionQueue, executionWithError ->
-            {
-                Execution execution = executionWithError.getLeft();
-                if (execution.getFlowId().equals("adls-listen-move-action")) {
-                    last.set(execution);
-                    queueCount.countDown();
-                }
-            });
-
+        try {
             upload("adls/azure/trigger/adls-listen-move-action");
             upload("adls/azure/trigger/adls-listen-move-action");
 
-            worker.run();
-            scheduler.run();
             repositoryLoader.load(Objects.requireNonNull(TriggerTest.class.getClassLoader().getResource("flows/adls-listen-move-action.yaml")));
 
             boolean await = queueCount.await(10, TimeUnit.SECONDS);
-            try {
-                assertThat(await, is(true));
-            } finally {
-                worker.shutdown();
-                receive.blockLast();
-            }
+            assertThat(await, is(true));
+            receive.blockLast();
 
             @SuppressWarnings("unchecked")
             java.util.List<AdlsFile> trigger = (java.util.List<AdlsFile>) last.get().getTrigger().getVariables().get("files");
 
             assertThat(trigger.size(), is(2));
 
-            //Moved files
             List listTask = list()
                 .directoryPath(Property.ofValue("adls/azure/trigger/adls-listen-move-action-direction"))
                 .build();
@@ -219,7 +151,6 @@ class TriggerTest extends AbstractTest {
                 .size();
             assertThat(movedFilesOnBucket, is(2));
 
-            //Initial files
             List remainingFiles = list()
                 .directoryPath(Property.ofValue("adls/azure/trigger/adls-listen-move-action"))
                 .build();

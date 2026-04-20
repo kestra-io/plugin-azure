@@ -38,7 +38,7 @@ class TriggerTest extends BaseServiceBusTest {
             .maxMessages(Property.ofValue(1))
             .build();
 
-        Map.Entry<ConditionContext, io.kestra.core.models.triggers.Trigger> context = TestsUtils.mockTrigger(runContextFactory, trigger);
+        Map.Entry<ConditionContext, io.kestra.core.scheduler.model.TriggerState> context = TestsUtils.mockTrigger(runContextFactory, trigger);
 
         //endregion
 
@@ -76,7 +76,7 @@ class TriggerTest extends BaseServiceBusTest {
             .maxMessages(Property.ofValue(1))
             .build();
 
-        Map.Entry<ConditionContext, io.kestra.core.models.triggers.Trigger> context = TestsUtils.mockTrigger(runContextFactory, trigger);
+        Map.Entry<ConditionContext, io.kestra.core.scheduler.model.TriggerState> context = TestsUtils.mockTrigger(runContextFactory, trigger);
         //endregion
 
         //region WHEN
@@ -108,7 +108,7 @@ class TriggerTest extends BaseServiceBusTest {
             .maxReceiveDuration(Property.ofValue(Duration.ofSeconds(1)))
             .build();
 
-        Map.Entry<ConditionContext, io.kestra.core.models.triggers.Trigger> context = TestsUtils.mockTrigger(runContextFactory, trigger);
+        Map.Entry<ConditionContext, io.kestra.core.scheduler.model.TriggerState> context = TestsUtils.mockTrigger(runContextFactory, trigger);
         //endregion
 
         //region WHEN
@@ -135,7 +135,7 @@ class TriggerTest extends BaseServiceBusTest {
             .maxReceiveDuration(Property.ofValue(Duration.ofSeconds(1)))
             .build();
 
-        Map.Entry<ConditionContext, io.kestra.core.models.triggers.Trigger> context = TestsUtils.mockTrigger(runContextFactory, trigger);
+        Map.Entry<ConditionContext, io.kestra.core.scheduler.model.TriggerState> context = TestsUtils.mockTrigger(runContextFactory, trigger);
         //endregion
 
         //region WHEN
@@ -164,7 +164,7 @@ class TriggerTest extends BaseServiceBusTest {
             .maxReceiveDuration(Property.ofValue(Duration.ofSeconds(1)))
             .build();
 
-        Map.Entry<ConditionContext, io.kestra.core.models.triggers.Trigger> context = TestsUtils.mockTrigger(runContextFactory, trigger);
+        Map.Entry<ConditionContext, io.kestra.core.scheduler.model.TriggerState> context = TestsUtils.mockTrigger(runContextFactory, trigger);
         //endregion
 
         //region WHEN

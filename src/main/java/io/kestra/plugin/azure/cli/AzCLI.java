@@ -115,7 +115,7 @@ public class AzCLI extends Task implements RunnableTask<ScriptOutput>, Namespace
     private Property<String> username;
 
     @Schema(title = "Login password", description = "Password or client secret used with username")
-    @PluginProperty(group = "connection")
+    @PluginProperty(group = "connection", secret = true)
     private Property<String> password;
 
     @Schema(title = "Tenant ID", description = "Tenant passed to az login --tenant")

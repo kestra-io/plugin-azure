@@ -68,7 +68,7 @@ public class Trigger extends AbstractTrigger implements PollingTriggerInterface,
     private Property<String> topicName;
 
     @Schema(description = CONNECTION_STRING_DESCRIPTION)
-    @PluginProperty(group = "connection")
+    @PluginProperty(group = "connection", secret = true)
     private Property<String> connectionString;
 
     @Schema(description = SUBSCRIPTION_NAME_DESCRIPTION)
@@ -98,7 +98,7 @@ public class Trigger extends AbstractTrigger implements PollingTriggerInterface,
     private Property<String> clientId;
 
     @Schema(description = "Client secret for the Azure app registration; not needed when using pemCertificate")
-    @PluginProperty(group = "connection")
+    @PluginProperty(group = "connection", secret = true)
     private Property<String> clientSecret;
 
     @Schema(description = "PEM certificate content for certificate-based authentication")

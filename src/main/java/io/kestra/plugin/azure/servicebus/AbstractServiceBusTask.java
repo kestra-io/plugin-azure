@@ -32,7 +32,7 @@ public abstract class AbstractServiceBusTask extends AbstractAzureIdentityConnec
     protected Property<String> topicName;
 
     @Schema(description = CONNECTION_STRING_DESCRIPTION)
-    @PluginProperty(group = "connection")
+    @PluginProperty(secret = true, group = "connection")
     protected Property<String> connectionString;
 
     @Schema(description = SUBSCRIPTION_NAME_DESCRIPTION)

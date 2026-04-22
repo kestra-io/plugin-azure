@@ -73,7 +73,7 @@ import io.kestra.core.models.annotations.PluginProperty;
                     type: io.kestra.plugin.azure.storage.blob.Trigger
                     interval: PT5M
                     endpoint: "https://yourblob.blob.core.windows.net"
-                    connectionString: "DefaultEndpointsProtocol=...=="
+                    connectionString: "{{ secret('AZURE_CONNECTION_STRING') }}"
                     container: myBlobContainer
                     prefix: yourDirectory/subdirectory
                     action: MOVE
@@ -103,7 +103,7 @@ import io.kestra.core.models.annotations.PluginProperty;
                       - id: delete
                         type: io.kestra.plugin.azure.storage.blob.Delete
                         endpoint: "https://yourblob.blob.core.windows.net"
-                        connectionString: "DefaultEndpointsProtocol=...=="
+                        connectionString: "{{ secret('AZURE_CONNECTION_STRING') }}"
                         container: myBlobContainer
                         name: "{{ taskrun.value }}"
 
@@ -111,7 +111,7 @@ import io.kestra.core.models.annotations.PluginProperty;
                   - id: watch
                     type: io.kestra.plugin.azure.storage.blob.Trigger
                     endpoint: "https://yourblob.blob.core.windows.net"
-                    connectionString: "DefaultEndpointsProtocol=...=="
+                    connectionString: "{{ secret('AZURE_CONNECTION_STRING') }}"
                     container: myBlobContainer
                     prefix: yourDirectory/subdirectory
                     action: NONE
@@ -130,12 +130,15 @@ public class Trigger extends AbstractTrigger implements PollingTriggerInterface,
 
     protected Property<String> endpoint;
 
+    @PluginProperty(secret = true)
     protected Property<String> connectionString;
 
     protected Property<String> sharedKeyAccountName;
 
+    @PluginProperty(secret = true)
     protected Property<String> sharedKeyAccountAccessKey;
 
+    @PluginProperty(secret = true)
     protected Property<String> sasToken;
 
     private Property<String> container;

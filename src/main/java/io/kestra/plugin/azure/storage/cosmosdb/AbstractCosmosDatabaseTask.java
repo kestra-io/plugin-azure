@@ -59,7 +59,7 @@ public abstract class AbstractCosmosDatabaseTask<T extends Output> extends Abstr
         title = "Cosmos connection string",
         description = "Full connection string from Azure portal; overrides endpoint and Azure AD credentials when set."
     )
-    @PluginProperty(group = "connection")
+    @PluginProperty(secret = true, group = "connection")
     protected Property<String> connectionString;
 
     private static final ConsistencyLevel DEFAULT_CONSISTENCY_LEVEL = ConsistencyLevel.SESSION;

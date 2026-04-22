@@ -15,9 +15,12 @@ import io.kestra.core.models.annotations.PluginProperty;
 @Getter
 public final class BlobContainerClientInterface implements AzureClientWithSasInterface {
 
+    @PluginProperty(secret = true)
     private Property<String> connectionString;
     private Property<String> sharedKeyAccountName;
+    @PluginProperty(secret = true)
     private Property<String> sharedKeyAccountAccessKey;
+    @PluginProperty(secret = true)
     private Property<String> sasToken;
     @Schema(
         title = "The blob container name."

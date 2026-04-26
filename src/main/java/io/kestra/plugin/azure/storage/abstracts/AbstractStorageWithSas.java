@@ -1,6 +1,5 @@
 package io.kestra.plugin.azure.storage.abstracts;
 
-import io.kestra.core.models.annotations.PluginProperty;
 import io.kestra.core.models.property.Property;
 import io.kestra.plugin.azure.shared.AzureClientWithSasInterface;
 
@@ -16,6 +15,5 @@ import lombok.experimental.SuperBuilder;
 @Getter
 @NoArgsConstructor
 public abstract class AbstractStorageWithSas extends AbstractStorage implements AzureClientWithSasInterface {
-    @PluginProperty(secret = true)
     protected Property<String> sasToken;
 }

@@ -1,6 +1,5 @@
 package io.kestra.plugin.azure.monitoring;
 
-import io.kestra.core.models.annotations.PluginProperty;
 import java.time.Duration;
 import java.util.List;
 import java.util.Optional;
@@ -101,7 +100,6 @@ public class Trigger extends AbstractTrigger implements PollingTriggerInterface,
 
     protected Property<String> clientId;
 
-    @PluginProperty(secret = true)
     protected Property<String> clientSecret;
 
     protected Property<String> subscriptionId;

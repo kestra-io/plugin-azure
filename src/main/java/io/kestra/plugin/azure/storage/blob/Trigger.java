@@ -130,15 +130,12 @@ public class Trigger extends AbstractTrigger implements PollingTriggerInterface,
 
     protected Property<String> endpoint;
 
-    @PluginProperty(secret = true)
     protected Property<String> connectionString;
 
     protected Property<String> sharedKeyAccountName;
 
-    @PluginProperty(secret = true)
     protected Property<String> sharedKeyAccountAccessKey;
 
-    @PluginProperty(secret = true)
     protected Property<String> sasToken;
 
     private Property<String> container;

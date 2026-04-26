@@ -114,15 +114,12 @@ import io.kestra.core.models.annotations.PluginProperty;
 public class RealtimeTrigger extends AbstractTrigger implements EventHubConsumerInterface, RealtimeTriggerInterface, TriggerOutput<EventDataOutput> {
 
     // TASK'S PARAMETERS
-    @PluginProperty(secret = true)
     protected Property<String> connectionString;
 
     protected Property<String> sharedKeyAccountName;
 
-    @PluginProperty(secret = true)
     protected Property<String> sharedKeyAccountAccessKey;
 
-    @PluginProperty(secret = true)
     protected Property<String> sasToken;
 
     @Builder.Default

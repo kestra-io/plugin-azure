@@ -16,7 +16,7 @@ import io.kestra.core.models.annotations.PluginProperty;
 public abstract class AbstractEventHubTask extends Task implements EventHubClientInterface {
 
     @Schema(title = "Event Hubs connection string", description = "Namespace or Event Hub–level connection string; overrides key/sas fields when set")
-    @PluginProperty(group = "connection")
+    @PluginProperty(group = "connection", secret = true)
     private Property<String> connectionString;
 
     @Schema(title = "Shared key account name", description = "Event Hubs namespace name used with sharedKeyAccountAccessKey when no connection string is provided")
@@ -24,11 +24,11 @@ public abstract class AbstractEventHubTask extends Task implements EventHubClien
     private Property<String> sharedKeyAccountName;
 
     @Schema(title = "Shared key", description = "Access key paired with sharedKeyAccountName; ignored if connectionString is provided")
-    @PluginProperty(group = "connection")
+    @PluginProperty(group = "connection", secret = true)
     private Property<String> sharedKeyAccountAccessKey;
 
     @Schema(title = "SAS token", description = "Precomputed SAS token for Event Hubs; optional alternative to shared key/connection string")
-    @PluginProperty(group = "connection")
+    @PluginProperty(group = "connection", secret = true)
     private Property<String> sasToken;
 
     @Builder.Default

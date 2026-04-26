@@ -14,6 +14,6 @@ public interface AzureSasTokenInterface {
         title = "The SAS token to use for authenticating requests.",
         description = "This string should only be the query parameters (with or without a leading '?') and not a full URL."
     )
-    @PluginProperty(group = "connection")
+    @PluginProperty(secret = true, group = "connection")
     Property<String> getSasToken();
 }

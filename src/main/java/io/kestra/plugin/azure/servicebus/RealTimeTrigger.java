@@ -62,7 +62,7 @@ public class RealTimeTrigger extends AbstractTrigger implements RealtimeTriggerI
     private Property<String> topicName;
 
     @Schema(description = CONNECTION_STRING_DESCRIPTION)
-    @PluginProperty(group = "connection")
+    @PluginProperty(group = "connection", secret = true)
     private Property<String> connectionString;
 
     @Schema(description = SUBSCRIPTION_NAME_DESCRIPTION)
@@ -92,7 +92,7 @@ public class RealTimeTrigger extends AbstractTrigger implements RealtimeTriggerI
     private Property<String> clientId;
 
     @Schema
-    @PluginProperty(group = "connection")
+    @PluginProperty(group = "connection", secret = true)
     private Property<String> clientSecret;
 
     @Schema

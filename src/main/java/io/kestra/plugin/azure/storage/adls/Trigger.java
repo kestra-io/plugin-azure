@@ -67,7 +67,7 @@ import static io.kestra.core.utils.Rethrow.throwFunction;
                     type: io.kestra.plugin.azure.storage.adls.Trigger
                     interval: PT5M
                     endpoint: "https://yourblob.blob.core.windows.net"
-                    connectionString: "DefaultEndpointsProtocol=...=="
+                    connectionString: "{{ secret('AZURE_CONNECTION_STRING') }}"
                     fileSystem: myFileSystem
                     directoryPath: yourDirectory/subdirectory
                 """

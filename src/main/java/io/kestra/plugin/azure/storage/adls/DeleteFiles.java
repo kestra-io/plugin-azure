@@ -57,8 +57,8 @@ import static io.kestra.core.utils.Rethrow.throwConsumer;
 
                 tasks:
                   - id: for_each
-                    type: io.kestra.plugin.core.flow.EachSequential
-                    value: ["pikachu", "charmander"]
+                    type: io.kestra.plugin.core.flow.Loop
+                    values: ["pikachu", "charmander"]
                     tasks:
                       - id: download_request
                         type: io.kestra.plugin.core.http.Download
@@ -66,12 +66,12 @@ import static io.kestra.core.utils.Rethrow.throwConsumer;
 
                       - id: to_ion
                         type: io.kestra.plugin.serdes.json.JsonToIon
-                        from: "{{ currentEachOutput(outputs.download_request).uri }}"
+                        from: "{{ outputs..uri }}"
 
                       - id: upload_file
                         type: io.kestra.plugin.azure.storage.adls.Upload
                         fileName: "adls/pokemon/{{ taskrun.value }}.json"
-                        from: "{{ currentEachOutput(outputs.to_ion).uri }}"
+                        from: "{{ outputs..uri }}"
 
                   - id: delete_file
                     type: io.kestra.plugin.azure.storage.adls.DeleteFiles

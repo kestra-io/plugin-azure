@@ -48,7 +48,7 @@ class RealTimeTriggerTest extends BaseServiceBusTest {
         //region WHEN
         Flux<Execution> output = realTimeTrigger.evaluate(
             context.getKey(),
-            context.getValue()
+            context.getValue().context()
         );
         //endregion
 
@@ -89,7 +89,7 @@ class RealTimeTriggerTest extends BaseServiceBusTest {
         //region WHEN
         Flux<Execution> output = realTimeTrigger.evaluate(
             context.getKey(),
-            context.getValue()
+            context.getValue().context()
         );
         //endregion
 
@@ -123,7 +123,7 @@ class RealTimeTriggerTest extends BaseServiceBusTest {
         AbstractThrowableAssert<?, ?> throwableAssert = assertThatThrownBy(
             () -> realTimeTrigger.evaluate(
                 context.getKey(),
-                context.getValue()
+                context.getValue().context()
             )
         );
         //endregion
@@ -151,7 +151,7 @@ class RealTimeTriggerTest extends BaseServiceBusTest {
         AbstractThrowableAssert<?, ?> throwableAssert = assertThatThrownBy(
             () -> realTimeTrigger.evaluate(
                 context.getKey(),
-                context.getValue()
+                context.getValue().context()
             )
         );
         //endregion

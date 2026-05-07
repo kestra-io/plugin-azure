@@ -45,7 +45,7 @@ class TriggerTest extends BaseServiceBusTest {
         //region WHEN
         Optional<Execution> execution = trigger.evaluate(
             context.getKey(),
-            context.getValue()
+            context.getValue().context()
         );
         //endregion
 
@@ -82,7 +82,7 @@ class TriggerTest extends BaseServiceBusTest {
         //region WHEN
         Optional<Execution> execution = trigger.evaluate(
             context.getKey(),
-            context.getValue()
+            context.getValue().context()
         );
         //endregion
 
@@ -114,7 +114,7 @@ class TriggerTest extends BaseServiceBusTest {
         //region WHEN
         Optional<Execution> execution = trigger.evaluate(
             context.getKey(),
-            context.getValue()
+            context.getValue().context()
         );
         //endregion
 
@@ -143,7 +143,7 @@ class TriggerTest extends BaseServiceBusTest {
         AbstractThrowableAssert<?, ?> throwableAssert = assertThatThrownBy(
             () -> trigger.evaluate(
                 context.getKey(),
-                context.getValue()
+                context.getValue().context()
             )
         );
         //endregion
@@ -171,7 +171,7 @@ class TriggerTest extends BaseServiceBusTest {
         AbstractThrowableAssert<?, ?> throwableAssert = assertThatThrownBy(
             () -> trigger.evaluate(
                 context.getKey(),
-                context.getValue()
+                context.getValue().context()
             )
         );
         //endregion

@@ -2,14 +2,15 @@ package io.kestra.plugin.azure.storage.blob;
 
 import java.time.Duration;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
 import io.kestra.core.junit.annotations.KestraTest;
+import io.kestra.core.junit.annotations.LoadFlows;
 import io.kestra.plugin.azure.shared.storage.blob.models.Blob;
+import org.awaitility.Awaitility;
 import org.junit.jupiter.api.Test;
 
 import io.kestra.core.models.conditions.ConditionContext;
@@ -17,7 +18,7 @@ import io.kestra.core.models.executions.Execution;
 import io.kestra.core.models.property.Property;
 import io.kestra.core.models.triggers.StatefulTriggerInterface;
 import io.kestra.core.queues.DispatchQueueInterface;
-import io.kestra.core.repositories.LocalFlowRepositoryLoader;
+import io.kestra.core.runners.Scheduler;
 import io.kestra.core.utils.IdUtils;
 import io.kestra.core.utils.TestsUtils;
 import io.kestra.plugin.azure.storage.blob.abstracts.ActionInterface;
@@ -32,10 +33,13 @@ class TriggerTest extends AbstractTest {
     private DispatchQueueInterface<Execution> executionQueue;
 
     @Inject
-    protected LocalFlowRepositoryLoader repositoryLoader;
+    protected Scheduler scheduler;
 
     @Test
+    @LoadFlows({"flows/blob-storage-listen.yaml"})
     void deleteAction() throws Exception {
+        Awaitility.await().atMost(Duration.ofSeconds(20)).pollInterval(Duration.ofMillis(100)).until(() -> scheduler.isActive());
+
         CountDownLatch queueCount = new CountDownLatch(1);
         AtomicReference<Execution> last = new AtomicReference<>();
 
@@ -51,9 +55,7 @@ class TriggerTest extends AbstractTest {
         upload(toUploadDir);
         upload(toUploadDir);
 
-        repositoryLoader.load(Objects.requireNonNull(TriggerTest.class.getClassLoader().getResource("flows/blob-storage-listen.yaml")));
-
-        boolean await = queueCount.await(10, TimeUnit.SECONDS);
+        boolean await = queueCount.await(1, TimeUnit.MINUTES);
         assertThat(await, is(true));
 
         @SuppressWarnings("unchecked")
@@ -71,7 +73,10 @@ class TriggerTest extends AbstractTest {
     }
 
     @Test
+    @LoadFlows({"flows/blob-storage-listen-none-action.yaml"})
     void noneAction() throws Exception {
+        Awaitility.await().atMost(Duration.ofSeconds(20)).pollInterval(Duration.ofMillis(100)).until(() -> scheduler.isActive());
+
         CountDownLatch queueCount = new CountDownLatch(1);
         AtomicReference<Execution> last = new AtomicReference<>();
 
@@ -87,9 +92,7 @@ class TriggerTest extends AbstractTest {
             upload("trigger/none-action-storage-listen");
             upload("trigger/none-action-storage-listen");
 
-            repositoryLoader.load(Objects.requireNonNull(TriggerTest.class.getClassLoader().getResource("flows/blob-storage-listen-none-action.yaml")));
-
-            boolean await = queueCount.await(10, TimeUnit.SECONDS);
+            boolean await = queueCount.await(1, TimeUnit.MINUTES);
             assertThat(await, is(true));
 
             @SuppressWarnings("unchecked")

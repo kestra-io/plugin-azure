@@ -23,13 +23,30 @@ import io.kestra.core.models.executions.metrics.Counter;
 import io.kestra.core.runners.RunContext;
 import io.kestra.core.utils.FileUtils;
 import io.kestra.plugin.azure.storage.adls.models.AdlsFile;
+import io.kestra.plugin.azure.storage.services.ChecksumValidator;
 
 public class DataLakeService {
     public static URI read(RunContext runContext, DataLakeFileClient client) throws IOException {
+        return read(runContext, client, null);
+    }
+
+    public static URI read(
+        RunContext runContext,
+        DataLakeFileClient client,
+        ChecksumValidator.Options checksumOptions
+    ) throws IOException {
         File tempFile = runContext.workingDir().createTempFile(FileUtils.getExtension(client.getFileName())).toFile();
         PathProperties pathProperties = client.readToFile(tempFile.getAbsolutePath(), true);
 
         runContext.metric(Counter.of("file.size", pathProperties.getFileSize()));
+
+        ChecksumValidator.verify(
+            runContext,
+            tempFile,
+            pathProperties.getContentMd5(),
+            checksumOptions,
+            client.getFilePath()
+        );
 
         return runContext.storage().putFile(tempFile);
     }

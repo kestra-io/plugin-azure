@@ -23,6 +23,8 @@ import io.kestra.plugin.azure.storage.blob.abstracts.ActionInterface;
 import io.kestra.plugin.azure.shared.storage.blob.abstracts.ListInterface;
 import io.kestra.plugin.azure.shared.storage.blob.models.Blob;
 import io.kestra.plugin.azure.storage.blob.services.BlobService;
+import io.kestra.plugin.azure.storage.services.ChecksumValidatedInterface;
+import io.kestra.plugin.azure.storage.services.ChecksumValidator;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.*;
@@ -60,7 +62,7 @@ import io.kestra.core.models.annotations.PluginProperty;
     title = "Download multiple blobs to Kestra storage",
     description = "Lists blobs with optional prefix/regex, downloads them to internal storage, and optionally archives or moves according to action."
 )
-public class Downloads extends AbstractBlobStorageWithSas implements RunnableTask<Downloads.Output>, ListInterface, ActionInterface, AbstractBlobStorageContainerInterface {
+public class Downloads extends AbstractBlobStorageWithSas implements RunnableTask<Downloads.Output>, ListInterface, ActionInterface, AbstractBlobStorageContainerInterface, ChecksumValidatedInterface {
     @Schema(title = "Container", description = "Target container to list and download from")
     @PluginProperty(group = "main")
     private Property<String> container;
@@ -96,6 +98,10 @@ public class Downloads extends AbstractBlobStorageWithSas implements RunnableTas
     @PluginProperty(group = "processing")
     private Property<Integer> maxFiles = Property.ofValue(25);
 
+    private Property<Boolean> validateChecksum;
+
+    private Property<Boolean> failOnMissingChecksum;
+
     @Override
     public Output run(RunContext runContext) throws Exception {
         List task = List.builder()
@@ -118,6 +124,10 @@ public class Downloads extends AbstractBlobStorageWithSas implements RunnableTas
         BlobServiceClient client = this.client(runContext);
         BlobContainerClient containerClient = client.getBlobContainerClient(runContext.render(this.container).as(String.class).orElse(null));
 
+        ChecksumValidator.Options checksumOptions = ChecksumValidator.resolve(
+            runContext, validateChecksum, failOnMissingChecksum, null, null
+        );
+
         java.util.List<Blob> list = run
             .getBlobs()
             .stream()
@@ -125,7 +135,7 @@ public class Downloads extends AbstractBlobStorageWithSas implements RunnableTas
             {
                 BlobClient blobClient = containerClient.getBlobClient(object.getName());
 
-                Pair<BlobProperties, URI> download = BlobService.download(runContext, blobClient);
+                Pair<BlobProperties, URI> download = BlobService.download(runContext, blobClient, checksumOptions);
 
                 return Blob.of(blobClient, download.getLeft())
                     .withUri(download.getRight());

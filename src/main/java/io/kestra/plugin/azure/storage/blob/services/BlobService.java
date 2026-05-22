@@ -27,13 +27,30 @@ import io.kestra.plugin.azure.storage.blob.Copy;
 import io.kestra.plugin.azure.storage.blob.Delete;
 import io.kestra.plugin.azure.storage.blob.abstracts.ActionInterface;
 import io.kestra.plugin.azure.shared.storage.blob.models.Blob;
+import io.kestra.plugin.azure.storage.services.ChecksumValidator;
 
 public class BlobService {
     public static Pair<BlobProperties, URI> download(RunContext runContext, BlobClient client) throws IOException {
+        return download(runContext, client, null);
+    }
+
+    public static Pair<BlobProperties, URI> download(
+        RunContext runContext,
+        BlobClient client,
+        ChecksumValidator.Options checksumOptions
+    ) throws IOException {
         File tempFile = runContext.workingDir().createTempFile(FileUtils.getExtension(client.getBlobName())).toFile();
         BlobProperties blobProperties = client.downloadToFile(tempFile.getAbsolutePath(), true);
 
         runContext.metric(Counter.of("file.size", blobProperties.getBlobSize()));
+
+        ChecksumValidator.verify(
+            runContext,
+            tempFile,
+            blobProperties.getContentMd5(),
+            checksumOptions,
+            client.getBlobName()
+        );
 
         return Pair.of(blobProperties, runContext.storage().putFile(tempFile));
     }

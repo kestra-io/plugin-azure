@@ -127,6 +127,26 @@ class ChecksumTest extends AbstractTest {
         assertThat(run.getOutputFiles().size(), is(2));
     }
 
+
+    @Test
+    void uploadValidateChecksumStoresHashMatchingLocal() throws Exception {
+        String prefix = IdUtils.create();
+        Upload.Output upload = upload("tasks/azure/" + prefix, true);
+
+        Download download = Download.builder()
+            .id(ChecksumTest.class.getSimpleName())
+            .type(Download.class.getName())
+            .endpoint(Property.ofValue(this.storageEndpoint))
+            .connectionString(Property.ofValue(connectionString))
+            .container(Property.ofValue(this.container))
+            .name(Property.ofValue(upload.getBlob().getName()))
+            .expectedChecksum(Property.ofValue(md5OfApplicationYml()))
+            .build();
+
+        Download.Output run = download.run(runContext(download));
+        assertThat(run.getBlob().getUri(), is(notNullValue()));
+    }
+
     @Test
     void downloadsStrictMissingChecksumFails() throws Exception {
         String prefix = IdUtils.create();

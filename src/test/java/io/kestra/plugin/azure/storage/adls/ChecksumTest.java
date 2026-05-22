@@ -103,6 +103,43 @@ class ChecksumTest extends AbstractTest {
     }
 
     @Test
+    void uploadValidateChecksumStoresHashMatchingLocal() throws Exception {
+        String prefix = IdUtils.create();
+        Upload.Output upload = upload("adls/azure/" + prefix, true);
+
+        Read read = Read.builder()
+            .id(ChecksumTest.class.getSimpleName())
+            .type(Read.class.getName())
+            .endpoint(Property.ofValue(this.adlsEndpoint))
+            .connectionString(Property.ofValue(connectionString))
+            .fileSystem(Property.ofValue(this.fileSystem))
+            .filePath(Property.ofValue(upload.getFile().getName()))
+            .expectedChecksum(Property.ofValue(md5OfApplicationYml()))
+            .build();
+
+        Read.Output run = read.run(runContext(read));
+        assertThat(run.getFile().getUri(), is(notNullValue()));
+    }
+
+    @Test
+    void uploadValidateChecksumRoundTripsCleanly() throws Exception {
+        String prefix = IdUtils.create();
+        Upload.Output upload = upload("adls/azure/" + prefix, true);
+
+        Read read = Read.builder()
+            .id(ChecksumTest.class.getSimpleName())
+            .type(Read.class.getName())
+            .endpoint(Property.ofValue(this.adlsEndpoint))
+            .connectionString(Property.ofValue(connectionString))
+            .fileSystem(Property.ofValue(this.fileSystem))
+            .filePath(Property.ofValue(upload.getFile().getName()))
+            .validateChecksum(Property.ofValue(true))
+            .build();
+
+        assertDoesNotThrow(() -> read.run(runContext(read)));
+    }
+
+    @Test
     void readsStrictMissingChecksumFails() throws Exception {
         String prefix = IdUtils.create();
         upload("adls/azure/" + prefix);

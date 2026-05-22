@@ -13,6 +13,10 @@ abstract class AbstractTest extends BaseTest {
     private java.util.List<String> directoryToClean = new ArrayList<>();
 
     protected Upload.Output upload(String dir) throws Exception {
+        return upload(dir, false);
+    }
+
+    protected Upload.Output upload(String dir, boolean validateChecksum) throws Exception {
         URI source = upload();
 
         String out = IdUtils.create();
@@ -25,6 +29,7 @@ abstract class AbstractTest extends BaseTest {
             .container(Property.ofValue(this.container))
             .from(Property.ofValue(source.toString()))
             .name(Property.ofValue(dir + "/" + out + ".yml"))
+            .validateChecksum(Property.ofValue(validateChecksum))
             .build();
 
         directoryToClean.add(dir);

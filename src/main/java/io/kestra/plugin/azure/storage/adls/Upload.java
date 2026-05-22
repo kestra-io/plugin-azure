@@ -2,17 +2,23 @@ package io.kestra.plugin.azure.storage.adls;
 
 import java.io.InputStream;
 import java.net.URI;
+import java.security.MessageDigest;
 
 import com.azure.core.util.BinaryData;
+import com.azure.core.util.Context;
 import com.azure.core.util.FluxUtil;
 import com.azure.storage.blob.BlobClient;
 import com.azure.storage.blob.BlobContainerClient;
 import com.azure.storage.blob.BlobServiceClient;
 import com.azure.storage.blob.BlobServiceClientBuilder;
+import com.azure.storage.blob.models.BlobRequestConditions;
+import com.azure.storage.blob.options.BlobParallelUploadOptions;
 import com.azure.storage.blob.specialized.BlobLeaseClient;
 import com.azure.storage.blob.specialized.BlobLeaseClientBuilder;
 import com.azure.storage.common.implementation.Constants;
 import com.azure.storage.file.datalake.DataLakeFileClient;
+import com.azure.storage.file.datalake.models.PathHttpHeaders;
+import com.azure.storage.file.datalake.options.FileParallelUploadOptions;
 
 import io.kestra.core.models.annotations.Example;
 import io.kestra.core.models.annotations.Metric;
@@ -89,6 +95,13 @@ public class Upload extends AbstractDataLakeWithFile implements RunnableTask<Upl
     @PluginProperty(group = "execution")
     private Property<Integer> leaseDurationSeconds;
 
+    @Schema(
+        title = "Validate checksum",
+        description = "Compute MD5 client-side and pass it to Azure for server-side integrity verification; on mismatch the upload fails with Md5Mismatch"
+    )
+    @PluginProperty(group = "reliability")
+    private Property<Boolean> validateChecksum;
+
     @Override
     public Upload.Output run(RunContext runContext) throws Exception {
         URI fromUri = new URI(runContext.render(this.from).as(String.class).orElseThrow());
@@ -97,6 +110,7 @@ public class Upload extends AbstractDataLakeWithFile implements RunnableTask<Upl
             DataLakeFileClient fileClient = this.dataLakeFileClient(runContext);
 
             boolean enableLease = runContext.render(this.useLease).as(Boolean.class).orElse(false);
+            boolean rValidateChecksum = runContext.render(this.validateChecksum).as(Boolean.class).orElse(false);
             int leaseDuration = Math.max(
                 AZURE_LEASE_MIN_DURATION,
                 Math.min(
@@ -141,11 +155,22 @@ public class Upload extends AbstractDataLakeWithFile implements RunnableTask<Upl
                         .subscribeOn(Schedulers.boundedElastic())
                 ).block();
 
-                if (enableLease && leaseId != null && blobClient != null && binaryData != null) {
-                    blobClient.upload(binaryData.toStream(), true);
+                if (enableLease && leaseId != null && binaryData != null) {
+                    blobClient.uploadWithResponse(
+                        new BlobParallelUploadOptions(binaryData)
+                            .setComputeMd5(rValidateChecksum)
+                            .setRequestConditions(new BlobRequestConditions().setLeaseId(leaseId)),
+                        null,
+                        Context.NONE
+                    );
                     runContext.logger().debug("Uploaded file {} using blobClient under lease {}", filePath, leaseId);
-                } else {
-                    fileClient.upload(binaryData, true);
+                } else if (binaryData != null) {
+                    FileParallelUploadOptions options = new FileParallelUploadOptions(binaryData);
+                    if (rValidateChecksum) {
+                        byte[] md5 = MessageDigest.getInstance("MD5").digest(binaryData.toBytes());
+                        options.setHeaders(new PathHttpHeaders().setContentMd5(md5));
+                    }
+                    fileClient.uploadWithResponse(options, null, Context.NONE);
                     runContext.logger().debug("Uploaded file {} using fileClient (no lease)", filePath);
                 }
 

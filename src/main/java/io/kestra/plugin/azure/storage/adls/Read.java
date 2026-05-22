@@ -6,7 +6,6 @@ import com.azure.storage.file.datalake.DataLakeFileClient;
 
 import io.kestra.core.models.annotations.Example;
 import io.kestra.core.models.annotations.Plugin;
-import io.kestra.core.models.annotations.PluginProperty;
 import io.kestra.core.models.property.Property;
 import io.kestra.core.models.tasks.RunnableTask;
 import io.kestra.core.runners.RunContext;
@@ -56,16 +55,12 @@ import lombok.experimental.SuperBuilder;
     title = "Read a file from Azure Data Lake Storage."
 )
 public class Read extends AbstractDataLakeWithFile implements RunnableTask<Read.Output>, SingleFileChecksumValidatedInterface {
-    @PluginProperty(group = "advanced")
     private Property<Boolean> validateChecksum;
 
-    @PluginProperty(group = "advanced")
     private Property<Boolean> failOnMissingChecksum;
 
-    @PluginProperty(group = "advanced")
     private Property<String> expectedChecksum;
 
-    @PluginProperty(group = "advanced")
     private Property<ChecksumValidator.Algorithm> checksumAlgorithm;
 
     @Override

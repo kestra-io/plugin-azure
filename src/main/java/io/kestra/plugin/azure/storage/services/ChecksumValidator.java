@@ -56,16 +56,10 @@ public final class ChecksumValidator {
         Property<String> expectedChecksum,
         Property<Algorithm> checksumAlgorithm
     ) throws IllegalVariableEvaluationException {
-        boolean rValidate = validateChecksum != null
-            && runContext.render(validateChecksum).as(Boolean.class).orElse(false);
-        boolean rFailOnMissing = failOnMissingChecksum != null
-            && runContext.render(failOnMissingChecksum).as(Boolean.class).orElse(false);
-        String rExpected = expectedChecksum != null
-            ? runContext.render(expectedChecksum).as(String.class).orElse(null)
-            : null;
-        Algorithm rAlgorithm = checksumAlgorithm != null
-            ? runContext.render(checksumAlgorithm).as(Algorithm.class).orElse(Algorithm.MD5)
-            : Algorithm.MD5;
+        boolean rValidate = runContext.render(validateChecksum).as(Boolean.class).orElse(false);
+        boolean rFailOnMissing = runContext.render(failOnMissingChecksum).as(Boolean.class).orElse(false);
+        String rExpected = runContext.render(expectedChecksum).as(String.class).orElse(null);
+        Algorithm rAlgorithm = runContext.render(checksumAlgorithm).as(Algorithm.class).orElse(Algorithm.MD5);
 
         return Options.builder()
             .validateAgainstServer(rValidate)

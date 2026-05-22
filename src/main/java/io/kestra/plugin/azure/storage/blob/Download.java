@@ -9,7 +9,6 @@ import com.azure.storage.blob.models.BlobProperties;
 
 import io.kestra.core.models.annotations.Example;
 import io.kestra.core.models.annotations.Plugin;
-import io.kestra.core.models.annotations.PluginProperty;
 import io.kestra.core.models.property.Property;
 import io.kestra.core.models.tasks.RunnableTask;
 import io.kestra.core.runners.RunContext;
@@ -73,16 +72,12 @@ import lombok.experimental.SuperBuilder;
     description = "Fetches a blob and stores it in internal storage, returning metadata and the downloaded URI."
 )
 public class Download extends AbstractBlobStorageWithSasObject implements RunnableTask<Download.Output>, SingleFileChecksumValidatedInterface {
-    @PluginProperty(group = "advanced")
     private Property<Boolean> validateChecksum;
 
-    @PluginProperty(group = "advanced")
     private Property<Boolean> failOnMissingChecksum;
 
-    @PluginProperty(group = "advanced")
     private Property<String> expectedChecksum;
 
-    @PluginProperty(group = "advanced")
     private Property<ChecksumValidator.Algorithm> checksumAlgorithm;
 
     @Override

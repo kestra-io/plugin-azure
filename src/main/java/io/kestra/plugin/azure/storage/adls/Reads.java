@@ -73,10 +73,8 @@ public class Reads extends AbstractDataLakeConnection implements RunnableTask<Re
     @PluginProperty(group = "processing")
     private Property<Integer> maxFiles = Property.ofValue(25);
 
-    @PluginProperty(group = "advanced")
     private Property<Boolean> validateChecksum;
 
-    @PluginProperty(group = "advanced")
     private Property<Boolean> failOnMissingChecksum;
 
     @Override

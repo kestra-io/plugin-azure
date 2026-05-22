@@ -98,10 +98,8 @@ public class Downloads extends AbstractBlobStorageWithSas implements RunnableTas
     @PluginProperty(group = "processing")
     private Property<Integer> maxFiles = Property.ofValue(25);
 
-    @PluginProperty(group = "advanced")
     private Property<Boolean> validateChecksum;
 
-    @PluginProperty(group = "advanced")
     private Property<Boolean> failOnMissingChecksum;
 
     @Override

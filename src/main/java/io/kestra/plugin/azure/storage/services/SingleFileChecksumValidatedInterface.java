@@ -12,7 +12,7 @@ public interface SingleFileChecksumValidatedInterface extends ChecksumValidatedI
             or uppercase hex digest, or the equivalent base64 encoding (Azure's native
             Content-MD5 format). Takes precedence over validateChecksum."""
     )
-    @PluginProperty(group = "advanced")
+    @PluginProperty(group = "reliability")
     Property<String> getExpectedChecksum();
 
     @Schema(
@@ -22,6 +22,6 @@ public interface SingleFileChecksumValidatedInterface extends ChecksumValidatedI
             Note: validateChecksum (server-side) only supports MD5, since that is what
             Azure stores. SHA-256 requires expectedChecksum."""
     )
-    @PluginProperty(group = "advanced")
+    @PluginProperty(group = "reliability")
     Property<ChecksumValidator.Algorithm> getChecksumAlgorithm();
 }

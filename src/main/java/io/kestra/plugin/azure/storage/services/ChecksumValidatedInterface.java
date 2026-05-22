@@ -12,7 +12,7 @@ public interface ChecksumValidatedInterface {
             Content-MD5 stored on the Azure object. Many block blobs uploaded as
             streams have no Content-MD5; see failOnMissingChecksum to control that case."""
     )
-    @PluginProperty(group = "advanced")
+    @PluginProperty(group = "reliability")
     Property<Boolean> getValidateChecksum();
 
     @Schema(
@@ -22,6 +22,6 @@ public interface ChecksumValidatedInterface {
             the Azure object has no stored Content-MD5. If false (default), validation
             is skipped with a warning."""
     )
-    @PluginProperty(group = "advanced")
+    @PluginProperty(group = "reliability")
     Property<Boolean> getFailOnMissingChecksum();
 }

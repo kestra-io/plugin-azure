@@ -9,11 +9,14 @@ import com.azure.storage.blob.models.BlobProperties;
 
 import io.kestra.core.models.annotations.Example;
 import io.kestra.core.models.annotations.Plugin;
+import io.kestra.core.models.property.Property;
 import io.kestra.core.models.tasks.RunnableTask;
 import io.kestra.core.runners.RunContext;
 import io.kestra.plugin.azure.shared.storage.blob.abstracts.AbstractBlobStorageWithSasObject;
 import io.kestra.plugin.azure.shared.storage.blob.models.Blob;
 import io.kestra.plugin.azure.storage.blob.services.BlobService;
+import io.kestra.plugin.azure.storage.services.ChecksumValidator;
+import io.kestra.plugin.azure.storage.services.SingleFileChecksumValidatedInterface;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.EqualsAndHashCode;
@@ -43,6 +46,24 @@ import lombok.experimental.SuperBuilder;
                     container: "mydata"
                     name: "myblob"
                 """
+        ),
+        @Example(
+            title = "Download with MD5 verification against the server's Content-MD5",
+            full = true,
+            code = """
+                id: azure_storage_blob_download_verified
+                namespace: company.team
+
+                tasks:
+                  - id: download
+                    type: io.kestra.plugin.azure.storage.blob.Download
+                    endpoint: "https://yourblob.blob.core.windows.net"
+                    connectionString: "DefaultEndpointsProtocol=...=="
+                    container: "mydata"
+                    name: "myblob"
+                    validateChecksum: true
+                    failOnMissingChecksum: true
+                """
         )
     }
 )
@@ -50,11 +71,22 @@ import lombok.experimental.SuperBuilder;
     title = "Download a blob to Kestra storage",
     description = "Fetches a blob and stores it in internal storage, returning metadata and the downloaded URI."
 )
-public class Download extends AbstractBlobStorageWithSasObject implements RunnableTask<Download.Output> {
+public class Download extends AbstractBlobStorageWithSasObject implements RunnableTask<Download.Output>, SingleFileChecksumValidatedInterface {
+    private Property<Boolean> validateChecksum;
+
+    private Property<Boolean> failOnMissingChecksum;
+
+    private Property<String> expectedChecksum;
+
+    private Property<ChecksumValidator.Algorithm> checksumAlgorithm;
+
     @Override
     public Output run(RunContext runContext) throws Exception {
         BlobClient blobClient = this.blobClient(runContext);
-        Pair<BlobProperties, URI> download = BlobService.download(runContext, blobClient);
+        ChecksumValidator.Options checksumOptions = ChecksumValidator.resolve(
+            runContext, validateChecksum, failOnMissingChecksum, expectedChecksum, checksumAlgorithm
+        );
+        Pair<BlobProperties, URI> download = BlobService.download(runContext, blobClient, checksumOptions);
 
         return Output
             .builder()

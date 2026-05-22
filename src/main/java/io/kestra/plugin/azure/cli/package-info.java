@@ -1,5 +1,5 @@
 @PluginSubGroup(
-    title = "CLI",
+    title = "Azure CLI",
     description = "This sub-group of plugins contains tasks to interact with Azure CLI. ",
     categories = { PluginSubGroup.PluginCategory.CLOUD, PluginSubGroup.PluginCategory.INFRASTRUCTURE }
 )

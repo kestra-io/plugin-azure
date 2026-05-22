@@ -1,5 +1,5 @@
 @PluginSubGroup(
-    title = "Authentication",
+    title = "Azure Authentication",
     description = "This sub-group of plugins contains tasks to manage authentication for Azure services.",
     categories = { PluginSubGroup.PluginCategory.CLOUD }
 )

@@ -1,4 +1,5 @@
 @PluginSubGroup(
+    title = "Azure Synapse",
     description = "Tasks for Azure Synapse Analytics.",
     categories = { PluginSubGroup.PluginCategory.CLOUD }
 )

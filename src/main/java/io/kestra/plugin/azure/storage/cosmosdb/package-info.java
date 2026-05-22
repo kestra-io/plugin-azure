@@ -1,4 +1,5 @@
 @PluginSubGroup(
+    title = "Cosmos DB",
     description = "This sub-group of plugins contains tasks for using Azure Cosmos DB.\n",
     categories = { PluginSubGroup.PluginCategory.DATA, PluginSubGroup.PluginCategory.CLOUD }
 )

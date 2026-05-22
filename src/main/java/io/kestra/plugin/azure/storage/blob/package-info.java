@@ -1,4 +1,5 @@
 @PluginSubGroup(
+    title = "Azure Blob Storage",
     description = "This sub-group of plugins contains tasks for using Azure Blob Storage. \n" +
         "Azure Blob Storage includes object, file, disk, queue, and table storage.",
     categories = { PluginSubGroup.PluginCategory.CLOUD, PluginSubGroup.PluginCategory.DATA, PluginSubGroup.PluginCategory.INFRASTRUCTURE }

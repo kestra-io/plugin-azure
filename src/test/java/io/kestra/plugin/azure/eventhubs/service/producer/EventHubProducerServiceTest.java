@@ -1,10 +1,10 @@
 package io.kestra.plugin.azure.eventhubs.service.producer;
 
-import java.io.BufferedReader;
+import java.io.BufferedInputStream;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.io.InputStreamReader;
+import java.io.InputStream;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
@@ -70,7 +70,7 @@ class EventHubProducerServiceTest {
         byte[] data = getDataAsBytesFor(events);
 
         // WHEN
-        try (BufferedReader stream = new BufferedReader(new InputStreamReader(new ByteArrayInputStream(data)))) {
+        try (InputStream stream = new BufferedInputStream(new ByteArrayInputStream(data))) {
             ProducerContext options = new ProducerContext(
                 null, null, maxRecordPerBatch, LOG
             );
@@ -88,7 +88,7 @@ class EventHubProducerServiceTest {
         byte[] data = getDataAsBytesFor(events);
 
         // WHEN
-        try (BufferedReader stream = new BufferedReader(new InputStreamReader(new ByteArrayInputStream(data)))) {
+        try (InputStream stream = new BufferedInputStream(new ByteArrayInputStream(data))) {
 
             ProducerContext options = new ProducerContext(
                 null, null, maxRecordPerBatch, LOG
@@ -116,7 +116,7 @@ class EventHubProducerServiceTest {
         byte[] data = getDataAsBytesFor(events);
 
         // WHEN
-        try (BufferedReader stream = new BufferedReader(new InputStreamReader(new ByteArrayInputStream(data)))) {
+        try (InputStream stream = new BufferedInputStream(new ByteArrayInputStream(data))) {
 
             ProducerContext options = new ProducerContext(
                 null, null, maxRecordPerBatch, LOG

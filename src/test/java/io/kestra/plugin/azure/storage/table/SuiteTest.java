@@ -126,9 +126,9 @@ class SuiteTest {
 
         List.Output listOutput = list.run(runContext);
 
-        BufferedReader inputStream = new BufferedReader(new InputStreamReader(storageInterface.get(TenantService.MAIN_TENANT, null, listOutput.getUri())));
+        InputStream inputStream = new BufferedInputStream(storageInterface.get(TenantService.MAIN_TENANT, null, listOutput.getUri()));
         java.util.List<Map<String, Object>> result = new ArrayList<>();
-        FileSerde.reader(inputStream, r -> result.add((Map<String, Object>) r));
+        FileSerde.read(inputStream, r -> result.add((Map<String, Object>) r));
 
         assertThat(listOutput.getCount(), is(50L));
         assertThat(result.size(), is(50));

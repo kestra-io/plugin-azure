@@ -1,6 +1,12 @@
 package io.kestra.plugin.azure.storage.cosmosdb;
 
+import java.time.Duration;
 import java.util.*;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 import org.assertj.core.api.AbstractThrowableAssert;
 import org.junit.jupiter.api.AfterAll;
@@ -58,7 +64,30 @@ public abstract class CosmosContainerBaseTest<T extends AbstractCosmosContainerT
     @SneakyThrows
     @AfterAll
     void tearDown() {
-        createdItemsToRemove.forEach(this::deleteItem);
+        if (createdItemsToRemove.isEmpty()) {
+            return;
+        }
+
+        ExecutorService executor = Executors.newSingleThreadExecutor();
+        try {
+            long deadlineNanos = System.nanoTime() + Duration.ofSeconds(30).toNanos();
+            for (Map<String, Object> item : createdItemsToRemove) {
+                if (System.nanoTime() > deadlineNanos) {
+                    log.warn("Cosmos cleanup deadline exceeded, skipping {} remaining items",
+                        createdItemsToRemove.size() - createdItemsToRemove.indexOf(item));
+                    break;
+                }
+                Future<?> future = executor.submit(() -> deleteItem(item));
+                try {
+                    future.get(5, TimeUnit.SECONDS);
+                } catch (TimeoutException e) {
+                    future.cancel(true);
+                    log.warn("Timed out deleting Cosmos item, skipping");
+                }
+            }
+        } finally {
+            executor.shutdownNow();
+        }
     }
 
     @Test

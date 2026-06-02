@@ -7,7 +7,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import com.azure.core.util.Context;
 import com.azure.storage.blob.BlobClient;
+import com.azure.storage.blob.options.BlobParallelUploadOptions;
 
 import io.kestra.core.models.annotations.Example;
 import io.kestra.core.models.annotations.Metric;
@@ -143,10 +145,18 @@ public class Upload extends AbstractBlobStorageWithSasObject implements Runnable
     @PluginProperty(group = "advanced")
     private BlobImmutabilityPolicy immutabilityPolicy;
 
+    @Schema(
+        title = "Validate checksum",
+        description = "Compute MD5 client-side and pass it to Azure for server-side integrity verification; on mismatch the upload fails with Md5Mismatch"
+    )
+    @PluginProperty(group = "reliability")
+    private Property<Boolean> validateChecksum;
+
     @Override
     public Upload.Output run(RunContext runContext) throws Exception {
         BlobClient baseClient = this.blobClient(runContext);
         List<Blob> uploadedBlobs = new ArrayList<>();
+        boolean rValidateChecksum = runContext.render(this.validateChecksum).as(Boolean.class).orElse(false);
 
         var rFrom = this.from;
         if (rFrom instanceof Property<?> propertyFrom) {
@@ -206,7 +216,11 @@ public class Upload extends AbstractBlobStorageWithSasObject implements Runnable
                 runContext.logger().debug("Upload from '{}' to '{}'", fileUri, blobClient.getBlobName());
 
                 try (var is = runContext.storage().getFile(fileUri)) {
-                    blobClient.upload(is, true);
+                    blobClient.uploadWithResponse(
+                        new BlobParallelUploadOptions(is).setComputeMd5(rValidateChecksum),
+                        null,
+                        Context.NONE
+                    );
                 }
 
                 if (this.metadata != null) {

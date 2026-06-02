@@ -6,11 +6,14 @@ import com.azure.storage.file.datalake.DataLakeFileClient;
 
 import io.kestra.core.models.annotations.Example;
 import io.kestra.core.models.annotations.Plugin;
+import io.kestra.core.models.property.Property;
 import io.kestra.core.models.tasks.RunnableTask;
 import io.kestra.core.runners.RunContext;
 import io.kestra.plugin.azure.storage.adls.abstracts.AbstractDataLakeWithFile;
 import io.kestra.plugin.azure.storage.adls.models.AdlsFile;
 import io.kestra.plugin.azure.storage.adls.services.DataLakeService;
+import io.kestra.plugin.azure.storage.services.ChecksumValidator;
+import io.kestra.plugin.azure.storage.services.SingleFileChecksumValidatedInterface;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.EqualsAndHashCode;
@@ -51,11 +54,22 @@ import lombok.experimental.SuperBuilder;
 @Schema(
     title = "Read a file from Azure Data Lake Storage."
 )
-public class Read extends AbstractDataLakeWithFile implements RunnableTask<Read.Output> {
+public class Read extends AbstractDataLakeWithFile implements RunnableTask<Read.Output>, SingleFileChecksumValidatedInterface {
+    private Property<Boolean> validateChecksum;
+
+    private Property<Boolean> failOnMissingChecksum;
+
+    private Property<String> expectedChecksum;
+
+    private Property<ChecksumValidator.Algorithm> checksumAlgorithm;
+
     @Override
     public Output run(RunContext runContext) throws Exception {
         DataLakeFileClient client = this.dataLakeFileClient(runContext);
-        URI readFileUri = DataLakeService.read(runContext, client);
+        ChecksumValidator.Options checksumOptions = ChecksumValidator.resolve(
+            runContext, validateChecksum, failOnMissingChecksum, expectedChecksum, checksumAlgorithm
+        );
+        URI readFileUri = DataLakeService.read(runContext, client, checksumOptions);
 
         return Output
             .builder()

@@ -1,7 +1,7 @@
 package io.kestra.plugin.azure.datafactory;
 
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
+import java.io.BufferedInputStream;
+import java.io.InputStream;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
@@ -75,9 +75,9 @@ class UploadRunTest {
         CreateRun.Output output = createRun.run(runContext);
 
         //Get logs and outputs
-        BufferedReader searchInputStream = new BufferedReader(new InputStreamReader(storageInterface.get(TenantService.MAIN_TENANT, null, output.getUri())));
+        InputStream searchInputStream = new BufferedInputStream(storageInterface.get(TenantService.MAIN_TENANT, null, output.getUri()));
         List<Map<String, Object>> results = new ArrayList<>();
-        FileSerde.reader(searchInputStream, r -> results.add((Map<String, Object>) r));
+        FileSerde.read(searchInputStream, r -> results.add((Map<String, Object>) r));
 
         Map<String, Object> logs = results.getLast();
         assertThat(logs.get("status"), is("Succeeded"));
@@ -114,9 +114,9 @@ class UploadRunTest {
         CreateRun.Output output = createRun.run(runContext);
 
         //Get logs and outputs
-        BufferedReader searchInputStream = new BufferedReader(new InputStreamReader(storageInterface.get(TenantService.MAIN_TENANT, null, output.getUri())));
+        InputStream searchInputStream = new BufferedInputStream(storageInterface.get(TenantService.MAIN_TENANT, null, output.getUri()));
         List<Map<String, Object>> results = new ArrayList<>();
-        FileSerde.reader(searchInputStream, r -> results.add((Map<String, Object>) r));
+        FileSerde.read(searchInputStream, r -> results.add((Map<String, Object>) r));
 
         Map<String, Object> logs = results.getLast();
         assertThat(logs.get("status"), is("Succeeded"));

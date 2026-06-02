@@ -18,6 +18,8 @@ import io.kestra.plugin.azure.storage.adls.abstracts.AbstractDataLakeConnection;
 import io.kestra.plugin.azure.storage.adls.abstracts.AbstractDataLakeStorageInterface;
 import io.kestra.plugin.azure.storage.adls.models.AdlsFile;
 import io.kestra.plugin.azure.storage.adls.services.DataLakeService;
+import io.kestra.plugin.azure.storage.services.ChecksumValidatedInterface;
+import io.kestra.plugin.azure.storage.services.ChecksumValidator;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotNull;
@@ -54,7 +56,7 @@ import io.kestra.core.models.annotations.PluginProperty;
 @Schema(
     title = "Read all files from an Azure Data Lake Storage directory."
 )
-public class Reads extends AbstractDataLakeConnection implements RunnableTask<Reads.Output>, AbstractDataLakeStorageInterface {
+public class Reads extends AbstractDataLakeConnection implements RunnableTask<Reads.Output>, AbstractDataLakeStorageInterface, ChecksumValidatedInterface {
     @Schema(title = "Directory Name")
     @NotNull
     @PluginProperty(group = "main")
@@ -70,6 +72,10 @@ public class Reads extends AbstractDataLakeConnection implements RunnableTask<Re
     @Builder.Default
     @PluginProperty(group = "processing")
     private Property<Integer> maxFiles = Property.ofValue(25);
+
+    private Property<Boolean> validateChecksum;
+
+    private Property<Boolean> failOnMissingChecksum;
 
     @Override
     public Reads.Output run(RunContext runContext) throws Exception {
@@ -90,13 +96,17 @@ public class Reads extends AbstractDataLakeConnection implements RunnableTask<Re
         DataLakeServiceClient client = this.dataLakeServiceClient(runContext);
         DataLakeFileSystemClient fileSystemClient = client.getFileSystemClient(runContext.render(this.fileSystem).as(String.class).orElseThrow());
 
+        ChecksumValidator.Options checksumOptions = ChecksumValidator.resolve(
+            runContext, validateChecksum, failOnMissingChecksum, null, null
+        );
+
         java.util.List<AdlsFile> list = run
             .getFiles()
             .stream()
             .map(throwFunction(object ->
             {
                 DataLakeFileClient fileClient = fileSystemClient.getFileClient(object.getName());
-                URI readFileUri = DataLakeService.read(runContext, fileClient);
+                URI readFileUri = DataLakeService.read(runContext, fileClient, checksumOptions);
 
                 return AdlsFile.of(fileClient)
                     .withUri(readFileUri);

@@ -11,6 +11,7 @@ import io.kestra.core.exceptions.IllegalVariableEvaluationException;
 import io.kestra.core.models.annotations.Example;
 import io.kestra.core.models.annotations.Metric;
 import io.kestra.core.models.annotations.Plugin;
+import io.kestra.core.models.annotations.PluginProperty;
 import io.kestra.core.models.executions.metrics.Counter;
 import io.kestra.core.models.property.Data;
 import io.kestra.core.models.property.Property;
@@ -29,7 +30,6 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotNull;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
-import io.kestra.core.models.annotations.PluginProperty;
 
 /**
  * The {@link RunnableTask} can be used for producing batches of events to Azure Event Hubs.
@@ -192,7 +192,7 @@ public class Produce extends AbstractEventHubTask implements RunnableTask<Produc
     private Output send(final RunContext runContext,
         final EventHubProducerService service,
         final InputStream is) throws IllegalVariableEvaluationException {
-        try (BufferedReader reader = new BufferedReader(new InputStreamReader(is))) {
+        try (BufferedInputStream reader = new BufferedInputStream(is, FileSerde.BUFFER_SIZE)) {
             // Sends
             ProducerContext options = new ProducerContext(
                 runContext.render(getBodyContentType()).as(String.class).orElse(null),

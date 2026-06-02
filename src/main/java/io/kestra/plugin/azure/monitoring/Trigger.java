@@ -43,7 +43,7 @@ import lombok.experimental.SuperBuilder;
                     tasks:
                       - id: log
                         type: io.kestra.plugin.core.log.Log
-                        message: "Datapoint: {{ json(taskrun.value) }}"
+                        message: "Datapoint: {{ fromJson(taskrun.value) }}"
 
                 triggers:
                   - id: watch

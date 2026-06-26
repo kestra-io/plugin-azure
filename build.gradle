@@ -1,8 +1,8 @@
 plugins {
     id 'io.kestra.gradle.repository-conventions' version '1.2.3'
-    id 'io.kestra.gradle.spotless-conventions' version '1.1.0'
+    id 'io.kestra.gradle.spotless-conventions' version '1.2.3'
     id "com.vanniktech.maven.publish" version "0.37.0"
-    id "io.kestra.gradle.inject-bom-versions" version "1.1.0"
+    id "io.kestra.gradle.inject-bom-versions" version "1.2.3"
     id 'java-library'
     id "idea"
     id 'jacoco'
@@ -74,7 +74,7 @@ dependencies {
     api(group: 'com.azure', name: 'azure-storage-file-datalake', kestraProvidedJackson)
     api(group: 'com.azure', name: 'azure-monitor-query-metrics', kestraProvidedJackson)
 
-    implementation("com.azure:azure-cosmos:4.80.0", kestraProvidedJackson)
+    implementation("com.azure:azure-cosmos:4.81.0", kestraProvidedJackson)
     implementation ("com.azure:azure-messaging-servicebus:7.17.18", kestraProvidedJackson)
 
     // Azure resource manager

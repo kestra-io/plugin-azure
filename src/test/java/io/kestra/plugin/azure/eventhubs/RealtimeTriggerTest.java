@@ -13,16 +13,13 @@ import com.google.common.collect.ImmutableMap;
 import io.kestra.core.junit.annotations.KestraTest;
 import io.kestra.core.models.executions.Execution;
 import io.kestra.core.models.property.Property;
-import io.kestra.core.queues.QueueFactoryInterface;
-import io.kestra.core.queues.QueueInterface;
+import io.kestra.core.queues.DispatchQueueInterface;
 import io.kestra.core.repositories.LocalFlowRepositoryLoader;
 import io.kestra.core.runners.RunContextFactory;
 import io.kestra.core.utils.TestsUtils;
 import io.kestra.plugin.azure.eventhubs.serdes.Serdes;
 import io.micronaut.context.annotation.Value;
 import jakarta.inject.Inject;
-import jakarta.inject.Named;
-import reactor.core.publisher.Flux;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
@@ -31,8 +28,7 @@ import static org.hamcrest.Matchers.is;
 class RealtimeTriggerTest {
 
     @Inject
-    @Named(QueueFactoryInterface.EXECUTION_NAMED)
-    private QueueInterface<Execution> executionQueue;
+    private DispatchQueueInterface<Execution> executionQueue;
 
     @Inject
     private RunContextFactory runContextFactory;
@@ -50,9 +46,12 @@ class RealtimeTriggerTest {
     @Disabled
     void testTrigger() throws Exception {
         CountDownLatch queueCount = new CountDownLatch(1);
-        Flux<Execution> receive = TestsUtils.receive(executionQueue, execution -> {
+        java.util.concurrent.atomic.AtomicReference<Execution> lastExecution = new java.util.concurrent.atomic.AtomicReference<>();
+        executionQueue.addListener(execution ->
+        {
+            lastExecution.set(execution);
             queueCount.countDown();
-            assertThat(execution.getLeft().getFlowId(), is("eventhubs-realtime-listen"));
+            assertThat(execution.getFlowId(), is("eventhubs-realtime-listen"));
         });
 
         repositoryLoader.load(Objects.requireNonNull(RealtimeTriggerTest.class.getClassLoader().getResource("flows/eventshubs-realtime.yaml")));
@@ -62,7 +61,7 @@ class RealtimeTriggerTest {
         boolean await = queueCount.await(1, TimeUnit.MINUTES);
         assertThat(await, is(true));
 
-        assertThat(receive.blockLast().getTrigger().getVariables().get("body"), is("event-1"));
+        assertThat(lastExecution.get().getTrigger().getVariables().get("body"), is("event-1"));
     }
 
     private void produceEvents() throws Exception {

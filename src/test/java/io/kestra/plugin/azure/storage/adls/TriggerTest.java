@@ -16,25 +16,21 @@ import io.kestra.core.models.conditions.ConditionContext;
 import io.kestra.core.models.executions.Execution;
 import io.kestra.core.models.property.Property;
 import io.kestra.core.models.triggers.StatefulTriggerInterface;
-import io.kestra.core.queues.QueueFactoryInterface;
-import io.kestra.core.queues.QueueInterface;
+import io.kestra.core.queues.DispatchQueueInterface;
 import io.kestra.core.repositories.LocalFlowRepositoryLoader;
 import io.kestra.core.utils.IdUtils;
 import io.kestra.core.utils.TestsUtils;
 import io.kestra.plugin.azure.storage.adls.models.AdlsFile;
 import jakarta.inject.Inject;
-import jakarta.inject.Named;
-import reactor.core.publisher.Flux;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 
-@KestraTest(startRunner = true, startScheduler = true, rebuildContext = true)
+@KestraTest(startRunner = true, startScheduler = true)
 @Disabled("Unit tests works correctly locally but fail on the CI - temporary disable them")
 class TriggerTest extends AbstractTest {
     @Inject
-    @Named(QueueFactoryInterface.EXECUTION_NAMED)
-    private QueueInterface<Execution> executionQueue;
+    private DispatchQueueInterface<Execution> executionQueue;
 
     @Inject
     protected LocalFlowRepositoryLoader repositoryLoader;
@@ -43,10 +39,11 @@ class TriggerTest extends AbstractTest {
     void trigger() throws Exception {
         CountDownLatch queueCount = new CountDownLatch(1);
         AtomicReference<Execution> last = new AtomicReference<>();
-        Flux<Execution> receive = TestsUtils.receive(executionQueue, executionWithError -> {
-            Execution execution = executionWithError.getLeft();
-            if (execution.getFlowId().equals("adls-listen")) {
-                last.set(execution);
+
+        executionQueue.addListener(executionWithError ->
+        {
+            if (executionWithError.getFlowId().equals("adls-listen")) {
+                last.set(executionWithError);
                 queueCount.countDown();
             }
         });
@@ -59,7 +56,6 @@ class TriggerTest extends AbstractTest {
 
             boolean await = queueCount.await(10, TimeUnit.SECONDS);
             assertThat(await, is(true));
-            receive.blockLast();
 
             @SuppressWarnings("unchecked")
             java.util.List<AdlsFile> trigger = (java.util.List<AdlsFile>) last.get().getTrigger().getVariables().get("files");
@@ -83,10 +79,11 @@ class TriggerTest extends AbstractTest {
     void deleteAction() throws Exception {
         CountDownLatch queueCount = new CountDownLatch(1);
         AtomicReference<Execution> last = new AtomicReference<>();
-        Flux<Execution> receive = TestsUtils.receive(executionQueue, executionWithError -> {
-            Execution execution = executionWithError.getLeft();
-            if (execution.getFlowId().equals("adls-listen-delete-action")) {
-                last.set(execution);
+
+        executionQueue.addListener(executionWithError ->
+        {
+            if (executionWithError.getFlowId().equals("adls-listen-delete-action")) {
+                last.set(executionWithError);
                 queueCount.countDown();
             }
         });
@@ -98,7 +95,6 @@ class TriggerTest extends AbstractTest {
 
         boolean await = queueCount.await(10, TimeUnit.SECONDS);
         assertThat(await, is(true));
-        receive.blockLast();
 
         @SuppressWarnings("unchecked")
         java.util.List<AdlsFile> trigger = (java.util.List<AdlsFile>) last.get().getTrigger().getVariables().get("files");
@@ -119,10 +115,11 @@ class TriggerTest extends AbstractTest {
     void moveAction() throws Exception {
         CountDownLatch queueCount = new CountDownLatch(1);
         AtomicReference<Execution> last = new AtomicReference<>();
-        Flux<Execution> receive = TestsUtils.receive(executionQueue, executionWithError -> {
-            Execution execution = executionWithError.getLeft();
-            if (execution.getFlowId().equals("adls-listen-move-action")) {
-                last.set(execution);
+
+        executionQueue.addListener(executionWithError ->
+        {
+            if (executionWithError.getFlowId().equals("adls-listen-move-action")) {
+                last.set(executionWithError);
                 queueCount.countDown();
             }
         });
@@ -135,7 +132,6 @@ class TriggerTest extends AbstractTest {
 
             boolean await = queueCount.await(10, TimeUnit.SECONDS);
             assertThat(await, is(true));
-            receive.blockLast();
 
             @SuppressWarnings("unchecked")
             java.util.List<AdlsFile> trigger = (java.util.List<AdlsFile>) last.get().getTrigger().getVariables().get("files");
@@ -184,8 +180,8 @@ class TriggerTest extends AbstractTest {
 
         upload("adls/trigger/adls/on-create");
 
-        Map.Entry<ConditionContext, io.kestra.core.models.triggers.Trigger> context = TestsUtils.mockTrigger(runContextFactory, trigger);
-        Optional<Execution> execution = trigger.evaluate(context.getKey(), context.getValue());
+        Map.Entry<ConditionContext, io.kestra.core.scheduler.model.TriggerState> context = TestsUtils.mockTrigger(runContextFactory, trigger);
+        Optional<Execution> execution = trigger.evaluate(context.getKey(), context.getValue().context());
 
         assertThat(execution.isPresent(), is(true));
 
@@ -209,14 +205,14 @@ class TriggerTest extends AbstractTest {
             .interval(Duration.ofSeconds(10))
             .build();
 
-        Map.Entry<ConditionContext, io.kestra.core.models.triggers.Trigger> context = TestsUtils.mockTrigger(runContextFactory, trigger);
+        Map.Entry<ConditionContext, io.kestra.core.scheduler.model.TriggerState> context = TestsUtils.mockTrigger(runContextFactory, trigger);
 
-        trigger.evaluate(context.getKey(), context.getValue());
+        trigger.evaluate(context.getKey(), context.getValue().context());
 
         update("adls/trigger/adls/on-update");
         Thread.sleep(2000);
 
-        Optional<Execution> execution = trigger.evaluate(context.getKey(), context.getValue());
+        Optional<Execution> execution = trigger.evaluate(context.getKey(), context.getValue().context());
         assertThat(execution.isPresent(), is(true));
 
         DeleteFiles cleaner = deleteDir("trigger/adls/on-update").build();
@@ -238,15 +234,15 @@ class TriggerTest extends AbstractTest {
 
         upload("trigger/adls/on-create-or-update");
 
-        Map.Entry<ConditionContext, io.kestra.core.models.triggers.Trigger> context = TestsUtils.mockTrigger(runContextFactory, trigger);
+        Map.Entry<ConditionContext, io.kestra.core.scheduler.model.TriggerState> context = TestsUtils.mockTrigger(runContextFactory, trigger);
 
-        Optional<Execution> createExecution = trigger.evaluate(context.getKey(), context.getValue());
+        Optional<Execution> createExecution = trigger.evaluate(context.getKey(), context.getValue().context());
         assertThat(createExecution.isPresent(), is(true));
 
         update("trigger/adls/on-create-or-update");
         Thread.sleep(2000);
 
-        Optional<Execution> updateExecution = trigger.evaluate(context.getKey(), context.getValue());
+        Optional<Execution> updateExecution = trigger.evaluate(context.getKey(), context.getValue().context());
         assertThat(updateExecution.isPresent(), is(true));
 
         DeleteFiles cleaner = deleteDir("trigger/adls/on-create-or-update").build();

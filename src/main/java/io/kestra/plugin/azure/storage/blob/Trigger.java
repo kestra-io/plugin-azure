@@ -60,13 +60,13 @@ import io.kestra.core.models.annotations.PluginProperty;
 
                 tasks:
                   - id: each
-                    type: io.kestra.plugin.core.flow.ForEach
+                    type: io.kestra.plugin.core.flow.Loop
                     concurrencyLimit: 1
                     values: "{{ trigger.blobs | jq('.[].uri') }}"
                     tasks:
                       - id: return
                         type: io.kestra.plugin.core.debug.Return
-                        format: "{{ taskrun.value }}"
+                        format: "{{ item.value }}"
 
                 triggers:
                   - id: watch
@@ -93,19 +93,19 @@ import io.kestra.core.models.annotations.PluginProperty;
 
                 tasks:
                   - id: each
-                    type: io.kestra.plugin.core.flow.ForEach
+                    type: io.kestra.plugin.core.flow.Loop
                     values: "{{ trigger.blobs | jq('.[].name') }}"
                     tasks:
                       - id: return
                         type: io.kestra.plugin.core.debug.Return
-                        format: "{{ taskrun.value }}"
+                        format: "{{ item.value }}"
 
                       - id: delete
                         type: io.kestra.plugin.azure.storage.blob.Delete
                         endpoint: "https://yourblob.blob.core.windows.net"
                         connectionString: "{{ secret('AZURE_CONNECTION_STRING') }}"
                         container: myBlobContainer
-                        name: "{{ taskrun.value }}"
+                        name: "{{ item.value }}"
 
                 triggers:
                   - id: watch

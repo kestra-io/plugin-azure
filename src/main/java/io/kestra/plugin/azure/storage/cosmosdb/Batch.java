@@ -103,18 +103,31 @@ public class Batch extends AbstractCosmosContainerTask<Batch.BatchResponseOutput
     }
 
     public record BatchResponseOutput(
+        @Schema(title = "Response headers")
         Map<String, String> responseHeaders,
+        @Schema(title = "Status code")
         int statusCode,
+        @Schema(title = "Sub status code")
         int subStatusCode,
+        @Schema(title = "Error message")
         String errorMessage,
+        @Schema(title = "Results")
         List<CosmosBatchOperationResult> results,
+        @Schema(title = "Diagnostics")
         CosmosDiagnostics diagnostics,
+        @Schema(title = "Request charge")
         double requestCharge,
+        @Schema(title = "Session token")
         String sessionToken,
+        @Schema(title = "Activity id")
         String activityId,
+        @Schema(title = "Retry after duration")
         Duration retryAfterDuration,
+        @Schema(title = "Response length")
         int responseLength,
+        @Schema(title = "Duration")
         Duration duration,
+        @Schema(title = "Success status code")
         boolean successStatusCode) implements io.kestra.core.models.tasks.Output {
         public static BatchResponseOutput from(CosmosBatchResponse r) {
             return new BatchResponseOutput(

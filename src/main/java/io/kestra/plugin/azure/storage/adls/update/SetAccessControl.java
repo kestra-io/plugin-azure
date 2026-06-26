@@ -50,23 +50,24 @@ import io.kestra.core.models.annotations.PluginProperty;
     }
 )
 @Schema(
-    title = "Set access controls to a file in Azure Data Lake Storage."
+    title = "Set access controls to a file in Azure Data Lake Storage",
+    description = "Set access controls to a file in Azure Data Lake Storage using the Azure SDK."
 )
 public class SetAccessControl extends AbstractDataLakeWithFile implements RunnableTask<VoidOutput> {
     @Schema(
-        title = "Group permissions."
+        title = "Group permissions"
     )
     @PluginProperty(group = "advanced")
     private Permission groupPermissions;
 
     @Schema(
-        title = "Owner permissions."
+        title = "Owner permissions"
     )
     @PluginProperty(group = "advanced")
     private Permission ownerPermissions;
 
     @Schema(
-        title = "Other permissions."
+        title = "Other permissions"
     )
     @PluginProperty(group = "advanced")
     private Permission otherPermissions;

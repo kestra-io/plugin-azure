@@ -36,7 +36,7 @@ import static io.kestra.core.utils.Rethrow.throwFunction;
 @Getter
 @NoArgsConstructor
 @Schema(
-    title = "Trigger a flow on new file arrival in Azure Data Lake Storage.",
+    title = "Trigger a flow on new file arrival in Azure Data Lake Storage",
     description = "This trigger will poll the specified Azure Data Lake Storage file system every `interval`. " +
         "Using the `from` and `regExp` properties, you can define which files' arrival will trigger the flow. " +
         "Under the hood, we use the Azure Data Lake Storage API to list the files in a specified location and download them to the internal storage and process them with the declared `action`. "
@@ -90,12 +90,14 @@ public class Trigger extends AbstractTrigger
 
     protected Property<String> sasToken;
 
+    @Schema(title = "The ADLS file system (container) to monitor")
     private Property<String> fileSystem;
 
+    @Schema(title = "The directory path to monitor")
     private Property<String> directoryPath;
 
     @Schema(
-        title = "The action to perform on the retrieved files. If using `NONE`, make sure to handle the files inside your flow to avoid infinite triggering."
+        title = "The action to perform on the retrieved files. If using `NONE`, make sure to handle the files inside your flow to avoid infinite triggering"
     )
     @Builder.Default
     @NotNull
@@ -103,9 +105,9 @@ public class Trigger extends AbstractTrigger
     private Property<Action> action = Property.ofValue(Action.NONE);
 
     @Schema(
-        title = "The destination container and key."
+        title = "The destination container and key"
     )
-    @PluginProperty(dynamic = true)
+    @PluginProperty(dynamic = true, group = "destination")
     DestinationObject moveTo;
 
     @Schema(
@@ -263,13 +265,13 @@ public class Trigger extends AbstractTrigger
     @NoArgsConstructor
     public static class DestinationObject {
         @Schema(
-            title = "The destination file system."
+            title = "The destination file system"
         )
         @NotNull
         Property<String> fileSystem;
 
         @Schema(
-            title = "The full destination directory path on the file system."
+            title = "The full destination directory path on the file system"
         )
         @NotNull
         Property<String> directoryPath;
@@ -287,7 +289,7 @@ public class Trigger extends AbstractTrigger
     @Builder
     @Getter
     public static class Output implements io.kestra.core.models.tasks.Output {
-        @Schema(title = "List of files that triggered the flow, each with its change type.")
+        @Schema(title = "List of files that triggered the flow, each with its change type")
         private final java.util.List<TriggeredFile> files;
     }
 

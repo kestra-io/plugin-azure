@@ -1,0 +1,8 @@
+group: io.kestra.plugin.azure.storage.adls.update
+name: "update"
+title: "Azure Data Lake Storage Update"
+description: "Tasks that update files in Azure Data Lake Storage (append, lease, access control)."
+body: ""
+videos: []
+createdBy: "Kestra Core Team"
+managedBy: "Kestra Core Team"

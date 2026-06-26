@@ -50,7 +50,8 @@ import io.kestra.core.models.annotations.PluginProperty;
     }
 )
 @Schema(
-    title = "List blob objects in an Azure Blob Storage container."
+    title = "List blob objects in an Azure Blob Storage container",
+    description = "List blob objects in an Azure Blob Storage container using the Azure SDK."
 )
 public class List extends AbstractBlobStorageWithSas implements RunnableTask<List.Output>, ListInterface, AbstractBlobStorageContainerInterface {
     @PluginProperty(group = "main")
@@ -117,7 +118,7 @@ public class List extends AbstractBlobStorageWithSas implements RunnableTask<Lis
     @Getter
     public static class Output implements io.kestra.core.models.tasks.Output {
         @Schema(
-            title = "The list of blobs."
+            title = "The list of blobs"
         )
         private final java.util.List<Blob> blobs;
     }

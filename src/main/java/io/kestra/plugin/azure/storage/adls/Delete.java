@@ -42,7 +42,8 @@ import lombok.experimental.SuperBuilder;
     }
 )
 @Schema(
-    title = "Delete a file from Azure Data Lake Storage."
+    title = "Delete a file from Azure Data Lake Storage",
+    description = "Delete a file from Azure Data Lake Storage using the Azure SDK."
 )
 public class Delete extends AbstractDataLakeWithFile implements RunnableTask<Delete.Output> {
 
@@ -67,7 +68,7 @@ public class Delete extends AbstractDataLakeWithFile implements RunnableTask<Del
     @Getter
     public static class Output implements io.kestra.core.models.tasks.Output {
         @Schema(
-            title = "The deleted file."
+            title = "The deleted file"
         )
         private final AdlsFile file;
     }

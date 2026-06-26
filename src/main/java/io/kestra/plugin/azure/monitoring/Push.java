@@ -27,6 +27,7 @@ import io.kestra.core.models.annotations.PluginProperty;
     examples = {
         @Example(
             title = "Query CPU utilization from Azure Monitor for multiple VMs",
+            full = true,
             code = """
                 id: azure_monitor_query
                 namespace: company.team

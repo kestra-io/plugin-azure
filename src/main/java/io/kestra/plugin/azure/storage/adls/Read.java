@@ -52,7 +52,8 @@ import lombok.experimental.SuperBuilder;
     }
 )
 @Schema(
-    title = "Read a file from Azure Data Lake Storage."
+    title = "Read a file from Azure Data Lake Storage",
+    description = "Read a file from Azure Data Lake Storage using the Azure SDK."
 )
 public class Read extends AbstractDataLakeWithFile implements RunnableTask<Read.Output>, SingleFileChecksumValidatedInterface {
     private Property<Boolean> validateChecksum;
@@ -81,7 +82,7 @@ public class Read extends AbstractDataLakeWithFile implements RunnableTask<Read.
     @Getter
     public static class Output implements io.kestra.core.models.tasks.Output {
         @Schema(
-            title = "The downloaded file."
+            title = "The downloaded file"
         )
         private final AdlsFile file;
     }

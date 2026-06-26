@@ -44,7 +44,8 @@ import io.kestra.core.models.annotations.PluginProperty;
     }
 )
 @Schema(
-    title = "Lease a file from Azure Data Lake Storage."
+    title = "Lease a file from Azure Data Lake Storage",
+    description = "Lease a file from Azure Data Lake Storage using the Azure SDK."
 )
 public class Lease extends AbstractDataLakeWithFile implements RunnableTask<Lease.Output> {
 
@@ -116,7 +117,7 @@ public class Lease extends AbstractDataLakeWithFile implements RunnableTask<Leas
     @Getter
     public static class Output implements io.kestra.core.models.tasks.Output {
         @Schema(
-            title = "Lease ID."
+            title = "Lease ID"
         )
         private final String id;
     }

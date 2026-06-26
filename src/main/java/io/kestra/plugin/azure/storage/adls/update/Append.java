@@ -52,7 +52,8 @@ import io.kestra.core.models.annotations.PluginProperty;
     }
 )
 @Schema(
-    title = "Append data to an existing file in Azure Data Lake Storage."
+    title = "Append data to an existing file in Azure Data Lake Storage",
+    description = "Append data to an existing file in Azure Data Lake Storage using the Azure SDK."
 )
 public class Append extends AbstractDataLakeWithFile implements RunnableTask<VoidOutput> {
     @Schema(title = "Data")

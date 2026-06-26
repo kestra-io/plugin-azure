@@ -67,10 +67,14 @@ import static io.kestra.core.utils.Rethrow.throwFunction;
         )
     }
 )
+@Schema(
+    title = "Publish messages to an Azure Service Bus queue",
+    description = "Sends one or more messages, provided via from, to the configured Service Bus queue."
+)
 public class Publish extends AbstractServiceBusTask implements RunnableTask<Publish.Output> {
     @NotNull
     @Schema(
-        title = Data.From.TITLE,
+        title = "Structured data items, either as a map, a list of map, a URI, or a JSON string",
         description = Data.From.DESCRIPTION,
         anyOf = { String.class, List.class, Message.class }
     )
@@ -138,6 +142,7 @@ public class Publish extends AbstractServiceBusTask implements RunnableTask<Publ
     }
 
     public record Output(
+        @Schema(title = "Messages count")
         Integer messagesCount) implements io.kestra.core.models.tasks.Output {
     }
 }

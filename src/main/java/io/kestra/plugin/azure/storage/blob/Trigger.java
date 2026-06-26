@@ -38,7 +38,7 @@ import io.kestra.core.models.annotations.PluginProperty;
 @EqualsAndHashCode
 
 @Schema(
-    title = "Trigger a flow on a new file arrival in an Azure Blob Storage container.",
+    title = "Trigger a flow on a new file arrival in an Azure Blob Storage container",
     description = "This trigger will poll the specified Azure Blob Storage container every `interval`. "
         + "Using the `from` and `regExp` properties, you can define which files' arrival will trigger the flow. "
         + "Under the hood, we use the Azure Blob Storage API to list the files in a specified location and "
@@ -259,7 +259,7 @@ public class Trigger extends AbstractTrigger implements PollingTriggerInterface,
     @Builder
     @Getter
     public static class Output implements io.kestra.core.models.tasks.Output {
-        @Schema(title = "List of blobs that triggered the flow, each with its change type.")
+        @Schema(title = "List of blobs that triggered the flow, each with its change type")
         private final java.util.List<TriggeredBlob> blobs;
     }
 

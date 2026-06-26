@@ -96,39 +96,55 @@ import lombok.experimental.SuperBuilder;
     }
 )
 public class Trigger extends AbstractTrigger implements PollingTriggerInterface, TriggerOutput<Query.Output> {
+    @Schema(title = "Azure tenant id")
     protected Property<String> tenantId;
 
+    @Schema(title = "Azure client id")
     protected Property<String> clientId;
 
+    @Schema(title = "Azure client secret")
+    @PluginProperty(secret = true, group = "connection")
     protected Property<String> clientSecret;
 
+    @Schema(title = "Azure subscription id")
     protected Property<String> subscriptionId;
 
+    @Schema(title = "Azure Monitor endpoint")
     @NotNull
     protected Property<String> endpoint;
 
     @Builder.Default
     private final Duration interval = Duration.ofSeconds(60);
 
+    @Schema(title = "Resource ids to query metrics for")
     private Property<List<String>> resourceIds;
 
+    @Schema(title = "Metric names to query")
     private Property<List<String>> metricNames;
 
+    @Schema(title = "Metrics namespace")
     private Property<String> metricsNamespace;
 
+    @Schema(title = "Time window to query over")
     @Builder.Default
     private Property<Duration> window = Property.ofValue(Duration.ofMinutes(5));
 
+    @Schema(title = "Aggregations to apply")
     private Property<List<String>> aggregations;
 
+    @Schema(title = "Granularity of the returned metrics")
     private Property<Duration> granularity;
 
+    @Schema(title = "Filter expression")
     private Property<String> filter;
 
+    @Schema(title = "Maximum number of records to return")
     private Property<Integer> top;
 
+    @Schema(title = "Order by expression")
     private Property<String> orderBy;
 
+    @Schema(title = "Dimension to roll up by")
     private Property<String> rollupBy;
 
     @Override

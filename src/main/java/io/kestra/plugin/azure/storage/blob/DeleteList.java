@@ -64,7 +64,8 @@ import static io.kestra.core.utils.Rethrow.throwConsumer;
     }
 )
 @Schema(
-    title = "Delete a list of objects from Azure Blob Storage."
+    title = "Delete a list of objects from Azure Blob Storage",
+    description = "Delete a list of objects from Azure Blob Storage using the Azure SDK."
 )
 public class DeleteList extends AbstractBlobStorageWithSas implements RunnableTask<DeleteList.Output>, ListInterface, AbstractBlobStorageContainerInterface {
     @PluginProperty(group = "main")
@@ -85,13 +86,13 @@ public class DeleteList extends AbstractBlobStorageWithSas implements RunnableTa
 
     @Min(2)
     @Schema(
-        title = "Number of concurrent parallel deletions."
+        title = "Number of concurrent parallel deletions"
     )
     @PluginProperty(dynamic = false, group = "execution")
     private Integer concurrent;
 
     @Schema(
-        title = "Whether to raise an error if the file is not found."
+        title = "Whether to raise an error if the file is not found"
     )
     @Builder.Default
     @PluginProperty(group = "reliability")
@@ -171,13 +172,13 @@ public class DeleteList extends AbstractBlobStorageWithSas implements RunnableTa
     public static class Output implements io.kestra.core.models.tasks.Output {
         @Builder.Default
         @Schema(
-            title = "The count of deleted blobs."
+            title = "The count of deleted blobs"
         )
         private final long count = 0;
 
         @Builder.Default
         @Schema(
-            title = "The size of all the deleted blobs."
+            title = "The size of all the deleted blobs"
         )
         private final long size = 0;
     }

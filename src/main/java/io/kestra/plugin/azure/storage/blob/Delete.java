@@ -42,7 +42,8 @@ import lombok.experimental.SuperBuilder;
     }
 )
 @Schema(
-    title = "Delete a file from Azure Blob Storage."
+    title = "Delete a file from Azure Blob Storage",
+    description = "Delete a file from Azure Blob Storage using the Azure SDK."
 )
 public class Delete extends AbstractBlobStorageWithSasObject implements RunnableTask<Delete.Output> {
     @Override
@@ -62,7 +63,7 @@ public class Delete extends AbstractBlobStorageWithSasObject implements Runnable
     @Getter
     public static class Output implements io.kestra.core.models.tasks.Output {
         @Schema(
-            title = "The deleted blob."
+            title = "The deleted blob"
         )
         private final Blob blob;
     }

@@ -78,16 +78,27 @@ public class CreateItem extends AbstractCosmosContainerTask<CreateItem.Output> i
     }
 
     public record Output(
+        @Schema(title = "Item")
         Map<String, Object> item,
+        @Schema(title = "Max resource quota")
         String maxResourceQuota,
+        @Schema(title = "Current resource quota usage")
         String currentResourceQuotaUsage,
+        @Schema(title = "Activity id")
         String activityId,
+        @Schema(title = "Request charge")
         double requestCharge,
+        @Schema(title = "Status code")
         int statusCode,
+        @Schema(title = "Session token")
         String sessionToken,
+        @Schema(title = "Response headers")
         Map<String, String> responseHeaders,
+        @Schema(title = "Diagnostics")
         CosmosDiagnostics diagnostics,
+        @Schema(title = "Duration")
         Duration duration,
+        @Schema(title = "E tag")
         String eTag) implements io.kestra.core.models.tasks.Output {
         public static Output from(com.azure.cosmos.models.CosmosItemResponse<Map<String, Object>> r) {
             return new Output(

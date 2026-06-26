@@ -42,19 +42,20 @@ import io.kestra.core.models.annotations.PluginProperty;
                     directoryPath: "path/to/my/directory/"
 
                   - id: for_each_file
-                      type: io.kestra.plugin.core.flow.EachParallel
-                      value: "{{ outputs.list_files_in_dir.files }}"
-                      tasks:
-                        - id: log_file_name
-                          type: io.kestra.plugin.core.debug.Echo
-                          level: DEBUG
-                          format: "{{ taskrun.value }}"
+                    type: io.kestra.plugin.core.flow.EachParallel
+                    value: "{{ outputs.list_files_in_dir.files }}"
+                    tasks:
+                      - id: log_file_name
+                        type: io.kestra.plugin.core.debug.Echo
+                        level: DEBUG
+                        format: "{{ taskrun.value }}"
                 """
         )
     }
 )
 @Schema(
-    title = "Upload a file to Azure Data Lake Storage."
+    title = "Upload a file to Azure Data Lake Storage",
+    description = "Upload a file to Azure Data Lake Storage using the Azure SDK."
 )
 public class List extends AbstractDataLakeConnection implements RunnableTask<List.Output>, AbstractDataLakeStorageInterface {
     @Schema(title = "Directory path", description = "Full path to the directory")
@@ -103,7 +104,7 @@ public class List extends AbstractDataLakeConnection implements RunnableTask<Lis
     @Getter
     public static class Output implements io.kestra.core.models.tasks.Output {
         @Schema(
-            title = "The list of file."
+            title = "The list of file"
         )
         private final java.util.List<AdlsFile> files;
     }

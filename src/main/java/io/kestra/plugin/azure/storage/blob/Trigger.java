@@ -10,6 +10,7 @@ import com.fasterxml.jackson.annotation.JsonUnwrapped;
 
 import io.kestra.core.models.annotations.Example;
 import io.kestra.core.models.annotations.Plugin;
+import io.kestra.core.models.annotations.PluginProperty;
 import io.kestra.core.models.conditions.ConditionContext;
 import io.kestra.core.models.executions.Execution;
 import io.kestra.core.models.property.Property;
@@ -130,12 +131,15 @@ public class Trigger extends AbstractTrigger implements PollingTriggerInterface,
 
     protected Property<String> endpoint;
 
+    @PluginProperty(group = "connection", secret = true)
     protected Property<String> connectionString;
 
     protected Property<String> sharedKeyAccountName;
 
+    @PluginProperty(group = "connection", secret = true)
     protected Property<String> sharedKeyAccountAccessKey;
 
+    @PluginProperty(group = "connection", secret = true)
     protected Property<String> sasToken;
 
     private Property<String> container;

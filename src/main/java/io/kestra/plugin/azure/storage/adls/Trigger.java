@@ -82,12 +82,15 @@ public class Trigger extends AbstractTrigger
 
     protected Property<String> endpoint;
 
+    @PluginProperty(group = "connection", secret = true)
     protected Property<String> connectionString;
 
     protected Property<String> sharedKeyAccountName;
 
+    @PluginProperty(group = "connection", secret = true)
     protected Property<String> sharedKeyAccountAccessKey;
 
+    @PluginProperty(group = "connection", secret = true)
     protected Property<String> sasToken;
 
     @Schema(title = "The ADLS file system (container) to monitor")

@@ -73,12 +73,15 @@ public class Trigger extends AbstractTrigger implements EventHubConsumerInterfac
     private Duration interval = Duration.ofSeconds(60);
 
     // TASK'S PARAMETERS
+    @PluginProperty(group = "connection", secret = true)
     protected Property<String> connectionString;
 
     protected Property<String> sharedKeyAccountName;
 
+    @PluginProperty(group = "connection", secret = true)
     protected Property<String> sharedKeyAccountAccessKey;
 
+    @PluginProperty(group = "connection", secret = true)
     protected Property<String> sasToken;
 
     @Builder.Default

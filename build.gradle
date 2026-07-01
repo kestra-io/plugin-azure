@@ -85,7 +85,7 @@ dependencies {
     api(group: 'com.azure', name: 'azure-analytics-synapse-spark', version: '1.0.0-beta.5', kestraProvidedJackson)
 
     // Shared kernel library
-    implementation 'io.kestra.plugin:plugin-azure-lib:1.1.2'
+    implementation 'io.kestra.plugin:plugin-azure-lib:1.1.3'
 }
 
 

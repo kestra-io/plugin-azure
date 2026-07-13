@@ -76,19 +76,20 @@ import lombok.experimental.SuperBuilder;
     }
 )
 @Schema(
-    title = "Create a Shared Access link for Azure Data Lake Storage."
+    title = "Create a Shared Access link for Azure Data Lake Storage",
+    description = "Create a Shared Access link for Azure Data Lake Storage using the Azure SDK."
 )
 public class SharedAccess extends AbstractDataLakeWithFile implements RunnableTask<SharedAccess.Output> {
 
     @Schema(
-        title = " The time after which the SAS will no longer work."
+        title = " The time after which the SAS will no longer work"
     )
     @NotNull
     @PluginProperty(group = "main")
     private Property<String> expirationDate;
 
     @Schema(
-        title = " The permissions to be set for the Shared Access."
+        title = " The permissions to be set for the Shared Access"
     )
     @PluginProperty(dynamic = true, group = "main")
     @NotNull
@@ -146,7 +147,7 @@ public class SharedAccess extends AbstractDataLakeWithFile implements RunnableTa
     @Getter
     public static class Output implements io.kestra.core.models.tasks.Output {
         @Schema(
-            title = "The SAS URI."
+            title = "The SAS URI"
         )
         private final URI uri;
     }

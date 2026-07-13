@@ -10,6 +10,7 @@ import com.fasterxml.jackson.annotation.JsonUnwrapped;
 
 import io.kestra.core.models.annotations.Example;
 import io.kestra.core.models.annotations.Plugin;
+import io.kestra.core.models.annotations.PluginProperty;
 import io.kestra.core.models.conditions.ConditionContext;
 import io.kestra.core.models.executions.Execution;
 import io.kestra.core.models.property.Property;
@@ -38,7 +39,7 @@ import io.kestra.core.models.annotations.PluginProperty;
 @EqualsAndHashCode
 
 @Schema(
-    title = "Trigger a flow on a new file arrival in an Azure Blob Storage container.",
+    title = "Trigger a flow on a new file arrival in an Azure Blob Storage container",
     description = "This trigger will poll the specified Azure Blob Storage container every `interval`. "
         + "Using the `from` and `regExp` properties, you can define which files' arrival will trigger the flow. "
         + "Under the hood, we use the Azure Blob Storage API to list the files in a specified location and "
@@ -130,12 +131,15 @@ public class Trigger extends AbstractTrigger implements PollingTriggerInterface,
 
     protected Property<String> endpoint;
 
+    @PluginProperty(group = "connection", secret = true)
     protected Property<String> connectionString;
 
     protected Property<String> sharedKeyAccountName;
 
+    @PluginProperty(group = "connection", secret = true)
     protected Property<String> sharedKeyAccountAccessKey;
 
+    @PluginProperty(group = "connection", secret = true)
     protected Property<String> sasToken;
 
     private Property<String> container;
@@ -259,7 +263,7 @@ public class Trigger extends AbstractTrigger implements PollingTriggerInterface,
     @Builder
     @Getter
     public static class Output implements io.kestra.core.models.tasks.Output {
-        @Schema(title = "List of blobs that triggered the flow, each with its change type.")
+        @Schema(title = "List of blobs that triggered the flow, each with its change type")
         private final java.util.List<TriggeredBlob> blobs;
     }
 

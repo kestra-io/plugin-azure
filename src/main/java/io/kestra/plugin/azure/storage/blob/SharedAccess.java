@@ -54,18 +54,19 @@ import lombok.experimental.SuperBuilder;
     }
 )
 @Schema(
-    title = "Create a shared access link on Azure Blob Storage."
+    title = "Create a shared access link on Azure Blob Storage",
+    description = "Create a shared access link on Azure Blob Storage using the Azure SDK."
 )
 public class SharedAccess extends AbstractBlobStorageObject implements RunnableTask<SharedAccess.Output> {
     @Schema(
-        title = " The time after which the SAS will no longer work."
+        title = " The time after which the SAS will no longer work"
     )
     @NotNull
     @PluginProperty(group = "main")
     private Property<String> expirationDate;
 
     @Schema(
-        title = " The permissions to be set for the Shared Access."
+        title = " The permissions to be set for the Shared Access"
     )
     @PluginProperty(dynamic = true, group = "main")
     @NotNull
@@ -125,7 +126,7 @@ public class SharedAccess extends AbstractBlobStorageObject implements RunnableT
     @Getter
     public static class Output implements io.kestra.core.models.tasks.Output {
         @Schema(
-            title = "The SAS URI."
+            title = "The SAS URI"
         )
         private final URI uri;
     }

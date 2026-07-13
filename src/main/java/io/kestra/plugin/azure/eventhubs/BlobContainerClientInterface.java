@@ -23,7 +23,7 @@ public final class BlobContainerClientInterface implements AzureClientWithSasInt
     @PluginProperty(secret = true)
     private Property<String> sasToken;
     @Schema(
-        title = "The blob container name."
+        title = "The blob container name"
     )
     @PluginProperty(group = "advanced")
     private Property<String> containerName;

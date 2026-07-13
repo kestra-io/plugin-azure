@@ -54,7 +54,8 @@ import io.kestra.core.models.annotations.PluginProperty;
     }
 )
 @Schema(
-    title = "Read all files from an Azure Data Lake Storage directory."
+    title = "Read all files from an Azure Data Lake Storage directory",
+    description = "Read all files from an Azure Data Lake Storage directory using the Azure SDK."
 )
 public class Reads extends AbstractDataLakeConnection implements RunnableTask<Reads.Output>, AbstractDataLakeStorageInterface, ChecksumValidatedInterface {
     @Schema(title = "Directory Name")
@@ -129,12 +130,12 @@ public class Reads extends AbstractDataLakeConnection implements RunnableTask<Re
     @Getter
     public static class Output implements io.kestra.core.models.tasks.Output {
         @Schema(
-            title = "The list of files."
+            title = "The list of files"
         )
         private final java.util.List<AdlsFile> files;
 
         @Schema(
-            title = "The downloaded files as a map of from/to URIs."
+            title = "The downloaded files as a map of from/to URIs"
         )
         private final Map<String, URI> outputFiles;
     }

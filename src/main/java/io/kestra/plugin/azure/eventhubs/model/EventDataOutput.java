@@ -3,6 +3,7 @@ package io.kestra.plugin.azure.eventhubs.model;
 import java.util.Map;
 
 import io.kestra.core.models.tasks.Output;
+import io.swagger.v3.oas.annotations.media.Schema;
 
 import lombok.Builder;
 import lombok.Getter;
@@ -20,37 +21,46 @@ public final class EventDataOutput implements Output {
     /**
      * the event data partitionKey.
      */
+    @Schema(title = "Partition Key")
     private final String partitionKey;
 
     /**
      * the event data body.
      */
+    @Schema(title = "Body")
     private final Object body;
 
     /**
      * the event data content-type.
      */
+    @Schema(title = "Content Type")
     private final String contentType;
 
     /**
      * The event correlation ID.
      */
+    @Schema(title = "Correlation Id")
     private final String correlationId;
 
     /**
      * the event message ID.
      */
+    @Schema(title = "Message Id")
     private final String messageId;
 
+    @Schema(title = "Enqueued Timestamp")
     private final Long enqueuedTimestamp;
 
+    @Schema(title = "Offset")
     private final Long offset;
 
+    @Schema(title = "Sequence Number")
     private final Long sequenceNumber;
 
     /**
      * the event properties.
      */
+    @Schema(title = "Properties")
     private final Map<String, Object> properties;
 
     public static EventDataOutput of(final EventDataObject event) {

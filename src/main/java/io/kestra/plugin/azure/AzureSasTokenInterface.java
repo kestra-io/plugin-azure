@@ -11,7 +11,7 @@ import io.kestra.core.models.annotations.PluginProperty;
  */
 public interface AzureSasTokenInterface {
     @Schema(
-        title = "The SAS token to use for authenticating requests.",
+        title = "The SAS token to use for authenticating requests",
         description = "This string should only be the query parameters (with or without a leading '?') and not a full URL."
     )
     @PluginProperty(secret = true, group = "connection")

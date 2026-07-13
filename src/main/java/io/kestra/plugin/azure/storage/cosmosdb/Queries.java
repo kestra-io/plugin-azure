@@ -190,6 +190,7 @@ public class Queries extends AbstractCosmosContainerTask<Queries.Output> impleme
     }
 
     public record Output(
+        @Schema(title = "Results")
         Map<String, List<Map>> results) implements io.kestra.core.models.tasks.Output {
     }
 }

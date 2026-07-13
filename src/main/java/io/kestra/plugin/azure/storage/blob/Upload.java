@@ -142,6 +142,7 @@ public class Upload extends AbstractBlobStorageWithSasObject implements Runnable
     @PluginProperty(group = "advanced")
     private Property<Boolean> legalHold;
 
+    @Schema(title = "Immutability policy to apply to the uploaded blob")
     @PluginProperty(group = "advanced")
     private BlobImmutabilityPolicy immutabilityPolicy;
 

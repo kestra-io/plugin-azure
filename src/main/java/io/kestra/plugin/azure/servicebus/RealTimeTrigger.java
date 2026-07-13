@@ -52,6 +52,10 @@ import io.kestra.core.models.annotations.PluginProperty;
         )
     }
 )
+@Schema(
+    title = "Consume messages in real time from an Azure Service Bus queue",
+    description = "Fires one execution per message received from the configured Service Bus queue."
+)
 public class RealTimeTrigger extends AbstractTrigger implements RealtimeTriggerInterface, TriggerOutput<Message> {
     @Schema(description = QUEUE_NAME_DESCRIPTION)
     @PluginProperty(group = "advanced")

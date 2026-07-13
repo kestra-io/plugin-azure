@@ -60,6 +60,10 @@ import io.kestra.core.models.annotations.PluginProperty;
         )
     }
 )
+@Schema(
+    title = "Consume messages from an Azure Service Bus queue",
+    description = "Reads messages from the configured queue until the max records or duration is reached and writes them to internal storage."
+)
 public class Consume extends AbstractServiceBusTask implements RunnableTask<Consume.Output> {
 
     @Schema(description = RECEIVE_MODE_DESCRIPTION)
@@ -196,11 +200,11 @@ public class Consume extends AbstractServiceBusTask implements RunnableTask<Cons
     @Getter
     public static class Output implements io.kestra.core.models.tasks.Output {
         @Schema(
-            title = "Number of consumed rows."
+            title = "Number of consumed rows"
         )
         private final Integer count;
         @Schema(
-            title = "File URI containing consumed messages."
+            title = "File URI containing consumed messages"
         )
         private final URI uri;
     }

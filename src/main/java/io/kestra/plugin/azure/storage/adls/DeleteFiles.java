@@ -86,7 +86,8 @@ import static io.kestra.core.utils.Rethrow.throwConsumer;
     }
 )
 @Schema(
-    title = "Delete a list of objects from Azure Data Lake Storage."
+    title = "Delete a list of objects from Azure Data Lake Storage",
+    description = "Delete a list of objects from Azure Data Lake Storage using the Azure SDK."
 )
 public class DeleteFiles extends AbstractDataLakeConnection implements RunnableTask<DeleteFiles.Output>, AbstractDataLakeStorageInterface {
     @PluginProperty(group = "main")
@@ -99,13 +100,13 @@ public class DeleteFiles extends AbstractDataLakeConnection implements RunnableT
 
     @Min(2)
     @Schema(
-        title = "Number of concurrent parallel deletions."
+        title = "Number of concurrent parallel deletions"
     )
     @PluginProperty(dynamic = false, group = "execution")
     private Integer concurrent;
 
     @Schema(
-        title = "Whether to raise an error if the file is not found."
+        title = "Whether to raise an error if the file is not found"
     )
     @Builder.Default
     @PluginProperty(group = "reliability")
@@ -185,13 +186,13 @@ public class DeleteFiles extends AbstractDataLakeConnection implements RunnableT
     public static class Output implements io.kestra.core.models.tasks.Output {
         @Builder.Default
         @Schema(
-            title = "The count of deleted files."
+            title = "The count of deleted files"
         )
         private final long count = 0;
 
         @Builder.Default
         @Schema(
-            title = "The size of all the deleted files."
+            title = "The size of all the deleted files"
         )
         private final long size = 0;
     }

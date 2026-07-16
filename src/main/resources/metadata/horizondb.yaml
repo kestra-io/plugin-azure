@@ -1,0 +1,8 @@
+group: io.kestra.plugin.azure.horizondb
+name: "horizondb"
+title: "Azure HorizonDB"
+description: "Tasks and triggers to run SQL queries and manage pg_durable durable workflows on Azure HorizonDB."
+body: "Connect with password or Azure Entra ID authentication; run single or multi-statement SQL queries with FETCH, FETCH_ONE, or STORE result handling, and submit, cancel, signal, inspect, list, and react to pg_durable durable function instances directly from a Kestra flow."
+videos: []
+createdBy: "Kestra Core Team"
+managedBy: "Kestra Core Team"

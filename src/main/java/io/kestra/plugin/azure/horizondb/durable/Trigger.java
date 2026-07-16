@@ -1,0 +1,186 @@
+package io.kestra.plugin.azure.horizondb.durable;
+
+import java.time.Duration;
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+
+import org.slf4j.Logger;
+
+import io.kestra.core.models.annotations.Example;
+import io.kestra.core.models.annotations.Plugin;
+import io.kestra.core.models.annotations.PluginProperty;
+import io.kestra.core.models.conditions.ConditionContext;
+import io.kestra.core.models.executions.Execution;
+import io.kestra.core.models.property.Property;
+import io.kestra.core.models.tasks.common.FetchType;
+import io.kestra.core.models.triggers.AbstractTrigger;
+import io.kestra.core.models.triggers.PollingTriggerInterface;
+import io.kestra.core.models.triggers.StatefulTriggerInterface;
+import io.kestra.core.models.triggers.StatefulTriggerService;
+import io.kestra.core.models.triggers.TriggerContext;
+import io.kestra.core.models.triggers.TriggerOutput;
+import io.kestra.core.models.triggers.TriggerService;
+import io.kestra.core.runners.RunContext;
+
+import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.NotNull;
+import lombok.Builder;
+import lombok.EqualsAndHashCode;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.ToString;
+import lombok.experimental.SuperBuilder;
+
+@SuperBuilder
+@ToString
+@EqualsAndHashCode
+@Getter
+@NoArgsConstructor
+@Schema(
+    title = "Trigger a flow when a pg_durable instance reaches a target status",
+    description = "Polls `df.list_instances()` on an interval and starts an execution the first time one or more instances are newly seen in, or newly transition to, targetStatus. Already-seen instances that remain in targetStatus do not refire; state is persisted in the flow's namespace KV store."
+)
+@Plugin(
+    examples = {
+        @Example(
+            title = "Trigger a flow when a durable function instance completes",
+            full = true,
+            code = """
+                id: horizondb_durable_on_completion
+                namespace: company.team
+
+                triggers:
+                  - id: on_durable_complete
+                    type: io.kestra.plugin.azure.horizondb.durable.Trigger
+                    host: "{{ secret('HORIZONDB_HOST') }}"
+                    port: 5432
+                    database: mydb
+                    username: "{{ secret('HORIZONDB_USERNAME') }}"
+                    password: "{{ secret('HORIZONDB_PASSWORD') }}"
+                    targetStatus: Completed
+                    interval: PT30S
+
+                tasks:
+                  - id: log_completion
+                    type: io.kestra.plugin.core.log.Log
+                    message: "Durable instance {{ trigger.instances[0].instance_id }} completed"
+                """
+        )
+    }
+)
+public class Trigger extends AbstractTrigger implements PollingTriggerInterface, TriggerOutput<ListInstances.Output>, StatefulTriggerInterface {
+    @Schema(title = "HorizonDB server host")
+    @NotNull
+    protected Property<String> host;
+
+    @Schema(title = "HorizonDB server port")
+    @Builder.Default
+    protected Property<Integer> port = Property.ofValue(5432);
+
+    @Schema(title = "Database name")
+    @NotNull
+    protected Property<String> database;
+
+    @Schema(title = "Username")
+    protected Property<String> username;
+
+    @Schema(title = "Password")
+    @PluginProperty(secret = true, group = "connection")
+    protected Property<String> password;
+
+    @Schema(title = "Authenticate with Azure Entra ID")
+    @Builder.Default
+    protected Property<Boolean> useEntraId = Property.ofValue(false);
+
+    @Schema(
+        title = "Target status",
+        description = "Instance status to watch for (e.g. Completed, Failed, Cancelled)."
+    )
+    @NotNull
+    protected Property<String> targetStatus;
+
+    @Builder.Default
+    private final Duration interval = Duration.ofSeconds(60);
+
+    @Builder.Default
+    protected Property<On> on = Property.ofValue(On.CREATE_OR_UPDATE);
+
+    protected Property<String> stateKey;
+
+    protected Property<Duration> stateTtl;
+
+    @Override
+    public Optional<Execution> evaluate(ConditionContext conditionContext, TriggerContext context) throws Exception {
+        RunContext runContext = conditionContext.getRunContext();
+        Logger logger = runContext.logger();
+
+        String rTargetStatus = runContext.render(this.targetStatus).as(String.class)
+            .orElseThrow(() -> new IllegalArgumentException("targetStatus is required"));
+
+        ListInstances.Output output = ListInstances.builder()
+            .id(this.id)
+            .type(ListInstances.class.getName())
+            .host(this.host)
+            .port(this.port)
+            .database(this.database)
+            .username(this.username)
+            .password(this.password)
+            .useEntraId(this.useEntraId)
+            .statusFilter(Property.ofValue(rTargetStatus))
+            .fetchType(Property.ofValue(FetchType.FETCH))
+            .build()
+            .run(runContext);
+
+        List<Map<String, Object>> instances = output.getInstances() == null ? List.of() : output.getInstances();
+        logger.debug("Polled {} instance(s) in status {}", instances.size(), rTargetStatus);
+
+        if (instances.isEmpty()) {
+            return Optional.empty();
+        }
+
+        On rOn = runContext.render(this.on).as(On.class).orElse(On.CREATE_OR_UPDATE);
+        String rStateKey = runContext.render(this.stateKey).as(String.class)
+            .orElse(StatefulTriggerService.defaultKey(context.getNamespace(), context.getFlowId(), this.getId()));
+        Optional<Duration> rStateTtl = runContext.render(this.stateTtl).as(Duration.class);
+
+        Map<String, StatefulTriggerService.Entry> state = StatefulTriggerService.readState(runContext, rStateKey, rStateTtl);
+
+        List<Map<String, Object>> fired = new ArrayList<>();
+        for (Map<String, Object> instance : instances) {
+            Object instanceId = instance.get("instance_id");
+            if (instanceId == null) {
+                continue;
+            }
+            Object status = instance.get("status");
+            var candidate = StatefulTriggerService.Entry.candidate(
+                String.valueOf(instanceId),
+                status == null ? null : String.valueOf(status),
+                Instant.now()
+            );
+            StatefulTriggerService.StateUpdate update = StatefulTriggerService.computeAndUpdateState(state, candidate, rOn);
+            if (update.fire()) {
+                fired.add(instance);
+            }
+        }
+
+        StatefulTriggerService.writeState(runContext, rStateKey, state, rStateTtl);
+
+        if (fired.isEmpty()) {
+            return Optional.empty();
+        }
+
+        logger.info("{} durable instance(s) newly reached status {}", fired.size(), rTargetStatus);
+
+        ListInstances.Output fireOutput = ListInstances.Output.builder()
+            .instances(fired)
+            .size((long) fired.size())
+            .build();
+
+        return Optional.of(
+            TriggerService.generateExecution(this, conditionContext, context, fireOutput)
+        );
+    }
+}

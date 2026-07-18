@@ -114,4 +114,88 @@ class QueryTest {
         assertThat(output.getRow(), nullValue());
         assertThat(output.getRows(), nullValue());
     }
+
+    @Test
+    void shouldStoreRowsToInternalStorage() throws Exception {
+        Connection connection = mock(Connection.class);
+        Statement statement = mock(Statement.class);
+        ResultSet resultSet = mock(ResultSet.class);
+        ResultSetMetaData metaData = mock(ResultSetMetaData.class);
+
+        when(connection.createStatement(anyInt(), anyInt())).thenReturn(statement);
+        when(statement.execute(anyString())).thenReturn(true);
+        when(statement.getResultSet()).thenReturn(resultSet);
+        when(resultSet.getMetaData()).thenReturn(metaData);
+        when(metaData.getColumnCount()).thenReturn(1);
+        when(metaData.getColumnLabel(1)).thenReturn("id");
+        when(resultSet.next()).thenReturn(true, true, false);
+        when(resultSet.getObject(1)).thenReturn(1, 2);
+
+        Query task = Query.builder()
+            .id(QueryTest.class.getSimpleName())
+            .type(Query.class.getName())
+            .sql(Property.ofValue("SELECT id FROM t"))
+            .fetchType(Property.ofValue(FetchType.STORE))
+            .build();
+
+        RunContext runContext = runContextFactory.of();
+        Query.Output output = task.run(runContext, connection);
+
+        assertThat(output.getUri(), notNullValue());
+        assertThat(output.getSize(), is(2L));
+        assertThat(output.getRow(), nullValue());
+        assertThat(output.getRows(), nullValue());
+        verify(statement).setFetchSize(10000);
+
+        // verify the stored ION content actually contains both rows
+        java.io.InputStream storedContent = runContext.storage().getFile(output.getUri());
+        java.util.List<Object> rows = new java.util.ArrayList<>();
+        try (java.io.BufferedReader reader = new java.io.BufferedReader(new java.io.InputStreamReader(storedContent))) {
+            io.kestra.core.serializers.FileSerde.reader(reader, rows::add);
+        }
+        assertThat(rows, hasSize(2));
+    }
+
+    @Test
+    void shouldFailFastWhenSqlIsMissing() {
+        Query task = Query.builder()
+            .id(QueryTest.class.getSimpleName())
+            .type(Query.class.getName())
+            .build();
+
+        Connection connection = mock(Connection.class);
+        RunContext runContext = runContextFactory.of();
+
+        org.junit.jupiter.api.Assertions.assertThrows(
+            IllegalArgumentException.class,
+            () -> task.run(runContext, connection)
+        );
+
+        verifyNoInteractions(connection);
+    }
+
+    @Test
+    void shouldPropagateSqlExceptionFromTheDriver() throws Exception {
+        Connection connection = mock(Connection.class);
+        Statement statement = mock(Statement.class);
+
+        when(connection.createStatement(anyInt(), anyInt())).thenReturn(statement);
+        when(statement.execute(anyString())).thenThrow(new java.sql.SQLException("syntax error at or near \"SELCT\""));
+
+        Query task = Query.builder()
+            .id(QueryTest.class.getSimpleName())
+            .type(Query.class.getName())
+            .sql(Property.ofValue("SELCT 1"))
+            .build();
+
+        RunContext runContext = runContextFactory.of();
+
+        java.sql.SQLException thrown = org.junit.jupiter.api.Assertions.assertThrows(
+            java.sql.SQLException.class,
+            () -> task.run(runContext, connection)
+        );
+        assertThat(thrown.getMessage(), containsString("syntax error"));
+        // the statement must still be closed even though execute() threw
+        verify(statement).close();
+    }
 }

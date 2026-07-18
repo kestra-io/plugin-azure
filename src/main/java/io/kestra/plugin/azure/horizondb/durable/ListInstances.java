@@ -21,8 +21,9 @@ import io.kestra.core.models.tasks.common.FetchType;
 import io.kestra.core.runners.RunContext;
 import io.kestra.core.serializers.FileSerde;
 import io.kestra.plugin.azure.horizondb.AbstractHorizonDb;
-
 import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import lombok.Builder;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
@@ -75,7 +76,7 @@ public class ListInstances extends AbstractHorizonDb<ListInstances.Output> imple
 
     @Schema(
         title = "Result fetching mode",
-        description = "FETCH returns all matching instances as a list, STORE streams them to internal storage (ION). NONE and FETCH_ONE are not meaningful here and are treated as FETCH / first row respectively."
+        description = "STORE streams matching instances to internal storage (ION). Any other value (including the FETCH default) returns them as an in-memory list; FETCH_ONE and NONE are not treated specially by this task."
     )
     @Builder.Default
     @PluginProperty(group = "main")
@@ -87,7 +88,7 @@ public class ListInstances extends AbstractHorizonDb<ListInstances.Output> imple
     )
     @Builder.Default
     @PluginProperty(group = "advanced")
-    protected Property<Integer> fetchSize = Property.ofValue(10000);
+    protected Property<@Min(1) @Max(100000) Integer> fetchSize = Property.ofValue(10000);
 
     @Override
     protected Output run(RunContext runContext, Connection connection) throws Exception {

@@ -1,5 +1,7 @@
 package io.kestra.plugin.azure.horizondb;
 
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
@@ -25,7 +27,6 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.ToString;
 import lombok.experimental.SuperBuilder;
-import org.postgresql.Driver;
 
 /**
  * Shared connection handling for Azure HorizonDB tasks: opens a JDBC connection using either
@@ -74,6 +75,7 @@ public abstract class AbstractHorizonDb<T extends Output> extends Task {
         description = "Required unless useEntraId is true."
     )
     @PluginProperty(secret = true, group = "connection")
+    @ToString.Exclude
     private Property<String> password;
 
     @Schema(
@@ -84,22 +86,35 @@ public abstract class AbstractHorizonDb<T extends Output> extends Task {
     @PluginProperty(group = "connection")
     private Property<Boolean> useEntraId = Property.ofValue(false);
 
+    @Schema(
+        title = "Require TLS",
+        description = "When true (the default), the connection is rejected unless it is encrypted (`sslmode=require`). Set to false only for local development against a non-TLS instance."
+    )
+    @Builder.Default
+    @PluginProperty(group = "connection")
+    private Property<Boolean> ssl = Property.ofValue(true);
+
     /**
      * Opens a JDBC connection to HorizonDB, delegates to the concrete task, then closes the connection.
      */
     public T run(RunContext runContext) throws Exception {
-        registerDriver();
-
         String rHost = runContext.render(host).as(String.class)
             .orElseThrow(() -> new IllegalArgumentException("host is required"));
         Integer rPort = runContext.render(port).as(Integer.class).orElse(5432);
         String rDatabase = runContext.render(database).as(String.class)
             .orElseThrow(() -> new IllegalArgumentException("database is required"));
         boolean rUseEntraId = runContext.render(useEntraId).as(Boolean.class).orElse(false);
+        boolean rSsl = runContext.render(ssl).as(Boolean.class).orElse(true);
 
-        String url = "jdbc:postgresql://" + rHost + ":" + rPort + "/" + rDatabase;
+        String url;
+        try {
+            url = buildJdbcUrl(rHost, rPort, rDatabase);
+        } catch (URISyntaxException e) {
+            throw new IllegalArgumentException("host or database contains characters that cannot form a valid connection URL: " + e.getMessage(), e);
+        }
 
         Properties props = new Properties();
+        props.setProperty("sslmode", rSsl ? "require" : "prefer");
         runContext.render(username).as(String.class).ifPresent(u -> props.setProperty("user", u));
 
         if (rUseEntraId) {
@@ -108,19 +123,28 @@ public abstract class AbstractHorizonDb<T extends Output> extends Task {
             runContext.render(password).as(String.class).ifPresent(p -> props.setProperty("password", p));
         }
 
+        // The org.postgresql driver self-registers with java.sql.DriverManager via the standard
+        // JDBC 4 ServiceLoader mechanism (META-INF/services/java.sql.Driver); no manual
+        // DriverManager.registerDriver call is needed.
         try (Connection connection = DriverManager.getConnection(url, props)) {
             return run(runContext, connection);
         }
     }
 
-    protected abstract T run(RunContext runContext, Connection connection) throws Exception;
-
-    private void registerDriver() throws SQLException {
-        // only register the driver if not already registered, to avoid a memory leak on repeated task runs
-        if (DriverManager.drivers().noneMatch(Driver.class::isInstance)) {
-            DriverManager.registerDriver(new Driver());
-        }
+    /**
+     * Builds the JDBC connection URL from individually-validated components rather than raw
+     * string concatenation, so that a hostile {@code host} or {@code database} value (e.g.
+     * containing {@code ?} or {@code #}) cannot smuggle extra driver parameters (such as
+     * {@code socketFactory}) into the connection string. {@link URI}'s multi-argument
+     * constructor percent-encodes reserved characters in the components it is given, and
+     * rejects host values that are not syntactically valid hostnames.
+     */
+    static String buildJdbcUrl(String host, int port, String database) throws URISyntaxException {
+        URI uri = new URI("postgresql", null, host, port, "/" + database, null, null);
+        return "jdbc:" + uri;
     }
+
+    protected abstract T run(RunContext runContext, Connection connection) throws Exception;
 
     /**
      * Binds a nullable value onto a prepared statement parameter, falling back to a typed NULL

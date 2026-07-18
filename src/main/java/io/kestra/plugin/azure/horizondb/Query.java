@@ -24,6 +24,8 @@ import io.kestra.core.runners.RunContext;
 import io.kestra.core.serializers.FileSerde;
 
 import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
 import lombok.Builder;
 import lombok.EqualsAndHashCode;
@@ -95,7 +97,7 @@ public class Query extends AbstractHorizonDb<Query.Output> implements RunnableTa
     )
     @Builder.Default
     @PluginProperty(group = "advanced")
-    protected Property<Integer> fetchSize = Property.ofValue(10000);
+    protected Property<@Min(1) @Max(100000) Integer> fetchSize = Property.ofValue(10000);
 
     @Override
     protected Output run(RunContext runContext, Connection connection) throws Exception {
@@ -104,6 +106,7 @@ public class Query extends AbstractHorizonDb<Query.Output> implements RunnableTa
         FetchType rFetchType = runContext.render(fetchType).as(FetchType.class).orElse(FetchType.NONE);
         Integer rFetchSize = runContext.render(fetchSize).as(Integer.class).orElse(10000);
 
+        Output output;
         try (Statement statement = createStatement(connection)) {
             if (rFetchType == FetchType.STORE) {
                 statement.setFetchSize(rFetchSize);
@@ -118,9 +121,15 @@ public class Query extends AbstractHorizonDb<Query.Output> implements RunnableTa
             }
 
             try (ResultSet rs = statement.getResultSet()) {
-                return fetch(runContext, rs, rFetchType);
+                output = fetch(runContext, rs, rFetchType);
             }
         }
+
+        if (output.getSize() != null) {
+            runContext.metric(Counter.of("fetch.size", output.getSize()));
+        }
+
+        return output;
     }
 
     static Output fetch(RunContext runContext, ResultSet rs, FetchType fetchType) throws Exception {

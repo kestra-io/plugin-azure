@@ -5,19 +5,25 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.hasSize;
+import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.notNullValue;
+import static org.hamcrest.Matchers.nullValue;
 import org.junit.jupiter.api.Test;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import io.kestra.core.junit.annotations.KestraTest;
 import io.kestra.core.models.property.Property;
 import io.kestra.core.models.tasks.common.FetchType;
 import io.kestra.core.runners.RunContext;
 import io.kestra.core.runners.RunContextFactory;
-
 import jakarta.inject.Inject;
-
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.*;
-import static org.mockito.Mockito.*;
 
 @KestraTest
 class ListInstancesTest {
@@ -81,5 +87,35 @@ class ListInstancesTest {
 
         assertThat(output.getInstances(), hasSize(0));
         verify(statement, never()).setObject(anyInt(), any());
+    }
+
+    @Test
+    void shouldStoreInstancesToInternalStorage() throws Exception {
+        Connection connection = mock(Connection.class);
+        PreparedStatement statement = mock(PreparedStatement.class);
+        ResultSet resultSet = mock(ResultSet.class);
+        ResultSetMetaData metaData = mock(ResultSetMetaData.class);
+
+        when(connection.prepareStatement("SELECT * FROM df.list_instances()")).thenReturn(statement);
+        when(statement.executeQuery()).thenReturn(resultSet);
+        when(resultSet.getMetaData()).thenReturn(metaData);
+        when(metaData.getColumnCount()).thenReturn(1);
+        when(metaData.getColumnLabel(1)).thenReturn("instance_id");
+        when(resultSet.next()).thenReturn(true, true, false);
+        when(resultSet.getObject(1)).thenReturn("i-1", "i-2");
+
+        ListInstances task = ListInstances.builder()
+            .id(ListInstancesTest.class.getSimpleName())
+            .type(ListInstances.class.getName())
+            .fetchType(Property.ofValue(FetchType.STORE))
+            .build();
+
+        RunContext runContext = runContextFactory.of();
+        ListInstances.Output output = task.run(runContext, connection);
+
+        assertThat(output.getUri(), notNullValue());
+        assertThat(output.getSize(), is(2L));
+        assertThat(output.getInstances(), nullValue());
+        verify(statement).setFetchSize(10000);
     }
 }

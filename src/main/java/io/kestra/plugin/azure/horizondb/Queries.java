@@ -13,8 +13,9 @@ import io.kestra.core.models.property.Property;
 import io.kestra.core.models.tasks.RunnableTask;
 import io.kestra.core.models.tasks.common.FetchType;
 import io.kestra.core.runners.RunContext;
-
 import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
 import lombok.Builder;
 import lombok.EqualsAndHashCode;
@@ -84,7 +85,7 @@ public class Queries extends AbstractHorizonDb<Queries.Output> implements Runnab
     )
     @Builder.Default
     @PluginProperty(group = "advanced")
-    protected Property<Integer> fetchSize = Property.ofValue(10000);
+    protected Property<@Min(1) @Max(100000) Integer> fetchSize = Property.ofValue(10000);
 
     @Override
     protected Output run(RunContext runContext, Connection connection) throws Exception {

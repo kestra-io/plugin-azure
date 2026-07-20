@@ -149,10 +149,11 @@ public abstract class AbstractHorizonDb<T extends Output> extends Task {
     /**
      * Binds a nullable value onto a prepared statement parameter, falling back to a typed NULL
      * when the value is absent so drivers that reject untyped nulls (setObject(idx, null)) still work.
+     * @param integer 
      */
-    protected static void bind(PreparedStatement statement, int index, Object value) throws SQLException {
+    protected static void bind(PreparedStatement statement, int index, Object value, int sqlType) throws SQLException {
         if (value == null) {
-            statement.setNull(index, java.sql.Types.VARCHAR);
+            statement.setNull(index, sqlType);
         } else {
             statement.setObject(index, value);
         }

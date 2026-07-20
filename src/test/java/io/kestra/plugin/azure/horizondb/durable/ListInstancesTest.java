@@ -5,25 +5,19 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.hasSize;
-import static org.hamcrest.Matchers.is;
-import static org.hamcrest.Matchers.notNullValue;
-import static org.hamcrest.Matchers.nullValue;
 import org.junit.jupiter.api.Test;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyInt;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
 
 import io.kestra.core.junit.annotations.KestraTest;
 import io.kestra.core.models.property.Property;
 import io.kestra.core.models.tasks.common.FetchType;
 import io.kestra.core.runners.RunContext;
 import io.kestra.core.runners.RunContextFactory;
+
 import jakarta.inject.Inject;
+
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.*;
+import static org.mockito.Mockito.*;
 
 @KestraTest
 class ListInstancesTest {
@@ -37,7 +31,7 @@ class ListInstancesTest {
         ResultSet resultSet = mock(ResultSet.class);
         ResultSetMetaData metaData = mock(ResultSetMetaData.class);
 
-        when(connection.prepareStatement("SELECT * FROM df.list_instances() WHERE status = ?")).thenReturn(statement);
+        when(connection.prepareStatement("SELECT * FROM df.list_instances(?, ?)")).thenReturn(statement);
         when(statement.executeQuery()).thenReturn(resultSet);
         when(resultSet.getMetaData()).thenReturn(metaData);
         when(metaData.getColumnCount()).thenReturn(2);
@@ -59,17 +53,47 @@ class ListInstancesTest {
 
         assertThat(output.getInstances(), hasSize(2));
         assertThat(output.getSize(), is(2L));
+        // status filter is passed as df.list_instances()'s own first argument
         verify(statement).setObject(1, "Completed");
+        // limit wasn't set: bound as a typed NULL (INTEGER), not a VARCHAR default
+        verify(statement).setNull(eq(2), anyInt());
     }
 
     @Test
-    void shouldListAllInstancesWhenNoFilter() throws Exception {
+    void shouldPassLimitAsSecondArgumentWhenSet() throws Exception {
         Connection connection = mock(Connection.class);
         PreparedStatement statement = mock(PreparedStatement.class);
         ResultSet resultSet = mock(ResultSet.class);
         ResultSetMetaData metaData = mock(ResultSetMetaData.class);
 
-        when(connection.prepareStatement("SELECT * FROM df.list_instances()")).thenReturn(statement);
+        when(connection.prepareStatement(anyString())).thenReturn(statement);
+        when(statement.executeQuery()).thenReturn(resultSet);
+        when(resultSet.getMetaData()).thenReturn(metaData);
+        when(metaData.getColumnCount()).thenReturn(1);
+        when(metaData.getColumnLabel(1)).thenReturn("instance_id");
+        when(resultSet.next()).thenReturn(false);
+
+        ListInstances task = ListInstances.builder()
+            .id(ListInstancesTest.class.getSimpleName())
+            .type(ListInstances.class.getName())
+            .limit(Property.ofValue(10))
+            .fetchType(Property.ofValue(FetchType.FETCH))
+            .build();
+
+        RunContext runContext = runContextFactory.of();
+        task.run(runContext, connection);
+
+        verify(statement).setObject(2, 10);
+    }
+
+    @Test
+    void shouldListAllInstancesWhenNoFilterOrLimit() throws Exception {
+        Connection connection = mock(Connection.class);
+        PreparedStatement statement = mock(PreparedStatement.class);
+        ResultSet resultSet = mock(ResultSet.class);
+        ResultSetMetaData metaData = mock(ResultSetMetaData.class);
+
+        when(connection.prepareStatement("SELECT * FROM df.list_instances(?, ?)")).thenReturn(statement);
         when(statement.executeQuery()).thenReturn(resultSet);
         when(resultSet.getMetaData()).thenReturn(metaData);
         when(metaData.getColumnCount()).thenReturn(1);
@@ -86,7 +110,8 @@ class ListInstancesTest {
         ListInstances.Output output = task.run(runContext, connection);
 
         assertThat(output.getInstances(), hasSize(0));
-        verify(statement, never()).setObject(anyInt(), any());
+        verify(statement).setNull(eq(1), anyInt());
+        verify(statement).setNull(eq(2), anyInt());
     }
 
     @Test
@@ -96,7 +121,7 @@ class ListInstancesTest {
         ResultSet resultSet = mock(ResultSet.class);
         ResultSetMetaData metaData = mock(ResultSetMetaData.class);
 
-        when(connection.prepareStatement("SELECT * FROM df.list_instances()")).thenReturn(statement);
+        when(connection.prepareStatement("SELECT * FROM df.list_instances(?, ?)")).thenReturn(statement);
         when(statement.executeQuery()).thenReturn(resultSet);
         when(resultSet.getMetaData()).thenReturn(metaData);
         when(metaData.getColumnCount()).thenReturn(1);

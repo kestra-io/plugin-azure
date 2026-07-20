@@ -2,7 +2,6 @@ package io.kestra.plugin.azure.horizondb.durable;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
-import java.sql.ResultSet;
 
 import org.junit.jupiter.api.Test;
 
@@ -26,12 +25,8 @@ class SignalTest {
     void shouldSignalInstance() throws Exception {
         Connection connection = mock(Connection.class);
         PreparedStatement statement = mock(PreparedStatement.class);
-        ResultSet resultSet = mock(ResultSet.class);
 
-        when(connection.prepareStatement("SELECT df.signal(?, ?, ?) AS signaled")).thenReturn(statement);
-        when(statement.executeQuery()).thenReturn(resultSet);
-        when(resultSet.next()).thenReturn(true);
-        when(resultSet.getBoolean("signaled")).thenReturn(true);
+        when(connection.prepareStatement("SELECT df.signal(?, ?, ?)")).thenReturn(statement);
 
         Signal task = Signal.builder()
             .id(SignalTest.class.getSimpleName())
@@ -49,18 +44,15 @@ class SignalTest {
         verify(statement).setObject(1, "instance-123");
         verify(statement).setObject(2, "approval");
         verify(statement).setObject(3, "{\"approved\": true}");
+        verify(statement).execute();
     }
 
     @Test
-    void shouldBindNullWhenPayloadAbsent() throws Exception {
+    void shouldDefaultPayloadToEmptyJsonObjectWhenAbsent() throws Exception {
         Connection connection = mock(Connection.class);
         PreparedStatement statement = mock(PreparedStatement.class);
-        ResultSet resultSet = mock(ResultSet.class);
 
         when(connection.prepareStatement(anyString())).thenReturn(statement);
-        when(statement.executeQuery()).thenReturn(resultSet);
-        when(resultSet.next()).thenReturn(true);
-        when(resultSet.getBoolean("signaled")).thenReturn(true);
 
         Signal task = Signal.builder()
             .id(SignalTest.class.getSimpleName())
@@ -72,6 +64,7 @@ class SignalTest {
         RunContext runContext = runContextFactory.of();
         task.run(runContext, connection);
 
-        verify(statement).setNull(eq(3), anyInt());
+        // matches df.signal()'s own documented default for the data argument
+        verify(statement).setObject(3, "{}");
     }
 }

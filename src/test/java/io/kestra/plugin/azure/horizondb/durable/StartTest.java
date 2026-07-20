@@ -28,7 +28,7 @@ class StartTest {
         PreparedStatement statement = mock(PreparedStatement.class);
         ResultSet resultSet = mock(ResultSet.class);
 
-        when(connection.prepareStatement("SELECT df.start(?, ?) AS instance_id")).thenReturn(statement);
+        when(connection.prepareStatement("SELECT df.start(?, ?, ?) AS instance_id")).thenReturn(statement);
         when(statement.executeQuery()).thenReturn(resultSet);
         when(resultSet.next()).thenReturn(true);
         when(resultSet.getString("instance_id")).thenReturn("instance-123");
@@ -46,5 +46,32 @@ class StartTest {
         assertThat(output.getInstanceId(), is("instance-123"));
         verify(statement).setObject(1, "'STEP1' ~> 'STEP2'");
         verify(statement).setObject(2, "nightly-etl");
+        // targetDatabase wasn't set: bound as NULL rather than omitted, since df.start()
+        // documents that an explicit NULL for `database` is equivalent to omitting it
+        verify(statement).setNull(eq(3), anyInt());
+    }
+
+    @Test
+    void shouldPassTargetDatabaseWhenSet() throws Exception {
+        Connection connection = mock(Connection.class);
+        PreparedStatement statement = mock(PreparedStatement.class);
+        ResultSet resultSet = mock(ResultSet.class);
+
+        when(connection.prepareStatement(anyString())).thenReturn(statement);
+        when(statement.executeQuery()).thenReturn(resultSet);
+        when(resultSet.next()).thenReturn(true);
+        when(resultSet.getString("instance_id")).thenReturn("instance-456");
+
+        Start task = Start.builder()
+            .id(StartTest.class.getSimpleName())
+            .type(Start.class.getName())
+            .functionBody(Property.ofValue("SELECT 1"))
+            .targetDatabase(Property.ofValue("analytics"))
+            .build();
+
+        RunContext runContext = runContextFactory.of();
+        task.run(runContext, connection);
+
+        verify(statement).setObject(3, "analytics");
     }
 }

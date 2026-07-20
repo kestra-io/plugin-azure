@@ -21,6 +21,7 @@ import io.kestra.core.models.tasks.common.FetchType;
 import io.kestra.core.runners.RunContext;
 import io.kestra.core.serializers.FileSerde;
 import io.kestra.plugin.azure.horizondb.AbstractHorizonDb;
+
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
@@ -38,7 +39,7 @@ import lombok.experimental.SuperBuilder;
 @NoArgsConstructor
 @Schema(
     title = "List pg_durable instances",
-    description = "Queries `df.list_instances()`, with an optional status filter, and returns matching instances according to fetchType (FETCH or STORE)."
+    description = "Queries `df.list_instances(status, limit)`, with an optional status filter and row limit, and returns matching instances according to fetchType (FETCH or STORE)."
 )
 @Plugin(
     examples = {
@@ -69,10 +70,17 @@ import lombok.experimental.SuperBuilder;
 public class ListInstances extends AbstractHorizonDb<ListInstances.Output> implements RunnableTask<ListInstances.Output> {
     @Schema(
         title = "Status filter",
-        description = "Optional status to filter instances by (e.g. Running, Completed, Failed, Cancelled). When empty, all instances are returned."
+        description = "Optional status to filter instances by (e.g. Running, Completed, Failed, Cancelled). Passed as df.list_instances()'s own status argument. When empty, all instances are returned."
     )
     @PluginProperty(group = "main")
     protected Property<String> statusFilter;
+
+    @Schema(
+        title = "Row limit",
+        description = "Optional maximum number of instances to return. Passed as df.list_instances()'s own limit argument. When empty, all matching instances are returned."
+    )
+    @PluginProperty(group = "main")
+    protected Property<@Min(1) Integer> limit;
 
     @Schema(
         title = "Result fetching mode",
@@ -93,17 +101,19 @@ public class ListInstances extends AbstractHorizonDb<ListInstances.Output> imple
     @Override
     protected Output run(RunContext runContext, Connection connection) throws Exception {
         String rStatusFilter = runContext.render(statusFilter).as(String.class).orElse(null);
+        Integer rLimit = runContext.render(limit).as(Integer.class).orElse(null);
         FetchType rFetchType = runContext.render(fetchType).as(FetchType.class).orElse(FetchType.FETCH);
         Integer rFetchSize = runContext.render(fetchSize).as(Integer.class).orElse(10000);
 
-        String sql = rStatusFilter == null
-            ? "SELECT * FROM df.list_instances()"
-            : "SELECT * FROM df.list_instances() WHERE status = ?";
-
-        try (PreparedStatement statement = connection.prepareStatement(sql)) {
-            if (rStatusFilter != null) {
-                bind(statement, 1, rStatusFilter);
-            }
+        // df.list_instances(p_status text DEFAULT NULL, p_limit integer DEFAULT NULL) takes the
+        // filter and limit as its own arguments rather than being wrapped in an external WHERE
+        // clause, matching the documented signature and Quick Reference examples:
+        //   SELECT * FROM df.list_instances();
+        //   SELECT * FROM df.list_instances('Running');
+        //   SELECT * FROM df.list_instances(NULL, 10);
+        try (PreparedStatement statement = connection.prepareStatement("SELECT * FROM df.list_instances(?, ?)")) {
+            bind(statement, 1, rStatusFilter, java.sql.Types.VARCHAR);
+            bind(statement, 2, rLimit, java.sql.Types.INTEGER);
             if (rFetchType == FetchType.STORE) {
                 statement.setFetchSize(rFetchSize);
             }

@@ -2,7 +2,6 @@ package io.kestra.plugin.azure.horizondb.durable;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
-import java.sql.ResultSet;
 
 import io.kestra.core.models.annotations.Example;
 import io.kestra.core.models.annotations.Plugin;
@@ -28,7 +27,7 @@ import lombok.experimental.SuperBuilder;
 @NoArgsConstructor
 @Schema(
     title = "Send an external signal to a pg_durable instance",
-    description = "Sends a named signal (with an optional payload) to a waiting instance via `SELECT df.signal(...)`."
+    description = "Sends a named signal (with an optional payload) to an instance waiting on `df.wait_for_signal(...)`, via `SELECT df.signal(id, name, data)`."
 )
 @Plugin(
     examples = {
@@ -65,14 +64,18 @@ public class Signal extends AbstractHorizonDb<Signal.Output> implements Runnable
     @PluginProperty(group = "main")
     protected Property<String> instanceId;
 
-    @Schema(title = "Signal name", description = "Name of the external signal the instance is waiting on.")
+    @Schema(title = "Signal name", description = "Name of the external signal the instance is waiting on (matches its df.wait_for_signal(name) call).")
     @NotNull
     @PluginProperty(group = "main")
     protected Property<String> signalName;
 
-    @Schema(title = "Signal payload", description = "Optional payload passed to the instance, typically a JSON string.")
+    @Schema(
+        title = "Signal payload",
+        description = "Payload passed to the instance as the signal's data, typically a JSON string. Defaults to '{}', matching df.signal()'s own default."
+    )
+    @Builder.Default
     @PluginProperty(group = "main")
-    protected Property<String> payload;
+    protected Property<String> payload = Property.ofValue("{}");
 
     @Override
     protected Output run(RunContext runContext, Connection connection) throws Exception {
@@ -80,19 +83,20 @@ public class Signal extends AbstractHorizonDb<Signal.Output> implements Runnable
             .orElseThrow(() -> new IllegalArgumentException("instanceId is required"));
         String rSignalName = runContext.render(signalName).as(String.class)
             .orElseThrow(() -> new IllegalArgumentException("signalName is required"));
-        String rPayload = runContext.render(payload).as(String.class).orElse(null);
+        String rPayload = runContext.render(payload).as(String.class).orElse("{}");
 
-        try (PreparedStatement statement = connection.prepareStatement("SELECT df.signal(?, ?, ?) AS signaled")) {
+        // df.signal(id text, name text, data text) — no confirmed return value/shape is
+        // documented, so this only asserts the call completed without the driver throwing; it
+        // does not assume a specific result column.
+        try (PreparedStatement statement = connection.prepareStatement("SELECT df.signal(?, ?, ?)")) {
             bind(statement, 1, rInstanceId);
             bind(statement, 2, rSignalName);
             bind(statement, 3, rPayload);
-
-            try (ResultSet rs = statement.executeQuery()) {
-                boolean signaled = rs.next() && rs.getBoolean("signaled");
-                runContext.logger().info("Signal '{}' for instance {} returned signaled={}", rSignalName, rInstanceId, signaled);
-                return Output.builder().instanceId(rInstanceId).signaled(signaled).build();
-            }
+            statement.execute();
         }
+
+        runContext.logger().info("Signal '{}' sent to instance {}", rSignalName, rInstanceId);
+        return Output.builder().instanceId(rInstanceId).signaled(true).build();
     }
 
     @Builder
@@ -101,7 +105,10 @@ public class Signal extends AbstractHorizonDb<Signal.Output> implements Runnable
         @Schema(title = "Durable instance id")
         private final String instanceId;
 
-        @Schema(title = "Whether the signal was accepted")
+        @Schema(
+            title = "Whether the signal was sent",
+            description = "True once df.signal() executes without error. This does not confirm a waiting instance actually received it (e.g. if it wasn't waiting on that signal name) — check GetStatus or df.explain() separately if you need to verify delivery."
+        )
         private final Boolean signaled;
     }
 }

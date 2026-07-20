@@ -2,7 +2,6 @@ package io.kestra.plugin.azure.horizondb.durable;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
-import java.sql.ResultSet;
 
 import io.kestra.core.models.annotations.Example;
 import io.kestra.core.models.annotations.Plugin;
@@ -11,7 +10,6 @@ import io.kestra.core.models.property.Property;
 import io.kestra.core.models.tasks.RunnableTask;
 import io.kestra.core.runners.RunContext;
 import io.kestra.plugin.azure.horizondb.AbstractHorizonDb;
-
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotNull;
 import lombok.Builder;
@@ -28,7 +26,7 @@ import lombok.experimental.SuperBuilder;
 @NoArgsConstructor
 @Schema(
     title = "Cancel a pg_durable durable function instance",
-    description = "Cancels a running instance via `SELECT df.cancel(...)`."
+    description = "Cancels a running instance via `SELECT df.cancel(id, reason)`."
 )
 @Plugin(
     examples = {
@@ -53,6 +51,7 @@ import lombok.experimental.SuperBuilder;
                     username: "{{ secret('HORIZONDB_USERNAME') }}"
                     password: "{{ secret('HORIZONDB_PASSWORD') }}"
                     instanceId: "{{ inputs.instance_id }}"
+                    reason: "Cancelled from a Kestra flow"
                 """
         )
     }
@@ -63,20 +62,31 @@ public class Cancel extends AbstractHorizonDb<Cancel.Output> implements Runnable
     @PluginProperty(group = "main")
     protected Property<String> instanceId;
 
+    @Schema(
+        title = "Cancellation reason",
+        description = "Free-text reason recorded against the instance. df.cancel() requires this argument."
+    )
+    @Builder.Default
+    @PluginProperty(group = "main")
+    protected Property<String> reason = Property.ofValue("Cancelled via Kestra");
+
     @Override
     protected Output run(RunContext runContext, Connection connection) throws Exception {
         String rInstanceId = runContext.render(instanceId).as(String.class)
             .orElseThrow(() -> new IllegalArgumentException("instanceId is required"));
+        String rReason = runContext.render(reason).as(String.class).orElse("Cancelled via Kestra");
 
-        try (PreparedStatement statement = connection.prepareStatement("SELECT df.cancel(?) AS cancelled")) {
+        // df.cancel(id text, reason text) — no confirmed return value/shape is documented, so
+        // this only asserts the call completed without the driver throwing; it does not assume
+        // a specific result column.
+        try (PreparedStatement statement = connection.prepareStatement("SELECT df.cancel(?, ?)")) {
             bind(statement, 1, rInstanceId);
-
-            try (ResultSet rs = statement.executeQuery()) {
-                boolean cancelled = rs.next() && rs.getBoolean("cancelled");
-                runContext.logger().info("Cancel request for instance {} returned cancelled={}", rInstanceId, cancelled);
-                return Output.builder().instanceId(rInstanceId).cancelled(cancelled).build();
-            }
+            bind(statement, 2, rReason);
+            statement.execute();
         }
+
+        runContext.logger().info("Cancel request sent for instance {}", rInstanceId);
+        return Output.builder().instanceId(rInstanceId).cancelled(true).build();
     }
 
     @Builder
@@ -85,7 +95,10 @@ public class Cancel extends AbstractHorizonDb<Cancel.Output> implements Runnable
         @Schema(title = "Durable instance id")
         private final String instanceId;
 
-        @Schema(title = "Whether the cancel request was accepted")
+        @Schema(
+            title = "Whether the cancel request was sent",
+            description = "True once df.cancel() executes without error; pg_durable does not document a specific return value to confirm the instance actually stopped, so check GetStatus separately if you need to verify the outcome."
+        )
         private final Boolean cancelled;
     }
 }

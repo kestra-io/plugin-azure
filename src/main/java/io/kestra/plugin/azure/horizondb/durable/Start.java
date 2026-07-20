@@ -11,7 +11,6 @@ import io.kestra.core.models.property.Property;
 import io.kestra.core.models.tasks.RunnableTask;
 import io.kestra.core.runners.RunContext;
 import io.kestra.plugin.azure.horizondb.AbstractHorizonDb;
-
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotNull;
 import lombok.Builder;
@@ -28,7 +27,7 @@ import lombok.experimental.SuperBuilder;
 @NoArgsConstructor
 @Schema(
     title = "Start a pg_durable durable function instance",
-    description = "Submits a pg_durable function body via `SELECT df.start(...)` and returns the new instance id."
+    description = "Submits a pg_durable function body via `SELECT df.start(func, label, database)` and returns the new instance id."
 )
 @Plugin(
     examples = {
@@ -76,15 +75,24 @@ public class Start extends AbstractHorizonDb<Start.Output> implements RunnableTa
     @PluginProperty(group = "main")
     protected Property<String> label;
 
+    @Schema(
+        title = "Target database",
+        description = "Optional database (on the same PostgreSQL cluster) that the function's SQL steps should run against. Omit to run in the extension's own database — the default HorizonDB connection's database is unaffected either way, since this only changes where df.start() executes the function's SQL, not the connection used to submit it."
+    )
+    @PluginProperty(group = "main")
+    protected Property<String> targetDatabase;
+
     @Override
     protected Output run(RunContext runContext, Connection connection) throws Exception {
         String rFunctionBody = runContext.render(functionBody).as(String.class)
             .orElseThrow(() -> new IllegalArgumentException("functionBody is required"));
         String rLabel = runContext.render(label).as(String.class).orElse(null);
+        String rTargetDatabase = runContext.render(targetDatabase).as(String.class).orElse(null);
 
-        try (PreparedStatement statement = connection.prepareStatement("SELECT df.start(?, ?) AS instance_id")) {
+        try (PreparedStatement statement = connection.prepareStatement("SELECT df.start(?, ?, ?) AS instance_id")) {
             bind(statement, 1, rFunctionBody);
             bind(statement, 2, rLabel);
+            bind(statement, 3, rTargetDatabase);
 
             try (ResultSet rs = statement.executeQuery()) {
                 if (!rs.next()) {

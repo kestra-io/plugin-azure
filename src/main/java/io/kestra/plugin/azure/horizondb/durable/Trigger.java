@@ -116,6 +116,7 @@ public class Trigger extends AbstractTrigger implements PollingTriggerInterface,
 
     @Schema(title = "Polling interval", description = "How often to poll df.list_instances(). Defaults to 60 seconds.")
     @Builder.Default
+    @PluginProperty(group = "main")
     private final Duration interval = Duration.ofSeconds(60);
 
     @Schema(
@@ -148,20 +149,7 @@ public class Trigger extends AbstractTrigger implements PollingTriggerInterface,
         String rTargetStatus = runContext.render(this.targetStatus).as(String.class)
             .orElseThrow(() -> new IllegalArgumentException("targetStatus is required"));
 
-        ListInstances.Output output = ListInstances.builder()
-            .id(this.id)
-            .type(ListInstances.class.getName())
-            .host(this.host)
-            .port(this.port)
-            .database(this.database)
-            .username(this.username)
-            .password(this.password)
-            .useEntraId(this.useEntraId)
-            .ssl(this.ssl)
-            .statusFilter(Property.ofValue(rTargetStatus))
-            .fetchType(Property.ofValue(FetchType.FETCH))
-            .build()
-            .run(runContext);
+        ListInstances.Output output = pollInstances(runContext, rTargetStatus);
 
         List<Map<String, Object>> instances = output.getInstances() == null ? List.of() : output.getInstances();
         logger.debug("Polled {} instance(s) in status {}", instances.size(), rTargetStatus);
@@ -195,6 +183,30 @@ public class Trigger extends AbstractTrigger implements PollingTriggerInterface,
         return Optional.of(
             TriggerService.generateExecution(this, conditionContext, context, fireOutput)
         );
+    }
+
+    /**
+     * Opens a connection and runs {@code df.list_instances()} filtered to {@code targetStatus}.
+     * Extracted from {@link #evaluate} (rather than inlined) so tests can override just this
+     * database-touching step — e.g. to return a canned {@link ListInstances.Output} — and
+     * exercise the rest of {@code evaluate}'s logic (state read/write, dedup, execution
+     * generation) without a live HorizonDB instance.
+     */
+    protected ListInstances.Output pollInstances(RunContext runContext, String targetStatus) throws Exception {
+        return ListInstances.builder()
+            .id(this.id)
+            .type(ListInstances.class.getName())
+            .host(this.host)
+            .port(this.port)
+            .database(this.database)
+            .username(this.username)
+            .password(this.password)
+            .useEntraId(this.useEntraId)
+            .ssl(this.ssl)
+            .statusFilter(Property.ofValue(targetStatus))
+            .fetchType(Property.ofValue(FetchType.FETCH))
+            .build()
+            .run(runContext);
     }
 
     /**

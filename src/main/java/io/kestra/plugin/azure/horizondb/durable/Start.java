@@ -90,9 +90,9 @@ public class Start extends AbstractHorizonDb<Start.Output> implements RunnableTa
         String rTargetDatabase = runContext.render(targetDatabase).as(String.class).orElse(null);
 
         try (PreparedStatement statement = connection.prepareStatement("SELECT df.start(?, ?, ?) AS instance_id")) {
-            bind(statement, 1, rFunctionBody);
-            bind(statement, 2, rLabel);
-            bind(statement, 3, rTargetDatabase);
+            bind(statement, 1, rFunctionBody, java.sql.Types.VARCHAR);
+            bind(statement, 2, rLabel, java.sql.Types.VARCHAR);
+            bind(statement, 3, rTargetDatabase, java.sql.Types.VARCHAR);
 
             try (ResultSet rs = statement.executeQuery()) {
                 if (!rs.next()) {

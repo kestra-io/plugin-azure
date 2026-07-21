@@ -11,7 +11,6 @@ import io.kestra.core.models.property.Property;
 import io.kestra.core.models.tasks.RunnableTask;
 import io.kestra.core.runners.RunContext;
 import io.kestra.plugin.azure.horizondb.AbstractHorizonDb;
-
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotNull;
 import lombok.Builder;
@@ -69,8 +68,8 @@ public class GetStatus extends AbstractHorizonDb<GetStatus.Output> implements Ru
             .orElseThrow(() -> new IllegalArgumentException("instanceId is required"));
 
         try (PreparedStatement statement = connection.prepareStatement("SELECT df.status(?) AS status, df.result(?) AS result")) {
-            bind(statement, 1, rInstanceId);
-            bind(statement, 2, rInstanceId);
+            bind(statement, 1, rInstanceId, java.sql.Types.VARCHAR);
+            bind(statement, 2, rInstanceId, java.sql.Types.VARCHAR);
 
             try (ResultSet rs = statement.executeQuery()) {
                 if (!rs.next()) {

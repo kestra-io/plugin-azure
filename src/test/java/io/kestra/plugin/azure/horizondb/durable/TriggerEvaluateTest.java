@@ -41,8 +41,7 @@ class TriggerEvaluateTest {
 
         TestTrigger trigger = new TestTrigger("trg-" + IdUtils.create(), Property.ofValue("Completed"), polled);
 
-        Map.Entry<ConditionContext, io.kestra.core.models.triggers.Trigger> context =
-            TestsUtils.mockTrigger(runContextFactory, trigger);
+        Map.Entry<ConditionContext, io.kestra.core.models.triggers.Trigger> context = TestsUtils.mockTrigger(runContextFactory, trigger);
 
         Optional<Execution> first = trigger.evaluate(context.getKey(), context.getValue());
         assertThat(first.isPresent(), is(true));
@@ -61,8 +60,7 @@ class TriggerEvaluateTest {
         ListInstances.Output polled = ListInstances.Output.builder().instances(List.of()).size(0L).build();
         TestTrigger trigger = new TestTrigger("trg-" + IdUtils.create(), Property.ofValue("Completed"), polled);
 
-        Map.Entry<ConditionContext, io.kestra.core.models.triggers.Trigger> context =
-            TestsUtils.mockTrigger(runContextFactory, trigger);
+        Map.Entry<ConditionContext, io.kestra.core.models.triggers.Trigger> context = TestsUtils.mockTrigger(runContextFactory, trigger);
 
         Optional<Execution> execution = trigger.evaluate(context.getKey(), context.getValue());
 
@@ -80,20 +78,23 @@ class TriggerEvaluateTest {
                 .build()
         );
 
-        Map.Entry<ConditionContext, io.kestra.core.models.triggers.Trigger> context =
-            TestsUtils.mockTrigger(runContextFactory, trigger);
+        Map.Entry<ConditionContext, io.kestra.core.models.triggers.Trigger> context = TestsUtils.mockTrigger(runContextFactory, trigger);
 
         Optional<Execution> first = trigger.evaluate(context.getKey(), context.getValue());
         assertThat(first.isPresent(), is(true));
 
         // a different instance id reaches Completed on the next poll: must fire again
-        trigger.setCanned(ListInstances.Output.builder()
-            .instances(List.of(
-                Map.of("instance_id", "i-1", "status", "Completed"),
-                Map.of("instance_id", "i-2", "status", "Completed")
-            ))
-            .size(2L)
-            .build());
+        trigger.setCanned(
+            ListInstances.Output.builder()
+                .instances(
+                    List.of(
+                        Map.of("instance_id", "i-1", "status", "Completed"),
+                        Map.of("instance_id", "i-2", "status", "Completed")
+                    )
+                )
+                .size(2L)
+                .build()
+        );
 
         Optional<Execution> second = trigger.evaluate(context.getKey(), context.getValue());
         assertThat(second.isPresent(), is(true));
@@ -114,6 +115,8 @@ class TriggerEvaluateTest {
         TestTrigger(String id, Property<String> targetStatus, ListInstances.Output canned) {
             this.id = id;
             this.type = TestTrigger.class.getName();
+            this.host = Property.ofValue("localhost");
+            this.database = Property.ofValue("test");
             this.targetStatus = targetStatus;
             this.canned = canned;
         }

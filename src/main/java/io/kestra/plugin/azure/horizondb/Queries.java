@@ -7,8 +7,10 @@ import java.util.ArrayList;
 import java.util.List;
 
 import io.kestra.core.models.annotations.Example;
+import io.kestra.core.models.annotations.Metric;
 import io.kestra.core.models.annotations.Plugin;
 import io.kestra.core.models.annotations.PluginProperty;
+import io.kestra.core.models.executions.metrics.Counter;
 import io.kestra.core.models.property.Property;
 import io.kestra.core.models.tasks.RunnableTask;
 import io.kestra.core.models.tasks.common.FetchType;
@@ -59,6 +61,9 @@ import lombok.experimental.SuperBuilder;
                     fetchType: NONE
                 """
         )
+    },
+    metrics = {
+        @Metric(name = "fetch.size", type = Counter.TYPE, unit = "rows", description = "The number of fetched or stored rows, emitted once per statement that returns a result set.")
     }
 )
 public class Queries extends AbstractHorizonDb<Queries.Output> implements RunnableTask<Queries.Output> {
@@ -105,13 +110,19 @@ public class Queries extends AbstractHorizonDb<Queries.Output> implements Runnab
             for (String single : statements) {
                 boolean isResultSet = statement.execute(single);
 
+                Query.Output statementOutput;
                 if (!isResultSet) {
-                    outputs.add(Query.Output.builder().updateCount((long) statement.getUpdateCount()).build());
+                    statementOutput = Query.Output.builder().updateCount((long) statement.getUpdateCount()).build();
                 } else {
                     try (ResultSet rs = statement.getResultSet()) {
-                        outputs.add(Query.fetch(runContext, rs, rFetchType));
+                        statementOutput = Query.fetch(runContext, rs, rFetchType);
                     }
                 }
+
+                if (statementOutput.getSize() != null) {
+                    runContext.metric(Counter.of("fetch.size", statementOutput.getSize()));
+                }
+                outputs.add(statementOutput);
             }
         }
 

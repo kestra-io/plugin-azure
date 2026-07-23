@@ -89,6 +89,12 @@ class QueryTest {
 
         assertThat(output.getRows(), hasSize(2));
         assertThat(output.getSize(), is(2L));
+
+        long fetchSizeMetricValue = runContext.metrics().stream()
+            .filter(m -> m.getName().equals("fetch.size"))
+            .mapToLong(m -> ((Number) m.getValue()).longValue())
+            .sum();
+        assertThat(fetchSizeMetricValue, is(2L));
     }
 
     @Test

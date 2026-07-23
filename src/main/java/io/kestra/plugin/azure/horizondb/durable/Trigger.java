@@ -96,10 +96,26 @@ public class Trigger extends AbstractTrigger implements PollingTriggerInterface,
     @ToString.Exclude
     protected Property<String> password;
 
-    @Schema(title = "Authenticate with Azure Entra ID", description = "When true, authenticates using Azure Entra ID instead of a static password.")
+    @Schema(
+        title = "Authenticate with Azure Entra ID",
+        description = "When true, authenticates using Azure Entra ID instead of a static password. With no further properties set, this falls back to whatever DefaultAzureCredential resolves on the worker; set tenantId/clientId/clientSecret below to authenticate as a specific service principal instead."
+    )
     @Builder.Default
     @PluginProperty(group = "connection")
     protected Property<Boolean> useEntraId = Property.ofValue(false);
+
+    @Schema(title = "Azure tenant id", description = "Used with clientId/clientSecret for service principal authentication when useEntraId is true. Ignored otherwise.")
+    @PluginProperty(group = "connection")
+    protected Property<String> tenantId;
+
+    @Schema(title = "Azure client id", description = "Used with tenantId/clientSecret for service principal authentication when useEntraId is true. Ignored otherwise.")
+    @PluginProperty(group = "connection")
+    protected Property<String> clientId;
+
+    @Schema(title = "Azure client secret", description = "Used with tenantId/clientId for service principal authentication when useEntraId is true. Ignored otherwise.")
+    @PluginProperty(secret = true, group = "connection")
+    @ToString.Exclude
+    protected Property<String> clientSecret;
 
     @Schema(title = "Require TLS", description = "When true (the default), each poll's connection is rejected unless it is encrypted (`sslmode=require`).")
     @Builder.Default
@@ -202,6 +218,9 @@ public class Trigger extends AbstractTrigger implements PollingTriggerInterface,
             .username(this.username)
             .password(this.password)
             .useEntraId(this.useEntraId)
+            .tenantId(this.tenantId)
+            .clientId(this.clientId)
+            .clientSecret(this.clientSecret)
             .ssl(this.ssl)
             .statusFilter(Property.ofValue(targetStatus))
             .fetchType(Property.ofValue(FetchType.FETCH))

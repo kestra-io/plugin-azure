@@ -18,15 +18,14 @@ import io.kestra.core.models.property.Property;
 import io.kestra.core.models.tasks.Output;
 import io.kestra.core.models.tasks.Task;
 import io.kestra.core.runners.RunContext;
-
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotNull;
-import lombok.Builder;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.ToString;
 import lombok.experimental.SuperBuilder;
+import lombok.Builder;
 
 /**
  * Shared connection handling for Azure HorizonDB tasks: opens a JDBC connection using either
@@ -80,11 +79,33 @@ public abstract class AbstractHorizonDb<T extends Output> extends Task {
 
     @Schema(
         title = "Authenticate with Azure Entra ID",
-        description = "When true, authenticates using Azure Entra ID (via the Azure Identity Extensions JDBC plugin) instead of a static password."
+        description = "When true, authenticates using Azure Entra ID (via the Azure Identity Extensions JDBC plugin) instead of a static password. With no further properties set, this falls back to whatever DefaultAzureCredential resolves on the worker (managed identity, environment variables, Azure CLI login, etc.); set tenantId/clientId/clientSecret below to authenticate as a specific service principal instead."
     )
     @Builder.Default
     @PluginProperty(group = "connection")
     private Property<Boolean> useEntraId = Property.ofValue(false);
+
+    @Schema(
+        title = "Azure tenant id",
+        description = "Used with clientId/clientSecret for service principal authentication when useEntraId is true. Ignored otherwise."
+    )
+    @PluginProperty(group = "connection")
+    private Property<String> tenantId;
+
+    @Schema(
+        title = "Azure client id",
+        description = "Used with tenantId/clientSecret for service principal authentication when useEntraId is true. Ignored otherwise."
+    )
+    @PluginProperty(group = "connection")
+    private Property<String> clientId;
+
+    @Schema(
+        title = "Azure client secret",
+        description = "Used with tenantId/clientId for service principal authentication when useEntraId is true. Ignored otherwise."
+    )
+    @PluginProperty(secret = true, group = "connection")
+    @ToString.Exclude
+    private Property<String> clientSecret;
 
     @Schema(
         title = "Require TLS",
@@ -113,15 +134,15 @@ public abstract class AbstractHorizonDb<T extends Output> extends Task {
             throw new IllegalArgumentException("host or database contains characters that cannot form a valid connection URL: " + e.getMessage(), e);
         }
 
-        Properties props = new Properties();
-        props.setProperty("sslmode", rSsl ? "require" : "prefer");
-        runContext.render(username).as(String.class).ifPresent(u -> props.setProperty("user", u));
-
-        if (rUseEntraId) {
-            props.setProperty("authenticationPluginClassName", ENTRA_ID_AUTH_PLUGIN);
-        } else {
-            runContext.render(password).as(String.class).ifPresent(p -> props.setProperty("password", p));
-        }
+        Properties props = buildConnectionProperties(
+            rSsl,
+            runContext.render(username).as(String.class).orElse(null),
+            rUseEntraId,
+            runContext.render(password).as(String.class).orElse(null),
+            runContext.render(tenantId).as(String.class).orElse(null),
+            runContext.render(clientId).as(String.class).orElse(null),
+            runContext.render(clientSecret).as(String.class).orElse(null)
+        );
 
         // The org.postgresql driver self-registers with java.sql.DriverManager via the standard
         // JDBC 4 ServiceLoader mechanism (META-INF/services/java.sql.Driver); no manual
@@ -129,6 +150,49 @@ public abstract class AbstractHorizonDb<T extends Output> extends Task {
         try (Connection connection = DriverManager.getConnection(url, props)) {
             return run(runContext, connection);
         }
+    }
+
+    /**
+     * Builds the JDBC connection {@link Properties} from already-rendered values. Extracted as a
+     * pure function (no RunContext, no I/O) so the branching between password and Entra ID /
+     * service-principal authentication can be unit tested directly.
+     */
+    static Properties buildConnectionProperties(
+        boolean ssl,
+        String username,
+        boolean useEntraId,
+        String password,
+        String tenantId,
+        String clientId,
+        String clientSecret
+    ) {
+        Properties props = new Properties();
+        props.setProperty("sslmode", ssl ? "require" : "prefer");
+        if (username != null) {
+            props.setProperty("user", username);
+        }
+
+        if (useEntraId) {
+            props.setProperty("authenticationPluginClassName", ENTRA_ID_AUTH_PLUGIN);
+            // Service principal creds are all optional: with none of them set, the plugin falls
+            // back to DefaultAzureCredential (managed identity, environment variables, Azure CLI
+            // login, etc.). Setting them switches to explicit service principal authentication
+            // instead. Property keys per the shared azure-identity-extensions framework used by
+            // both its MySQL and PostgreSQL plugins.
+            if (tenantId != null) {
+                props.setProperty("azure.tenantId", tenantId);
+            }
+            if (clientId != null) {
+                props.setProperty("azure.clientId", clientId);
+            }
+            if (clientSecret != null) {
+                props.setProperty("azure.clientSecret", clientSecret);
+            }
+        } else if (password != null) {
+            props.setProperty("password", password);
+        }
+
+        return props;
     }
 
     /**
@@ -148,9 +212,15 @@ public abstract class AbstractHorizonDb<T extends Output> extends Task {
 
     /**
      * Binds a nullable value onto a prepared statement parameter, falling back to a typed NULL
-     * when the value is absent so drivers that reject untyped nulls (setObject(idx, null)) still work.
-     * @param integer 
+     * when the value is absent so drivers that reject untyped nulls (setObject(idx, null)) still
+     * work. Defaults to {@link java.sql.Types#VARCHAR}; use the 4-arg overload for non-text
+     * parameters (e.g. an integer), since a NULL bound with the wrong SQL type can cause
+     * PostgreSQL to fail to resolve the correct function overload.
      */
+    protected static void bind(PreparedStatement statement, int index, Object value) throws SQLException {
+        bind(statement, index, value, java.sql.Types.VARCHAR);
+    }
+
     protected static void bind(PreparedStatement statement, int index, Object value, int sqlType) throws SQLException {
         if (value == null) {
             statement.setNull(index, sqlType);

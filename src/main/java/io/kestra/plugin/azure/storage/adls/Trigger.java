@@ -54,13 +54,13 @@ import static io.kestra.core.utils.Rethrow.throwFunction;
 
                 tasks:
                   - id: each
-                    type: io.kestra.plugin.core.flow.ForEach
+                    type: io.kestra.plugin.core.flow.Loop
                     concurrencyLimit: 1
                     values: "{{ trigger.files | jq('.[].uri') }}"
                     tasks:
                       - id: return
                         type: io.kestra.plugin.core.debug.Return
-                        format: "{{ taskrun.value }}"
+                        format: "{{ item.value }}"
 
                 triggers:
                   - id: watch

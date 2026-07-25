@@ -13,16 +13,13 @@ import com.google.common.collect.ImmutableMap;
 import io.kestra.core.junit.annotations.KestraTest;
 import io.kestra.core.models.executions.Execution;
 import io.kestra.core.models.property.Property;
-import io.kestra.core.queues.QueueFactoryInterface;
-import io.kestra.core.queues.QueueInterface;
+import io.kestra.core.queues.DispatchQueueInterface;
 import io.kestra.core.repositories.LocalFlowRepositoryLoader;
 import io.kestra.core.runners.RunContextFactory;
 import io.kestra.core.utils.TestsUtils;
 import io.kestra.plugin.azure.eventhubs.serdes.Serdes;
 import io.micronaut.context.annotation.Value;
 import jakarta.inject.Inject;
-import jakarta.inject.Named;
-import reactor.core.publisher.Flux;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
@@ -32,8 +29,7 @@ import static org.hamcrest.Matchers.is;
 class TriggerTest {
 
     @Inject
-    @Named(QueueFactoryInterface.EXECUTION_NAMED)
-    private QueueInterface<Execution> executionQueue;
+    private DispatchQueueInterface<Execution> executionQueue;
 
     @Inject
     private RunContextFactory runContextFactory;
@@ -51,9 +47,12 @@ class TriggerTest {
     @Test
     void testTrigger() throws Exception {
         CountDownLatch queueCount = new CountDownLatch(1);
-        Flux<Execution> receive = TestsUtils.receive(executionQueue, execution -> {
+        java.util.concurrent.atomic.AtomicReference<Execution> lastExecution = new java.util.concurrent.atomic.AtomicReference<>();
+        executionQueue.addListener(execution ->
+        {
+            lastExecution.set(execution);
             queueCount.countDown();
-            assertThat(execution.getLeft().getFlowId(), is("trigger"));
+            assertThat(execution.getFlowId(), is("trigger"));
         });
 
         repositoryLoader.load(Objects.requireNonNull(TriggerTest.class.getClassLoader().getResource("flows/eventshubs-trigger.yaml")));
@@ -63,7 +62,8 @@ class TriggerTest {
         boolean await = queueCount.await(1, TimeUnit.MINUTES);
         assertThat(await, is(true));
 
-        Integer trigger = (Integer) receive.blockLast().getTrigger().getVariables().get("eventsCount");
+        Integer trigger = (Integer) lastExecution.get().getTrigger().getVariables().get("eventsCount");
+
         assertThat(trigger, greaterThanOrEqualTo(2));
     }
 

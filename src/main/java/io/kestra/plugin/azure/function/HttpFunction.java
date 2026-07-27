@@ -49,7 +49,7 @@ import lombok.experimental.SuperBuilder;
                   - id: encode_string
                     type: io.kestra.plugin.azure.function.HttpFunction
                     httpMethod: POST
-                    url: https://service.azurewebsites.net/api/Base64Encoder?code=${{secret('AZURE_FUNCTION_CODE')}}
+                    url: "https://service.azurewebsites.net/api/Base64Encoder?code={{ secret('AZURE_FUNCTION_CODE') }}"
                     httpBody: {"text": "Hello, Kestra"}
                 """
         )

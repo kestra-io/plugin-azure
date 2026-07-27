@@ -9,9 +9,7 @@ import com.azure.cosmos.models.*;
 
 import io.kestra.core.exceptions.IllegalVariableEvaluationException;
 import io.kestra.core.models.annotations.Example;
-import io.kestra.core.models.annotations.Metric;
 import io.kestra.core.models.annotations.Plugin;
-import io.kestra.core.models.executions.metrics.Counter;
 import io.kestra.core.models.property.Property;
 import io.kestra.core.models.tasks.RunnableTask;
 import io.kestra.core.runners.RunContext;
@@ -36,7 +34,7 @@ import io.kestra.core.models.annotations.PluginProperty;
                 namespace: company.team
 
                 tasks:
-                  - id: bulk
+                  - id: query
                     type: io.kestra.plugin.azure.storage.cosmosdb.Query
                     endpoint: "https://yourcosmosaccount.documents.azure.com"
                     databaseId: your_data_base_id
@@ -53,9 +51,6 @@ import io.kestra.core.models.annotations.PluginProperty;
                       region: europe
                 """
         )
-    },
-    metrics = {
-        @Metric(name = "records.count", type = Counter.TYPE, description = "The total number of entities processed in the bulk operation.")
     }
 )
 @Schema(

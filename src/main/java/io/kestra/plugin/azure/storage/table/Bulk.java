@@ -43,7 +43,7 @@ import io.kestra.core.models.annotations.PluginProperty;
                 tasks:
                   - id: bulk
                     type: io.kestra.plugin.azure.storage.table.Bulk
-                    endpoint: "https://yourstorageaccount.blob.core.windows.net"
+                    endpoint: "https://yourstorageaccount.table.core.windows.net"
                     connectionString: "DefaultEndpointsProtocol=...=="
                     table: "table_name"
                     from:

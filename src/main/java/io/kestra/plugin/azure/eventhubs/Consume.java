@@ -81,7 +81,7 @@ import io.kestra.core.models.annotations.PluginProperty;
 )
 @Schema(
     title = "Consume events from Azure Event Hubs",
-    description = "Polls Event Hubs partitions in batches, checkpoints to Azure Blob Storage, and writes events to internal storage as Ion. Defaults: consumerGroup=$Default, partitionStartingPosition=EARLIEST, maxBatchSizePerPartition=50, maxWaitTimePerPartition=PT5S, maxDuration=PT10S. Requires checkpointStoreProperties.connectionString and .containerName."
+    description = "Polls Event Hubs partitions in batches, checkpoints to Azure Blob Storage, and writes events to internal storage as ION. Defaults: consumerGroup=$Default, partitionStartingPosition=EARLIEST, maxBatchSizePerPartition=50, maxWaitTimePerPartition=PT5S, maxDuration=PT10S. Requires checkpointStoreProperties.connectionString and .containerName."
 )
 @SuperBuilder
 @NoArgsConstructor
@@ -110,7 +110,7 @@ public class Consume extends AbstractEventHubTask implements EventHubConsumerInt
     @PluginProperty(group = "advanced")
     private Property<StartingPosition> partitionStartingPosition = Property.ofValue(StartingPosition.EARLIEST);
 
-    @Schema(title = "Start from enqueue time", description = "Optional enqueue time filter (ISO-8601); overrides starting position when set")
+    @Schema(title = "Start from enqueue time", description = "ISO-8601 datetime applied only when partitionStartingPosition is set to INSTANT; ignored for EARLIEST and LATEST")
     @PluginProperty(group = "advanced")
     private Property<String> enqueueTime;
 
@@ -284,7 +284,7 @@ public class Consume extends AbstractEventHubTask implements EventHubConsumerInt
 
         @Schema(
             title = "Consumed events URI",
-            description = "kestra:// URI for Ion file containing consumed events"
+            description = "kestra:// URI for the ION file containing consumed events"
         )
         private URI uri;
     }

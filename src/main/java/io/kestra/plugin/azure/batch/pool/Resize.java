@@ -35,8 +35,11 @@ import io.kestra.core.models.annotations.PluginProperty;
                 tasks:
                   - id: resize
                     type: io.kestra.plugin.azure.batch.pool.Resize
+                    endpoint: https://my.francecentral.batch.azure.com
+                    account: "{{ secret('AZURE_ACCOUNT') }}"
+                    accessKey: "{{ secret('AZURE_ACCESS_KEY') }}"
                     poolId: "<your-pool-id>"
-                    targetDedicatedNodes: "12"
+                    targetDedicatedNodes: 12
                 """
         )
     }

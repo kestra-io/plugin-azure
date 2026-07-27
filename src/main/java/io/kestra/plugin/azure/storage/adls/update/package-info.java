@@ -1,4 +1,5 @@
 @PluginSubGroup(
+    title = "Azure Data Lake Storage Update",
     description = "This sub-group of plugins contains tasks for updating files in Azure Data Lake Storage.",
     categories = { PluginSubGroup.PluginCategory.CLOUD }
 )

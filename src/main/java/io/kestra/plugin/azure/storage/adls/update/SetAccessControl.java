@@ -32,19 +32,19 @@ import io.kestra.core.models.annotations.PluginProperty;
                 namespace: company.team
 
                 tasks:
-                  - id: lease_file
+                  - id: set_access_control
                     type: io.kestra.plugin.azure.storage.adls.update.SetAccessControl
                     endpoint: "https://yourblob.blob.core.windows.net"
                     sasToken: "{{ secret('SAS_TOKEN') }}"
                     fileSystem: "mydata"
                     filePath: "path/to/myfile"
                     groupPermissions:
-                      readPermissions: true
+                      readPermission: true
                     ownerPermissions:
-                      readPermissions: true
-                      writePermissions: true
+                      readPermission: true
+                      writePermission: true
                     otherPermissions:
-                      readPermissions: true
+                      readPermission: true
                 """
         )
     }

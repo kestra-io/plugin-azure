@@ -35,6 +35,12 @@ Infrastructure dependencies (Docker Compose services):
 - `io.kestra.plugin.azure.eventhubs.RealtimeTrigger`
 - `io.kestra.plugin.azure.eventhubs.Trigger`
 - `io.kestra.plugin.azure.function.HttpFunction`
+- `io.kestra.plugin.azure.logicapps.Get`
+- `io.kestra.plugin.azure.logicapps.GetRun`
+- `io.kestra.plugin.azure.logicapps.List`
+- `io.kestra.plugin.azure.logicapps.ListRuns`
+- `io.kestra.plugin.azure.logicapps.Run`
+- `io.kestra.plugin.azure.logicapps.Trigger`
 - `io.kestra.plugin.azure.monitoring.Push`
 - `io.kestra.plugin.azure.monitoring.Query`
 - `io.kestra.plugin.azure.monitoring.Trigger`

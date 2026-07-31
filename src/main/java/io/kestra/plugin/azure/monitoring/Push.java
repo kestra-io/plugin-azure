@@ -26,27 +26,32 @@ import io.kestra.core.models.annotations.PluginProperty;
 @Plugin(
     examples = {
         @Example(
-            title = "Query CPU utilization from Azure Monitor for multiple VMs",
+            title = "Push a custom metric to Azure Monitor via a Data Collection Rule",
             full = true,
             code = """
-                id: azure_monitor_query
+                id: azure_monitor_push
                 namespace: company.team
                 tasks:
-                  - id: query
-                    type: io.kestra.plugin.azure.monitoring.Query
+                  - id: push
+                    type: io.kestra.plugin.azure.monitoring.Push
                     tenantId: "{{ secret('AZURE_TENANT_ID') }}"
                     clientId: "{{ secret('AZURE_CLIENT_ID') }}"
                     clientSecret: "{{ secret('AZURE_CLIENT_SECRET') }}"
-                    resourceIds:
-                      - "/subscriptions/xxx/resourceGroups/rg/providers/Microsoft.Compute/virtualMachines/vm1"
-                      - "/subscriptions/xxx/resourceGroups/rg/providers/Microsoft.Compute/virtualMachines/vm2"
-                    metricNames:
-                      - "Percentage CPU"
-                    metricsNamespace: "Microsoft.Compute/virtualMachines"
-                    window: PT5M
-                    aggregations:
-                      - "Average"
-                      - "Maximum"
+                    endpoint: "https://westeurope.metrics.monitor.azure.com"
+                    path: "/dataCollectionRules/dcr-xxxxxxxxxxxxxxxx/streams/Custom-MyStream"
+                    metrics:
+                      time: "2024-01-01T00:00:00Z"
+                      data:
+                        baseData:
+                          metric: "OrdersProcessed"
+                          namespace: "MyCompany.Orders"
+                          dimNames:
+                            - "Environment"
+                          series:
+                            - dimValues:
+                                - "Production"
+                              sum: 100
+                              count: 5
                 """
         )
     }

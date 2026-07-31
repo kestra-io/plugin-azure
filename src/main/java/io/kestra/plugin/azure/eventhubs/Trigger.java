@@ -110,7 +110,7 @@ public class Trigger extends AbstractTrigger implements EventHubConsumerInterfac
     @PluginProperty(group = "advanced")
     private Property<StartingPosition> partitionStartingPosition = Property.ofValue(StartingPosition.EARLIEST);
 
-    @Schema(title = "Start from enqueue time", description = "Optional enqueue time filter (ISO-8601); overrides starting position")
+    @Schema(title = "Start from enqueue time", description = "ISO-8601 datetime applied only when partitionStartingPosition is set to INSTANT; ignored for EARLIEST and LATEST")
     @PluginProperty(group = "advanced")
     private Property<String> enqueueTime;
 

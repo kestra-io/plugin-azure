@@ -1,0 +1,8 @@
+group: io.kestra.plugin.azure.horizondb.durable
+name: "durable"
+title: "Azure HorizonDB Durable Workflows"
+description: "Submit, cancel, signal, inspect, list, and react to pg_durable durable function instances on Azure HorizonDB."
+body: "Start durable function instances from a pg_durable SQL DSL body, cancel or signal running instances, poll status and results, list instances filtered by status, and trigger a flow when an instance reaches a target status."
+videos: []
+createdBy: "Kestra Core Team"
+managedBy: "Kestra Core Team"

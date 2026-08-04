@@ -45,17 +45,17 @@ public class List extends AbstractLogicAppsTask implements RunnableTask<List.Out
 
     @Override
     public Output run(RunContext runContext) throws Exception {
-        String resourceGroup = runContext.render(this.resourceGroupName).as(String.class).orElseThrow();
-        Integer maxWorkflows = runContext.render(this.maxWorkflows).as(Integer.class).orElse(100);
+        String rResourceGroup = runContext.render(this.resourceGroupName).as(String.class).orElseThrow();
+        Integer rMaxWorkflows = runContext.render(this.maxWorkflows).as(Integer.class).orElse(100);
 
-        runContext.logger().info("Listing Logic App workflows in resource group '{}'", resourceGroup);
+        runContext.logger().info("Listing Logic App workflows in resource group '{}'", rResourceGroup);
 
         try {
             java.util.List<WorkflowRecord> workflows = logicManager(runContext)
                 .workflows()
-                .listByResourceGroup(resourceGroup)
+                .listByResourceGroup(rResourceGroup)
                 .stream()
-                .limit(maxWorkflows)
+                .limit(rMaxWorkflows)
                 .map(WorkflowRecord::of)
                 .toList();
 
@@ -65,7 +65,7 @@ public class List extends AbstractLogicAppsTask implements RunnableTask<List.Out
                 .build();
         } catch (Exception e) {
             throw new Exception(
-                "Failed to list Logic App workflows in resource group '" + resourceGroup + "'",
+                "Failed to list Logic App workflows in resource group '" + rResourceGroup + "'",
                 e
             );
         }

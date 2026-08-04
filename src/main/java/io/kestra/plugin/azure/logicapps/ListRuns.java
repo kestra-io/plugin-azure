@@ -60,17 +60,17 @@ public class ListRuns extends AbstractLogicAppsWorkflowTask implements RunnableT
 
     @Override
     public Output run(RunContext runContext) throws Exception {
-        String resourceGroup = runContext.render(this.resourceGroupName).as(String.class).orElseThrow();
-        String workflowName = runContext.render(this.workflowName).as(String.class).orElseThrow();
-        Integer top = runContext.render(this.maxRuns).as(Integer.class).orElse(100);
-        String filter = runContext.render(this.statusFilter).as(String.class).map(ListRuns::statusFilter).orElse(null);
+        String rResourceGroup = runContext.render(this.resourceGroupName).as(String.class).orElseThrow();
+        String rWorkflowName = runContext.render(this.workflowName).as(String.class).orElseThrow();
+        Integer rTop = runContext.render(this.maxRuns).as(Integer.class).orElse(100);
+        String rFilter = runContext.render(this.statusFilter).as(String.class).map(ListRuns::statusFilter).orElse(null);
 
-        runContext.logger().info("Listing Logic App workflow '{}' runs", workflowName);
+        runContext.logger().info("Listing Logic App workflow '{}' runs", rWorkflowName);
 
         try {
             java.util.List<RunRecord> runs = logicManager(runContext)
                 .workflowRuns()
-                .list(resourceGroup, workflowName, top, filter, Context.NONE)
+                .list(rResourceGroup, rWorkflowName, rTop, rFilter, Context.NONE)
                 .stream()
                 .map(RunRecord::of)
                 .toList();
@@ -81,7 +81,7 @@ public class ListRuns extends AbstractLogicAppsWorkflowTask implements RunnableT
                 .build();
         } catch (Exception e) {
             throw new Exception(
-                "Failed to list Logic App workflow runs for workflow '" + workflowName + "' in resource group '" + resourceGroup + "'",
+                "Failed to list Logic App workflow runs for workflow '" + rWorkflowName + "' in resource group '" + rResourceGroup + "'",
                 e
             );
         }

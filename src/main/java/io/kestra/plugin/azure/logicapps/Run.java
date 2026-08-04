@@ -53,25 +53,25 @@ public class Run extends AbstractLogicAppsWorkflowTask implements RunnableTask<R
     @Override
     public Output run(RunContext runContext) throws Exception {
         LogicManager manager = logicManager(runContext);
-        String resourceGroup = runContext.render(this.resourceGroupName).as(String.class).orElseThrow();
-        String workflowName = runContext.render(this.workflowName).as(String.class).orElseThrow();
-        String triggerName = runContext.render(this.triggerName).as(String.class).orElseThrow();
+        String rResourceGroup = runContext.render(this.resourceGroupName).as(String.class).orElseThrow();
+        String rWorkflowName = runContext.render(this.workflowName).as(String.class).orElseThrow();
+        String rTriggerName = runContext.render(this.triggerName).as(String.class).orElseThrow();
 
-        runContext.logger().info("Triggering Logic App workflow '{}' trigger '{}'", workflowName, triggerName);
+        runContext.logger().info("Triggering Logic App workflow '{}' trigger '{}'", rWorkflowName, rTriggerName);
 
         try {
-            Response<Void> response = manager.workflowTriggers().runWithResponse(resourceGroup, workflowName, triggerName, Context.NONE);
+            Response<Void> response = manager.workflowTriggers().runWithResponse(rResourceGroup, rWorkflowName, rTriggerName, Context.NONE);
             String location = response.getHeaders().getValue("Location");
 
             return Output.builder()
-                .workflowName(workflowName)
-                .triggerName(triggerName)
+                .workflowName(rWorkflowName)
+                .triggerName(rTriggerName)
                 .runId(location == null ? null : extractRunId(location))
                 .statusCode(response.getStatusCode())
                 .build();
         } catch (Exception e) {
             throw new Exception(
-                "Failed to trigger Logic App workflow '" + workflowName + "' using trigger '" + triggerName + "' in resource group '" + resourceGroup + "'",
+                "Failed to trigger Logic App workflow '" + rWorkflowName + "' using trigger '" + rTriggerName + "' in resource group '" + rResourceGroup + "'",
                 e
             );
         }

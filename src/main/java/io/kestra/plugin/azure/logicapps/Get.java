@@ -41,20 +41,20 @@ import lombok.experimental.SuperBuilder;
 public class Get extends AbstractLogicAppsWorkflowTask implements RunnableTask<Get.Output> {
     @Override
     public Output run(RunContext runContext) throws Exception {
-        String resourceGroup = runContext.render(this.resourceGroupName).as(String.class).orElseThrow();
-        String workflowName = runContext.render(this.workflowName).as(String.class).orElseThrow();
+        String rResourceGroup = runContext.render(this.resourceGroupName).as(String.class).orElseThrow();
+        String rWorkflowName = runContext.render(this.workflowName).as(String.class).orElseThrow();
 
-        runContext.logger().info("Fetching Logic App workflow '{}'", workflowName);
+        runContext.logger().info("Fetching Logic App workflow '{}'", rWorkflowName);
 
         try {
-            Workflow workflow = logicManager(runContext).workflows().getByResourceGroup(resourceGroup, workflowName);
+            Workflow workflow = logicManager(runContext).workflows().getByResourceGroup(rResourceGroup, rWorkflowName);
 
             return Output.builder()
                 .workflow(WorkflowRecord.of(workflow))
                 .build();
         } catch (Exception e) {
             throw new Exception(
-                "Failed to retrieve Logic App workflow '" + workflowName + "' in resource group '" + resourceGroup + "'",
+                "Failed to retrieve Logic App workflow '" + rWorkflowName + "' in resource group '" + rResourceGroup + "'",
                 e
             );
         }

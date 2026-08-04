@@ -17,6 +17,7 @@ import io.kestra.core.utils.Rethrow;
 import io.kestra.plugin.azure.shared.AzureIdentityConnectionInterface;
 
 import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.NotNull;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
 
@@ -60,30 +61,38 @@ public class Trigger extends AbstractTrigger implements PollingTriggerInterface,
     private final Duration interval = Duration.ofSeconds(60);
 
     @Schema(title = "Azure tenant ID", description = "Azure Entra tenant ID used for service principal authentication.")
+    @NotNull
     @PluginProperty(group = "connection")
     protected Property<String> tenantId;
 
     @Schema(title = "Azure client ID", description = "Client ID of the Azure app registration.")
+    @NotNull
     @PluginProperty(group = "connection")
     protected Property<String> clientId;
 
     @Schema(title = "Azure client secret", description = "Client secret of the Azure app registration.")
+    @ToString.Exclude
+    @NotNull
     @PluginProperty(secret = true, group = "connection")
     protected Property<String> clientSecret;
 
     @Schema(title = "PEM certificate", description = "PEM certificate content for certificate-based authentication.")
-    @PluginProperty(group = "connection")
+    @ToString.Exclude
+    @PluginProperty(secret = true, group = "connection")
     protected Property<String> pemCertificate;
 
     @Schema(title = "Subscription ID", description = "Azure subscription GUID that owns the Logic App workflow.")
+    @NotNull
     @PluginProperty(group = "connection")
     protected Property<String> subscriptionId;
 
     @Schema(title = "Resource group name", description = "Azure resource group containing the Logic App workflow.")
+    @NotNull
     @PluginProperty(group = "main")
     protected Property<String> resourceGroupName;
 
     @Schema(title = "Workflow name", description = "Name of the Azure Logic App workflow.")
+    @NotNull
     @PluginProperty(group = "main")
     protected Property<String> workflowName;
 
@@ -156,7 +165,6 @@ public class Trigger extends AbstractTrigger implements PollingTriggerInterface,
             TriggerService.generateExecution(
                 this, conditionContext, context, Output.builder()
                     .runs(newRuns)
-                    .run(newRuns.getFirst())
                     .total(newRuns.size())
                     .build()
             )

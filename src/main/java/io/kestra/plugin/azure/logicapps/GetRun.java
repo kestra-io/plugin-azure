@@ -51,15 +51,23 @@ public class GetRun extends AbstractLogicAppsWorkflowTask implements RunnableTas
     @Override
     public Output run(RunContext runContext) throws Exception {
         String resourceGroup = runContext.render(this.resourceGroupName).as(String.class).orElseThrow();
-        String workflow = runContext.render(this.workflowName).as(String.class).orElseThrow();
+        String workflowName = runContext.render(this.workflowName).as(String.class).orElseThrow();
         String runId = runContext.render(this.runId).as(String.class).orElseThrow();
 
-        runContext.logger().info("Fetching Logic App workflow '{}' run '{}'", workflow, runId);
-        WorkflowRun run = logicManager(runContext).workflowRuns().get(resourceGroup, workflow, runId);
+        runContext.logger().info("Fetching Logic App workflow '{}' run '{}'", workflowName, runId);
 
-        return Output.builder()
-            .run(RunRecord.of(run))
-            .build();
+        try {
+            WorkflowRun run = logicManager(runContext).workflowRuns().get(resourceGroup, workflowName, runId);
+
+            return Output.builder()
+                .run(RunRecord.of(run))
+                .build();
+        } catch (Exception e) {
+            throw new Exception(
+                "Failed to retrieve Logic App workflow run '" + runId + "' for workflow '" + workflowName + "' in resource group '" + resourceGroup + "'",
+                e
+            );
+        }
     }
 
     @Builder

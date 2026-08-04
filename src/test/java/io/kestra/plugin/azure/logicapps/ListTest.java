@@ -41,6 +41,7 @@ class ListTest {
             .clientSecret(Property.ofValue("secret"))
             .subscriptionId(Property.ofValue("subscription"))
             .resourceGroupName(Property.ofValue("rg"))
+            .maxWorkflows(Property.ofValue(1))
             .build();
 
         try (MockedStatic<LogicManager> mockedStatic = mockStatic(LogicManager.class)) {
@@ -48,8 +49,8 @@ class ListTest {
 
             List.Output output = task.run(runContextFactory.of());
 
-            assertThat(output.getTotal(), is(2));
-            assertThat(output.getWorkflows().get(1).getName(), is("workflow-b"));
+            assertThat(output.getTotal(), is(1));
+            assertThat(output.getWorkflows().getFirst().getName(), is("workflow-a"));
         }
     }
 }

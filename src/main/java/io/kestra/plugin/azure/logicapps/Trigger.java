@@ -14,6 +14,7 @@ import io.kestra.core.models.property.Property;
 import io.kestra.core.models.triggers.*;
 import io.kestra.core.runners.RunContext;
 import io.kestra.core.utils.Rethrow;
+import io.kestra.plugin.azure.shared.AzureIdentityConnectionInterface;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.*;
@@ -54,7 +55,7 @@ import static io.kestra.core.models.triggers.StatefulTriggerService.*;
     }
 )
 @Schema(title = "Trigger flows from Azure Logic App workflow runs", description = "Polls a Logic App workflow and starts an execution for newly observed completed or failed runs.")
-public class Trigger extends AbstractTrigger implements PollingTriggerInterface, TriggerOutput<Trigger.Output>, StatefulTriggerInterface {
+public class Trigger extends AbstractTrigger implements PollingTriggerInterface, TriggerOutput<Trigger.Output>, StatefulTriggerInterface, AzureIdentityConnectionInterface {
     @Builder.Default
     private final Duration interval = Duration.ofSeconds(60);
 
@@ -69,6 +70,10 @@ public class Trigger extends AbstractTrigger implements PollingTriggerInterface,
     @Schema(title = "Azure client secret", description = "Client secret of the Azure app registration.")
     @PluginProperty(secret = true, group = "connection")
     protected Property<String> clientSecret;
+
+    @Schema(title = "PEM certificate", description = "PEM certificate content for certificate-based authentication.")
+    @PluginProperty(group = "connection")
+    protected Property<String> pemCertificate;
 
     @Schema(title = "Subscription ID", description = "Azure subscription GUID that owns the Logic App workflow.")
     @PluginProperty(group = "connection")
@@ -117,6 +122,7 @@ public class Trigger extends AbstractTrigger implements PollingTriggerInterface,
             .tenantId(this.tenantId)
             .clientId(this.clientId)
             .clientSecret(this.clientSecret)
+            .pemCertificate(this.pemCertificate)
             .subscriptionId(this.subscriptionId)
             .resourceGroupName(this.resourceGroupName)
             .workflowName(this.workflowName)

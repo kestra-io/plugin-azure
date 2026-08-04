@@ -2,6 +2,8 @@ package io.kestra.plugin.azure.logicapps;
 
 import io.kestra.core.models.annotations.Example;
 import io.kestra.core.models.annotations.Plugin;
+import io.kestra.core.models.annotations.PluginProperty;
+import io.kestra.core.models.property.Property;
 import io.kestra.core.models.tasks.RunnableTask;
 import io.kestra.core.runners.RunContext;
 
@@ -36,22 +38,37 @@ import lombok.experimental.SuperBuilder;
 )
 @Schema(title = "List Azure Logic App workflows", description = "Lists Logic App workflows in an Azure resource group.")
 public class List extends AbstractLogicAppsTask implements RunnableTask<List.Output> {
+    @Schema(title = "Maximum workflows", description = "Maximum number of workflows to return. Defaults to 100.")
+    @Builder.Default
+    @PluginProperty(group = "execution")
+    private Property<Integer> maxWorkflows = Property.ofValue(100);
+
     @Override
     public Output run(RunContext runContext) throws Exception {
         String resourceGroup = runContext.render(this.resourceGroupName).as(String.class).orElseThrow();
+        Integer maxWorkflows = runContext.render(this.maxWorkflows).as(Integer.class).orElse(100);
 
         runContext.logger().info("Listing Logic App workflows in resource group '{}'", resourceGroup);
-        java.util.List<WorkflowRecord> workflows = logicManager(runContext)
-            .workflows()
-            .listByResourceGroup(resourceGroup)
-            .stream()
-            .map(WorkflowRecord::of)
-            .toList();
 
-        return Output.builder()
-            .workflows(workflows)
-            .total(workflows.size())
-            .build();
+        try {
+            java.util.List<WorkflowRecord> workflows = logicManager(runContext)
+                .workflows()
+                .listByResourceGroup(resourceGroup)
+                .stream()
+                .limit(maxWorkflows)
+                .map(WorkflowRecord::of)
+                .toList();
+
+            return Output.builder()
+                .workflows(workflows)
+                .total(workflows.size())
+                .build();
+        } catch (Exception e) {
+            throw new Exception(
+                "Failed to list Logic App workflows in resource group '" + resourceGroup + "'",
+                e
+            );
+        }
     }
 
     @Builder

@@ -45,11 +45,19 @@ public class Get extends AbstractLogicAppsWorkflowTask implements RunnableTask<G
         String workflowName = runContext.render(this.workflowName).as(String.class).orElseThrow();
 
         runContext.logger().info("Fetching Logic App workflow '{}'", workflowName);
-        Workflow workflow = logicManager(runContext).workflows().getByResourceGroup(resourceGroup, workflowName);
 
-        return Output.builder()
-            .workflow(WorkflowRecord.of(workflow))
-            .build();
+        try {
+            Workflow workflow = logicManager(runContext).workflows().getByResourceGroup(resourceGroup, workflowName);
+
+            return Output.builder()
+                .workflow(WorkflowRecord.of(workflow))
+                .build();
+        } catch (Exception e) {
+            throw new Exception(
+                "Failed to retrieve Logic App workflow '" + workflowName + "' in resource group '" + resourceGroup + "'",
+                e
+            );
+        }
     }
 
     @Builder

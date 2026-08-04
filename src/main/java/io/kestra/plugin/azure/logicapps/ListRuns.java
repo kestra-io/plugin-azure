@@ -61,22 +61,30 @@ public class ListRuns extends AbstractLogicAppsWorkflowTask implements RunnableT
     @Override
     public Output run(RunContext runContext) throws Exception {
         String resourceGroup = runContext.render(this.resourceGroupName).as(String.class).orElseThrow();
-        String workflow = runContext.render(this.workflowName).as(String.class).orElseThrow();
+        String workflowName = runContext.render(this.workflowName).as(String.class).orElseThrow();
         Integer top = runContext.render(this.maxRuns).as(Integer.class).orElse(100);
         String filter = runContext.render(this.statusFilter).as(String.class).map(ListRuns::statusFilter).orElse(null);
 
-        runContext.logger().info("Listing Logic App workflow '{}' runs", workflow);
-        java.util.List<RunRecord> runs = logicManager(runContext)
-            .workflowRuns()
-            .list(resourceGroup, workflow, top, filter, Context.NONE)
-            .stream()
-            .map(RunRecord::of)
-            .toList();
+        runContext.logger().info("Listing Logic App workflow '{}' runs", workflowName);
 
-        return Output.builder()
-            .runs(runs)
-            .total(runs.size())
-            .build();
+        try {
+            java.util.List<RunRecord> runs = logicManager(runContext)
+                .workflowRuns()
+                .list(resourceGroup, workflowName, top, filter, Context.NONE)
+                .stream()
+                .map(RunRecord::of)
+                .toList();
+
+            return Output.builder()
+                .runs(runs)
+                .total(runs.size())
+                .build();
+        } catch (Exception e) {
+            throw new Exception(
+                "Failed to list Logic App workflow runs for workflow '" + workflowName + "' in resource group '" + resourceGroup + "'",
+                e
+            );
+        }
     }
 
     static String statusFilter(String status) {

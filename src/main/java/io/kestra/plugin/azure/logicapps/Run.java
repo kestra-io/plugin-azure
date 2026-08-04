@@ -1,5 +1,7 @@
 package io.kestra.plugin.azure.logicapps;
 
+import java.net.URI;
+
 import com.azure.core.http.rest.Response;
 import com.azure.core.util.Context;
 import com.azure.resourcemanager.logic.LogicManager;
@@ -52,17 +54,33 @@ public class Run extends AbstractLogicAppsWorkflowTask implements RunnableTask<R
     public Output run(RunContext runContext) throws Exception {
         LogicManager manager = logicManager(runContext);
         String resourceGroup = runContext.render(this.resourceGroupName).as(String.class).orElseThrow();
-        String workflow = runContext.render(this.workflowName).as(String.class).orElseThrow();
-        String trigger = runContext.render(this.triggerName).as(String.class).orElseThrow();
+        String workflowName = runContext.render(this.workflowName).as(String.class).orElseThrow();
+        String triggerName = runContext.render(this.triggerName).as(String.class).orElseThrow();
 
-        runContext.logger().info("Triggering Logic App workflow '{}' trigger '{}'", workflow, trigger);
-        Response<Void> response = manager.workflowTriggers().runWithResponse(resourceGroup, workflow, trigger, Context.NONE);
+        runContext.logger().info("Triggering Logic App workflow '{}' trigger '{}'", workflowName, triggerName);
 
-        return Output.builder()
-            .workflowName(workflow)
-            .triggerName(trigger)
-            .statusCode(response.getStatusCode())
-            .build();
+        try {
+            Response<Void> response = manager.workflowTriggers().runWithResponse(resourceGroup, workflowName, triggerName, Context.NONE);
+            String location = response.getHeaders().getValue("Location");
+
+            return Output.builder()
+                .workflowName(workflowName)
+                .triggerName(triggerName)
+                .runId(location == null ? null : extractRunId(location))
+                .statusCode(response.getStatusCode())
+                .build();
+        } catch (Exception e) {
+            throw new Exception(
+                "Failed to trigger Logic App workflow '" + workflowName + "' using trigger '" + triggerName + "' in resource group '" + resourceGroup + "'",
+                e
+            );
+        }
+    }
+
+    private static String extractRunId(String location) {
+        String path = URI.create(location).getPath();
+        int lastSlash = path.lastIndexOf('/');
+        return lastSlash >= 0 ? path.substring(lastSlash + 1) : path;
     }
 
     @Builder
@@ -73,6 +91,9 @@ public class Run extends AbstractLogicAppsWorkflowTask implements RunnableTask<R
 
         @Schema(title = "Trigger name", description = "Name of the workflow trigger that was run.")
         private final String triggerName;
+
+        @Schema(title = "Run ID", description = "Identifier of the triggered Logic App workflow run, extracted from the response Location header when available.")
+        private final String runId;
 
         @Schema(title = "HTTP status code", description = "Status code returned by the Azure Logic Apps run trigger operation.")
         private final Integer statusCode;

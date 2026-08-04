@@ -4,6 +4,7 @@ import org.junit.jupiter.api.Test;
 import org.mockito.MockedStatic;
 
 import com.azure.core.credential.TokenCredential;
+import com.azure.core.http.HttpHeaders;
 import com.azure.core.http.rest.Response;
 import com.azure.core.management.profile.AzureProfile;
 import com.azure.core.util.Context;
@@ -32,6 +33,9 @@ class RunTest {
         @SuppressWarnings("unchecked")
         Response<Void> response = mock(Response.class);
         when(response.getStatusCode()).thenReturn(202);
+        HttpHeaders headers = new HttpHeaders();
+        headers.put("Location", "https://management.azure.com/subscriptions/subscription/resourceGroups/rg/providers/Microsoft.Logic/workflows/workflow/runs/run-123?api-version=2019-05-01");
+        when(response.getHeaders()).thenReturn(headers);
         when(triggers.runWithResponse("rg", "workflow", "manual", Context.NONE)).thenReturn(response);
 
         LogicManager manager = LogicAppsTestHelper.managerWithTriggers(triggers);
@@ -47,6 +51,7 @@ class RunTest {
 
             assertThat(output.getWorkflowName(), is("workflow"));
             assertThat(output.getTriggerName(), is("manual"));
+            assertThat(output.getRunId(), is("run-123"));
             assertThat(output.getStatusCode(), is(202));
             verify(triggers).runWithResponse("rg", "workflow", "manual", Context.NONE);
         }

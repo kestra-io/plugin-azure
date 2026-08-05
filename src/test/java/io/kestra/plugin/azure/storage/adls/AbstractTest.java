@@ -98,6 +98,9 @@ public class AbstractTest extends BaseTest {
 
     @AfterEach
     void cleanup() throws Exception {
+        if (connectionString == null || connectionString.isBlank()) {
+            return;
+        }
         DataLakeServiceClient client = DataLakeService.client(adlsEndpoint, connectionString, null, null, null, runContextFactory.of());
 
         for (String dirName : directoryToClean) {

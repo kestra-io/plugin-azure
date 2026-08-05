@@ -3,6 +3,8 @@ package io.kestra.plugin.azure.cli;
 import java.util.List;
 import java.util.Map;
 
+import org.junit.jupiter.api.Assumptions;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import io.kestra.core.junit.annotations.KestraTest;
@@ -28,6 +30,14 @@ public class AzCLITest {
     protected String secret;
     @Value("${kestra.variables.globals.azure.sp.tenant}")
     String tenant;
+
+    @BeforeEach
+    void requireAzureCredentials() {
+        Assumptions.assumeTrue(
+            username != null && !username.isBlank(),
+            "Azure credentials not configured, skipping integration test"
+        );
+    }
 
     @Inject
     private RunContextFactory runContextFactory;

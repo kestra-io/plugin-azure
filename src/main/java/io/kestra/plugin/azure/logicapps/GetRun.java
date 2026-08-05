@@ -22,6 +22,7 @@ import lombok.experimental.SuperBuilder;
 @Plugin(
     examples = {
         @Example(
+            title = "Get run",
             full = true,
             code = """
                 id: azure_logic_apps_get_run
@@ -55,19 +56,18 @@ public class GetRun extends AbstractLogicAppsWorkflowTask implements RunnableTas
         String rRunId = runContext.render(this.runId).as(String.class).orElseThrow();
 
         runContext.logger().info("Fetching Logic App workflow '{}' run '{}'", rWorkflowName, rRunId);
+        return withAzureContext(
+            runContext,
+            "Failed to retrieve Logic App workflow run '" + rRunId + "' for workflow '" + rWorkflowName + "' in resource group '" + rResourceGroup + "'",
+            () ->
+            {
+                WorkflowRun run = logicManager(runContext).workflowRuns().get(rResourceGroup, rWorkflowName, rRunId);
 
-        try {
-            WorkflowRun run = logicManager(runContext).workflowRuns().get(rResourceGroup, rWorkflowName, rRunId);
-
-            return Output.builder()
-                .run(RunRecord.of(run))
-                .build();
-        } catch (Exception e) {
-            throw new Exception(
-                "Failed to retrieve Logic App workflow run '" + rRunId + "' for workflow '" + rWorkflowName + "' in resource group '" + rResourceGroup + "'",
-                e
-            );
-        }
+                return Output.builder()
+                    .run(RunRecord.of(run))
+                    .build();
+            }
+        );
     }
 
     @Builder

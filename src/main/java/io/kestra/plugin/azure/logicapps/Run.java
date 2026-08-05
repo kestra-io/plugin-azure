@@ -25,6 +25,7 @@ import lombok.experimental.SuperBuilder;
 @Plugin(
     examples = {
         @Example(
+            title = "Trigger workflow",
             full = true,
             code = """
                 id: azure_logic_apps_run
@@ -59,28 +60,42 @@ public class Run extends AbstractLogicAppsWorkflowTask implements RunnableTask<R
 
         runContext.logger().info("Triggering Logic App workflow '{}' trigger '{}'", rWorkflowName, rTriggerName);
 
-        try {
-            Response<Void> response = manager.workflowTriggers().runWithResponse(rResourceGroup, rWorkflowName, rTriggerName, Context.NONE);
-            String location = response.getHeaders().getValue("Location");
+        return withAzureContext(
+            runContext,
+            "Failed to trigger Logic App workflow '" + rWorkflowName + "' using trigger '" + rTriggerName + "' in resource group '" + rResourceGroup + "'",
+            () ->
+            {
+                Response<Void> response = manager.workflowTriggers().runWithResponse(rResourceGroup, rWorkflowName, rTriggerName, Context.NONE);
+                String location = response.getHeaders().getValue("Location");
 
-            return Output.builder()
-                .workflowName(rWorkflowName)
-                .triggerName(rTriggerName)
-                .runId(location == null ? null : extractRunId(location))
-                .statusCode(response.getStatusCode())
-                .build();
-        } catch (Exception e) {
-            throw new Exception(
-                "Failed to trigger Logic App workflow '" + rWorkflowName + "' using trigger '" + rTriggerName + "' in resource group '" + rResourceGroup + "'",
-                e
-            );
-        }
+                return Output.builder()
+                    .workflowName(rWorkflowName)
+                    .triggerName(rTriggerName)
+                    .runId(location == null ? null : extractRunId(location))
+                    .statusCode(response.getStatusCode())
+                    .build();
+            }
+        );
     }
 
     private static String extractRunId(String location) {
+        if (location == null) {
+            return null;
+        }
+
         String path = URI.create(location).getPath();
-        int lastSlash = path.lastIndexOf('/');
-        return lastSlash >= 0 ? path.substring(lastSlash + 1) : path;
+        if (path == null || path.isEmpty()) {
+            return null;
+        }
+
+        String[] parts = path.split("/");
+        for (int i = parts.length - 1; i >= 0; i--) {
+            if (parts[i] != null && !parts[i].isEmpty()) {
+                return parts[i];
+            }
+        }
+
+        return null;
     }
 
     @Builder

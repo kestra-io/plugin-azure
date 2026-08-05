@@ -43,4 +43,17 @@ public abstract class AbstractLogicAppsTask extends AbstractAzureIdentityConnect
             new AzureProfile(tenant, subscription, AzureEnvironment.AZURE)
         );
     }
+
+    @FunctionalInterface
+    protected interface ThrowingSupplier<T> {
+        T get() throws Exception;
+    }
+
+    protected <T> T withAzureContext(RunContext runContext, String message, ThrowingSupplier<T> supplier) throws Exception {
+        try {
+            return supplier.get();
+        } catch (Exception e) {
+            throw new Exception(message, e);
+        }
+    }
 }

@@ -24,6 +24,7 @@ import lombok.experimental.SuperBuilder;
 @Plugin(
     examples = {
         @Example(
+            title = "List runs",
             full = true,
             code = """
                 id: azure_logic_apps_list_runs
@@ -66,25 +67,24 @@ public class ListRuns extends AbstractLogicAppsWorkflowTask implements RunnableT
         String rFilter = runContext.render(this.statusFilter).as(String.class).map(ListRuns::statusFilter).orElse(null);
 
         runContext.logger().info("Listing Logic App workflow '{}' runs", rWorkflowName);
+        return withAzureContext(
+            runContext,
+            "Failed to list Logic App workflow runs for workflow '" + rWorkflowName + "' in resource group '" + rResourceGroup + "'",
+            () ->
+            {
+                java.util.List<RunRecord> runs = logicManager(runContext)
+                    .workflowRuns()
+                    .list(rResourceGroup, rWorkflowName, rTop, rFilter, Context.NONE)
+                    .stream()
+                    .map(RunRecord::of)
+                    .toList();
 
-        try {
-            java.util.List<RunRecord> runs = logicManager(runContext)
-                .workflowRuns()
-                .list(rResourceGroup, rWorkflowName, rTop, rFilter, Context.NONE)
-                .stream()
-                .map(RunRecord::of)
-                .toList();
-
-            return Output.builder()
-                .runs(runs)
-                .total(runs.size())
-                .build();
-        } catch (Exception e) {
-            throw new Exception(
-                "Failed to list Logic App workflow runs for workflow '" + rWorkflowName + "' in resource group '" + rResourceGroup + "'",
-                e
-            );
-        }
+                return Output.builder()
+                    .runs(runs)
+                    .total(runs.size())
+                    .build();
+            }
+        );
     }
 
     static String statusFilter(String status) {

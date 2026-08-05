@@ -49,7 +49,7 @@ class TriggerTest {
             .subscriptionId(Property.ofValue("subscription"))
             .resourceGroupName(Property.ofValue("rg"))
             .workflowName(Property.ofValue("workflow"))
-            .stateKey(Property.ofValue("trigger-fire-once"))
+            .stateKey(Property.ofValue("trigger-fire-once-" + io.kestra.core.utils.IdUtils.create()))
             .interval(Duration.ofSeconds(60))
             .build();
 
@@ -86,7 +86,7 @@ class TriggerTest {
             .resourceGroupName(Property.ofValue("rg"))
             .workflowName(Property.ofValue("workflow"))
             .statuses(Property.ofValue(java.util.List.of("Succeeded")))
-            .stateKey(Property.ofValue("trigger-status-filter"))
+            .stateKey(Property.ofValue("trigger-status-filter-" + io.kestra.core.utils.IdUtils.create()))
             .on(Property.ofValue(StatefulTriggerInterface.On.CREATE))
             .interval(Duration.ofSeconds(60))
             .build();

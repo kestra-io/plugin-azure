@@ -19,6 +19,7 @@ import lombok.experimental.SuperBuilder;
 @Plugin(
     examples = {
         @Example(
+            title = "Get workflow",
             full = true,
             code = """
                 id: azure_logic_apps_get
@@ -45,19 +46,18 @@ public class Get extends AbstractLogicAppsWorkflowTask implements RunnableTask<G
         String rWorkflowName = runContext.render(this.workflowName).as(String.class).orElseThrow();
 
         runContext.logger().info("Fetching Logic App workflow '{}'", rWorkflowName);
+        return withAzureContext(
+            runContext,
+            "Failed to retrieve Logic App workflow '" + rWorkflowName + "' in resource group '" + rResourceGroup + "'",
+            () ->
+            {
+                Workflow workflow = logicManager(runContext).workflows().getByResourceGroup(rResourceGroup, rWorkflowName);
 
-        try {
-            Workflow workflow = logicManager(runContext).workflows().getByResourceGroup(rResourceGroup, rWorkflowName);
-
-            return Output.builder()
-                .workflow(WorkflowRecord.of(workflow))
-                .build();
-        } catch (Exception e) {
-            throw new Exception(
-                "Failed to retrieve Logic App workflow '" + rWorkflowName + "' in resource group '" + rResourceGroup + "'",
-                e
-            );
-        }
+                return Output.builder()
+                    .workflow(WorkflowRecord.of(workflow))
+                    .build();
+            }
+        );
     }
 
     @Builder

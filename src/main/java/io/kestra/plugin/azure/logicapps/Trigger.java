@@ -2,8 +2,9 @@ package io.kestra.plugin.azure.logicapps;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
-import java.util.stream.Stream;
 
 import io.kestra.core.models.annotations.Example;
 import io.kestra.core.models.annotations.Plugin;
@@ -13,7 +14,6 @@ import io.kestra.core.models.executions.Execution;
 import io.kestra.core.models.property.Property;
 import io.kestra.core.models.triggers.*;
 import io.kestra.core.runners.RunContext;
-import io.kestra.core.utils.Rethrow;
 import io.kestra.plugin.azure.shared.AzureIdentityConnectionInterface;
 
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -31,6 +31,7 @@ import static io.kestra.core.models.triggers.StatefulTriggerService.*;
 @Plugin(
     examples = {
         @Example(
+            title = "On run complete",
             full = true,
             code = """
                 id: azure_logic_apps_on_complete
@@ -99,10 +100,11 @@ public class Trigger extends AbstractTrigger implements PollingTriggerInterface,
     @Schema(title = "Statuses", description = "Workflow run statuses that should trigger executions. Defaults to `Succeeded` and `Failed`.")
     @Builder.Default
     @PluginProperty(group = "main")
-    private Property<java.util.List<String>> statuses = Property.ofValue(java.util.List.of("Succeeded", "Failed"));
+    private Property<List<String>> statuses = Property.ofValue(List.of("Succeeded", "Failed"));
 
     @Builder.Default
     @Schema(title = "State change mode", description = "Stateful trigger change mode used for observed workflow runs.")
+    @PluginProperty(group = "advanced")
     private final Property<On> on = Property.ofValue(On.CREATE);
 
     @Schema(title = "Maximum runs", description = "Maximum number of recent runs to inspect per polling interval. Defaults to 25.")
@@ -123,7 +125,7 @@ public class Trigger extends AbstractTrigger implements PollingTriggerInterface,
         RunContext runContext = conditionContext.getRunContext();
         String state = runContext.render(stateKey).as(String.class).orElse(StatefulTriggerService.defaultKey(context.getNamespace(), context.getFlowId(), id));
         Optional<Duration> ttl = runContext.render(stateTtl).as(Duration.class);
-        java.util.List<String> watchedStatuses = runContext.render(statuses).asList(String.class);
+        List<String> watchedStatuses = runContext.render(statuses).asList(String.class);
 
         ListRuns.Output listedRuns = ListRuns.builder()
             .id(this.id)
@@ -140,20 +142,23 @@ public class Trigger extends AbstractTrigger implements PollingTriggerInterface,
             .run(runContext);
 
         var previousState = readState(runContext, state, ttl);
-        java.util.List<RunRecord> newRuns = listedRuns.getRuns()
-            .stream()
-            .filter(run -> watchedStatuses.stream().anyMatch(status -> status.equalsIgnoreCase(run.getStatus())))
-            .flatMap(Rethrow.throwFunction(run ->
-            {
+        On rOn = runContext.render(on).as(On.class).orElse(On.CREATE);
+
+        List<RunRecord> newRuns = new ArrayList<>();
+        for (RunRecord run : listedRuns.getRuns()) {
+            if (watchedStatuses.stream().anyMatch(status -> status.equalsIgnoreCase(run.getStatus()))) {
                 Instant modifiedAt = Optional.ofNullable(run.getEndTime())
                     .map(java.time.OffsetDateTime::toInstant)
                     .orElseGet(Instant::now);
-                var candidate = StatefulTriggerService.Entry.candidate(run.getId(), run.getStatus(), modifiedAt);
-                var stateChange = computeAndUpdateState(previousState, candidate, runContext.render(on).as(On.class).orElse(On.CREATE));
 
-                return stateChange.fire() ? Stream.of(run) : Stream.empty();
-            }))
-            .toList();
+                var candidate = StatefulTriggerService.Entry.candidate(run.getId(), run.getStatus(), modifiedAt);
+                var stateChange = computeAndUpdateState(previousState, candidate, rOn);
+
+                if (stateChange.fire()) {
+                    newRuns.add(run);
+                }
+            }
+        }
 
         writeState(runContext, state, previousState, ttl);
 
@@ -164,6 +169,7 @@ public class Trigger extends AbstractTrigger implements PollingTriggerInterface,
         return Optional.of(
             TriggerService.generateExecution(
                 this, conditionContext, context, Output.builder()
+                    .run(newRuns.get(0))
                     .runs(newRuns)
                     .total(newRuns.size())
                     .build()

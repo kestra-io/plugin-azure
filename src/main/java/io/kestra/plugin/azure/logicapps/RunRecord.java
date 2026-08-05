@@ -3,6 +3,7 @@ package io.kestra.plugin.azure.logicapps;
 import java.time.OffsetDateTime;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 import com.azure.resourcemanager.logic.models.WorkflowOutputParameter;
 import com.azure.resourcemanager.logic.models.WorkflowRun;
@@ -64,7 +65,7 @@ public class RunRecord {
         return outputs.entrySet()
             .stream()
             .collect(
-                java.util.stream.Collectors.toMap(
+                Collectors.toMap(
                     Map.Entry::getKey,
                     entry -> entry.getValue() == null ? null : entry.getValue().value()
                 )

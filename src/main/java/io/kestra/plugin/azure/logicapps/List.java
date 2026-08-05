@@ -19,6 +19,7 @@ import lombok.experimental.SuperBuilder;
 @Plugin(
     examples = {
         @Example(
+            title = "List workflows",
             full = true,
             code = """
                 id: azure_logic_apps_list
@@ -49,26 +50,25 @@ public class List extends AbstractLogicAppsTask implements RunnableTask<List.Out
         Integer rMaxWorkflows = runContext.render(this.maxWorkflows).as(Integer.class).orElse(100);
 
         runContext.logger().info("Listing Logic App workflows in resource group '{}'", rResourceGroup);
+        return withAzureContext(
+            runContext,
+            "Failed to list Logic App workflows in resource group '" + rResourceGroup + "'",
+            () ->
+            {
+                java.util.List<WorkflowRecord> workflows = logicManager(runContext)
+                    .workflows()
+                    .listByResourceGroup(rResourceGroup)
+                    .stream()
+                    .limit(rMaxWorkflows)
+                    .map(WorkflowRecord::of)
+                    .toList();
 
-        try {
-            java.util.List<WorkflowRecord> workflows = logicManager(runContext)
-                .workflows()
-                .listByResourceGroup(rResourceGroup)
-                .stream()
-                .limit(rMaxWorkflows)
-                .map(WorkflowRecord::of)
-                .toList();
-
-            return Output.builder()
-                .workflows(workflows)
-                .total(workflows.size())
-                .build();
-        } catch (Exception e) {
-            throw new Exception(
-                "Failed to list Logic App workflows in resource group '" + rResourceGroup + "'",
-                e
-            );
-        }
+                return Output.builder()
+                    .workflows(workflows)
+                    .total(workflows.size())
+                    .build();
+            }
+        );
     }
 
     @Builder

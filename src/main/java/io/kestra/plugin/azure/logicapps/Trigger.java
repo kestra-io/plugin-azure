@@ -123,9 +123,9 @@ public class Trigger extends AbstractTrigger implements PollingTriggerInterface,
     @Override
     public Optional<Execution> evaluate(ConditionContext conditionContext, TriggerContext context) throws Exception {
         RunContext runContext = conditionContext.getRunContext();
-        String state = runContext.render(stateKey).as(String.class).orElse(StatefulTriggerService.defaultKey(context.getNamespace(), context.getFlowId(), id));
-        Optional<Duration> ttl = runContext.render(stateTtl).as(Duration.class);
-        List<String> watchedStatuses = runContext.render(statuses).asList(String.class);
+        String rState = runContext.render(stateKey).as(String.class).orElse(StatefulTriggerService.defaultKey(context.getNamespace(), context.getFlowId(), id));
+        Optional<Duration> rTtl = runContext.render(stateTtl).as(Duration.class);
+        List<String> rWatchedStatuses = runContext.render(statuses).asList(String.class);
 
         ListRuns.Output listedRuns = ListRuns.builder()
             .id(this.id)
@@ -141,12 +141,12 @@ public class Trigger extends AbstractTrigger implements PollingTriggerInterface,
             .build()
             .run(runContext);
 
-        var previousState = readState(runContext, state, ttl);
+        var previousState = readState(runContext, rState, rTtl);
         On rOn = runContext.render(on).as(On.class).orElse(On.CREATE);
 
         List<RunRecord> newRuns = new ArrayList<>();
         for (RunRecord run : listedRuns.getRuns()) {
-            if (watchedStatuses.stream().anyMatch(status -> status.equalsIgnoreCase(run.getStatus()))) {
+            if (rWatchedStatuses.stream().anyMatch(status -> status.equalsIgnoreCase(run.getStatus()))) {
                 Instant modifiedAt = Optional.ofNullable(run.getEndTime())
                     .map(java.time.OffsetDateTime::toInstant)
                     .orElseGet(Instant::now);
@@ -160,7 +160,7 @@ public class Trigger extends AbstractTrigger implements PollingTriggerInterface,
             }
         }
 
-        writeState(runContext, state, previousState, ttl);
+        writeState(runContext, rState, previousState, rTtl);
 
         if (newRuns.isEmpty()) {
             return Optional.empty();

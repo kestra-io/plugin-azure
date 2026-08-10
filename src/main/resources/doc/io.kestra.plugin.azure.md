@@ -59,3 +59,14 @@ The `horizondb.durable` tasks and trigger wrap `pg_durable`, Microsoft's open-so
 - `horizondb.Query` / `horizondb.Queries` run one or more SQL statements, with `fetchType` controlling whether results are returned inline (`FETCH`, `FETCH_ONE`), streamed to internal storage (`STORE`), or discarded (`NONE`).
 - `horizondb.durable.Start`, `Cancel`, `Signal`, `GetStatus`, and `ListInstances` manage `pg_durable` durable function instances directly from SQL (`df.start(func, label, database)`, `df.cancel(id, reason)`, `df.signal(id, name, data)`, `df.status`/`df.result`, and `df.list_instances(status, limit)`).
 - `horizondb.durable.Trigger` polls `df.list_instances(status)` and starts an execution the first time an instance newly reaches a target status, without refiring for instances that remain in that status.
+## Logic Apps
+
+The `logicapps` package provides tasks and triggers for Azure Logic Apps workflows:
+- `logicapps.Run` - trigger a workflow's trigger (e.g. `manual`) and return the run id / status.
+- `logicapps.List` - list workflows in a resource group.
+- `logicapps.ListRuns` - list recent workflow runs with optional status filtering.
+- `logicapps.Get` - retrieve workflow metadata.
+- `logicapps.GetRun` - retrieve a specific workflow run's details (status, outputs, errors).
+- `logicapps.Trigger` - stateful polling trigger that starts Kestra executions for newly observed workflow runs matching configured statuses.
+
+These support service principal and certificate authentication consistent with other Azure tasks. Use the `statusFilter` or `statuses` properties to scope runs, and the `Trigger` provides deduplication and state TTL controls.

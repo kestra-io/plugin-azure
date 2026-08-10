@@ -43,6 +43,12 @@ Infrastructure dependencies (Docker Compose services):
 - `io.kestra.plugin.azure.horizondb.durable.Signal`
 - `io.kestra.plugin.azure.horizondb.durable.Start`
 - `io.kestra.plugin.azure.horizondb.durable.Trigger`
+- `io.kestra.plugin.azure.logicapps.Get`
+- `io.kestra.plugin.azure.logicapps.GetRun`
+- `io.kestra.plugin.azure.logicapps.List`
+- `io.kestra.plugin.azure.logicapps.ListRuns`
+- `io.kestra.plugin.azure.logicapps.Run`
+- `io.kestra.plugin.azure.logicapps.Trigger`
 - `io.kestra.plugin.azure.monitoring.Push`
 - `io.kestra.plugin.azure.monitoring.Query`
 - `io.kestra.plugin.azure.monitoring.Trigger`

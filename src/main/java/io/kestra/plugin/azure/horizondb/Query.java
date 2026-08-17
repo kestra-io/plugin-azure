@@ -22,7 +22,6 @@ import io.kestra.core.models.tasks.RunnableTask;
 import io.kestra.core.models.tasks.common.FetchType;
 import io.kestra.core.runners.RunContext;
 import io.kestra.core.serializers.FileSerde;
-
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
@@ -108,6 +107,8 @@ public class Query extends AbstractHorizonDb<Query.Output> implements RunnableTa
 
         Output output;
         try (Statement statement = createStatement(connection)) {
+            trackStatement(statement);
+
             if (rFetchType == FetchType.STORE) {
                 statement.setFetchSize(rFetchSize);
             }

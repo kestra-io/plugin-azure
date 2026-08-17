@@ -115,6 +115,8 @@ class TriggerEvaluateTest {
             this.id = id;
             this.type = TestTrigger.class.getName();
             this.targetStatus = targetStatus;
+            this.host = Property.ofValue("localhost");
+            this.database = Property.ofValue("test");
             this.canned = canned;
         }
 

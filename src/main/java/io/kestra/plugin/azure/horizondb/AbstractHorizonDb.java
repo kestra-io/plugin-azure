@@ -16,16 +16,18 @@ import java.util.Properties;
 import io.kestra.core.models.annotations.PluginProperty;
 import io.kestra.core.models.property.Property;
 import io.kestra.core.models.tasks.Output;
+import io.kestra.core.models.tasks.RunnableTask;
 import io.kestra.core.models.tasks.Task;
 import io.kestra.core.runners.RunContext;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotNull;
+import lombok.AccessLevel;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.ToString;
-import lombok.experimental.SuperBuilder;
 import lombok.Builder;
+import lombok.experimental.SuperBuilder;
 
 /**
  * Shared connection handling for Azure HorizonDB tasks: opens a JDBC connection using either
@@ -36,7 +38,7 @@ import lombok.Builder;
 @EqualsAndHashCode
 @Getter
 @NoArgsConstructor
-public abstract class AbstractHorizonDb<T extends Output> extends Task {
+public abstract class AbstractHorizonDb<T extends Output> extends Task implements RunnableTask<T> {
     private static final String ENTRA_ID_AUTH_PLUGIN = "com.azure.identity.extensions.jdbc.postgresql.AzurePostgresqlAuthenticationPlugin";
 
     @Schema(
@@ -115,9 +117,24 @@ public abstract class AbstractHorizonDb<T extends Output> extends Task {
     @PluginProperty(group = "connection")
     private Property<Boolean> ssl = Property.ofValue(true);
 
+    // Tracked so kill() (invoked from a different thread when the execution is killed or times
+    // out) can cancel the in-flight statement and close the connection server-side, instead of
+    // leaving the query running on HorizonDB after the Kestra execution has stopped. Mirrors the
+    // pattern used by plugin-jdbc's AbstractJdbcQuery. Never part of equals/toString/the builder.
+    @Getter(AccessLevel.NONE)
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
+    private transient volatile Statement runningStatement;
+
+    @Getter(AccessLevel.NONE)
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
+    private transient volatile Connection runningConnection;
+
     /**
      * Opens a JDBC connection to HorizonDB, delegates to the concrete task, then closes the connection.
      */
+    @Override
     public T run(RunContext runContext) throws Exception {
         String rHost = runContext.render(host).as(String.class)
             .orElseThrow(() -> new IllegalArgumentException("host is required"));
@@ -148,7 +165,10 @@ public abstract class AbstractHorizonDb<T extends Output> extends Task {
         // JDBC 4 ServiceLoader mechanism (META-INF/services/java.sql.Driver); no manual
         // DriverManager.registerDriver call is needed.
         try (Connection connection = DriverManager.getConnection(url, props)) {
+            this.runningConnection = connection;
             return run(runContext, connection);
+        } finally {
+            this.runningConnection = null;
         }
     }
 
@@ -209,6 +229,48 @@ public abstract class AbstractHorizonDb<T extends Output> extends Task {
     }
 
     protected abstract T run(RunContext runContext, Connection connection) throws Exception;
+
+    /**
+     * Registers the statement currently being executed so {@link #kill()} can cancel it if the
+     * execution is killed or times out mid-query. Subclasses must call this immediately after
+     * creating their {@link Statement} or {@link PreparedStatement}.
+     */
+    protected void trackStatement(Statement statement) {
+        this.runningStatement = statement;
+    }
+
+    /**
+     * Forces termination of the in-flight query: sends a cancel request to the server for the
+     * currently tracked statement, then closes the connection. Invoked from a different thread
+     * than the one running the task (see {@link io.kestra.core.models.WorkerJobLifecycle}), so
+     * this must not rely on any thread-local or per-call state beyond the tracked fields.
+     */
+    @Override
+    public void kill() {
+        kill(this.runningStatement);
+        kill(this.runningConnection);
+    }
+
+    private static void kill(Statement statement) {
+        try {
+            if (statement != null && !statement.isClosed()) {
+                statement.cancel();
+                statement.close();
+            }
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    private static void kill(Connection connection) {
+        try {
+            if (connection != null && !connection.isClosed()) {
+                connection.close();
+            }
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
+    }
 
     /**
      * Binds a nullable value onto a prepared statement parameter, falling back to a typed NULL

@@ -103,6 +103,8 @@ public class Queries extends AbstractHorizonDb<Queries.Output> implements Runnab
         List<Query.Output> outputs = new ArrayList<>();
 
         try (Statement statement = createStatement(connection)) {
+            trackStatement(statement);
+
             if (rFetchType == FetchType.STORE) {
                 statement.setFetchSize(rFetchSize);
             }

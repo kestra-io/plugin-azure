@@ -10,6 +10,7 @@ import io.kestra.core.models.property.Property;
 import io.kestra.core.models.tasks.RunnableTask;
 import io.kestra.core.runners.RunContext;
 import io.kestra.plugin.azure.horizondb.AbstractHorizonDb;
+
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotNull;
 import lombok.Builder;
@@ -88,9 +89,10 @@ public class Signal extends AbstractHorizonDb<Signal.Output> implements Runnable
         // documented, so this only asserts the call completed without the driver throwing; it
         // does not assume a specific result column.
         try (PreparedStatement statement = connection.prepareStatement("SELECT df.signal(?, ?, ?)")) {
-            bind(statement, 1, rInstanceId, java.sql.Types.VARCHAR);
-            bind(statement, 2, rSignalName, java.sql.Types.VARCHAR);
-            bind(statement, 3, rPayload, java.sql.Types.VARCHAR);
+            trackStatement(statement);
+            bind(statement, 1, rInstanceId);
+            bind(statement, 2, rSignalName);
+            bind(statement, 3, rPayload);
             statement.execute();
         }
 

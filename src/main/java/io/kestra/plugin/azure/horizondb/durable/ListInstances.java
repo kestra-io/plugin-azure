@@ -70,17 +70,18 @@ import lombok.experimental.SuperBuilder;
 public class ListInstances extends AbstractHorizonDb<ListInstances.Output> implements RunnableTask<ListInstances.Output> {
     @Schema(
         title = "Status filter",
-        description = "Optional status to filter instances by (e.g. Running, Completed, Failed, Cancelled). Passed as df.list_instances()'s own status argument. When empty, all instances are returned."
+        description = "Optional status to filter instances by (e.g. Running, Completed, Failed, Cancelled). Passed as df.list_instances()'s own status argument. When empty, all instances (up to limit) are returned."
     )
     @PluginProperty(group = "main")
     protected Property<String> statusFilter;
 
     @Schema(
         title = "Row limit",
-        description = "Optional maximum number of instances to return. Passed as df.list_instances()'s own limit argument. When empty, all matching instances are returned."
+        description = "Maximum number of instances to return, passed as df.list_instances()'s own limit argument. Defaults to 1000 so this can't silently load an unbounded number of instances into memory (or into a STORE'd file); raise it explicitly if you need more in one call."
     )
+    @Builder.Default
     @PluginProperty(group = "main")
-    protected Property<@Min(1) Integer> limit;
+    protected Property<@Min(1) @Max(10000) Integer> limit = Property.ofValue(1000);
 
     @Schema(
         title = "Result fetching mode",
@@ -101,7 +102,7 @@ public class ListInstances extends AbstractHorizonDb<ListInstances.Output> imple
     @Override
     protected Output run(RunContext runContext, Connection connection) throws Exception {
         String rStatusFilter = runContext.render(statusFilter).as(String.class).orElse(null);
-        Integer rLimit = runContext.render(limit).as(Integer.class).orElse(null);
+        Integer rLimit = runContext.render(limit).as(Integer.class).orElse(1000);
         FetchType rFetchType = runContext.render(fetchType).as(FetchType.class).orElse(FetchType.FETCH);
         Integer rFetchSize = runContext.render(fetchSize).as(Integer.class).orElse(10000);
 
@@ -112,7 +113,8 @@ public class ListInstances extends AbstractHorizonDb<ListInstances.Output> imple
         //   SELECT * FROM df.list_instances('Running');
         //   SELECT * FROM df.list_instances(NULL, 10);
         try (PreparedStatement statement = connection.prepareStatement("SELECT * FROM df.list_instances(?, ?)")) {
-            bind(statement, 1, rStatusFilter, java.sql.Types.VARCHAR);
+            trackStatement(statement);
+            bind(statement, 1, rStatusFilter);
             bind(statement, 2, rLimit, java.sql.Types.INTEGER);
             if (rFetchType == FetchType.STORE) {
                 statement.setFetchSize(rFetchSize);

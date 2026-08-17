@@ -1,9 +1,10 @@
 package io.kestra.plugin.azure.horizondb;
 
-import org.junit.jupiter.api.Test;
-
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.*;
+import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.not;
+import org.junit.jupiter.api.Test;
 
 class AbstractHorizonDbUrlTest {
     @Test

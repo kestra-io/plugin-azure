@@ -80,8 +80,9 @@ public class Cancel extends AbstractHorizonDb<Cancel.Output> implements Runnable
         // this only asserts the call completed without the driver throwing; it does not assume
         // a specific result column.
         try (PreparedStatement statement = connection.prepareStatement("SELECT df.cancel(?, ?)")) {
-            bind(statement, 1, rInstanceId, java.sql.Types.VARCHAR);
-            bind(statement, 2, rReason, java.sql.Types.VARCHAR);
+            trackStatement(statement);
+            bind(statement, 1, rInstanceId);
+            bind(statement, 2, rReason);
             statement.execute();
         }
 

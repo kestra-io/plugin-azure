@@ -204,4 +204,38 @@ class QueryTest {
         // the statement must still be closed even though execute() threw
         verify(statement).close();
     }
+
+    @Test
+    void shouldCancelTheRunningStatementOnKill() throws Exception {
+        Connection connection = mock(Connection.class);
+        Statement statement = mock(Statement.class);
+        ResultSet resultSet = mock(ResultSet.class);
+        ResultSetMetaData metaData = mock(ResultSetMetaData.class);
+
+        when(connection.createStatement(anyInt(), anyInt())).thenReturn(statement);
+        when(statement.execute(anyString())).thenReturn(true);
+        when(statement.getResultSet()).thenReturn(resultSet);
+        when(resultSet.getMetaData()).thenReturn(metaData);
+        when(metaData.getColumnCount()).thenReturn(1);
+        when(metaData.getColumnLabel(1)).thenReturn("id");
+        when(resultSet.next()).thenReturn(false);
+        // simulate that the statement is still open at the moment kill() is invoked
+        when(statement.isClosed()).thenReturn(false);
+
+        Query task = Query.builder()
+            .id(QueryTest.class.getSimpleName())
+            .type(Query.class.getName())
+            .sql(Property.ofValue("SELECT id FROM t"))
+            .build();
+
+        RunContext runContext = runContextFactory.of();
+        task.run(runContext, connection);
+
+        // run() has already returned (and closed the statement via try-with-resources), but
+        // kill() must still be safe to call and must attempt cancel()/close() on whatever
+        // statement was last tracked
+        task.kill();
+
+        verify(statement, atLeastOnce()).cancel();
+    }
 }

@@ -68,8 +68,9 @@ public class GetStatus extends AbstractHorizonDb<GetStatus.Output> implements Ru
             .orElseThrow(() -> new IllegalArgumentException("instanceId is required"));
 
         try (PreparedStatement statement = connection.prepareStatement("SELECT df.status(?) AS status, df.result(?) AS result")) {
-            bind(statement, 1, rInstanceId, java.sql.Types.VARCHAR);
-            bind(statement, 2, rInstanceId, java.sql.Types.VARCHAR);
+            trackStatement(statement);
+            bind(statement, 1, rInstanceId);
+            bind(statement, 2, rInstanceId);
 
             try (ResultSet rs = statement.executeQuery()) {
                 if (!rs.next()) {

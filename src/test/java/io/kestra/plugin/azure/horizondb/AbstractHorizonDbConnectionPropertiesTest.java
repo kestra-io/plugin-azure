@@ -2,10 +2,11 @@ package io.kestra.plugin.azure.horizondb;
 
 import java.util.Properties;
 
-import org.junit.jupiter.api.Test;
-
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.*;
+import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.notNullValue;
+import static org.hamcrest.Matchers.nullValue;
+import org.junit.jupiter.api.Test;
 
 class AbstractHorizonDbConnectionPropertiesTest {
     @Test
@@ -31,12 +32,9 @@ class AbstractHorizonDbConnectionPropertiesTest {
             props.getProperty("authenticationPluginClassName"),
             is("com.azure.identity.extensions.jdbc.postgresql.AzurePostgresqlAuthenticationPlugin")
         );
-        // no service principal creds set: none of the azure.* properties are populated, leaving
-        // the plugin free to fall back to DefaultAzureCredential (managed identity, env vars, CLI)
         assertThat(props.getProperty("azure.tenantId"), nullValue());
         assertThat(props.getProperty("azure.clientId"), nullValue());
         assertThat(props.getProperty("azure.clientSecret"), nullValue());
-        // a password must never leak through when Entra ID is on
         assertThat(props.getProperty("password"), nullValue());
     }
 
@@ -54,7 +52,6 @@ class AbstractHorizonDbConnectionPropertiesTest {
 
     @Test
     void shouldIgnorePasswordWhenEntraIdIsOnEvenIfSet() {
-        // a leftover `password` value must not leak onto the connection once useEntraId is true
         Properties props = AbstractHorizonDb.buildConnectionProperties(
             true, "alice", true, "leftover-password", null, null, null
         );

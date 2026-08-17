@@ -9,6 +9,9 @@ import java.net.URISyntaxException;
 import java.util.Map;
 import java.util.Objects;
 
+import org.junit.jupiter.api.Assumptions;
+import org.junit.jupiter.api.BeforeEach;
+
 import io.kestra.core.junit.annotations.KestraTest;
 import io.kestra.core.models.tasks.Task;
 import io.kestra.core.runners.RunContext;
@@ -39,6 +42,14 @@ public abstract class BaseTest {
 
     @Value("${kestra.variables.globals.azure.blobs.connection-string}")
     protected String connectionString;
+
+    @BeforeEach
+    void requireAzureCredentials() {
+        Assumptions.assumeTrue(
+            connectionString != null && !connectionString.isBlank(),
+            "Azure credentials not configured, skipping integration test"
+        );
+    }
 
     @Value("${kestra.variables.globals.azure.blobs.container}")
     protected String container;

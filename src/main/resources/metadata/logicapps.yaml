@@ -1,0 +1,8 @@
+group: io.kestra.plugin.azure.logicapps
+name: "logicapps"
+title: "Azure Logic Apps"
+description: "Tasks and triggers for running and monitoring Azure Logic Apps workflows."
+body: "Authenticate using an Azure AD service principal (tenantId, clientId, clientSecret, optionally pemCertificate) and provide subscriptionId, resourceGroupName, and workflowName. Use Run to trigger workflows and surface the new runId from the Location header, GetRun and ListRuns to inspect executions, Get and List for workflow metadata, and Trigger to react to completed or failed runs. List supports maxWorkflows to cap large resource groups."
+videos: []
+createdBy: "Kestra Core Team"
+managedBy: "Kestra Core Team"

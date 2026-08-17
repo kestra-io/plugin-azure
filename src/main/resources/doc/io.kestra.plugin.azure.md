@@ -47,3 +47,15 @@ Most tasks require an `endpoint` property pointing to the Azure service endpoint
 Tasks span the most commonly used Azure services. The `storage.blob` and `storage.adls` packages cover uploads, downloads, copies, deletions, and file-arrival triggers for Blob Storage and ADLS Gen2. For messaging, `eventhubs` and `servicebus` each offer produce, consume, a polling `Trigger`, and a `RealtimeTrigger` — use `Trigger` for batch processing on a schedule and `RealtimeTrigger` for per-message executions.
 
 For data and compute, `datafactory` triggers pipeline runs, `synapse.SparkBatchJobCreate` submits Spark jobs, and `batch` manages HPC pools and jobs. `storage.cosmosdb` and `storage.table` cover NoSQL reads and writes, and `function.HttpFunction` invokes Azure Functions. Use `cli.AzCLI` for operations not covered by a dedicated task.
+
+## Logic Apps
+
+The `logicapps` package provides tasks and triggers for Azure Logic Apps workflows:
+- `logicapps.Run` - trigger a workflow's trigger (e.g. `manual`) and return the run id / status.
+- `logicapps.List` - list workflows in a resource group.
+- `logicapps.ListRuns` - list recent workflow runs with optional status filtering.
+- `logicapps.Get` - retrieve workflow metadata.
+- `logicapps.GetRun` - retrieve a specific workflow run's details (status, outputs, errors).
+- `logicapps.Trigger` - stateful polling trigger that starts Kestra executions for newly observed workflow runs matching configured statuses.
+
+These support service principal and certificate authentication consistent with other Azure tasks. Use the `statusFilter` or `statuses` properties to scope runs, and the `Trigger` provides deduplication and state TTL controls.

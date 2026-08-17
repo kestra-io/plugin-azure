@@ -10,6 +10,8 @@ import java.util.concurrent.TimeoutException;
 
 import org.assertj.core.api.AbstractThrowableAssert;
 import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.Assumptions;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 import org.slf4j.Logger;
@@ -36,6 +38,14 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 public abstract class CosmosContainerBaseTest<T extends AbstractCosmosContainerTask.AbstractCosmosContainerTaskBuilder<?, ?, ?>> {
     @Value("${kestra.variables.globals.azure.cosmos.connection-string}")
     protected String connectionString;
+
+    @BeforeEach
+    void requireAzureCredentials() {
+        Assumptions.assumeTrue(
+            connectionString != null && !connectionString.isBlank(),
+            "Azure credentials not configured, skipping integration test"
+        );
+    }
 
     @Value("${kestra.variables.globals.azure.cosmos.endpoint}")
     protected String endpoint;
@@ -73,8 +83,10 @@ public abstract class CosmosContainerBaseTest<T extends AbstractCosmosContainerT
             long deadlineNanos = System.nanoTime() + Duration.ofSeconds(30).toNanos();
             for (Map<String, Object> item : createdItemsToRemove) {
                 if (System.nanoTime() > deadlineNanos) {
-                    log.warn("Cosmos cleanup deadline exceeded, skipping {} remaining items",
-                        createdItemsToRemove.size() - createdItemsToRemove.indexOf(item));
+                    log.warn(
+                        "Cosmos cleanup deadline exceeded, skipping {} remaining items",
+                        createdItemsToRemove.size() - createdItemsToRemove.indexOf(item)
+                    );
                     break;
                 }
                 Future<?> future = executor.submit(() -> deleteItem(item));

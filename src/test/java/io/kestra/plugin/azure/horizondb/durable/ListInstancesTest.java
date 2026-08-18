@@ -55,8 +55,9 @@ class ListInstancesTest {
         assertThat(output.getSize(), is(2L));
         // status filter is passed as df.list_instances()'s own first argument
         verify(statement).setObject(1, "Completed");
-        // limit wasn't set: bound as a typed NULL (INTEGER), not a VARCHAR default
-        verify(statement).setNull(eq(2), anyInt());
+        // limit wasn't set explicitly, but it now defaults to 1000 rather than being left
+        // null/unbounded
+        verify(statement).setObject(2, 1000);
     }
 
     @Test
@@ -111,7 +112,7 @@ class ListInstancesTest {
 
         assertThat(output.getInstances(), hasSize(0));
         verify(statement).setNull(eq(1), anyInt());
-        verify(statement).setNull(eq(2), anyInt());
+        verify(statement).setObject(2, 1000);
     }
 
     @Test

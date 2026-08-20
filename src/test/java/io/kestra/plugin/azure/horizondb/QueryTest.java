@@ -238,4 +238,46 @@ class QueryTest {
 
         verify(statement, atLeastOnce()).cancel();
     }
+
+    @Test
+    void shouldNotThrowAndStillCloseTheConnectionWhenCancelFails() throws Exception {
+        Connection connection = mock(Connection.class);
+        Statement statement = mock(Statement.class);
+        ResultSet resultSet = mock(ResultSet.class);
+        ResultSetMetaData metaData = mock(ResultSetMetaData.class);
+
+        when(connection.createStatement(anyInt(), anyInt())).thenReturn(statement);
+        when(statement.execute(anyString())).thenReturn(true);
+        when(statement.getResultSet()).thenReturn(resultSet);
+        when(resultSet.getMetaData()).thenReturn(metaData);
+        when(metaData.getColumnCount()).thenReturn(1);
+        when(metaData.getColumnLabel(1)).thenReturn("id");
+        when(resultSet.next()).thenReturn(false);
+        when(statement.isClosed()).thenReturn(false);
+        when(connection.isClosed()).thenReturn(false);
+        // cancelling the in-flight statement itself fails
+        doThrow(new java.sql.SQLException("driver refused to cancel")).when(statement).cancel();
+
+        Query task = Query.builder()
+            .id(QueryTest.class.getSimpleName())
+            .type(Query.class.getName())
+            .sql(Property.ofValue("SELECT id FROM t"))
+            .build();
+
+        RunContext runContext = runContextFactory.of();
+        task.run(runContext, connection);
+
+        // simulate kill() being invoked while a connection is still tracked, i.e. mid-run(RunContext)
+        java.lang.reflect.Field runningConnectionField = io.kestra.plugin.azure.horizondb.AbstractHorizonDb.class
+            .getDeclaredField("runningConnection");
+        runningConnectionField.setAccessible(true);
+        runningConnectionField.set(task, connection);
+
+        // kill() must never throw, even though statement.cancel() does
+        org.junit.jupiter.api.Assertions.assertDoesNotThrow(task::kill);
+
+        // ...and must still close the connection despite the statement cancel failure, instead
+        // of aborting early and leaking it
+        verify(connection).close();
+    }
 }

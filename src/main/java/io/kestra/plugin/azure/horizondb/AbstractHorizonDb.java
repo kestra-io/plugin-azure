@@ -19,15 +19,18 @@ import io.kestra.core.models.tasks.Output;
 import io.kestra.core.models.tasks.RunnableTask;
 import io.kestra.core.models.tasks.Task;
 import io.kestra.core.runners.RunContext;
+
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotNull;
 import lombok.AccessLevel;
+import lombok.Builder;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.ToString;
-import lombok.Builder;
 import lombok.experimental.SuperBuilder;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Shared connection handling for Azure HorizonDB tasks: opens a JDBC connection using either
@@ -39,6 +42,8 @@ import lombok.experimental.SuperBuilder;
 @Getter
 @NoArgsConstructor
 public abstract class AbstractHorizonDb<T extends Output> extends Task implements RunnableTask<T> {
+    private static final Logger log = LoggerFactory.getLogger(AbstractHorizonDb.class);
+
     private static final String ENTRA_ID_AUTH_PLUGIN = "com.azure.identity.extensions.jdbc.postgresql.AzurePostgresqlAuthenticationPlugin";
 
     @Schema(
@@ -258,7 +263,10 @@ public abstract class AbstractHorizonDb<T extends Output> extends Task implement
                 statement.close();
             }
         } catch (SQLException e) {
-            throw new RuntimeException(e);
+            // kill() must never throw or block: log and move on so kill(Connection) below still
+            // runs even if cancelling the statement itself failed, rather than leaking the
+            // connection because this exception aborted the rest of kill().
+            log.warn("Failed to cancel in-flight HorizonDB statement", e);
         }
     }
 
@@ -268,7 +276,7 @@ public abstract class AbstractHorizonDb<T extends Output> extends Task implement
                 connection.close();
             }
         } catch (SQLException e) {
-            throw new RuntimeException(e);
+            log.warn("Failed to close HorizonDB connection during kill()", e);
         }
     }
 

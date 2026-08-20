@@ -1,10 +1,13 @@
 package io.kestra.plugin.azure.aifoundry;
 
 import com.azure.ai.projects.AIProjectClientBuilder;
-import com.azure.core.credential.KeyCredential;
+import com.azure.ai.projects.DeploymentsClient;
+import com.azure.ai.projects.models.Deployment;
 import com.azure.core.credential.TokenCredential;
 
+import io.kestra.core.models.annotations.Example;
 import io.kestra.core.models.annotations.Plugin;
+import io.kestra.core.models.annotations.PluginProperty;
 import io.kestra.core.models.property.Property;
 import io.kestra.core.models.tasks.RunnableTask;
 import io.kestra.core.runners.RunContext;
@@ -23,49 +26,76 @@ import lombok.experimental.SuperBuilder;
 @EqualsAndHashCode
 @Getter
 @NoArgsConstructor
-@Plugin
+@Plugin(
+    examples = {
+        @Example(
+            full = true,
+            title = "Retrieve a model deployment from Azure AI Foundry",
+            code = {
+                "id: azure_ai_get_deployment",
+                "namespace: company.team",
+                "tasks:",
+                "  - id: get_deployment",
+                "    type: io.kestra.plugin.azure.aifoundry.GetDeployment",
+                "    endpoint: \"{{ secret('AZURE_AI_FOUNDRY_ENDPOINT') }}\"",
+                "    deploymentName: gpt-4o"
+            }
+        )
+    }
+)
 @Schema(
-    title = "Retrieve deployment status and configuration from Azure AI Foundry."
+    title = "Retrieve deployment status and configuration from Azure AI Foundry",
+    description = "Fetches a named deployment via the Azure AI Projects DeploymentsClient. " +
+        "Requires Entra ID authentication (DefaultAzureCredential); API-key authentication is not supported by this client."
 )
 public class GetDeployment extends AbstractAiFoundryTask implements RunnableTask<GetDeployment.Output> {
 
-    @Schema(title = "The name of the deployment to retrieve.")
+    @Schema(title = "The name of the deployment to retrieve")
     @NotNull
+    @PluginProperty(group = "main")
     private Property<String> deploymentName;
 
     @Override
     public Output run(RunContext runContext) throws Exception {
-        AIProjectClientBuilder builder = new AIProjectClientBuilder()
-            .endpoint(this.getEndpoint(runContext));
-
-        KeyCredential key = this.getKeyCredential(runContext);
-        if (key != null) {
-            throw new IllegalArgumentException("Deployments client only supports Entra ID. Do not provide apiKey.");
-        } else {
-            TokenCredential token = this.getTokenCredential(runContext);
-            builder.credential(token);
+        if (this.getKeyCredential(runContext) != null) {
+            throw new IllegalArgumentException(
+                "GetDeployment uses the Azure AI Projects DeploymentsClient which only supports " +
+                "Entra ID authentication. Remove the apiKey property and configure DefaultAzureCredential " +
+                "(e.g. via AZURE_CLIENT_ID / AZURE_CLIENT_SECRET / AZURE_TENANT_ID environment variables)."
+            );
         }
 
-        var client = builder.buildDeploymentsClient();
-        String deploymentNameRendered = runContext.render(this.deploymentName).as(String.class).orElseThrow();
+        TokenCredential token = this.getTokenCredential(runContext);
+        DeploymentsClient client = new AIProjectClientBuilder()
+            .endpoint(this.getEndpoint(runContext))
+            .credential(token)
+            .buildDeploymentsClient();
 
-        var deployment = client.getDeployment(deploymentNameRendered);
+        String deploymentNameRendered = runContext.render(this.deploymentName)
+            .as(String.class)
+            .orElseThrow(() -> new IllegalArgumentException("deploymentName is required"));
 
-        runContext.logger().info("Retrieved deployment {}", deployment.getName());
+        Deployment deployment = client.getDeployment(deploymentNameRendered);
+
+        runContext.logger().info("Retrieved deployment {} (type: {})", deployment.getName(), deployment.getType());
 
         return Output.builder()
             .name(deployment.getName())
-            .deployment(deployment)
+            .type(deployment.getType() != null ? deployment.getType().toString() : null)
+            .configuration(deployment)
             .build();
     }
 
     @Builder
     @Getter
     public static class Output implements io.kestra.core.models.tasks.Output {
-        @Schema(title = "Deployment name.")
+        @Schema(title = "Deployment name")
         private String name;
 
-        @Schema(title = "Deployment configuration.")
+        @Schema(title = "Deployment type")
+        private String type;
+
+        @Schema(title = "Full deployment configuration object")
         private Object configuration;
     }
 }

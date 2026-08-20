@@ -9,11 +9,13 @@ import com.azure.ai.inference.models.ChatCompletions;
 import com.azure.ai.inference.models.ChatCompletionsOptions;
 import com.azure.ai.inference.models.ChatRequestMessage;
 import com.azure.ai.inference.models.ChatRequestSystemMessage;
+import com.azure.ai.inference.models.ChatRequestUserMessage;
 import com.azure.core.credential.KeyCredential;
 import com.azure.core.credential.TokenCredential;
 
 import io.kestra.core.models.annotations.Example;
 import io.kestra.core.models.annotations.Plugin;
+import io.kestra.core.models.annotations.PluginProperty;
 import io.kestra.core.models.property.Property;
 import io.kestra.core.models.tasks.RunnableTask;
 import io.kestra.core.runners.RunContext;
@@ -59,21 +61,19 @@ import lombok.experimental.SuperBuilder;
     }
 )
 @Schema(
-    title = "Call a deployed model for chat completions.",
+    title = "Call a deployed model for chat completions",
     description = "Use Azure AI Foundry to generate chat completions using a deployed model endpoint."
 )
 public class ChatCompletion extends AbstractAiFoundryTask implements RunnableTask<ChatCompletion.Output> {
 
-    @Schema(
-        title = "The name of the deployment to use."
-    )
+    @Schema(title = "The name of the deployment to use")
     @NotNull
+    @PluginProperty(group = "main")
     private Property<String> deploymentName;
 
-    @Schema(
-        title = "The messages to generate chat completions for."
-    )
+    @Schema(title = "The messages to generate chat completions for")
     @NotNull
+    @PluginProperty(group = "main")
     private Property<List<ChatMessage>> messages;
 
     @NoArgsConstructor
@@ -102,7 +102,8 @@ public class ChatCompletion extends AbstractAiFoundryTask implements RunnableTas
 
         ChatCompletionsClient client = builder.buildClient();
 
-        String deployment = runContext.render(this.deploymentName).as(String.class).orElseThrow();
+        String deployment = runContext.render(this.deploymentName).as(String.class)
+            .orElseThrow(() -> new IllegalArgumentException("deploymentName is required"));
         List<ChatMessage> messageList = runContext.render(this.messages).asList(ChatMessage.class);
 
         List<ChatRequestMessage> requestMessages = new ArrayList<>();
@@ -113,10 +114,10 @@ public class ChatCompletion extends AbstractAiFoundryTask implements RunnableTas
             if ("system".equalsIgnoreCase(role)) {
                 requestMessages.add(new ChatRequestSystemMessage(content));
             } else if ("user".equalsIgnoreCase(role)) {
-                requestMessages.add(new ChatRequestUsertMessage(content));
+                requestMessages.add(new ChatRequestUserMessage(content));
             } else {
                 throw new IllegalArgumentException(
-                    "Unsupported chat message role: " + role
+                    "Unsupported chat message role: '" + role + "'. Supported values: system, user."
                 );
             }
         }
@@ -126,9 +127,16 @@ public class ChatCompletion extends AbstractAiFoundryTask implements RunnableTas
 
         ChatCompletions completions = client.complete(options);
 
-        String result = completions.getChoices().get(0).getMessage().getContent();
+        List<?> choices = completions.getChoices();
+        if (choices == null || choices.isEmpty()) {
+            throw new IllegalStateException(
+                "Azure AI Foundry returned no choices for deployment '" + deployment +
+                "'. Verify the deployment is active and the prompt is not empty."
+            );
+        }
+        String result = completions.getChoices().getFirst().getMessage().getContent();
 
-        runContext.logger().info("Chat completion generated successfully.");
+        runContext.logger().info("Chat completion generated successfully via deployment {}.", deployment);
 
         return Output.builder()
             .content(result)
@@ -138,9 +146,7 @@ public class ChatCompletion extends AbstractAiFoundryTask implements RunnableTas
     @Builder
     @Getter
     public static class Output implements io.kestra.core.models.tasks.Output {
-        @Schema(
-            title = "The generated chat completion content."
-        )
+        @Schema(title = "The generated chat completion content")
         private String content;
     }
 }

@@ -25,12 +25,6 @@ Infrastructure dependencies (Docker Compose services):
 
 ### Key Plugin Classes
 
-- `io.kestra.plugin.azure.aifoundry.ChatCompletion`
-- `io.kestra.plugin.azure.aifoundry.CreateDeployment`
-- `io.kestra.plugin.azure.aifoundry.Embeddings`
-- `io.kestra.plugin.azure.aifoundry.GetDeployment`
-- `io.kestra.plugin.azure.aifoundry.RunAgent`
-- `io.kestra.plugin.azure.aifoundry.Trigger`
 - `io.kestra.plugin.azure.auth.OauthAccessToken`
 - `io.kestra.plugin.azure.batch.job.Create`
 - `io.kestra.plugin.azure.batch.pool.Resize`
@@ -83,7 +77,15 @@ Infrastructure dependencies (Docker Compose services):
 - `io.kestra.plugin.azure.storage.table.Delete`
 - `io.kestra.plugin.azure.storage.table.Get`
 - `io.kestra.plugin.azure.storage.table.List`
+- `io.kestra.plugin.azure.aifoundry.AbstractAiFoundryTask`
+- `io.kestra.plugin.azure.aifoundry.ChatCompletion`
+- `io.kestra.plugin.azure.aifoundry.Embeddings`
+- `io.kestra.plugin.azure.aifoundry.RunAgent`
+- `io.kestra.plugin.azure.aifoundry.GetDeployment`
+- `io.kestra.plugin.azure.aifoundry.CreateEvaluation`
+- `io.kestra.plugin.azure.aifoundry.Trigger`
 - `io.kestra.plugin.azure.synapse.SparkBatchJobCreate`
+
 
 ### Project Structure
 

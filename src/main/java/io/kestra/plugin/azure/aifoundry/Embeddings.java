@@ -10,6 +10,7 @@ import com.azure.core.credential.KeyCredential;
 
 import io.kestra.core.models.annotations.Example;
 import io.kestra.core.models.annotations.Plugin;
+import io.kestra.core.models.annotations.PluginProperty;
 import io.kestra.core.models.property.Property;
 import io.kestra.core.models.tasks.RunnableTask;
 import io.kestra.core.runners.RunContext;
@@ -52,21 +53,19 @@ import lombok.experimental.SuperBuilder;
     }
 )
 @Schema(
-    title = "Generate vector embeddings from text input.",
+    title = "Generate vector embeddings from text input",
     description = "Use Azure AI Foundry to generate embeddings using a deployed model endpoint."
 )
 public class Embeddings extends AbstractAiFoundryTask implements RunnableTask<Embeddings.Output> {
 
-    @Schema(
-        title = "The name of the deployment to use."
-    )
+    @Schema(title = "The name of the deployment to use")
     @NotNull
+    @PluginProperty(group = "main")
     private Property<String> deploymentName;
 
-    @Schema(
-        title = "The text inputs to generate embeddings for."
-    )
+    @Schema(title = "The text inputs to generate embeddings for")
     @NotNull
+    @PluginProperty(group = "main")
     private Property<List<String>> inputs;
 
     @Override
@@ -75,7 +74,6 @@ public class Embeddings extends AbstractAiFoundryTask implements RunnableTask<Em
             .endpoint(getEndpoint(runContext));
 
         KeyCredential key = getKeyCredential(runContext);
-
         if (key != null) {
             builder.credential(key);
         } else {
@@ -88,8 +86,7 @@ public class Embeddings extends AbstractAiFoundryTask implements RunnableTask<Em
             .as(String.class)
             .orElseThrow(() -> new IllegalArgumentException("deploymentName is required"));
 
-        List<String> inputTexts = runContext.render(this.inputs)
-            .asList(String.class);
+        List<String> inputTexts = runContext.render(this.inputs).asList(String.class);
 
         EmbeddingsResult result = client.embed(
             inputTexts,
@@ -106,7 +103,7 @@ public class Embeddings extends AbstractAiFoundryTask implements RunnableTask<Em
             .toList();
 
         runContext.logger().info(
-            "Generated {} embeddings using deployment {}",
+            "Generated {} embeddings using deployment {}.",
             embeddings.size(),
             deployment
         );
@@ -119,9 +116,7 @@ public class Embeddings extends AbstractAiFoundryTask implements RunnableTask<Em
     @Builder
     @Getter
     public static class Output implements io.kestra.core.models.tasks.Output {
-        @Schema(
-            title = "The generated embeddings."
-        )
+        @Schema(title = "The generated embeddings, one list of floats per input text")
         private List<List<Float>> embeddings;
     }
 }

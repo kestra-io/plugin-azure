@@ -1,7 +1,5 @@
 package io.kestra.plugin.azure.aifoundry;
 
-import org.apache.commons.lang3.StringUtils;
-
 import com.azure.core.credential.KeyCredential;
 import com.azure.core.credential.TokenCredential;
 import com.azure.identity.DefaultAzureCredentialBuilder;
@@ -28,17 +26,19 @@ import lombok.experimental.SuperBuilder;
 public abstract class AbstractAiFoundryTask extends Task {
 
     @Schema(
-        title = "Azure AI Foundry endpoint.",
-        description = "The Azure AI Foundry project or model endpoint."
+        title = "Azure AI Foundry endpoint",
+        description = "The Azure AI Foundry project or model endpoint URL."
     )
     @NotNull
+    @PluginProperty(group = "connection")
     private Property<String> endpoint;
 
     @Schema(
-        title = "Azure AI Foundry API key.",
-        description = "API key used when API-key authentication is configured."
+        title = "Azure AI Foundry API key",
+        description = "API key for API-key authentication. When omitted, DefaultAzureCredential (Entra ID) is used instead."
     )
-    @PluginProperty(secret = true)
+    @ToString.Exclude
+    @PluginProperty(group = "connection", secret = true)
     private Property<String> apiKey;
 
     protected String getEndpoint(RunContext runContext)
@@ -46,7 +46,8 @@ public abstract class AbstractAiFoundryTask extends Task {
 
         return runContext.render(this.endpoint)
             .as(String.class)
-            .orElseThrow(() -> new IllegalArgumentException("endpoint is required"));
+            .orElseThrow(() -> new IllegalArgumentException(
+                "endpoint is required. Set it to your Azure AI Foundry project endpoint."));
     }
 
     protected String getApiKey(RunContext runContext)
@@ -60,20 +61,17 @@ public abstract class AbstractAiFoundryTask extends Task {
     protected KeyCredential getKeyCredential(RunContext runContext)
         throws IllegalVariableEvaluationException {
 
-        String apiKey = getApiKey(runContext);
-
-        return StringUtils.isNotBlank(apiKey)
-            ? new KeyCredential(apiKey)
-            : null;
+        String key = getApiKey(runContext);
+        return (key != null && !key.isBlank()) ? new KeyCredential(key) : null;
     }
 
     protected TokenCredential getTokenCredential(RunContext runContext)
         throws IllegalVariableEvaluationException {
 
-        if (StringUtils.isNotBlank(getApiKey(runContext))) {
+        String key = getApiKey(runContext);
+        if (key != null && !key.isBlank()) {
             return null;
         }
-
         return new DefaultAzureCredentialBuilder().build();
     }
 }

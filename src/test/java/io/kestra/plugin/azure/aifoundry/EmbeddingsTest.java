@@ -3,8 +3,16 @@ package io.kestra.plugin.azure.aifoundry;
 import java.util.List;
 import java.util.Map;
 
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
+import org.mockito.MockedConstruction;
+import org.mockito.Mockito;
+
+import com.azure.ai.inference.EmbeddingsClient;
+import com.azure.ai.inference.EmbeddingsClientBuilder;
+import com.azure.ai.inference.models.EmbeddingItem;
+
+import com.azure.ai.inference.models.EmbeddingsResult;
 
 import io.kestra.core.junit.annotations.KestraTest;
 import io.kestra.core.models.property.Property;
@@ -17,29 +25,65 @@ import jakarta.inject.Inject;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.notNullValue;
+import static org.hamcrest.Matchers.contains;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 @KestraTest
 class EmbeddingsTest {
+
     @Inject
     private RunContextFactory runContextFactory;
 
     @Test
-    @Disabled("Needs Azure AI Foundry credentials")
-    void run() throws Exception {
+    void run_withMockedClient_returnsEmbeddingsAndVerifiesArgs() throws Exception {
         Embeddings task = Embeddings.builder()
             .id("embeddings")
             .type(Embeddings.class.getName())
-            .endpoint(Property.ofValue("https://your-endpoint.openai.azure.com/"))
-            .apiKey(Property.ofValue("your-api-key"))
+            .endpoint(Property.ofValue("https://test.api.azureml.ms/"))
+            .apiKey(Property.ofValue("test-key"))
             .deploymentName(Property.ofValue("text-embedding-3-small"))
-            .inputs(Property.ofValue(List.of("The quick brown fox jumps over the lazy dog.")))
+            .inputs(Property.ofValue(List.of("First input text", "Second input text")))
             .build();
 
         RunContext runContext = TestsUtils.mockRunContext(runContextFactory, task, Map.of());
 
-        Embeddings.Output runOutput = task.run(runContext);
+        EmbeddingItem item1 = mock(EmbeddingItem.class);
+        when(item1.getEmbeddingList()).thenReturn(List.of(0.1f, 0.2f, 0.3f));
 
-        assertThat(runOutput.getEmbeddings().size(), is(1));
-        assertThat(runOutput.getEmbeddings().get(0), notNullValue());
+        EmbeddingItem item2 = mock(EmbeddingItem.class);
+        when(item2.getEmbeddingList()).thenReturn(List.of(0.4f, 0.5f, 0.6f));
+
+        EmbeddingsResult embeddingsResult = mock(EmbeddingsResult.class);
+        when(embeddingsResult.getData()).thenReturn(List.of(item1, item2));
+
+        EmbeddingsClient mockClient = mock(EmbeddingsClient.class);
+        when(mockClient.embed(any(java.util.List.class), any(), any(), any(), anyString(), any())).thenReturn(embeddingsResult);
+
+        try (MockedConstruction<EmbeddingsClientBuilder> ignored =
+                 Mockito.mockConstruction(EmbeddingsClientBuilder.class, (mock, ctx) -> {
+                     when(mock.endpoint(anyString())).thenReturn(mock);
+                     when(mock.credential(any(com.azure.core.credential.TokenCredential.class))).thenReturn(mock);
+                     when(mock.buildClient()).thenReturn(mockClient);
+                 })) {
+
+            Embeddings.Output output = task.run(runContext);
+
+            assertThat(output, notNullValue());
+            assertThat(output.getEmbeddings().size(), is(2));
+            assertThat(output.getEmbeddings().get(0), contains(0.1f, 0.2f, 0.3f));
+            assertThat(output.getEmbeddings().get(1), contains(0.4f, 0.5f, 0.6f));
+
+            ArgumentCaptor<java.util.List<String>> captor = ArgumentCaptor.forClass(java.util.List.class);
+            verify(mockClient).embed(captor.capture(), any(), any(), any(), anyString(), any());
+
+            
+            
+            assertThat(captor.getValue().size(), is(2));
+            assertThat(captor.getValue(), contains("First input text", "Second input text"));
+        }
     }
 }

@@ -35,6 +35,14 @@ Infrastructure dependencies (Docker Compose services):
 - `io.kestra.plugin.azure.eventhubs.RealtimeTrigger`
 - `io.kestra.plugin.azure.eventhubs.Trigger`
 - `io.kestra.plugin.azure.function.HttpFunction`
+- `io.kestra.plugin.azure.horizondb.Queries`
+- `io.kestra.plugin.azure.horizondb.Query`
+- `io.kestra.plugin.azure.horizondb.durable.Cancel`
+- `io.kestra.plugin.azure.horizondb.durable.GetStatus`
+- `io.kestra.plugin.azure.horizondb.durable.ListInstances`
+- `io.kestra.plugin.azure.horizondb.durable.Signal`
+- `io.kestra.plugin.azure.horizondb.durable.Start`
+- `io.kestra.plugin.azure.horizondb.durable.Trigger`
 - `io.kestra.plugin.azure.logicapps.Get`
 - `io.kestra.plugin.azure.logicapps.GetRun`
 - `io.kestra.plugin.azure.logicapps.List`

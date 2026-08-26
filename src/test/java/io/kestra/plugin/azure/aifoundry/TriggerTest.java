@@ -28,9 +28,9 @@ import static org.hamcrest.Matchers.is;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-import static org.mockito.Mockito.times;
 
 @KestraTest
 class TriggerTest {
@@ -46,11 +46,10 @@ class TriggerTest {
             .endpoint(Property.ofValue("https://test.api.azureml.ms/"))
             .threadId(Property.ofValue("thread-123"))
             .runId(Property.ofValue("run-456"))
-            .stateKey(Property.ofValue("trigger-completed-test"))
+            .stateKey(Property.ofValue("test-" + java.util.UUID.randomUUID().toString()))
             .build();
 
-        Map.Entry<ConditionContext, io.kestra.core.models.triggers.Trigger> ctx =
-            TestsUtils.mockTrigger(runContextFactory, trigger);
+        Map.Entry<ConditionContext, io.kestra.core.models.triggers.Trigger> ctx = TestsUtils.mockTrigger(runContextFactory, trigger);
 
         ThreadRun mockRun = mock(ThreadRun.class);
         when(mockRun.getStatus()).thenReturn(RunStatus.COMPLETED);
@@ -62,16 +61,16 @@ class TriggerTest {
         PersistentAgentsClient agentsClient = mock(PersistentAgentsClient.class);
         when(agentsClient.getRunsClient()).thenReturn(runsClient);
 
-        try (MockedConstruction<AIProjectClientBuilder> ignored =
-                 Mockito.mockConstruction(AIProjectClientBuilder.class, (mock, c) -> {
-                     when(mock.endpoint(anyString())).thenReturn(mock);
-                     when(mock.credential(any())).thenReturn(mock);
-                     when(mock.buildPersistentAgentsClient()).thenReturn(agentsClient);
-                 })) {
+        try (MockedConstruction<AIProjectClientBuilder> ignored = Mockito.mockConstruction(AIProjectClientBuilder.class, (mock, c) ->
+        {
+            when(mock.endpoint(anyString())).thenReturn(mock);
+            when(mock.credential(any())).thenReturn(mock);
+            when(mock.buildPersistentAgentsClient()).thenReturn(agentsClient);
+        })) {
 
             // First poll: Should fire execution
             Optional<Execution> result1 = trigger.evaluate(ctx.getKey(), ctx.getValue());
-            System.out.println("RES1: " + result1); assertThat(result1.isPresent(), is(true));
+            assertThat(result1.isPresent(), is(true));
 
             // Second poll: Same run and status, should be deduplicated (return Optional.empty)
             Optional<Execution> result2 = trigger.evaluate(ctx.getKey(), ctx.getValue());
@@ -90,11 +89,10 @@ class TriggerTest {
             .endpoint(Property.ofValue("https://test.api.azureml.ms/"))
             .threadId(Property.ofValue("thread-123"))
             .runId(Property.ofValue("run-456"))
-            .stateKey(Property.ofValue("trigger-in-progress-test"))
+            .stateKey(Property.ofValue("test-" + java.util.UUID.randomUUID().toString()))
             .build();
 
-        Map.Entry<ConditionContext, io.kestra.core.models.triggers.Trigger> ctx =
-            TestsUtils.mockTrigger(runContextFactory, trigger);
+        Map.Entry<ConditionContext, io.kestra.core.models.triggers.Trigger> ctx = TestsUtils.mockTrigger(runContextFactory, trigger);
 
         ThreadRun mockRun = mock(ThreadRun.class);
         when(mockRun.getStatus()).thenReturn(RunStatus.IN_PROGRESS);
@@ -105,12 +103,12 @@ class TriggerTest {
         PersistentAgentsClient agentsClient = mock(PersistentAgentsClient.class);
         when(agentsClient.getRunsClient()).thenReturn(runsClient);
 
-        try (MockedConstruction<AIProjectClientBuilder> ignored =
-                 Mockito.mockConstruction(AIProjectClientBuilder.class, (mock, c) -> {
-                     when(mock.endpoint(anyString())).thenReturn(mock);
-                     when(mock.credential(any())).thenReturn(mock);
-                     when(mock.buildPersistentAgentsClient()).thenReturn(agentsClient);
-                 })) {
+        try (MockedConstruction<AIProjectClientBuilder> ignored = Mockito.mockConstruction(AIProjectClientBuilder.class, (mock, c) ->
+        {
+            when(mock.endpoint(anyString())).thenReturn(mock);
+            when(mock.credential(any())).thenReturn(mock);
+            when(mock.buildPersistentAgentsClient()).thenReturn(agentsClient);
+        })) {
 
             Optional<Execution> result = trigger.evaluate(ctx.getKey(), ctx.getValue());
             assertThat(result.isEmpty(), is(true));
@@ -125,11 +123,10 @@ class TriggerTest {
             .endpoint(Property.ofValue("https://test.api.azureml.ms/"))
             .threadId(Property.ofValue("thread-123"))
             .runId(Property.ofValue("run-456"))
-            .stateKey(Property.ofValue("trigger-failed-test"))
+            .stateKey(Property.ofValue("test-" + java.util.UUID.randomUUID().toString()))
             .build();
 
-        Map.Entry<ConditionContext, io.kestra.core.models.triggers.Trigger> ctx =
-            TestsUtils.mockTrigger(runContextFactory, trigger);
+        Map.Entry<ConditionContext, io.kestra.core.models.triggers.Trigger> ctx = TestsUtils.mockTrigger(runContextFactory, trigger);
 
         ThreadRun mockRun = mock(ThreadRun.class);
         when(mockRun.getStatus()).thenReturn(RunStatus.FAILED);
@@ -141,12 +138,12 @@ class TriggerTest {
         PersistentAgentsClient agentsClient = mock(PersistentAgentsClient.class);
         when(agentsClient.getRunsClient()).thenReturn(runsClient);
 
-        try (MockedConstruction<AIProjectClientBuilder> ignored =
-                 Mockito.mockConstruction(AIProjectClientBuilder.class, (mock, c) -> {
-                     when(mock.endpoint(anyString())).thenReturn(mock);
-                     when(mock.credential(any())).thenReturn(mock);
-                     when(mock.buildPersistentAgentsClient()).thenReturn(agentsClient);
-                 })) {
+        try (MockedConstruction<AIProjectClientBuilder> ignored = Mockito.mockConstruction(AIProjectClientBuilder.class, (mock, c) ->
+        {
+            when(mock.endpoint(anyString())).thenReturn(mock);
+            when(mock.credential(any())).thenReturn(mock);
+            when(mock.buildPersistentAgentsClient()).thenReturn(agentsClient);
+        })) {
 
             Optional<Execution> result = trigger.evaluate(ctx.getKey(), ctx.getValue());
             assertThat(result.isPresent(), is(true));

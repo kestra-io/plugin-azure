@@ -3,6 +3,7 @@ package io.kestra.plugin.azure.aifoundry;
 import com.azure.ai.projects.AIProjectClientBuilder;
 import com.azure.ai.projects.DeploymentsClient;
 import com.azure.ai.projects.models.Deployment;
+import com.azure.ai.projects.models.ModelDeployment;
 import com.azure.core.credential.TokenCredential;
 
 import io.kestra.core.models.annotations.Example;
@@ -31,15 +32,15 @@ import lombok.experimental.SuperBuilder;
         @Example(
             full = true,
             title = "Retrieve a model deployment from Azure AI Foundry",
-            code = {
-                "id: azure_ai_get_deployment",
-                "namespace: company.team",
-                "tasks:",
-                "  - id: get_deployment",
-                "    type: io.kestra.plugin.azure.aifoundry.GetDeployment",
-                "    endpoint: \"{{ secret('AZURE_AI_FOUNDRY_ENDPOINT') }}\"",
-                "    deploymentName: gpt-4o"
-            }
+            code = """
+                    id: azure_ai_get_deployment
+                    namespace: company.team
+                    tasks:
+                      - id: get_deployment
+                        type: io.kestra.plugin.azure.aifoundry.GetDeployment
+                        endpoint: "{{ secret('AZURE_AI_FOUNDRY_ENDPOINT') }}"
+                        deploymentName: gpt-4o
+                """
         )
     }
 )
@@ -60,8 +61,8 @@ public class GetDeployment extends AbstractAiFoundryTask implements RunnableTask
         if (this.getKeyCredential(runContext) != null) {
             throw new IllegalArgumentException(
                 "GetDeployment uses the Azure AI Projects DeploymentsClient which only supports " +
-                "Entra ID authentication. Remove the apiKey property and configure DefaultAzureCredential " +
-                "(e.g. via AZURE_CLIENT_ID / AZURE_CLIENT_SECRET / AZURE_TENANT_ID environment variables)."
+                    "Entra ID authentication. Remove the apiKey property and configure DefaultAzureCredential " +
+                    "(e.g. via AZURE_CLIENT_ID / AZURE_CLIENT_SECRET / AZURE_TENANT_ID environment variables)."
             );
         }
 
@@ -79,10 +80,22 @@ public class GetDeployment extends AbstractAiFoundryTask implements RunnableTask
 
         runContext.logger().info("Retrieved deployment {} (type: {})", deployment.getName(), deployment.getType());
 
+        DeploymentRecord.DeploymentRecordBuilder recordBuilder = DeploymentRecord.builder()
+            .name(deployment.getName())
+            .type(deployment.getType() != null ? deployment.getType().toString() : null);
+
+        if (deployment instanceof ModelDeployment modelDeployment) {
+            recordBuilder
+                .modelName(modelDeployment.getModelName())
+                .modelVersion(modelDeployment.getModelVersion())
+                .modelPublisher(modelDeployment.getModelPublisher())
+                .connectionName(modelDeployment.getConnectionName());
+        }
+
         return Output.builder()
             .name(deployment.getName())
             .type(deployment.getType() != null ? deployment.getType().toString() : null)
-            .configuration(deployment)
+            .configuration(recordBuilder.build())
             .build();
     }
 
@@ -96,6 +109,17 @@ public class GetDeployment extends AbstractAiFoundryTask implements RunnableTask
         private String type;
 
         @Schema(title = "Full deployment configuration object")
-        private Object configuration;
+        private DeploymentRecord configuration;
+    }
+
+    @Builder
+    @Getter
+    public static class DeploymentRecord {
+        private String name;
+        private String type;
+        private String modelName;
+        private String modelVersion;
+        private String modelPublisher;
+        private String connectionName;
     }
 }

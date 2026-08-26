@@ -40,23 +40,23 @@ import lombok.experimental.SuperBuilder;
         @Example(
             full = true,
             title = "Chat completion with a deployed model",
-            code = {
-                "id: azure_ai_chat_completion",
-                "namespace: company.team",
-                "inputs:",
-                "  - id: prompt",
-                "    type: STRING",
-                "    defaults: \"Summarize the quarterly report.\"",
-                "tasks:",
-                "  - id: chat",
-                "    type: io.kestra.plugin.azure.aifoundry.ChatCompletion",
-                "    endpoint: \"{{ secret('AZURE_AI_FOUNDRY_ENDPOINT') }}\"",
-                "    apiKey: \"{{ secret('AZURE_AI_FOUNDRY_API_KEY') }}\"",
-                "    deploymentName: gpt-4o",
-                "    messages:",
-                "      - role: user",
-                "        content: \"{{ inputs.prompt }}\""
-            }
+            code = """
+                    id: azure_ai_chat_completion
+                    namespace: company.team
+                    inputs:
+                      - id: prompt
+                        type: STRING
+                        defaults: "Summarize the quarterly report."
+                    tasks:
+                      - id: chat
+                        type: io.kestra.plugin.azure.aifoundry.ChatCompletion
+                        endpoint: "{{ secret('AZURE_AI_FOUNDRY_ENDPOINT') }}"
+                        apiKey: "{{ secret('AZURE_AI_FOUNDRY_API_KEY') }}"
+                        deploymentName: gpt-4o
+                        messages:
+                          - role: user
+                            content: "{{ inputs.prompt }}"
+                """
         )
     }
 )
@@ -131,7 +131,7 @@ public class ChatCompletion extends AbstractAiFoundryTask implements RunnableTas
         if (choices == null || choices.isEmpty()) {
             throw new IllegalStateException(
                 "Azure AI Foundry returned no choices for deployment '" + deployment +
-                "'. Verify the deployment is active and the prompt is not empty."
+                    "'. Verify the deployment is active and the prompt is not empty."
             );
         }
         String result = completions.getChoices().getFirst().getMessage().getContent();

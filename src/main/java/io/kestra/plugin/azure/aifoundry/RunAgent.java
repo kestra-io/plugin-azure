@@ -4,8 +4,8 @@ import java.time.Duration;
 import java.util.List;
 import java.util.Set;
 
-import com.azure.ai.agents.persistent.PersistentAgentsClient;
 import com.azure.ai.agents.persistent.MessagesClient;
+import com.azure.ai.agents.persistent.PersistentAgentsClient;
 import com.azure.ai.agents.persistent.RunsClient;
 import com.azure.ai.agents.persistent.ThreadsClient;
 import com.azure.ai.agents.persistent.models.CreateRunOptions;
@@ -45,18 +45,18 @@ import lombok.experimental.SuperBuilder;
         @Example(
             full = true,
             title = "Run an Azure AI Foundry agent and retrieve the reply",
-            code = {
-                "id: azure_ai_run_agent",
-                "namespace: company.team",
-                "tasks:",
-                "  - id: run_agent",
-                "    type: io.kestra.plugin.azure.aifoundry.RunAgent",
-                "    endpoint: \"{{ secret('AZURE_AI_FOUNDRY_ENDPOINT') }}\"",
-                "    agentId: asst_abc123",
-                "    prompt: \"Summarize last week's sales data.\"",
-                "    pollInterval: PT5S",
-                "    timeout: PT5M"
-            }
+            code = """
+                    id: azure_ai_run_agent
+                    namespace: company.team
+                    tasks:
+                      - id: run_agent
+                        type: io.kestra.plugin.azure.aifoundry.RunAgent
+                        endpoint: "{{ secret('AZURE_AI_FOUNDRY_ENDPOINT') }}"
+                        agentId: asst_abc123
+                        prompt: "Summarize last week's sales data."
+                        pollInterval: PT5S
+                        timeout: PT5M
+                """
         )
     }
 )
@@ -117,6 +117,10 @@ public class RunAgent extends AbstractAiFoundryTask implements RunnableTask<RunA
             .orElse(Duration.ofMillis(DEFAULT_TIMEOUT_MS))
             .toMillis();
 
+        String apiKeyStr = runContext.render(this.getApiKey()).as(String.class).orElse(null);
+        if (apiKeyStr != null && !apiKeyStr.isBlank()) {
+            throw new IllegalArgumentException("Tasks using the Azure AI Projects SDK require Entra ID authentication (DefaultAzureCredential). Do not provide an apiKey.");
+        }
         TokenCredential token = this.getTokenCredential(runContext);
         PersistentAgentsClient agentsClient = new AIProjectClientBuilder()
             .endpoint(this.getEndpoint(runContext))
@@ -148,7 +152,7 @@ public class RunAgent extends AbstractAiFoundryTask implements RunnableTask<RunA
             if (System.currentTimeMillis() > deadline) {
                 throw new IllegalStateException(
                     "Run " + runId + " did not complete within the configured timeout (" +
-                    Duration.ofMillis(timeoutMs) + "). Last status: " + status + "."
+                        Duration.ofMillis(timeoutMs) + "). Last status: " + status + "."
                 );
             }
             Thread.sleep(pollMs);
@@ -163,7 +167,7 @@ public class RunAgent extends AbstractAiFoundryTask implements RunnableTask<RunA
                 : "no error details available";
             throw new IllegalStateException(
                 "Run " + runId + " finished with non-completed status " + status +
-                ". Error: " + errorMsg
+                    ". Error: " + errorMsg
             );
         }
 
@@ -173,9 +177,11 @@ public class RunAgent extends AbstractAiFoundryTask implements RunnableTask<RunA
             .filter(m -> MessageRole.AGENT.equals(m.getRole()))
             .findFirst()
             .map(m -> extractText(m.getContent()))
-            .orElseThrow(() -> new IllegalStateException(
-                "Run " + runId + " completed but no assistant message was found in thread " + threadId + "."
-            ));
+            .orElseThrow(
+                () -> new IllegalStateException(
+                    "Run " + runId + " completed but no assistant message was found in thread " + threadId + "."
+                )
+            );
 
         runContext.logger().info("Run {} completed successfully.", runId);
 

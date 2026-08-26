@@ -50,22 +50,21 @@ import static io.kestra.core.models.triggers.StatefulTriggerService.writeState;
         @Example(
             full = true,
             title = "Fire an execution when a specific Azure AI Foundry agent run reaches a terminal state",
-            code = {
-                "id: azure_ai_on_agent_complete",
-                "namespace: company.team",
-                "triggers:",
-                "  - id: on_agent_run",
-                "    type: io.kestra.plugin.azure.aifoundry.Trigger",
-                "    endpoint: \"{{ secret('AZURE_AI_FOUNDRY_ENDPOINT') }}\"",
-                "    apiKey: \"{{ secret('AZURE_AI_FOUNDRY_API_KEY') }}\"",
-                "    threadId: thread_abc123",
-                "    runId: run_xyz789",
-                "    interval: PT1M",
-                "tasks:",
-                "  - id: notify",
-                "    type: io.kestra.plugin.core.log.Log",
-                "    message: \"Agent run {{ trigger.runId }} finished with status {{ trigger.status }}\""
-            }
+            code = """
+                    id: azure_ai_on_agent_complete
+                    namespace: company.team
+                    tasks:
+                      - id: notify
+                        type: io.kestra.plugin.core.log.Log
+                        message: "Agent run {{ trigger.runId }} finished with status {{ trigger.status }}"
+                    triggers:
+                      - id: on_agent_run
+                        type: io.kestra.plugin.azure.aifoundry.Trigger
+                        endpoint: "{{ secret('AZURE_AI_FOUNDRY_ENDPOINT') }}"
+                        threadId: thread_abc123
+                        runId: run_xyz789
+                        interval: PT1M
+                """
         )
     }
 )
@@ -84,14 +83,6 @@ public class Trigger extends AbstractTrigger implements PollingTriggerInterface,
     @NotNull
     @PluginProperty(group = "connection")
     private Property<String> endpoint;
-
-    @Schema(
-        title = "Azure AI Foundry API key",
-        description = "API key for key-based authentication. When omitted, DefaultAzureCredential is used."
-    )
-    @ToString.Exclude
-    @PluginProperty(group = "connection", secret = true)
-    private Property<String> apiKey;
 
     @Schema(title = "The thread ID containing the run to watch")
     @NotNull
@@ -134,7 +125,6 @@ public class Trigger extends AbstractTrigger implements PollingTriggerInterface,
         String endpointStr = runContext.render(this.endpoint).as(String.class)
             .orElseThrow(() -> new IllegalArgumentException("endpoint is required"));
 
-        String apiKeyStr = runContext.render(this.apiKey).as(String.class).orElse(null);
         TokenCredential credential = new DefaultAzureCredentialBuilder().build();
 
         PersistentAgentsClient agentsClient = new AIProjectClientBuilder()
@@ -169,7 +159,9 @@ public class Trigger extends AbstractTrigger implements PollingTriggerInterface,
 
         writeState(runContext, rStateKey, previousState, rStateTtl);
 
-        runContext.logger().info("State evaluation: run={}, status={}, modifiedAt={}, on={}, previousState={}, fire={}, new={}", run, status, modifiedAt, rOn, previousState, stateChange.fire(), stateChange.isNew());
+        runContext.logger().info(
+            "State evaluation: run={}, status={}, modifiedAt={}, on={}, previousState={}, fire={}, new={}", run, status, modifiedAt, rOn, previousState, stateChange.fire(), stateChange.isNew()
+        );
 
         if (!stateChange.fire()) {
             runContext.logger().debug(

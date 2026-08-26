@@ -36,18 +36,18 @@ import lombok.experimental.SuperBuilder;
         @Example(
             full = true,
             title = "Create a new evaluation run in Azure AI Foundry",
-            code = {
-                "id: azure_ai_create_evaluation",
-                "namespace: company.team",
-                "tasks:",
-                "  - id: create_eval",
-                "    type: io.kestra.plugin.azure.aifoundry.CreateEvaluation",
-                "    endpoint: \"{{ secret('AZURE_AI_FOUNDRY_ENDPOINT') }}\"",
-                "    datasetId: \"azureml:my-dataset:1\"",
-                "    displayName: \"Nightly Groundedness Eval\"",
-                "    evaluators:",
-                "      groundedness: \"azureml://registries/azureml/models/Groundedness-Evaluator/versions/1\""
-            }
+            code = """
+                    id: azure_ai_create_evaluation
+                    namespace: company.team
+                    tasks:
+                      - id: create_eval
+                        type: io.kestra.plugin.azure.aifoundry.CreateEvaluation
+                        endpoint: "{{ secret('AZURE_AI_FOUNDRY_ENDPOINT') }}"
+                        datasetId: "azureml:my-dataset:1"
+                        displayName: "Nightly Groundedness Eval"
+                        evaluators:
+                          groundedness: "azureml://registries/azureml/models/Groundedness-Evaluator/versions/1"
+                """
         )
     }
 )
@@ -86,7 +86,7 @@ public class CreateEvaluation extends AbstractAiFoundryTask implements RunnableT
         if (this.getKeyCredential(runContext) != null) {
             throw new IllegalArgumentException(
                 "CreateEvaluation uses the Azure AI Projects EvaluationsClient which only supports " +
-                "Entra ID authentication. Remove the apiKey property and configure DefaultAzureCredential."
+                    "Entra ID authentication. Remove the apiKey property and configure DefaultAzureCredential."
             );
         }
 
@@ -112,7 +112,7 @@ public class CreateEvaluation extends AbstractAiFoundryTask implements RunnableT
 
         InputDataset inputDataset = new InputDataset(datasetIdRendered);
         Evaluation evaluation = new Evaluation(inputDataset, evaluatorConfigs);
-        
+
         String displayNameRendered = runContext.render(this.displayName).as(String.class).orElse(null);
         if (displayNameRendered != null) {
             evaluation.setDisplayName(displayNameRendered);

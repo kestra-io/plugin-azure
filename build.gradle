@@ -89,6 +89,7 @@ dependencies {
     implementation("com.azure:azure-ai-inference:1.0.0-beta.5", kestraProvidedJackson)
     // Azure AI Projects SDK (agents via PersistentAgentsClient, evaluations, deployments)
     implementation("com.azure:azure-ai-projects:1.0.0-beta.2", kestraProvidedJackson)
+    implementation("com.azure:azure-ai-agents-persistent:1.0.0-beta.2", kestraProvidedJackson)
 
     // Shared kernel library
     implementation 'io.kestra.plugin:plugin-azure-lib:1.1.3'

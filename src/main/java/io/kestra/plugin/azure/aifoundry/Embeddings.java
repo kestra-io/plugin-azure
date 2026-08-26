@@ -34,21 +34,21 @@ import lombok.experimental.SuperBuilder;
         @Example(
             full = true,
             title = "Generate embeddings and log the result",
-            code = {
-                "id: azure_ai_embeddings",
-                "namespace: company.team",
-                "tasks:",
-                "  - id: embed",
-                "    type: io.kestra.plugin.azure.aifoundry.Embeddings",
-                "    endpoint: \"{{ secret('AZURE_AI_FOUNDRY_ENDPOINT') }}\"",
-                "    apiKey: \"{{ secret('AZURE_AI_FOUNDRY_API_KEY') }}\"",
-                "    deploymentName: text-embedding-3-small",
-                "    inputs:",
-                "      - \"The quick brown fox jumps over the lazy dog.\"",
-                "  - id: log_result",
-                "    type: io.kestra.plugin.core.log.Log",
-                "    message: \"Embedding vector length: {{ outputs.embed.embeddings[0] | length }}\""
-            }
+            code = """
+                    id: azure_ai_embeddings
+                    namespace: company.team
+                    tasks:
+                      - id: embed
+                        type: io.kestra.plugin.azure.aifoundry.Embeddings
+                        endpoint: "{{ secret('AZURE_AI_FOUNDRY_ENDPOINT') }}"
+                        apiKey: "{{ secret('AZURE_AI_FOUNDRY_API_KEY') }}"
+                        deploymentName: text-embedding-3-small
+                        inputs:
+                          - "The quick brown fox jumps over the lazy dog."
+                      - id: log_result
+                        type: io.kestra.plugin.core.log.Log
+                        message: "Embedding vector length: {{ outputs.embed.embeddings[0] | length }}"
+                """
         )
     }
 )

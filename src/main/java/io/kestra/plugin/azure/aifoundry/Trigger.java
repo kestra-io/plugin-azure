@@ -61,7 +61,7 @@ import static io.kestra.core.models.triggers.StatefulTriggerService.writeState;
                       - id: on_evaluation
                         type: io.kestra.plugin.azure.aifoundry.Trigger
                         endpoint: "{{ secret('AZURE_AI_FOUNDRY_ENDPOINT') }}"
-                        interval: PT1M
+                        interval: PT5M
                 """
         )
     }
@@ -69,7 +69,8 @@ import static io.kestra.core.models.triggers.StatefulTriggerService.writeState;
 @Schema(
     title = "Poll Azure AI Foundry for completed evaluations",
     description = "Polls the Azure AI Projects EvaluationsClient for terminal evaluations. " +
-        "Fires an execution when a newly observed evaluation reaches a terminal status (e.g., Completed, Failed, Canceled)."
+        "Fires an execution when a newly observed evaluation reaches one of the configured terminal statuses. " +
+        "Subsequent polls will not re-fire for already-observed evaluations (uses state deduplication)."
 )
 public class Trigger extends AbstractTrigger implements PollingTriggerInterface, TriggerOutput<Trigger.Output>, StatefulTriggerInterface {
 
@@ -84,6 +85,16 @@ public class Trigger extends AbstractTrigger implements PollingTriggerInterface,
     @Builder.Default
     private final Duration interval = Duration.ofSeconds(60);
 
+    @Schema(title = "Statuses", description = "Evaluation statuses that should trigger executions. Defaults to Completed, Failed, Canceled, and Expired.")
+    @Builder.Default
+    @PluginProperty(group = "main")
+    private Property<List<String>> statuses = Property.ofValue(List.of("Completed", "Failed", "Canceled", "Expired"));
+
+    @Schema(title = "Maximum evaluations", description = "Maximum number of recent evaluations to inspect per polling interval. Defaults to 25.")
+    @Builder.Default
+    @PluginProperty(group = "execution")
+    private Property<Integer> maxEvaluations = Property.ofValue(25);
+
     @Builder.Default
     @Schema(title = "State change mode", description = "Stateful trigger change mode used for observed evaluations.")
     @PluginProperty(group = "advanced")
@@ -93,7 +104,7 @@ public class Trigger extends AbstractTrigger implements PollingTriggerInterface,
     @PluginProperty(group = "advanced")
     private Property<String> stateKey;
 
-    @Schema(title = "State TTL", description = "How long observed workflow run state is retained.")
+    @Schema(title = "State TTL", description = "How long observed evaluation state is retained.")
     @PluginProperty(group = "advanced")
     private Property<Duration> stateTtl;
 
@@ -104,6 +115,8 @@ public class Trigger extends AbstractTrigger implements PollingTriggerInterface,
         String rStateKey = runContext.render(stateKey).as(String.class).orElse(StatefulTriggerService.defaultKey(context.getNamespace(), context.getFlowId(), id));
         Optional<Duration> rStateTtl = runContext.render(stateTtl).as(Duration.class);
         On rOn = runContext.render(on).as(On.class).orElse(On.CREATE);
+        List<String> rStatuses = runContext.render(statuses).asList(String.class);
+        int rMaxEvaluations = runContext.render(maxEvaluations).as(Integer.class).orElse(25);
 
         String endpointStr = runContext.render(this.endpoint).as(String.class)
             .orElseThrow(() -> new IllegalArgumentException("endpoint is required"));
@@ -118,14 +131,16 @@ public class Trigger extends AbstractTrigger implements PollingTriggerInterface,
         List<EvaluationRecord> newEvaluations = new ArrayList<>();
         var previousState = readState(runContext, rStateKey, rStateTtl);
 
+        int count = 0;
         for (Evaluation evaluation : evalClient.listEvaluations()) {
-            String status = evaluation.getStatus();
-            boolean isTerminal = "Completed".equalsIgnoreCase(status)
-                || "Failed".equalsIgnoreCase(status)
-                || "Canceled".equalsIgnoreCase(status)
-                || "Expired".equalsIgnoreCase(status);
+            if (count >= rMaxEvaluations) {
+                break;
+            }
+            count++;
 
-            if (isTerminal) {
+            String status = evaluation.getStatus();
+
+            if (rStatuses.stream().anyMatch(s -> s.equalsIgnoreCase(status))) {
                 var candidate = StatefulTriggerService.Entry.candidate(evaluation.getName(), status, Instant.now());
                 var stateChange = computeAndUpdateState(previousState, candidate, rOn);
 
@@ -143,7 +158,7 @@ public class Trigger extends AbstractTrigger implements PollingTriggerInterface,
         }
 
         Output output = Output.builder()
-            .evaluation(newEvaluations.get(0))
+            .evaluation(newEvaluations.getFirst())
             .evaluations(newEvaluations)
             .total(newEvaluations.size())
             .build();

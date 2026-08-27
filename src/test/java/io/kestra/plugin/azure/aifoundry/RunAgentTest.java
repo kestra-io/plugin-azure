@@ -13,12 +13,11 @@ import com.azure.ai.agents.persistent.MessagesClient;
 import com.azure.ai.agents.persistent.PersistentAgentsClient;
 import com.azure.ai.agents.persistent.RunsClient;
 import com.azure.ai.agents.persistent.ThreadsClient;
-import com.azure.ai.agents.persistent.models.PersistentAgentThread;
 import com.azure.ai.agents.persistent.models.CreateRunOptions;
 import com.azure.ai.agents.persistent.models.MessageRole;
 import com.azure.ai.agents.persistent.models.MessageTextContent;
 import com.azure.ai.agents.persistent.models.MessageTextDetails;
-
+import com.azure.ai.agents.persistent.models.PersistentAgentThread;
 import com.azure.ai.agents.persistent.models.RunStatus;
 import com.azure.ai.agents.persistent.models.ThreadMessage;
 import com.azure.ai.agents.persistent.models.ThreadRun;
@@ -39,11 +38,11 @@ import static org.hamcrest.Matchers.notNullValue;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.eq;
 
 @KestraTest
 class RunAgentTest {
@@ -89,7 +88,7 @@ class RunAgentTest {
 
         RunsClient runsClient = mock(RunsClient.class);
         when(runsClient.createRun(any(CreateRunOptions.class))).thenReturn(mockRunCreated);
-        
+
         // Return IN_PROGRESS twice, then COMPLETED
         when(runsClient.getRun("thread-123", "run-456"))
             .thenReturn(mockRunInProgress)
@@ -106,12 +105,9 @@ class RunAgentTest {
         when(mockAssistantMessage.getRole()).thenReturn(MessageRole.AGENT);
         when(mockAssistantMessage.getContent()).thenReturn(List.of(textContent));
 
-        
-        
-        
         PagedIterable<ThreadMessage> pagedIterable = mock(PagedIterable.class);
         when(pagedIterable.stream()).thenReturn(java.util.stream.Stream.of(mockAssistantMessage));
-        
+
         when(messagesClient.listMessages("thread-123")).thenReturn(pagedIterable);
 
         PersistentAgentsClient agentsClient = mock(PersistentAgentsClient.class);
@@ -119,12 +115,12 @@ class RunAgentTest {
         when(agentsClient.getMessagesClient()).thenReturn(messagesClient);
         when(agentsClient.getRunsClient()).thenReturn(runsClient);
 
-        try (MockedConstruction<AIProjectClientBuilder> ignored =
-                 Mockito.mockConstruction(AIProjectClientBuilder.class, (mock, ctx) -> {
-                     when(mock.endpoint(anyString())).thenReturn(mock);
-                     when(mock.credential(any())).thenReturn(mock);
-                     when(mock.buildPersistentAgentsClient()).thenReturn(agentsClient);
-                 })) {
+        try (MockedConstruction<AIProjectClientBuilder> ignored = Mockito.mockConstruction(AIProjectClientBuilder.class, (mock, ctx) ->
+        {
+            when(mock.endpoint(anyString())).thenReturn(mock);
+            when(mock.credential(any())).thenReturn(mock);
+            when(mock.buildPersistentAgentsClient()).thenReturn(agentsClient);
+        })) {
 
             RunAgent.Output output = task.run(runContext);
 
@@ -135,12 +131,12 @@ class RunAgentTest {
 
             // Verify important arguments passed to the SDK
             verify(messagesClient).createMessage("thread-123", MessageRole.USER, "Hello agent");
-            
+
             ArgumentCaptor<CreateRunOptions> runOptionsCaptor = ArgumentCaptor.forClass(CreateRunOptions.class);
             verify(runsClient).createRun(runOptionsCaptor.capture());
             assertThat(runOptionsCaptor.getValue().getThreadId(), is("thread-123"));
             assertThat(runOptionsCaptor.getValue().getAssistantId(), is("agent-123"));
-            
+
             // Verify polling loop occurred (1 initial check inside loop structure, maybe more depending on while condition)
             // It should be called 3 times total based on our mock setup
             verify(runsClient, times(3)).getRun("thread-123", "run-456");
@@ -182,12 +178,12 @@ class RunAgentTest {
         when(agentsClient.getMessagesClient()).thenReturn(messagesClient);
         when(agentsClient.getRunsClient()).thenReturn(runsClient);
 
-        try (MockedConstruction<AIProjectClientBuilder> ignored =
-                 Mockito.mockConstruction(AIProjectClientBuilder.class, (mock, ctx) -> {
-                     when(mock.endpoint(anyString())).thenReturn(mock);
-                     when(mock.credential(any())).thenReturn(mock);
-                     when(mock.buildPersistentAgentsClient()).thenReturn(agentsClient);
-                 })) {
+        try (MockedConstruction<AIProjectClientBuilder> ignored = Mockito.mockConstruction(AIProjectClientBuilder.class, (mock, ctx) ->
+        {
+            when(mock.endpoint(anyString())).thenReturn(mock);
+            when(mock.credential(any())).thenReturn(mock);
+            when(mock.buildPersistentAgentsClient()).thenReturn(agentsClient);
+        })) {
 
             assertThrows(IllegalStateException.class, () -> task.run(runContext));
         }

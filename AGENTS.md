@@ -85,12 +85,11 @@ Infrastructure dependencies (Docker Compose services):
 - `io.kestra.plugin.azure.storage.table.Delete`
 - `io.kestra.plugin.azure.storage.table.Get`
 - `io.kestra.plugin.azure.storage.table.List`
-- `io.kestra.plugin.azure.aifoundry.AbstractAiFoundryTask`
 - `io.kestra.plugin.azure.aifoundry.ChatCompletion`
-- `io.kestra.plugin.azure.aifoundry.Embeddings`
-- `io.kestra.plugin.azure.aifoundry.RunAgent`
-- `io.kestra.plugin.azure.aifoundry.GetDeployment`
 - `io.kestra.plugin.azure.aifoundry.CreateEvaluation`
+- `io.kestra.plugin.azure.aifoundry.Embeddings`
+- `io.kestra.plugin.azure.aifoundry.GetDeployment`
+- `io.kestra.plugin.azure.aifoundry.RunAgent`
 - `io.kestra.plugin.azure.aifoundry.Trigger`
 - `io.kestra.plugin.azure.synapse.SparkBatchJobCreate`
 

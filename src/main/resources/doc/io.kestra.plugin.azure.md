@@ -81,7 +81,7 @@ The `aifoundry` package provides tasks and a trigger for interacting with Azure 
 - `aifoundry.RunAgent` - Create and run an Azure AI Foundry agent, returning the conversation result.
 - `aifoundry.CreateEvaluation` - Submit a new evaluation job using a dataset and a set of evaluators.
 - `aifoundry.GetDeployment` - Retrieve deployment status and configuration.
-- `aifoundry.Trigger` - Poll an Azure AI Foundry agent run and fire when it reaches a terminal state.
+- `aifoundry.Trigger` - Poll Azure AI Foundry for newly completed evaluations and fire an execution.
 
 ### Authentication for Azure AI Foundry
 

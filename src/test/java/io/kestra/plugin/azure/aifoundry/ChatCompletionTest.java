@@ -48,9 +48,13 @@ class ChatCompletionTest {
             .endpoint(Property.ofValue("https://test.api.azureml.ms/"))
             .apiKey(Property.ofValue("test-key"))
             .deploymentName(Property.ofValue("gpt-4o"))
-            .messages(Property.ofValue(List.of(
-                new ChatCompletion.ChatMessage(Property.ofValue("user"), Property.ofValue("Hello Azure AI"))
-            )))
+            .messages(
+                Property.ofValue(
+                    List.of(
+                        new ChatCompletion.ChatMessage(Property.ofValue("user"), Property.ofValue("Hello Azure AI"))
+                    )
+                )
+            )
             .build();
 
         RunContext runContext = TestsUtils.mockRunContext(runContextFactory, task, Map.of());
@@ -67,14 +71,18 @@ class ChatCompletionTest {
         ChatCompletionsClient mockClient = mock(ChatCompletionsClient.class);
         when(mockClient.complete(any(ChatCompletionsOptions.class))).thenReturn(completions);
 
-        try (MockedConstruction<ChatCompletionsClientBuilder> ignored =
-                 Mockito.mockConstruction(ChatCompletionsClientBuilder.class, (mock, ctx) -> {
-                     when(mock.endpoint(anyString())).thenReturn(mock);
-                     when(mock.credential(any(com.azure.core.credential.TokenCredential.class))).thenReturn(mock);
-                     when(mock.buildClient()).thenReturn(mockClient);
-                 })) {
+        try (MockedConstruction<ChatCompletionsClientBuilder> ignored = Mockito.mockConstruction(ChatCompletionsClientBuilder.class, (mock, ctx) ->
+        {
+            when(mock.endpoint(anyString())).thenReturn(mock);
+            when(mock.credential(any(com.azure.core.credential.TokenCredential.class))).thenReturn(mock);
+            when(mock.credential(any(com.azure.core.credential.KeyCredential.class))).thenReturn(mock);
+            when(mock.buildClient()).thenReturn(mockClient);
+        })) {
 
             ChatCompletion.Output output = task.run(runContext);
+
+            ChatCompletionsClientBuilder builderMock = ignored.constructed().get(0);
+            verify(builderMock).credential(any(com.azure.core.credential.KeyCredential.class));
 
             assertThat(output, notNullValue());
             assertThat(output.getContent(), is("Hello from Azure!"));
@@ -85,7 +93,7 @@ class ChatCompletionTest {
             ChatCompletionsOptions options = captor.getValue();
             assertThat(options.getModel(), is("gpt-4o"));
             assertThat(options.getMessages().size(), is(1));
-            
+
             ChatRequestMessage sentMessage = options.getMessages().get(0);
             assertThat(sentMessage instanceof ChatRequestUserMessage, is(true));
         }

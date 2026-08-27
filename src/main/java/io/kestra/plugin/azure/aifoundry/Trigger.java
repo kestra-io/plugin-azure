@@ -2,13 +2,13 @@ package io.kestra.plugin.azure.aifoundry;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 
-import com.azure.ai.agents.persistent.PersistentAgentsClient;
-import com.azure.ai.agents.persistent.RunsClient;
-import com.azure.ai.agents.persistent.models.RunStatus;
-import com.azure.ai.agents.persistent.models.ThreadRun;
 import com.azure.ai.projects.AIProjectClientBuilder;
+import com.azure.ai.projects.EvaluationsClient;
+import com.azure.ai.projects.models.Evaluation;
 import com.azure.core.credential.TokenCredential;
 import com.azure.identity.DefaultAzureCredentialBuilder;
 
@@ -49,30 +49,27 @@ import static io.kestra.core.models.triggers.StatefulTriggerService.writeState;
     examples = {
         @Example(
             full = true,
-            title = "Fire an execution when a specific Azure AI Foundry agent run reaches a terminal state",
+            title = "Fire an execution when an Azure AI Foundry evaluation completes",
             code = """
-                    id: azure_ai_on_agent_complete
+                    id: azure_ai_on_evaluation_complete
                     namespace: company.team
                     tasks:
                       - id: notify
                         type: io.kestra.plugin.core.log.Log
-                        message: "Agent run {{ trigger.runId }} finished with status {{ trigger.status }}"
+                        message: "Evaluation {{ trigger.evaluation.name }} finished with status {{ trigger.evaluation.status }}"
                     triggers:
-                      - id: on_agent_run
+                      - id: on_evaluation
                         type: io.kestra.plugin.azure.aifoundry.Trigger
                         endpoint: "{{ secret('AZURE_AI_FOUNDRY_ENDPOINT') }}"
-                        threadId: thread_abc123
-                        runId: run_xyz789
                         interval: PT1M
                 """
         )
     }
 )
 @Schema(
-    title = "Poll an Azure AI Foundry agent run and fire when it reaches a terminal state",
-    description = "Polls the Azure AI Projects PersistentAgentsClient for the status of a specific " +
-        "run. Fires an execution when the run status is one of: COMPLETED, FAILED, CANCELLED, or EXPIRED. " +
-        "Subsequent polls after the run has reached a terminal state will not re-fire (uses state deduplication)."
+    title = "Poll Azure AI Foundry for completed evaluations",
+    description = "Polls the Azure AI Projects EvaluationsClient for terminal evaluations. " +
+        "Fires an execution when a newly observed evaluation reaches a terminal status (e.g., Completed, Failed, Canceled)."
 )
 public class Trigger extends AbstractTrigger implements PollingTriggerInterface, TriggerOutput<Trigger.Output>, StatefulTriggerInterface {
 
@@ -84,25 +81,15 @@ public class Trigger extends AbstractTrigger implements PollingTriggerInterface,
     @PluginProperty(group = "connection")
     private Property<String> endpoint;
 
-    @Schema(title = "The thread ID containing the run to watch")
-    @NotNull
-    @PluginProperty(group = "main")
-    private Property<String> threadId;
-
-    @Schema(title = "The run ID to watch")
-    @NotNull
-    @PluginProperty(group = "main")
-    private Property<String> runId;
-
     @Builder.Default
     private final Duration interval = Duration.ofSeconds(60);
 
     @Builder.Default
-    @Schema(title = "State change mode", description = "Stateful trigger change mode used for observed workflow runs.")
+    @Schema(title = "State change mode", description = "Stateful trigger change mode used for observed evaluations.")
     @PluginProperty(group = "advanced")
     private final Property<On> on = Property.ofValue(On.CREATE);
 
-    @Schema(title = "State key", description = "Custom key used to store observed workflow runs.")
+    @Schema(title = "State key", description = "Custom key used to store observed evaluations.")
     @PluginProperty(group = "advanced")
     private Property<String> stateKey;
 
@@ -118,63 +105,47 @@ public class Trigger extends AbstractTrigger implements PollingTriggerInterface,
         Optional<Duration> rStateTtl = runContext.render(stateTtl).as(Duration.class);
         On rOn = runContext.render(on).as(On.class).orElse(On.CREATE);
 
-        String thread = runContext.render(this.threadId).as(String.class)
-            .orElseThrow(() -> new IllegalArgumentException("threadId is required"));
-        String run = runContext.render(this.runId).as(String.class)
-            .orElseThrow(() -> new IllegalArgumentException("runId is required"));
         String endpointStr = runContext.render(this.endpoint).as(String.class)
             .orElseThrow(() -> new IllegalArgumentException("endpoint is required"));
 
         TokenCredential credential = new DefaultAzureCredentialBuilder().build();
 
-        PersistentAgentsClient agentsClient = new AIProjectClientBuilder()
+        EvaluationsClient evalClient = new AIProjectClientBuilder()
             .endpoint(endpointStr)
             .credential(credential)
-            .buildPersistentAgentsClient();
+            .buildEvaluationsClient();
 
-        RunsClient runsClient = agentsClient.getRunsClient();
-        ThreadRun threadRun = runsClient.getRun(thread, run);
-        RunStatus status = threadRun.getStatus();
-
-        runContext.logger().debug("Polled run {} on thread {}: status={}", run, thread, status);
-
-        boolean isTerminal = RunStatus.COMPLETED.equals(status)
-            || RunStatus.FAILED.equals(status)
-            || RunStatus.CANCELLED.equals(status)
-            || RunStatus.EXPIRED.equals(status);
-
-        if (!isTerminal) {
-            return Optional.empty();
-        }
-
+        List<EvaluationRecord> newEvaluations = new ArrayList<>();
         var previousState = readState(runContext, rStateKey, rStateTtl);
 
-        // Fallback to Instant.now() if completedAt is null
-        Instant modifiedAt = Optional.ofNullable(threadRun.getCompletedAt())
-            .map(java.time.OffsetDateTime::toInstant)
-            .orElseGet(Instant::now);
+        for (Evaluation evaluation : evalClient.listEvaluations()) {
+            String status = evaluation.getStatus();
+            boolean isTerminal = "Completed".equalsIgnoreCase(status)
+                || "Failed".equalsIgnoreCase(status)
+                || "Canceled".equalsIgnoreCase(status)
+                || "Expired".equalsIgnoreCase(status);
 
-        var candidate = StatefulTriggerService.Entry.candidate(run, status.toString(), modifiedAt);
-        var stateChange = computeAndUpdateState(previousState, candidate, rOn);
+            if (isTerminal) {
+                var candidate = StatefulTriggerService.Entry.candidate(evaluation.getName(), status, Instant.now());
+                var stateChange = computeAndUpdateState(previousState, candidate, rOn);
+
+                if (stateChange.fire()) {
+                    newEvaluations.add(new EvaluationRecord(evaluation.getName(), status));
+                    runContext.logger().info("New evaluation observed: {} (status: {})", evaluation.getName(), status);
+                }
+            }
+        }
 
         writeState(runContext, rStateKey, previousState, rStateTtl);
 
-        runContext.logger().info(
-            "State evaluation: run={}, status={}, modifiedAt={}, on={}, previousState={}, fire={}, new={}", run, status, modifiedAt, rOn, previousState, stateChange.fire(), stateChange.isNew()
-        );
-
-        if (!stateChange.fire()) {
-            runContext.logger().debug(
-                "Run {} state change didn't fire (already observed).",
-                run
-            );
+        if (newEvaluations.isEmpty()) {
             return Optional.empty();
         }
 
         Output output = Output.builder()
-            .runId(run)
-            .threadId(thread)
-            .status(status.toString())
+            .evaluation(newEvaluations.get(0))
+            .evaluations(newEvaluations)
+            .total(newEvaluations.size())
             .build();
 
         return Optional.ofNullable(
@@ -185,13 +156,28 @@ public class Trigger extends AbstractTrigger implements PollingTriggerInterface,
     @Builder
     @Getter
     public static class Output implements io.kestra.core.models.tasks.Output {
-        @Schema(title = "The completed run ID")
-        private String runId;
+        @Schema(title = "First completed evaluation")
+        private EvaluationRecord evaluation;
 
-        @Schema(title = "The thread ID")
-        private String threadId;
+        @Schema(title = "List of all newly completed evaluations")
+        private List<EvaluationRecord> evaluations;
 
-        @Schema(title = "The terminal status of the run (COMPLETED, FAILED, CANCELLED, or EXPIRED)")
+        @Schema(title = "Total number of newly completed evaluations")
+        private Integer total;
+    }
+
+    @Builder
+    @Getter
+    public static class EvaluationRecord {
+        @Schema(title = "Evaluation name")
+        private String name;
+
+        @Schema(title = "Evaluation status")
         private String status;
+
+        public EvaluationRecord(String name, String status) {
+            this.name = name;
+            this.status = status;
+        }
     }
 }

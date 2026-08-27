@@ -11,7 +11,6 @@ import org.mockito.Mockito;
 import com.azure.ai.inference.EmbeddingsClient;
 import com.azure.ai.inference.EmbeddingsClientBuilder;
 import com.azure.ai.inference.models.EmbeddingItem;
-
 import com.azure.ai.inference.models.EmbeddingsResult;
 
 import io.kestra.core.junit.annotations.KestraTest;
@@ -23,9 +22,9 @@ import io.kestra.core.utils.TestsUtils;
 import jakarta.inject.Inject;
 
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.notNullValue;
-import static org.hamcrest.Matchers.contains;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
@@ -63,14 +62,18 @@ class EmbeddingsTest {
         EmbeddingsClient mockClient = mock(EmbeddingsClient.class);
         when(mockClient.embed(any(java.util.List.class), any(), any(), any(), anyString(), any())).thenReturn(embeddingsResult);
 
-        try (MockedConstruction<EmbeddingsClientBuilder> ignored =
-                 Mockito.mockConstruction(EmbeddingsClientBuilder.class, (mock, ctx) -> {
-                     when(mock.endpoint(anyString())).thenReturn(mock);
-                     when(mock.credential(any(com.azure.core.credential.TokenCredential.class))).thenReturn(mock);
-                     when(mock.buildClient()).thenReturn(mockClient);
-                 })) {
+        try (MockedConstruction<EmbeddingsClientBuilder> ignored = Mockito.mockConstruction(EmbeddingsClientBuilder.class, (mock, ctx) ->
+        {
+            when(mock.endpoint(anyString())).thenReturn(mock);
+            when(mock.credential(any(com.azure.core.credential.TokenCredential.class))).thenReturn(mock);
+            when(mock.credential(any(com.azure.core.credential.KeyCredential.class))).thenReturn(mock);
+            when(mock.buildClient()).thenReturn(mockClient);
+        })) {
 
             Embeddings.Output output = task.run(runContext);
+
+            EmbeddingsClientBuilder builderMock = ignored.constructed().get(0);
+            verify(builderMock).credential(any(com.azure.core.credential.KeyCredential.class));
 
             assertThat(output, notNullValue());
             assertThat(output.getEmbeddings().size(), is(2));
@@ -80,8 +83,6 @@ class EmbeddingsTest {
             ArgumentCaptor<java.util.List<String>> captor = ArgumentCaptor.forClass(java.util.List.class);
             verify(mockClient).embed(captor.capture(), any(), any(), any(), anyString(), any());
 
-            
-            
             assertThat(captor.getValue().size(), is(2));
             assertThat(captor.getValue(), contains("First input text", "Second input text"));
         }

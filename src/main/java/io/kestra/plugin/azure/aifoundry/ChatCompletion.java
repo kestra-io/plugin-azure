@@ -82,8 +82,10 @@ public class ChatCompletion extends AbstractAiFoundryTask implements RunnableTas
     @Builder
     public static class ChatMessage {
         @NotNull
+        @Schema(title = "The role of the author of this message", description = "Supported values: 'user' or 'system'")
         private Property<String> role;
         @NotNull
+        @Schema(title = "The contents of the message")
         private Property<String> content;
     }
 

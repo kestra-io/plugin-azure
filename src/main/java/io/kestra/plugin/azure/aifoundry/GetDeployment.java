@@ -80,9 +80,7 @@ public class GetDeployment extends AbstractAiFoundryTask implements RunnableTask
 
         runContext.logger().info("Retrieved deployment {} (type: {})", deployment.getName(), deployment.getType());
 
-        DeploymentRecord.DeploymentRecordBuilder recordBuilder = DeploymentRecord.builder()
-            .name(deployment.getName())
-            .type(deployment.getType() != null ? deployment.getType().toString() : null);
+        DeploymentRecord.DeploymentRecordBuilder recordBuilder = DeploymentRecord.builder();
 
         if (deployment instanceof ModelDeployment modelDeployment) {
             recordBuilder
@@ -115,11 +113,13 @@ public class GetDeployment extends AbstractAiFoundryTask implements RunnableTask
     @Builder
     @Getter
     public static class DeploymentRecord {
-        private String name;
-        private String type;
+        @Schema(title = "Model name")
         private String modelName;
+        @Schema(title = "Model version")
         private String modelVersion;
+        @Schema(title = "Model publisher")
         private String modelPublisher;
+        @Schema(title = "Connection name")
         private String connectionName;
     }
 }

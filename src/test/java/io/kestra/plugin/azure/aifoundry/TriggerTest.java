@@ -1,23 +1,23 @@
 package io.kestra.plugin.azure.aifoundry;
 
-import java.time.OffsetDateTime;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Stream;
 
 import org.junit.jupiter.api.Test;
 import org.mockito.MockedConstruction;
 import org.mockito.Mockito;
 
-import com.azure.ai.agents.persistent.PersistentAgentsClient;
-import com.azure.ai.agents.persistent.RunsClient;
-import com.azure.ai.agents.persistent.models.RunStatus;
-import com.azure.ai.agents.persistent.models.ThreadRun;
 import com.azure.ai.projects.AIProjectClientBuilder;
+import com.azure.ai.projects.EvaluationsClient;
+import com.azure.ai.projects.models.Evaluation;
+import com.azure.core.http.rest.PagedIterable;
 
 import io.kestra.core.junit.annotations.KestraTest;
-import io.kestra.core.models.conditions.ConditionContext;
 import io.kestra.core.models.executions.Execution;
 import io.kestra.core.models.property.Property;
+import io.kestra.core.models.triggers.TriggerContext;
 import io.kestra.core.runners.RunContextFactory;
 import io.kestra.core.utils.TestsUtils;
 
@@ -39,114 +39,57 @@ class TriggerTest {
     private RunContextFactory runContextFactory;
 
     @Test
-    void evaluate_completedRun_firesExecutionAndDeduplicatesAndVerifiesArgs() throws Exception {
+    void evaluate_terminalEvaluations_firesAndDeduplicates() throws Exception {
         Trigger trigger = Trigger.builder()
-            .id("trigger")
+            .id("trigger-" + java.util.UUID.randomUUID())
             .type(Trigger.class.getName())
             .endpoint(Property.ofValue("https://test.api.azureml.ms/"))
-            .threadId(Property.ofValue("thread-123"))
-            .runId(Property.ofValue("run-456"))
-            .stateKey(Property.ofValue("test-" + java.util.UUID.randomUUID().toString()))
+            .stateKey(Property.ofValue("test-" + java.util.UUID.randomUUID()))
             .build();
 
-        Map.Entry<ConditionContext, io.kestra.core.models.triggers.Trigger> ctx = TestsUtils.mockTrigger(runContextFactory, trigger);
+        Map.Entry<io.kestra.core.models.conditions.ConditionContext, io.kestra.core.models.triggers.Trigger> ctx = TestsUtils.mockTrigger(runContextFactory, trigger);
 
-        ThreadRun mockRun = mock(ThreadRun.class);
-        when(mockRun.getStatus()).thenReturn(RunStatus.COMPLETED);
-        when(mockRun.getCompletedAt()).thenReturn(OffsetDateTime.now());
+        TriggerContext triggerContext = TriggerContext.builder()
+            .namespace("company.team")
+            .flowId("azure_ai_flow")
+            .build();
 
-        RunsClient runsClient = mock(RunsClient.class);
-        when(runsClient.getRun(anyString(), anyString())).thenReturn(mockRun);
+        Evaluation eval1 = mock(Evaluation.class);
+        when(eval1.getName()).thenReturn("eval-1");
+        when(eval1.getStatus()).thenReturn("Completed");
 
-        PersistentAgentsClient agentsClient = mock(PersistentAgentsClient.class);
-        when(agentsClient.getRunsClient()).thenReturn(runsClient);
+        Evaluation eval2 = mock(Evaluation.class);
+        when(eval2.getName()).thenReturn("eval-2");
+        when(eval2.getStatus()).thenReturn("Running");
 
-        try (MockedConstruction<AIProjectClientBuilder> ignored = Mockito.mockConstruction(AIProjectClientBuilder.class, (mock, c) ->
+        PagedIterable<Evaluation> mockedIterable = mock(PagedIterable.class);
+        when(mockedIterable.iterator())
+            .thenAnswer(inv -> List.of(eval1, eval2).iterator());
+        when(mockedIterable.stream())
+            .thenAnswer(inv -> Stream.of(eval1, eval2));
+
+        EvaluationsClient evalClient = mock(EvaluationsClient.class);
+        when(evalClient.listEvaluations()).thenReturn(mockedIterable);
+
+        try (MockedConstruction<AIProjectClientBuilder> ignored = Mockito.mockConstruction(AIProjectClientBuilder.class, (mock, context) ->
         {
             when(mock.endpoint(anyString())).thenReturn(mock);
             when(mock.credential(any())).thenReturn(mock);
-            when(mock.buildPersistentAgentsClient()).thenReturn(agentsClient);
+            when(mock.buildEvaluationsClient()).thenReturn(evalClient);
         })) {
 
-            // First poll: Should fire execution
-            Optional<Execution> result1 = trigger.evaluate(ctx.getKey(), ctx.getValue());
+            Optional<Execution> result1 = trigger.evaluate(ctx.getKey(), triggerContext);
             assertThat(result1.isPresent(), is(true));
 
-            // Second poll: Same run and status, should be deduplicated (return Optional.empty)
-            Optional<Execution> result2 = trigger.evaluate(ctx.getKey(), ctx.getValue());
+            Optional<Execution> result2 = trigger.evaluate(ctx.getKey(), triggerContext);
             assertThat(result2.isEmpty(), is(true));
 
-            // Verify specific thread and run IDs were checked
-            verify(runsClient, times(2)).getRun("thread-123", "run-456");
-        }
-    }
+            when(eval2.getStatus()).thenReturn("Failed");
 
-    @Test
-    void evaluate_inProgressRun_doesNotFire() throws Exception {
-        Trigger trigger = Trigger.builder()
-            .id("trigger")
-            .type(Trigger.class.getName())
-            .endpoint(Property.ofValue("https://test.api.azureml.ms/"))
-            .threadId(Property.ofValue("thread-123"))
-            .runId(Property.ofValue("run-456"))
-            .stateKey(Property.ofValue("test-" + java.util.UUID.randomUUID().toString()))
-            .build();
+            Optional<Execution> result3 = trigger.evaluate(ctx.getKey(), triggerContext);
+            assertThat(result3.isPresent(), is(true));
 
-        Map.Entry<ConditionContext, io.kestra.core.models.triggers.Trigger> ctx = TestsUtils.mockTrigger(runContextFactory, trigger);
-
-        ThreadRun mockRun = mock(ThreadRun.class);
-        when(mockRun.getStatus()).thenReturn(RunStatus.IN_PROGRESS);
-
-        RunsClient runsClient = mock(RunsClient.class);
-        when(runsClient.getRun(anyString(), anyString())).thenReturn(mockRun);
-
-        PersistentAgentsClient agentsClient = mock(PersistentAgentsClient.class);
-        when(agentsClient.getRunsClient()).thenReturn(runsClient);
-
-        try (MockedConstruction<AIProjectClientBuilder> ignored = Mockito.mockConstruction(AIProjectClientBuilder.class, (mock, c) ->
-        {
-            when(mock.endpoint(anyString())).thenReturn(mock);
-            when(mock.credential(any())).thenReturn(mock);
-            when(mock.buildPersistentAgentsClient()).thenReturn(agentsClient);
-        })) {
-
-            Optional<Execution> result = trigger.evaluate(ctx.getKey(), ctx.getValue());
-            assertThat(result.isEmpty(), is(true));
-        }
-    }
-
-    @Test
-    void evaluate_failedRun_firesExecution() throws Exception {
-        Trigger trigger = Trigger.builder()
-            .id("trigger")
-            .type(Trigger.class.getName())
-            .endpoint(Property.ofValue("https://test.api.azureml.ms/"))
-            .threadId(Property.ofValue("thread-123"))
-            .runId(Property.ofValue("run-456"))
-            .stateKey(Property.ofValue("test-" + java.util.UUID.randomUUID().toString()))
-            .build();
-
-        Map.Entry<ConditionContext, io.kestra.core.models.triggers.Trigger> ctx = TestsUtils.mockTrigger(runContextFactory, trigger);
-
-        ThreadRun mockRun = mock(ThreadRun.class);
-        when(mockRun.getStatus()).thenReturn(RunStatus.FAILED);
-        when(mockRun.getCompletedAt()).thenReturn(OffsetDateTime.now());
-
-        RunsClient runsClient = mock(RunsClient.class);
-        when(runsClient.getRun(anyString(), anyString())).thenReturn(mockRun);
-
-        PersistentAgentsClient agentsClient = mock(PersistentAgentsClient.class);
-        when(agentsClient.getRunsClient()).thenReturn(runsClient);
-
-        try (MockedConstruction<AIProjectClientBuilder> ignored = Mockito.mockConstruction(AIProjectClientBuilder.class, (mock, c) ->
-        {
-            when(mock.endpoint(anyString())).thenReturn(mock);
-            when(mock.credential(any())).thenReturn(mock);
-            when(mock.buildPersistentAgentsClient()).thenReturn(agentsClient);
-        })) {
-
-            Optional<Execution> result = trigger.evaluate(ctx.getKey(), ctx.getValue());
-            assertThat(result.isPresent(), is(true));
+            verify(evalClient, times(3)).listEvaluations();
         }
     }
 }

@@ -117,10 +117,13 @@ public class RunAgent extends AbstractAiFoundryTask implements RunnableTask<RunA
             .orElse(Duration.ofMillis(DEFAULT_TIMEOUT_MS))
             .toMillis();
 
-        String apiKeyStr = runContext.render(this.getApiKey()).as(String.class).orElse(null);
-        if (apiKeyStr != null && !apiKeyStr.isBlank()) {
-            throw new IllegalArgumentException("Tasks using the Azure AI Projects SDK require Entra ID authentication (DefaultAzureCredential). Do not provide an apiKey.");
+        if (this.getKeyCredential(runContext) != null) {
+            throw new IllegalArgumentException(
+                "RunAgent uses the Azure AI Projects PersistentAgentsClient which only supports " +
+                    "Entra ID authentication. Remove the apiKey property and configure DefaultAzureCredential."
+            );
         }
+
         TokenCredential token = this.getTokenCredential(runContext);
         PersistentAgentsClient agentsClient = new AIProjectClientBuilder()
             .endpoint(this.getEndpoint(runContext))

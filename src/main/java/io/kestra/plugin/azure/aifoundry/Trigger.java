@@ -28,6 +28,8 @@ import io.kestra.core.models.triggers.TriggerService;
 import io.kestra.core.runners.RunContext;
 
 import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 import lombok.Builder;
 import lombok.EqualsAndHashCode;
@@ -70,7 +72,9 @@ import static io.kestra.core.models.triggers.StatefulTriggerService.writeState;
     title = "Poll Azure AI Foundry for completed evaluations",
     description = "Polls the Azure AI Projects EvaluationsClient for terminal evaluations. " +
         "Fires an execution when a newly observed evaluation reaches one of the configured terminal statuses. " +
-        "Subsequent polls will not re-fire for already-observed evaluations (uses state deduplication)."
+        "The statuses and maximum number of evaluations inspected per poll are configurable. " +
+        "Subsequent polls will not re-fire for already-observed evaluations because trigger state deduplicates " +
+        "evaluation names and statuses; state retention can be controlled with stateTtl."
 )
 public class Trigger extends AbstractTrigger implements PollingTriggerInterface, TriggerOutput<Trigger.Output>, StatefulTriggerInterface {
 
@@ -88,12 +92,12 @@ public class Trigger extends AbstractTrigger implements PollingTriggerInterface,
     @Schema(title = "Statuses", description = "Evaluation statuses that should trigger executions. Defaults to Completed, Failed, Canceled, and Expired.")
     @Builder.Default
     @PluginProperty(group = "main")
-    private Property<List<String>> statuses = Property.ofValue(List.of("Completed", "Failed", "Canceled", "Expired"));
+    private Property<@NotEmpty List<String>> statuses = Property.ofValue(List.of("Completed", "Failed", "Canceled", "Expired"));
 
     @Schema(title = "Maximum evaluations", description = "Maximum number of recent evaluations to inspect per polling interval. Defaults to 25.")
     @Builder.Default
     @PluginProperty(group = "execution")
-    private Property<Integer> maxEvaluations = Property.ofValue(25);
+    private Property<@Min(1) Integer> maxEvaluations = Property.ofValue(25);
 
     @Builder.Default
     @Schema(title = "State change mode", description = "Stateful trigger change mode used for observed evaluations.")
@@ -117,6 +121,13 @@ public class Trigger extends AbstractTrigger implements PollingTriggerInterface,
         On rOn = runContext.render(on).as(On.class).orElse(On.CREATE);
         List<String> rStatuses = runContext.render(statuses).asList(String.class);
         int rMaxEvaluations = runContext.render(maxEvaluations).as(Integer.class).orElse(25);
+
+        if (rStatuses.isEmpty()) {
+            throw new IllegalArgumentException("statuses cannot be empty");
+        }
+        if (rMaxEvaluations < 1) {
+            throw new IllegalArgumentException("maxEvaluations must be greater than or equal to 1");
+        }
 
         String endpointStr = runContext.render(this.endpoint).as(String.class)
             .orElseThrow(() -> new IllegalArgumentException("endpoint is required"));
@@ -145,7 +156,12 @@ public class Trigger extends AbstractTrigger implements PollingTriggerInterface,
                 var stateChange = computeAndUpdateState(previousState, candidate, rOn);
 
                 if (stateChange.fire()) {
-                    newEvaluations.add(new EvaluationRecord(evaluation.getName(), status));
+                    newEvaluations.add(
+                        EvaluationRecord.builder()
+                            .name(evaluation.getName())
+                            .status(status)
+                            .build()
+                    );
                     runContext.logger().info("New evaluation observed: {} (status: {})", evaluation.getName(), status);
                 }
             }
@@ -189,10 +205,5 @@ public class Trigger extends AbstractTrigger implements PollingTriggerInterface,
 
         @Schema(title = "Evaluation status")
         private String status;
-
-        public EvaluationRecord(String name, String status) {
-            this.name = name;
-            this.status = status;
-        }
     }
 }

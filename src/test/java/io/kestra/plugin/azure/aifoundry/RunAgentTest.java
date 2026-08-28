@@ -33,6 +33,7 @@ import io.kestra.core.utils.TestsUtils;
 import jakarta.inject.Inject;
 
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -49,6 +50,26 @@ class RunAgentTest {
 
     @Inject
     private RunContextFactory runContextFactory;
+
+    @Test
+    void run_withApiKey_throwsIllegalArgumentWithGuidance() throws Exception {
+        RunAgent task = RunAgent.builder()
+            .id("run-agent")
+            .type(RunAgent.class.getName())
+            .endpoint(Property.ofValue("https://test.api.azureml.ms/"))
+            .apiKey(Property.ofValue("some-key"))
+            .agentId(Property.ofValue("agent-123"))
+            .prompt(Property.ofValue("Hello agent"))
+            .build();
+
+        RunContext runContext = TestsUtils.mockRunContext(runContextFactory, task, Map.of());
+
+        IllegalArgumentException ex = assertThrows(
+            IllegalArgumentException.class,
+            () -> task.run(runContext)
+        );
+        assertThat(ex.getMessage(), containsString("Entra ID"));
+    }
 
     @Test
     void run_pollsUntilCompleteAndReturnsMessage() throws Exception {

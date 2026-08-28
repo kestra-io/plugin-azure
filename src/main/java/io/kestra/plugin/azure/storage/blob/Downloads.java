@@ -54,6 +54,7 @@ import io.kestra.core.models.annotations.PluginProperty;
                     container: "mydata"
                     prefix: "sub-dir"
                     delimiter: "/"
+                    action: NONE
                 """
         )
     }

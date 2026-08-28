@@ -70,7 +70,7 @@ import static io.kestra.core.utils.Rethrow.throwConsumer;
 
                       - id: upload_file
                         type: io.kestra.plugin.azure.storage.adls.Upload
-                        fileName: "adls/pokemon/{{ taskrun.value }}.json"
+                        filePath: "adls/pokemon/{{ taskrun.value }}.json"
                         from: "{{ currentEachOutput(outputs.to_ion).uri }}"
 
                   - id: delete_file

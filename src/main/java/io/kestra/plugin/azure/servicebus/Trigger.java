@@ -43,7 +43,7 @@ import io.kestra.core.models.annotations.PluginProperty;
                 tasks:
                   - id: log_messages
                     type: io.kestra.plugin.core.log.Log
-                    message: "Trigger body: {{trigger.body}}."
+                    message: "Received {{ trigger.count }} messages, stored at {{ trigger.uri }}."
 
                 triggers:
                   - id: watch

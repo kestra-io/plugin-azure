@@ -73,7 +73,7 @@ import io.kestra.core.models.annotations.PluginProperty;
                     tasks:
                       - id: insert_into_storagetable
                         type: io.kestra.plugin.azure.storage.table.Bulk
-                        endpoint: https://yourstorageaccount.blob.core.windows.net
+                        endpoint: https://yourstorageaccount.table.core.windows.net
                         connectionString: "{{ secret('STORAGETABLE_CONNECTION') }}"
                         table: orders
                         from:
@@ -151,7 +151,7 @@ public class RealtimeTrigger extends AbstractTrigger implements EventHubConsumer
     @PluginProperty(group = "advanced")
     private Property<StartingPosition> partitionStartingPosition = Property.ofValue(StartingPosition.EARLIEST);
 
-    @Schema(title = "Start from enqueue time", description = "Optional enqueue time filter (ISO-8601); overrides starting position")
+    @Schema(title = "Start from enqueue time", description = "ISO-8601 datetime applied only when partitionStartingPosition is set to INSTANT; ignored for EARLIEST and LATEST")
     @PluginProperty(group = "advanced")
     private Property<String> enqueueTime;
 

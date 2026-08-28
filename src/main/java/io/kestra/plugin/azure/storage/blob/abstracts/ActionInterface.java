@@ -16,7 +16,7 @@ public interface ActionInterface {
     Property<Action> getAction();
 
     @Schema(
-        title = "The destination container and key"
+        title = "The destination container and blob name"
     )
     @PluginProperty(dynamic = true, group = "destination")
     Copy.CopyObject getMoveTo();

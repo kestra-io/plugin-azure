@@ -54,8 +54,8 @@ import io.kestra.core.models.annotations.PluginProperty;
     }
 )
 @Schema(
-    title = "Upload a file to Azure Data Lake Storage",
-    description = "Upload a file to Azure Data Lake Storage using the Azure SDK."
+    title = "List files and directories in Azure Data Lake Storage",
+    description = "Lists the files and directories under a given Data Lake Storage directory path."
 )
 public class List extends AbstractDataLakeConnection implements RunnableTask<List.Output>, AbstractDataLakeStorageInterface {
     @Schema(title = "Directory path", description = "Full path to the directory")
@@ -104,7 +104,7 @@ public class List extends AbstractDataLakeConnection implements RunnableTask<Lis
     @Getter
     public static class Output implements io.kestra.core.models.tasks.Output {
         @Schema(
-            title = "The list of file"
+            title = "The list of files"
         )
         private final java.util.List<AdlsFile> files;
     }

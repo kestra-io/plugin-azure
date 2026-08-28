@@ -89,12 +89,12 @@ public class Embeddings extends AbstractAiFoundryTask implements RunnableTask<Em
         List<String> inputTexts = runContext.render(this.inputs).asList(String.class);
 
         EmbeddingsResult result = client.embed(
-            inputTexts,
-            null,
-            null,
-            null,
-            deployment,
-            null
+            inputTexts, // inputs
+            null, // dimensions
+            null, // user
+            null, // model
+            null, // extraParameters
+            null // requestOptions
         );
 
         List<List<Float>> embeddings = result.getData()

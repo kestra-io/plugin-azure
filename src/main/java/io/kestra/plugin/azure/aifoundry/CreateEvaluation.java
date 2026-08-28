@@ -43,6 +43,9 @@ import lombok.experimental.SuperBuilder;
                       - id: create_eval
                         type: io.kestra.plugin.azure.aifoundry.CreateEvaluation
                         endpoint: "{{ secret('AZURE_AI_FOUNDRY_ENDPOINT') }}"
+                        tenantId: "{{ secret('AZURE_TENANT_ID') }}"
+                        clientId: "{{ secret('AZURE_CLIENT_ID') }}"
+                        clientSecret: "{{ secret('AZURE_CLIENT_SECRET') }}"
                         datasetId: "azureml:my-dataset:1"
                         displayName: "Nightly Groundedness Eval"
                         evaluators:

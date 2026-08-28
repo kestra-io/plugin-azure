@@ -9,6 +9,7 @@ import com.azure.ai.agents.persistent.PersistentAgentsClient;
 import com.azure.ai.agents.persistent.RunsClient;
 import com.azure.ai.agents.persistent.ThreadsClient;
 import com.azure.ai.agents.persistent.models.CreateRunOptions;
+import com.azure.ai.agents.persistent.models.ListSortOrder;
 import com.azure.ai.agents.persistent.models.MessageContent;
 import com.azure.ai.agents.persistent.models.MessageRole;
 import com.azure.ai.agents.persistent.models.MessageTextContent;
@@ -52,6 +53,9 @@ import lombok.experimental.SuperBuilder;
                       - id: run_agent
                         type: io.kestra.plugin.azure.aifoundry.RunAgent
                         endpoint: "{{ secret('AZURE_AI_FOUNDRY_ENDPOINT') }}"
+                        tenantId: "{{ secret('AZURE_TENANT_ID') }}"
+                        clientId: "{{ secret('AZURE_CLIENT_ID') }}"
+                        clientSecret: "{{ secret('AZURE_CLIENT_SECRET') }}"
                         agentId: asst_abc123
                         prompt: "Summarize last week's sales data."
                         pollInterval: PT5S
@@ -175,7 +179,10 @@ public class RunAgent extends AbstractAiFoundryTask implements RunnableTask<RunA
         }
 
         // 5. Retrieve last assistant message
-        List<ThreadMessage> messages = messagesClient.listMessages(threadId).stream().toList();
+        List<ThreadMessage> messages = messagesClient
+            .listMessages(threadId, null, null, ListSortOrder.DESCENDING, null, null)
+            .stream()
+            .toList();
         String assistantReply = messages.stream()
             .filter(m -> MessageRole.AGENT.equals(m.getRole()))
             .findFirst()

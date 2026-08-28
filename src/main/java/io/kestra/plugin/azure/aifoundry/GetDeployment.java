@@ -39,6 +39,9 @@ import lombok.experimental.SuperBuilder;
                       - id: get_deployment
                         type: io.kestra.plugin.azure.aifoundry.GetDeployment
                         endpoint: "{{ secret('AZURE_AI_FOUNDRY_ENDPOINT') }}"
+                        tenantId: "{{ secret('AZURE_TENANT_ID') }}"
+                        clientId: "{{ secret('AZURE_CLIENT_ID') }}"
+                        clientSecret: "{{ secret('AZURE_CLIENT_SECRET') }}"
                         deploymentName: gpt-4o
                 """
         )

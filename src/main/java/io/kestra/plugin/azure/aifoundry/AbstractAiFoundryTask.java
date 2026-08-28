@@ -2,7 +2,6 @@ package io.kestra.plugin.azure.aifoundry;
 
 import com.azure.core.credential.KeyCredential;
 import com.azure.core.credential.TokenCredential;
-import com.azure.identity.DefaultAzureCredentialBuilder;
 
 import io.kestra.core.exceptions.IllegalVariableEvaluationException;
 import io.kestra.core.models.annotations.PluginProperty;
@@ -41,13 +40,29 @@ public abstract class AbstractAiFoundryTask extends Task {
     @PluginProperty(group = "connection", secret = true)
     private Property<String> apiKey;
 
+    @Schema(title = "Azure tenant ID", description = "Azure Entra tenant ID used with clientId and clientSecret for service principal authentication.")
+    @PluginProperty(group = "connection")
+    protected Property<String> tenantId;
+
+    @Schema(title = "Azure client ID", description = "Client ID of the Azure app registration used with tenantId and clientSecret.")
+    @PluginProperty(group = "connection")
+    protected Property<String> clientId;
+
+    @Schema(title = "Azure client secret", description = "Client secret of the Azure app registration used with tenantId and clientId.")
+    @ToString.Exclude
+    @PluginProperty(group = "connection", secret = true)
+    protected Property<String> clientSecret;
+
     protected String getEndpoint(RunContext runContext)
         throws IllegalVariableEvaluationException {
 
         return runContext.render(this.endpoint)
             .as(String.class)
-            .orElseThrow(() -> new IllegalArgumentException(
-                "endpoint is required. Set it to your Azure AI Foundry project endpoint."));
+            .orElseThrow(
+                () -> new IllegalArgumentException(
+                    "endpoint is required. Set it to your Azure AI Foundry project endpoint."
+                )
+            );
     }
 
     protected String getApiKey(RunContext runContext)
@@ -68,10 +83,6 @@ public abstract class AbstractAiFoundryTask extends Task {
     protected TokenCredential getTokenCredential(RunContext runContext)
         throws IllegalVariableEvaluationException {
 
-        String key = getApiKey(runContext);
-        if (key != null && !key.isBlank()) {
-            return null;
-        }
-        return new DefaultAzureCredentialBuilder().build();
+        return AiFoundryCredentials.tokenCredential(runContext, tenantId, clientId, clientSecret);
     }
 }

@@ -10,7 +10,8 @@ import com.azure.ai.projects.AIProjectClientBuilder;
 import com.azure.ai.projects.EvaluationsClient;
 import com.azure.ai.projects.models.Evaluation;
 import com.azure.core.credential.TokenCredential;
-import com.azure.identity.DefaultAzureCredentialBuilder;
+import com.azure.core.http.rest.RequestOptions;
+import com.azure.core.util.BinaryData;
 
 import io.kestra.core.models.annotations.Example;
 import io.kestra.core.models.annotations.Plugin;
@@ -63,6 +64,9 @@ import static io.kestra.core.models.triggers.StatefulTriggerService.writeState;
                       - id: on_evaluation
                         type: io.kestra.plugin.azure.aifoundry.Trigger
                         endpoint: "{{ secret('AZURE_AI_FOUNDRY_ENDPOINT') }}"
+                        tenantId: "{{ secret('AZURE_TENANT_ID') }}"
+                        clientId: "{{ secret('AZURE_CLIENT_ID') }}"
+                        clientSecret: "{{ secret('AZURE_CLIENT_SECRET') }}"
                         interval: PT5M
                 """
         )
@@ -85,6 +89,19 @@ public class Trigger extends AbstractTrigger implements PollingTriggerInterface,
     @NotNull
     @PluginProperty(group = "connection")
     private Property<String> endpoint;
+
+    @Schema(title = "Azure tenant ID", description = "Azure Entra tenant ID used with clientId and clientSecret for service principal authentication.")
+    @PluginProperty(group = "connection")
+    private Property<String> tenantId;
+
+    @Schema(title = "Azure client ID", description = "Client ID of the Azure app registration used with tenantId and clientSecret.")
+    @PluginProperty(group = "connection")
+    private Property<String> clientId;
+
+    @Schema(title = "Azure client secret", description = "Client secret of the Azure app registration used with tenantId and clientId.")
+    @ToString.Exclude
+    @PluginProperty(group = "connection", secret = true)
+    private Property<String> clientSecret;
 
     @Builder.Default
     private final Duration interval = Duration.ofSeconds(60);
@@ -132,7 +149,7 @@ public class Trigger extends AbstractTrigger implements PollingTriggerInterface,
         String endpointStr = runContext.render(this.endpoint).as(String.class)
             .orElseThrow(() -> new IllegalArgumentException("endpoint is required"));
 
-        TokenCredential credential = new DefaultAzureCredentialBuilder().build();
+        TokenCredential credential = AiFoundryCredentials.tokenCredential(runContext, tenantId, clientId, clientSecret);
 
         EvaluationsClient evalClient = new AIProjectClientBuilder()
             .endpoint(endpointStr)
@@ -141,13 +158,11 @@ public class Trigger extends AbstractTrigger implements PollingTriggerInterface,
 
         List<EvaluationRecord> newEvaluations = new ArrayList<>();
         var previousState = readState(runContext, rStateKey, rStateTtl);
+        RequestOptions requestOptions = new RequestOptions()
+            .addQueryParam("$top", String.valueOf(rMaxEvaluations));
 
-        int count = 0;
-        for (Evaluation evaluation : evalClient.listEvaluations()) {
-            if (count >= rMaxEvaluations) {
-                break;
-            }
-            count++;
+        for (BinaryData evaluationData : evalClient.listEvaluations(requestOptions)) {
+            Evaluation evaluation = evaluationData.toObject(Evaluation.class);
 
             String status = evaluation.getStatus();
 

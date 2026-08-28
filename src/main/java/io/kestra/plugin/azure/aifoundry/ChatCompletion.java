@@ -61,8 +61,9 @@ import lombok.experimental.SuperBuilder;
     }
 )
 @Schema(
-    title = "Call a deployed model for chat completions",
-    description = "Use Azure AI Foundry to generate chat completions using a deployed model endpoint."
+    title = "Generate chat completions using an Azure AI Foundry model deployment",
+    description = "Sends a list of chat messages to a model deployment in Azure AI Foundry and returns the model response. " +
+        "Currently supports 'system' and 'user' message roles; multi-turn conversations with prior 'assistant' turns are not yet supported."
 )
 public class ChatCompletion extends AbstractAiFoundryTask implements RunnableTask<ChatCompletion.Output> {
 

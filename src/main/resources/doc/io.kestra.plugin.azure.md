@@ -70,3 +70,20 @@ The `logicapps` package provides tasks and triggers for Azure Logic Apps workflo
 - `logicapps.Trigger` - stateful polling trigger that starts Kestra executions for newly observed workflow runs matching configured statuses.
 
 These support service principal and certificate authentication consistent with other Azure tasks. Use the `statusFilter` or `statuses` properties to scope runs, and the `Trigger` provides deduplication and state TTL controls.
+
+
+## Azure AI Foundry
+
+The `aifoundry` package provides tasks and a trigger for interacting with Azure AI Foundry:
+
+- `aifoundry.ChatCompletion` - Call a deployed model for chat completions.
+- `aifoundry.Embeddings` - Generate vector embeddings from text input.
+- `aifoundry.RunAgent` - Create and run an Azure AI Foundry agent, returning the conversation result.
+- `aifoundry.CreateEvaluation` - Submit a new evaluation job using a dataset and a set of evaluators.
+- `aifoundry.GetDeployment` - Retrieve deployment status and configuration.
+- `aifoundry.Trigger` - Poll Azure AI Foundry for newly completed evaluations and fire an execution. Use the `statuses` and `maxEvaluations` properties to scope evaluations; the trigger provides deduplication and state TTL controls.
+
+### Authentication for Azure AI Foundry
+
+- Tasks like `ChatCompletion` and `Embeddings` support API-key authentication (via the `apiKey` property) or Entra ID (`DefaultAzureCredential`).
+- Tasks that use the Azure AI Projects SDK (like `RunAgent`, `CreateEvaluation`, `GetDeployment`, and `Trigger`) **require** Entra ID (`DefaultAzureCredential`) as API keys are not supported by the underlying client. Do not provide the `apiKey` property when using these tasks.

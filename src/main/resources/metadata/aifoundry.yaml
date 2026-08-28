@@ -1,0 +1,8 @@
+group: io.kestra.plugin.azure.aifoundry
+name: "aifoundry"
+title: "Azure AI Foundry"
+description: "Tasks and triggers to interact with Azure AI Foundry."
+body: "Leverage Microsoft's unified platform for building, evaluating, and deploying AI models. Perform chat completions, generate embeddings, run persistent agents, and retrieve deployment information directly within Kestra data pipelines."
+videos: []
+createdBy: "Kestra Core Team"
+managedBy: "Kestra Core Team"

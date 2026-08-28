@@ -27,6 +27,7 @@ import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.nullable;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -60,7 +61,7 @@ class EmbeddingsTest {
         when(embeddingsResult.getData()).thenReturn(List.of(item1, item2));
 
         EmbeddingsClient mockClient = mock(EmbeddingsClient.class);
-        when(mockClient.embed(any(java.util.List.class), any(), any(), any(), anyString(), any())).thenReturn(embeddingsResult);
+        when(mockClient.embed(any(java.util.List.class), any(), any(), any(), nullable(String.class), any())).thenReturn(embeddingsResult);
 
         try (MockedConstruction<EmbeddingsClientBuilder> ignored = Mockito.mockConstruction(EmbeddingsClientBuilder.class, (mock, ctx) ->
         {
@@ -81,7 +82,7 @@ class EmbeddingsTest {
             assertThat(output.getEmbeddings().get(1), contains(0.4f, 0.5f, 0.6f));
 
             ArgumentCaptor<java.util.List<String>> captor = ArgumentCaptor.forClass(java.util.List.class);
-            verify(mockClient).embed(captor.capture(), any(), any(), any(), anyString(), any());
+            verify(mockClient).embed(captor.capture(), any(), any(), any(), nullable(String.class), any());
 
             assertThat(captor.getValue().size(), is(2));
             assertThat(captor.getValue(), contains("First input text", "Second input text"));

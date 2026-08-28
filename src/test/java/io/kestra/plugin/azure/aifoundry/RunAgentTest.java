@@ -14,6 +14,7 @@ import com.azure.ai.agents.persistent.PersistentAgentsClient;
 import com.azure.ai.agents.persistent.RunsClient;
 import com.azure.ai.agents.persistent.ThreadsClient;
 import com.azure.ai.agents.persistent.models.CreateRunOptions;
+import com.azure.ai.agents.persistent.models.ListSortOrder;
 import com.azure.ai.agents.persistent.models.MessageRole;
 import com.azure.ai.agents.persistent.models.MessageTextContent;
 import com.azure.ai.agents.persistent.models.MessageTextDetails;
@@ -39,6 +40,7 @@ import static org.hamcrest.Matchers.notNullValue;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
@@ -129,7 +131,8 @@ class RunAgentTest {
         PagedIterable<ThreadMessage> pagedIterable = mock(PagedIterable.class);
         when(pagedIterable.stream()).thenReturn(java.util.stream.Stream.of(mockAssistantMessage));
 
-        when(messagesClient.listMessages("thread-123")).thenReturn(pagedIterable);
+        when(messagesClient.listMessages(eq("thread-123"), isNull(), isNull(), eq(ListSortOrder.DESCENDING), isNull(), isNull()))
+            .thenReturn(pagedIterable);
 
         PersistentAgentsClient agentsClient = mock(PersistentAgentsClient.class);
         when(agentsClient.getThreadsClient()).thenReturn(threadsClient);

@@ -12,6 +12,8 @@ import com.azure.ai.projects.AIProjectClientBuilder;
 import com.azure.ai.projects.EvaluationsClient;
 import com.azure.ai.projects.models.Evaluation;
 import com.azure.core.http.rest.PagedIterable;
+import com.azure.core.http.rest.RequestOptions;
+import com.azure.core.util.BinaryData;
 
 import io.kestra.core.junit.annotations.KestraTest;
 import io.kestra.core.models.executions.Execution;
@@ -64,12 +66,12 @@ class TriggerTest {
         when(eval2.getName()).thenReturn("eval-2");
         when(eval2.getStatus()).thenReturn("Running");
 
-        PagedIterable<Evaluation> mockedIterable = mock(PagedIterable.class);
+        PagedIterable<BinaryData> mockedIterable = mock(PagedIterable.class);
         when(mockedIterable.iterator())
-            .thenAnswer(inv -> List.of(eval1, eval2).iterator());
+            .thenAnswer(inv -> List.of(binaryDataFor(eval1), binaryDataFor(eval2)).iterator());
 
         EvaluationsClient evalClient = mock(EvaluationsClient.class);
-        when(evalClient.listEvaluations()).thenReturn(mockedIterable);
+        when(evalClient.listEvaluations(any(RequestOptions.class))).thenReturn(mockedIterable);
 
         try (MockedConstruction<AIProjectClientBuilder> ignored = Mockito.mockConstruction(AIProjectClientBuilder.class, (mock, context) ->
         {
@@ -94,7 +96,7 @@ class TriggerTest {
             assertThat(result3.get().getTrigger().getVariables().get("total"), is(1));
             assertEvaluation(result3.get(), "eval-2", "Failed");
 
-            verify(evalClient, times(3)).listEvaluations();
+            verify(evalClient, times(3)).listEvaluations(any(RequestOptions.class));
         }
     }
 
@@ -118,12 +120,12 @@ class TriggerTest {
         when(evalRunning.getName()).thenReturn("eval-run");
         when(evalRunning.getStatus()).thenReturn("Running");
 
-        PagedIterable<Evaluation> mockedIterable = mock(PagedIterable.class);
+        PagedIterable<BinaryData> mockedIterable = mock(PagedIterable.class);
         when(mockedIterable.iterator())
-            .thenAnswer(inv -> List.of(evalRunning).iterator());
+            .thenAnswer(inv -> List.of(binaryDataFor(evalRunning)).iterator());
 
         EvaluationsClient evalClient = mock(EvaluationsClient.class);
-        when(evalClient.listEvaluations()).thenReturn(mockedIterable);
+        when(evalClient.listEvaluations(any(RequestOptions.class))).thenReturn(mockedIterable);
 
         try (MockedConstruction<AIProjectClientBuilder> ignored = Mockito.mockConstruction(AIProjectClientBuilder.class, (mock, context) ->
         {
@@ -161,12 +163,12 @@ class TriggerTest {
         when(evalFailed.getName()).thenReturn("eval-bad");
         when(evalFailed.getStatus()).thenReturn("Failed");
 
-        PagedIterable<Evaluation> mockedIterable = mock(PagedIterable.class);
+        PagedIterable<BinaryData> mockedIterable = mock(PagedIterable.class);
         when(mockedIterable.iterator())
-            .thenAnswer(inv -> List.of(evalCompleted, evalFailed).iterator());
+            .thenAnswer(inv -> List.of(binaryDataFor(evalCompleted), binaryDataFor(evalFailed)).iterator());
 
         EvaluationsClient evalClient = mock(EvaluationsClient.class);
-        when(evalClient.listEvaluations()).thenReturn(mockedIterable);
+        when(evalClient.listEvaluations(any(RequestOptions.class))).thenReturn(mockedIterable);
 
         try (MockedConstruction<AIProjectClientBuilder> ignored = Mockito.mockConstruction(AIProjectClientBuilder.class, (mock, context) ->
         {
@@ -204,16 +206,14 @@ class TriggerTest {
         when(eval1.getName()).thenReturn("eval-first");
         when(eval1.getStatus()).thenReturn("Completed");
 
-        Evaluation eval2 = mock(Evaluation.class);
-        when(eval2.getName()).thenReturn("eval-second");
-        when(eval2.getStatus()).thenReturn("Completed");
-
-        PagedIterable<Evaluation> mockedIterable = mock(PagedIterable.class);
+        // The Azure API applies the $top query param server-side, so a maxEvaluations of 1
+        // means the (mocked) service itself only ever returns a single evaluation.
+        PagedIterable<BinaryData> mockedIterable = mock(PagedIterable.class);
         when(mockedIterable.iterator())
-            .thenAnswer(inv -> List.of(eval1, eval2).iterator());
+            .thenAnswer(inv -> List.of(binaryDataFor(eval1)).iterator());
 
         EvaluationsClient evalClient = mock(EvaluationsClient.class);
-        when(evalClient.listEvaluations()).thenReturn(mockedIterable);
+        when(evalClient.listEvaluations(any(RequestOptions.class))).thenReturn(mockedIterable);
 
         try (MockedConstruction<AIProjectClientBuilder> ignored = Mockito.mockConstruction(AIProjectClientBuilder.class, (mock, context) ->
         {
@@ -272,6 +272,12 @@ class TriggerTest {
             () -> trigger.evaluate(ctx.getKey(), triggerContext)
         );
         assertThat(ex.getMessage(), containsString("maxEvaluations: must be greater than or equal to 1"));
+    }
+
+    private BinaryData binaryDataFor(Evaluation evaluation) {
+        BinaryData binaryData = mock(BinaryData.class);
+        when(binaryData.toObject(Evaluation.class)).thenReturn(evaluation);
+        return binaryData;
     }
 
     @SuppressWarnings("unchecked")

@@ -11,6 +11,8 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
+import org.junit.jupiter.api.Assumptions;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import com.azure.data.tables.models.TableErrorCode;
@@ -49,6 +51,14 @@ class SuiteTest {
 
     @Value("${kestra.variables.globals.azure.tables.table}")
     protected String table;
+
+    @BeforeEach
+    void requireAzureCredentials() {
+        Assumptions.assumeTrue(
+            connectionString != null && !connectionString.isBlank(),
+            "Azure credentials not configured, skipping integration test"
+        );
+    }
 
     @SuppressWarnings("unchecked")
     @Test

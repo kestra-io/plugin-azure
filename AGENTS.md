@@ -25,6 +25,12 @@ Infrastructure dependencies (Docker Compose services):
 
 ### Key Plugin Classes
 
+- `io.kestra.plugin.azure.aifoundry.ChatCompletion`
+- `io.kestra.plugin.azure.aifoundry.CreateEvaluation`
+- `io.kestra.plugin.azure.aifoundry.Embeddings`
+- `io.kestra.plugin.azure.aifoundry.GetDeployment`
+- `io.kestra.plugin.azure.aifoundry.RunAgent`
+- `io.kestra.plugin.azure.aifoundry.Trigger`
 - `io.kestra.plugin.azure.auth.OauthAccessToken`
 - `io.kestra.plugin.azure.batch.job.Create`
 - `io.kestra.plugin.azure.batch.pool.Resize`
@@ -35,6 +41,20 @@ Infrastructure dependencies (Docker Compose services):
 - `io.kestra.plugin.azure.eventhubs.RealtimeTrigger`
 - `io.kestra.plugin.azure.eventhubs.Trigger`
 - `io.kestra.plugin.azure.function.HttpFunction`
+- `io.kestra.plugin.azure.horizondb.Queries`
+- `io.kestra.plugin.azure.horizondb.Query`
+- `io.kestra.plugin.azure.horizondb.durable.Cancel`
+- `io.kestra.plugin.azure.horizondb.durable.GetStatus`
+- `io.kestra.plugin.azure.horizondb.durable.ListInstances`
+- `io.kestra.plugin.azure.horizondb.durable.Signal`
+- `io.kestra.plugin.azure.horizondb.durable.Start`
+- `io.kestra.plugin.azure.horizondb.durable.Trigger`
+- `io.kestra.plugin.azure.logicapps.Get`
+- `io.kestra.plugin.azure.logicapps.GetRun`
+- `io.kestra.plugin.azure.logicapps.List`
+- `io.kestra.plugin.azure.logicapps.ListRuns`
+- `io.kestra.plugin.azure.logicapps.Run`
+- `io.kestra.plugin.azure.logicapps.Trigger`
 - `io.kestra.plugin.azure.monitoring.Push`
 - `io.kestra.plugin.azure.monitoring.Query`
 - `io.kestra.plugin.azure.monitoring.Trigger`
@@ -72,6 +92,7 @@ Infrastructure dependencies (Docker Compose services):
 - `io.kestra.plugin.azure.storage.table.Get`
 - `io.kestra.plugin.azure.storage.table.List`
 - `io.kestra.plugin.azure.synapse.SparkBatchJobCreate`
+
 
 ### Project Structure
 

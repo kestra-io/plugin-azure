@@ -70,7 +70,7 @@ import reactor.core.publisher.Mono;
                     factoryName: exampleFactoryName
                     pipelineName: examplePipeline
                     resourceGroupName: exampleResourceGroup
-                    subscriptionId: 12345678-1234-1234-12345678abc
+                    subscriptionId: 00000000-0000-0000-0000-000000000000
                     tenantId: "{{ secret('DATAFACTORY_TENANT_ID') }}"
                     clientId: "{{ secret('DATAFACTORY_CLIENT_ID') }}"
                     clientSecret: "{{ secret('DATAFACTORY_CLIENT_SECRET') }}"

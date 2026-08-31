@@ -39,7 +39,7 @@ import lombok.experimental.SuperBuilder;
                 tasks:
                   - id: each
                     type: io.kestra.plugin.core.flow.Loop
-                    values: "{{ trigger.series }}"
+                    values: "{{ trigger.results }}"
                     tasks:
                       - id: log
                         type: io.kestra.plugin.core.log.Log
@@ -52,6 +52,7 @@ import lombok.experimental.SuperBuilder;
                     tenantId: "{{ secret('AZURE_TENANT_ID') }}"
                     clientId: "{{ secret('AZURE_CLIENT_ID') }}"
                     clientSecret: "{{ secret('AZURE_CLIENT_SECRET') }}"
+                    endpoint: "https://westeurope.metrics.monitor.azure.com"
                     resourceIds:
                       - "/subscriptions/xxx/resourceGroups/rg/providers/Microsoft.Compute/virtualMachines/vm1"
                     metricNames:
@@ -72,7 +73,7 @@ import lombok.experimental.SuperBuilder;
                 tasks:
                   - id: alert
                     type: io.kestra.plugin.core.log.Log
-                    message: "High CPU detected: {{ trigger.count }} datapoints"
+                    message: "High CPU detected: {{ trigger.datapoints }} datapoints"
 
                 triggers:
                   - id: watch_cpu
@@ -81,6 +82,7 @@ import lombok.experimental.SuperBuilder;
                     tenantId: "{{ secret('AZURE_TENANT_ID') }}"
                     clientId: "{{ secret('AZURE_CLIENT_ID') }}"
                     clientSecret: "{{ secret('AZURE_CLIENT_SECRET') }}"
+                    endpoint: "https://westeurope.metrics.monitor.azure.com"
                     resourceIds:
                       - "/subscriptions/xxx/resourceGroups/rg/providers/Microsoft.Compute/virtualMachines/vm1"
                       - "/subscriptions/xxx/resourceGroups/rg/providers/Microsoft.Compute/virtualMachines/vm2"

@@ -26,6 +26,7 @@ kestra:
         blobs:
           endpoint: "https://unittestkt.blob.core.windows.net"
           container: tasks
+          connection-string: ""
         tables:
           endpoint: "https://unittestkt.table.core.windows.net"
           table: tasks
@@ -54,6 +55,12 @@ kestra:
           endpoint: "https://cosmos-unit-test.documents.azure.com"
           database-id: "cosmos-database-unit-test"
           container-id: "cosmos-container-unit-test"
+          connection-string: ""
         servicebus:
           queue-name: "unittest-queue"
           topic-name: "unittest-topic"
+          connection-string: ""
+        sp:
+          username: ""
+          secret: ""
+          tenant: ""

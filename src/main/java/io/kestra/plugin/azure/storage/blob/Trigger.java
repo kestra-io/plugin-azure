@@ -19,9 +19,9 @@ import io.kestra.core.runners.RunContext;
 import io.kestra.plugin.azure.shared.AbstractConnectionInterface;
 import io.kestra.plugin.azure.shared.AzureClientWithSasInterface;
 import io.kestra.plugin.azure.shared.storage.blob.abstracts.AbstractBlobStorageContainerInterface;
-import io.kestra.plugin.azure.storage.blob.abstracts.ActionInterface;
 import io.kestra.plugin.azure.shared.storage.blob.abstracts.ListInterface;
 import io.kestra.plugin.azure.shared.storage.blob.models.Blob;
+import io.kestra.plugin.azure.storage.blob.abstracts.ActionInterface;
 import io.kestra.plugin.azure.storage.blob.services.BlobService;
 
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -30,7 +30,6 @@ import lombok.experimental.SuperBuilder;
 
 import static io.kestra.core.models.triggers.StatefulTriggerService.*;
 import static io.kestra.core.utils.Rethrow.throwFunction;
-import io.kestra.core.models.annotations.PluginProperty;
 
 @SuperBuilder
 @NoArgsConstructor
@@ -41,7 +40,7 @@ import io.kestra.core.models.annotations.PluginProperty;
 @Schema(
     title = "Trigger a flow on a new file arrival in an Azure Blob Storage container",
     description = "This trigger will poll the specified Azure Blob Storage container every `interval`. "
-        + "Using the `from` and `regExp` properties, you can define which files' arrival will trigger the flow. "
+        + "Using the `prefix` and `regexp` properties, you can define which files' arrival will trigger the flow. "
         + "Under the hood, we use the Azure Blob Storage API to list the files in a specified location and "
         + "download them to the internal storage and process them with the declared `action`. "
         + "You can use the `action` property to move or delete the files from the container after processing "

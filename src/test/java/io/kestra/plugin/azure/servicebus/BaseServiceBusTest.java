@@ -30,6 +30,14 @@ public class BaseServiceBusTest {
     @Value("${kestra.variables.globals.azure.servicebus.connection-string}")
     protected String connectionString;
 
+    @BeforeEach
+    void requireAzureCredentials() {
+        Assumptions.assumeTrue(
+            connectionString != null && !connectionString.isBlank(),
+            "Azure credentials not configured, skipping integration test"
+        );
+    }
+
     @Inject
     protected RunContextFactory runContextFactory = new RunContextFactory();
 
@@ -44,6 +52,9 @@ public class BaseServiceBusTest {
 
     @AfterAll
     void tearDown() {
+        if (connectionString == null || connectionString.isBlank()) {
+            return;
+        }
         ServiceBusAdministrationClient admin = new ServiceBusAdministrationClientBuilder()
             .connectionString(connectionString)
             .buildClient();

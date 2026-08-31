@@ -79,7 +79,7 @@ public class List extends AbstractTableStorage implements RunnableTask<List.Outp
 
     @Schema(
         title = "The maximum number of entities to return",
-        description = "Limits the number of entities returned by the list operation. If not specified, all matching entities will be returned."
+        description = "Limits the number of entities returned by the list operation; defaults to 25. Increase it to return more entities."
     )
     @Builder.Default
     @PluginProperty(group = "processing")

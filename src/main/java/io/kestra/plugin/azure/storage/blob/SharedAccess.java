@@ -59,14 +59,14 @@ import lombok.experimental.SuperBuilder;
 )
 public class SharedAccess extends AbstractBlobStorageObject implements RunnableTask<SharedAccess.Output> {
     @Schema(
-        title = " The time after which the SAS will no longer work"
+        title = "The time after which the SAS will no longer work"
     )
     @NotNull
     @PluginProperty(group = "main")
     private Property<String> expirationDate;
 
     @Schema(
-        title = " The permissions to be set for the Shared Access"
+        title = "The permissions to be set for the Shared Access"
     )
     @PluginProperty(dynamic = true, group = "main")
     @NotNull

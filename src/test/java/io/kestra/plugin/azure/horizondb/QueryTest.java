@@ -154,10 +154,12 @@ class QueryTest {
         verify(statement).setFetchSize(10000);
 
         // verify the stored ION content actually contains both rows
-        java.io.InputStream storedContent = runContext.storage().getFile(output.getUri());
         java.util.List<Object> rows = new java.util.ArrayList<>();
-        try (java.io.BufferedReader reader = new java.io.BufferedReader(new java.io.InputStreamReader(storedContent))) {
-            io.kestra.core.serializers.FileSerde.reader(reader, rows::add);
+        // ION is written as binary, so read the stream directly rather than through a text Reader
+        try (java.io.InputStream storedContent = runContext.storage().getFile(output.getUri())) {
+            io.kestra.core.serializers.FileSerde.readAll(storedContent)
+                .doOnNext(rows::add)
+                .blockLast();
         }
         assertThat(rows, hasSize(2));
     }

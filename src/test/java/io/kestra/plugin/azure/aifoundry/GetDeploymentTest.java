@@ -71,12 +71,12 @@ class GetDeploymentTest {
         DeploymentsClient mockClient = mock(DeploymentsClient.class);
         when(mockClient.getDeployment(anyString())).thenReturn(mockDeployment);
 
-        try (MockedConstruction<AIProjectClientBuilder> ignored =
-                 Mockito.mockConstruction(AIProjectClientBuilder.class, (mock, ctx) -> {
-                     when(mock.endpoint(anyString())).thenReturn(mock);
-                     when(mock.credential(any())).thenReturn(mock);
-                     when(mock.buildDeploymentsClient()).thenReturn(mockClient);
-                 })) {
+        try (MockedConstruction<AIProjectClientBuilder> ignored = Mockito.mockConstruction(AIProjectClientBuilder.class, (mock, ctx) ->
+        {
+            when(mock.endpoint(anyString())).thenReturn(mock);
+            when(mock.credential(any())).thenReturn(mock);
+            when(mock.buildDeploymentsClient()).thenReturn(mockClient);
+        })) {
 
             GetDeployment.Output output = task.run(runContext);
 

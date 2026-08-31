@@ -94,9 +94,11 @@ public class HttpFunction extends Task implements RunnableTask<HttpFunction.Outp
                 .runContext(runContext)
                 .configuration(
                     HttpConfiguration.builder()
-                        .timeout(TimeoutConfiguration.builder()
-                            .readIdleTimeout(Property.ofValue(timeout))
-                            .build())
+                        .timeout(
+                            TimeoutConfiguration.builder()
+                                .readIdleTimeout(Property.ofValue(timeout))
+                                .build()
+                        )
                         .build()
                 )
                 .build()

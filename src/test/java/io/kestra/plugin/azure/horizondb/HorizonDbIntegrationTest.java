@@ -1,8 +1,5 @@
 package io.kestra.plugin.azure.horizondb;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.hasEntry;
-import static org.hamcrest.Matchers.notNullValue;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
@@ -13,8 +10,13 @@ import io.kestra.core.runners.RunContext;
 import io.kestra.core.runners.RunContextFactory;
 import io.kestra.plugin.azure.horizondb.durable.GetStatus;
 import io.kestra.plugin.azure.horizondb.durable.Start;
+
 import io.micronaut.context.annotation.Value;
 import jakarta.inject.Inject;
+
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.hasEntry;
+import static org.hamcrest.Matchers.notNullValue;
 
 /**
  * Requires a live Azure HorizonDB instance (public preview) with pg_durable enabled.

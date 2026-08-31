@@ -19,9 +19,9 @@ import io.kestra.core.runners.RunContext;
 import io.kestra.plugin.azure.shared.AbstractConnectionInterface;
 import io.kestra.plugin.azure.shared.AzureClientWithSasInterface;
 import io.kestra.plugin.azure.shared.storage.blob.abstracts.AbstractBlobStorageContainerInterface;
-import io.kestra.plugin.azure.storage.blob.abstracts.ActionInterface;
 import io.kestra.plugin.azure.shared.storage.blob.abstracts.ListInterface;
 import io.kestra.plugin.azure.shared.storage.blob.models.Blob;
+import io.kestra.plugin.azure.storage.blob.abstracts.ActionInterface;
 import io.kestra.plugin.azure.storage.blob.services.BlobService;
 
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -30,7 +30,6 @@ import lombok.experimental.SuperBuilder;
 
 import static io.kestra.core.models.triggers.StatefulTriggerService.*;
 import static io.kestra.core.utils.Rethrow.throwFunction;
-import io.kestra.core.models.annotations.PluginProperty;
 
 @SuperBuilder
 @NoArgsConstructor
@@ -61,13 +60,13 @@ import io.kestra.core.models.annotations.PluginProperty;
 
                 tasks:
                   - id: each
-                    type: io.kestra.plugin.core.flow.ForEach
+                    type: io.kestra.plugin.core.flow.Loop
                     concurrencyLimit: 1
                     values: "{{ trigger.blobs | jq('.[].uri') }}"
                     tasks:
                       - id: return
                         type: io.kestra.plugin.core.debug.Return
-                        format: "{{ taskrun.value }}"
+                        format: "{{ item.value }}"
 
                 triggers:
                   - id: watch
@@ -94,19 +93,19 @@ import io.kestra.core.models.annotations.PluginProperty;
 
                 tasks:
                   - id: each
-                    type: io.kestra.plugin.core.flow.ForEach
+                    type: io.kestra.plugin.core.flow.Loop
                     values: "{{ trigger.blobs | jq('.[].name') }}"
                     tasks:
                       - id: return
                         type: io.kestra.plugin.core.debug.Return
-                        format: "{{ taskrun.value }}"
+                        format: "{{ item.value }}"
 
                       - id: delete
                         type: io.kestra.plugin.azure.storage.blob.Delete
                         endpoint: "https://yourblob.blob.core.windows.net"
                         connectionString: "{{ secret('AZURE_CONNECTION_STRING') }}"
                         container: myBlobContainer
-                        name: "{{ taskrun.value }}"
+                        name: "{{ item.value }}"
 
                 triggers:
                   - id: watch

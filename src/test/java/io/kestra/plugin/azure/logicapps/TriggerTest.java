@@ -53,13 +53,13 @@ class TriggerTest {
             .interval(Duration.ofSeconds(60))
             .build();
 
-        Map.Entry<ConditionContext, io.kestra.core.models.triggers.Trigger> context = TestsUtils.mockTrigger(runContextFactory, trigger);
+        Map.Entry<ConditionContext, io.kestra.core.scheduler.model.TriggerState> context = TestsUtils.mockTrigger(runContextFactory, trigger);
 
         try (MockedStatic<LogicManager> mockedStatic = mockStatic(LogicManager.class)) {
             mockedStatic.when(() -> LogicManager.authenticate(any(TokenCredential.class), any(AzureProfile.class))).thenReturn(manager);
 
-            Optional<Execution> first = trigger.evaluate(context.getKey(), context.getValue());
-            Optional<Execution> second = trigger.evaluate(context.getKey(), context.getValue());
+            Optional<Execution> first = trigger.evaluate(context.getKey(), context.getValue().context());
+            Optional<Execution> second = trigger.evaluate(context.getKey(), context.getValue().context());
 
             assertThat(first.isPresent(), is(true));
             assertThat(first.get().getTrigger().getVariables().get("total"), is(1));
@@ -91,12 +91,12 @@ class TriggerTest {
             .interval(Duration.ofSeconds(60))
             .build();
 
-        Map.Entry<ConditionContext, io.kestra.core.models.triggers.Trigger> context = TestsUtils.mockTrigger(runContextFactory, trigger);
+        Map.Entry<ConditionContext, io.kestra.core.scheduler.model.TriggerState> context = TestsUtils.mockTrigger(runContextFactory, trigger);
 
         try (MockedStatic<LogicManager> mockedStatic = mockStatic(LogicManager.class)) {
             mockedStatic.when(() -> LogicManager.authenticate(any(TokenCredential.class), any(AzureProfile.class))).thenReturn(manager);
 
-            Optional<Execution> execution = trigger.evaluate(context.getKey(), context.getValue());
+            Optional<Execution> execution = trigger.evaluate(context.getKey(), context.getValue().context());
 
             assertThat(execution.isEmpty(), is(true));
         }

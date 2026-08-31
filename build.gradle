@@ -23,7 +23,7 @@ repositories {
     }
 }
 
-final targetJavaVersion = JavaVersion.VERSION_21
+final targetJavaVersion = JavaVersion.VERSION_25
 
 java {
     sourceCompatibility = targetJavaVersion
@@ -98,6 +98,18 @@ dependencies {
     implementation "com.azure:azure-identity-extensions:1.2.0"
 }
 
+// Kestra's platform BOM (azure-sdk-bom) constrains azure-ai-projects to 2.2.0, and because the
+// platform is applied as an enforcedPlatform that constraint wins over the version requested above.
+// 2.2.0 is an API rewrite, not a rename: EvaluationsClient, Evaluation, EvaluatorConfiguration and
+// InputDataset are gone, and evaluation runs moved to the OpenAI-compatible surface
+// (EvalCreateParams + TestingCriterionAzureAIEvaluator), which has no Azure ML dataset data source.
+// Pin the version the aifoundry tasks were written against until they are ported to that model.
+configurations.all {
+    resolutionStrategy {
+        force "com.azure:azure-ai-projects:1.0.0-beta.2"
+    }
+}
+
 
 /**********************************************************************************************************************\
  * Test
@@ -137,6 +149,7 @@ dependencies {
     testImplementation group: "io.kestra", name: "storage-local"
     testImplementation group: "io.kestra", name: "scheduler"
     testImplementation group: "io.kestra", name: "worker"
+    testImplementation group: "io.kestra", name: "indexer", version: kestraVersion
 
     // test
     testImplementation "org.junit.jupiter:junit-jupiter-engine"

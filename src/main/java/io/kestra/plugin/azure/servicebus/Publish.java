@@ -142,7 +142,6 @@ public class Publish extends AbstractServiceBusTask implements RunnableTask<Publ
     }
 
     public record Output(
-        @Schema(title = "Messages count")
-        Integer messagesCount) implements io.kestra.core.models.tasks.Output {
+        @Schema(title = "Messages count") Integer messagesCount) implements io.kestra.core.models.tasks.Output {
     }
 }

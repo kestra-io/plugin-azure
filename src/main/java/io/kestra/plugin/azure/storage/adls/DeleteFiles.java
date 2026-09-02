@@ -48,13 +48,6 @@ import static io.kestra.core.utils.Rethrow.throwConsumer;
                 id: azure_storage_blob_delete_list
                 namespace: company.team
 
-                pluginDefaults:
-                  - type: io.kestra.plugin.azure.storage.adls
-                    values:
-                      connectionString: "{{ secret('AZURE_CONNECTION_STRING') }}"
-                      fileSystem: "tasks"
-                      endpoint: "https://yourblob.blob.core.windows.net"
-
                 tasks:
                   - id: for_each
                     type: io.kestra.plugin.core.flow.Loop
@@ -72,11 +65,17 @@ import static io.kestra.core.utils.Rethrow.throwConsumer;
                         type: io.kestra.plugin.azure.storage.adls.Upload
                         filePath: "adls/pokemon/{{ item.value }}.json"
                         from: "{{ outputs.to_ion[item.value].uri }}"
+                        connectionString: "{{ secret('AZURE_CONNECTION_STRING') }}"
+                        fileSystem: "tasks"
+                        endpoint: "https://yourblob.blob.core.windows.net"
 
                   - id: delete_file
                     type: io.kestra.plugin.azure.storage.adls.DeleteFiles
                     concurrent: 2
                     directoryPath: "adls/pokemon/"
+                    connectionString: "{{ secret('AZURE_CONNECTION_STRING') }}"
+                    fileSystem: "tasks"
+                    endpoint: "https://yourblob.blob.core.windows.net"
                 """
         )
     },

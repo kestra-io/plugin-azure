@@ -40,13 +40,6 @@ import lombok.experimental.SuperBuilder;
                 id: azure_storage_adls_shared_access
                 namespace: company.team
 
-                pluginDefaults:
-                  - type: io.kestra.plugin.azure.storage.adls
-                    values:
-                      connectionString: "{{ secret('AZURE_CONNECTION_STRING') }}"
-                      fileSystem: "tasks"
-                      endpoint: "https://yourblob.blob.core.windows.net"
-
                 tasks:
                     - id: download_request
                       type: io.kestra.plugin.core.http.Download
@@ -60,6 +53,9 @@ import lombok.experimental.SuperBuilder;
                       type: io.kestra.plugin.azure.storage.adls.Upload
                       filePath: "adls/product_data/product.json"
                       from: "{{ outputs.to_ion.uri }}"
+                      connectionString: "{{ secret('AZURE_CONNECTION_STRING') }}"
+                      fileSystem: "tasks"
+                      endpoint: "https://yourblob.blob.core.windows.net"
 
                     - id: shared_access
                       type: io.kestra.plugin.azure.storage.adls.SharedAccess
@@ -67,6 +63,9 @@ import lombok.experimental.SuperBuilder;
                       expirationDate: "{{ now() | dateAdd(1, 'DAYS') }}"
                       permissions:
                         - READ
+                      connectionString: "{{ secret('AZURE_CONNECTION_STRING') }}"
+                      fileSystem: "tasks"
+                      endpoint: "https://yourblob.blob.core.windows.net"
 
                     - id: download_file_with_token
                       type: io.kestra.plugin.core.http.Download

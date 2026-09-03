@@ -78,7 +78,7 @@ dependencies {
     implementation ("com.azure:azure-messaging-servicebus:7.17.18", kestraProvidedJackson)
 
     // Azure resource manager
-    implementation 'com.azure.resourcemanager:azure-resourcemanager-datafactory:1.2.0'
+    implementation 'com.azure.resourcemanager:azure-resourcemanager-datafactory:1.2.9'
     implementation 'com.azure.resourcemanager:azure-resourcemanager-logic:1.0.0'
     implementation 'com.azure.resourcemanager:azure-resourcemanager-streamanalytics:1.0.0'
     // Azure Synapse Spark (beta SDK - no GA version available)
@@ -95,7 +95,7 @@ dependencies {
 
     // Azure HorizonDB (PostgreSQL wire protocol + Entra ID auth extension)
     implementation "org.postgresql:postgresql:42.7.12"
-    implementation "com.azure:azure-identity-extensions:1.2.0"
+    implementation "com.azure:azure-identity-extensions:1.2.9"
 }
 
 // Kestra's platform BOM (azure-sdk-bom) constrains azure-ai-projects to 2.2.0, and because the

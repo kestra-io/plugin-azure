@@ -94,7 +94,7 @@ dependencies {
     implementation 'io.kestra.plugin:plugin-azure-lib:1.1.5'
 
     // Azure HorizonDB (PostgreSQL wire protocol + Entra ID auth extension)
-    implementation "org.postgresql:postgresql:42.7.12"
+    implementation "org.postgresql:postgresql:42.7.13"
     implementation "com.azure:azure-identity-extensions:1.2.0"
 }
 

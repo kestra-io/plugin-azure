@@ -83,7 +83,7 @@ public class GetJob extends AbstractMachineLearningTask implements RunnableTask<
             throw e;
         }
 
-        JobState state = MachineLearningService.toJobState(job.properties().status());
+        JobState state = MachineLearningService.toJobState(job);
 
         Map<String, Double> metrics = MachineLearningService.mlflowMetrics(
             runContext,

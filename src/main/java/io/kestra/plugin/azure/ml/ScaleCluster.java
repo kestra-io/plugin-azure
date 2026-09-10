@@ -1,6 +1,10 @@
 package io.kestra.plugin.azure.ml;
 
 import java.time.Duration;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 import com.azure.core.management.exception.ManagementException;
 import com.azure.resourcemanager.machinelearning.MachineLearningManager;
@@ -114,16 +118,26 @@ public class ScaleCluster extends AbstractMachineLearningTask implements Runnabl
         runContext.render(this.nodeIdleTimeBeforeScaleDown).as(Duration.class).ifPresent(scaleSettings::withNodeIdleTimeBeforeScaleDown);
 
         try {
-            compute.update()
-                .withProperties(new ScaleSettingsInformation().withScaleSettings(scaleSettings))
-                .apply();
-        } catch (ManagementException e) {
-            if (e.getResponse() != null && e.getResponse().getStatusCode() == 409) {
-                throw new IllegalStateException(
-                    "Could not update compute cluster '%s' — an update is likely already in progress; wait for it to settle and retry".formatted(rComputeName), e
-                );
+            // .apply() blocks with no client-side timeout of its own — bound it explicitly so a stalled ARM
+            // long-running operation fails cleanly instead of hanging the task indefinitely.
+            CompletableFuture.supplyAsync(() ->
+                compute.update()
+                    .withProperties(new ScaleSettingsInformation().withScaleSettings(scaleSettings))
+                    .apply()
+            ).get(2, TimeUnit.MINUTES);
+        } catch (TimeoutException e) {
+            throw new IllegalStateException("Updating autoscale settings for compute cluster '%s' did not complete within 2 minutes".formatted(rComputeName), e);
+        } catch (ExecutionException e) {
+            Throwable cause = e.getCause();
+            if (cause instanceof ManagementException managementException) {
+                throw translateScaleError(managementException, rComputeName);
             }
-            throw e;
+            throw new IllegalStateException("Failed to update autoscale settings for compute cluster '%s': %s".formatted(rComputeName, cause.getMessage()), cause);
+        } catch (ManagementException e) {
+            throw translateScaleError(e, rComputeName);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new IllegalStateException("Interrupted while updating autoscale settings for compute cluster '%s'".formatted(rComputeName), e);
         }
 
         logger.info("Updated autoscale settings of compute cluster '{}': min={}, max={}", rComputeName, rMinNodeCount, rMaxNodeCount);
@@ -133,6 +147,15 @@ public class ScaleCluster extends AbstractMachineLearningTask implements Runnabl
             .minNodeCount(rMinNodeCount)
             .maxNodeCount(rMaxNodeCount)
             .build();
+    }
+
+    private static IllegalStateException translateScaleError(ManagementException e, String computeName) {
+        if (e.getResponse() != null && e.getResponse().getStatusCode() == 409) {
+            return new IllegalStateException(
+                "Could not update compute cluster '%s' — an update is likely already in progress; wait for it to settle and retry".formatted(computeName), e
+            );
+        }
+        return new IllegalStateException("Failed to update autoscale settings for compute cluster '%s': %s".formatted(computeName, e.getValue() != null ? e.getValue().getMessage() : e.getMessage()), e);
     }
 
     @SuperBuilder

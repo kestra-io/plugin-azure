@@ -31,8 +31,16 @@ final class MachineLearningComputeService {
 
         if (compute.properties() instanceof ComputeInstance computeInstance) {
             ComputeInstanceState state = computeInstance.properties() != null ? computeInstance.properties().state() : null;
-            if (state == ComputeInstanceState.STOPPED || state == ComputeInstanceState.STOPPING) {
-                throw new IllegalStateException("Compute instance '%s' is %s — start it first with the StartComputeInstance task".formatted(computeName, state.toString().toLowerCase()));
+            // Allow-list rather than a deny-list of known-bad states: any state other than one that means "up and
+            // able to take work" is treated as not (yet) usable, so a state this list doesn't know about (a
+            // provisioning/failure state added by Azure, or a genuinely unset state) still surfaces an actionable
+            // error instead of silently falling through to submit against a compute that isn't really ready.
+            boolean usable = state == ComputeInstanceState.RUNNING || state == ComputeInstanceState.JOB_RUNNING;
+            if (!usable) {
+                String stateLabel = state != null ? state.toString() : "in an unknown state";
+                throw new IllegalStateException(
+                    "Compute instance '%s' is not ready to accept work (%s) — if it is stopped, start it first with the StartComputeInstance task, otherwise wait for it to finish transitioning".formatted(computeName, stateLabel)
+                );
             }
         }
     }

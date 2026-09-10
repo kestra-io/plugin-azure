@@ -48,6 +48,15 @@ final class MachineLearningService {
     }
 
     /**
+     * Null-safe: a job's {@code properties()} is not guaranteed non-null (a malformed/partial ARM response), unlike
+     * a compute resource's, which every other call site already accounts for. Prefer this over
+     * {@code toJobState(job.properties().status())} at any job call site.
+     */
+    static JobState toJobState(JobBase job) {
+        return toJobState(job.properties() != null ? job.properties().status() : null);
+    }
+
+    /**
      * {@link JobStatus} values are PascalCase strings straight off the ARM REST API (e.g. {@code "CancelRequested"}),
      * not {@link JobState}'s SCREAMING_SNAKE_CASE names, so this maps them explicitly rather than relying on a
      * case transform that would silently break if Azure changes casing.
@@ -103,7 +112,7 @@ final class MachineLearningService {
      *
      * @throws TimeoutException if {@code maxDuration} elapses before a terminal state is reached
      */
-    static JobBase awaitTerminalState(Supplier<JobBase> fetch, Duration interval, Duration maxDuration) throws TimeoutException {
+    static JobBase awaitTerminalState(RunContext runContext, Supplier<JobBase> fetch, Duration interval, Duration maxDuration) throws TimeoutException {
         AtomicReference<JobBase> last = new AtomicReference<>();
         // Await.until checks the timeout only between sleeps, not during one — an interval larger than maxDuration
         // would otherwise sleep straight through the whole timeout budget before the first check even happens.
@@ -112,9 +121,17 @@ final class MachineLearningService {
         Await.until(
             () ->
             {
-                JobBase job = fetch.get();
+                JobBase job;
+                try {
+                    job = fetch.get();
+                } catch (ManagementException e) {
+                    // A single transient ARM error (throttling, a network blip) must not fail a wait that can span
+                    // hours — log it and keep polling; a persistent problem still surfaces via the timeout below.
+                    runContext.logger().warn("Transient error polling job status, will retry: {}", e.getMessage());
+                    return false;
+                }
                 last.set(job);
-                return toJobState(job.properties().status()).isTerminal();
+                return toJobState(job).isTerminal();
             },
             pollInterval,
             maxDuration
@@ -137,7 +154,7 @@ final class MachineLearningService {
         Duration maxDuration,
         boolean cancelOnTimeout) {
         try {
-            return awaitTerminalState(() -> manager.jobs().get(resourceGroupName, workspaceName, jobName), interval, maxDuration);
+            return awaitTerminalState(runContext, () -> manager.jobs().get(resourceGroupName, workspaceName, jobName), interval, maxDuration);
         } catch (TimeoutException e) {
             if (cancelOnTimeout) {
                 // Goes through the same cancelQuietly() path a kill signal uses, instead of issuing its own raw
@@ -154,8 +171,8 @@ final class MachineLearningService {
                 Duration cancelGrace = Duration.ofSeconds(30);
                 Duration cancelPollInterval = interval.compareTo(Duration.ofSeconds(5)) < 0 ? interval : Duration.ofSeconds(5);
                 try {
-                    JobBase cancelled = awaitTerminalState(() -> manager.jobs().get(resourceGroupName, workspaceName, jobName), cancelPollInterval, cancelGrace);
-                    JobState finalState = toJobState(cancelled.properties().status());
+                    JobBase cancelled = awaitTerminalState(runContext, () -> manager.jobs().get(resourceGroupName, workspaceName, jobName), cancelPollInterval, cancelGrace);
+                    JobState finalState = toJobState(cancelled);
                     throw new IllegalStateException("Job '%s' did not reach a terminal state within %s; cancellation was requested and confirmed (final status '%s')".formatted(jobName, maxDuration, finalState));
                 } catch (TimeoutException confirmTimeout) {
                     throw new IllegalStateException("Job '%s' did not reach a terminal state within %s; cancellation was requested but not yet confirmed — check its status in Azure ML Studio".formatted(jobName, maxDuration));
@@ -346,13 +363,13 @@ final class MachineLearningService {
      */
     static ModelVersion latestModelVersion(MachineLearningManager manager, String resourceGroupName, String workspaceName, String modelName) {
         return manager.modelVersions().list(resourceGroupName, workspaceName, modelName).stream()
-            .max(Comparator.comparing(v -> v.systemData().createdAt()))
+            .max(Comparator.comparing((ModelVersion v) -> v.systemData() != null ? v.systemData().createdAt() : null, Comparator.nullsFirst(Comparator.naturalOrder())))
             .orElse(null);
     }
 
     static DataVersionBase latestDataVersion(MachineLearningManager manager, String resourceGroupName, String workspaceName, String dataName) {
         return manager.dataVersions().list(resourceGroupName, workspaceName, dataName).stream()
-            .max(Comparator.comparing(v -> v.systemData().createdAt()))
+            .max(Comparator.comparing((DataVersionBase v) -> v.systemData() != null ? v.systemData().createdAt() : null, Comparator.nullsFirst(Comparator.naturalOrder())))
             .orElse(null);
     }
 

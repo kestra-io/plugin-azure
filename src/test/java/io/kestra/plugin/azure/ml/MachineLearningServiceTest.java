@@ -26,7 +26,7 @@ class MachineLearningServiceTest {
 
     @Test
     void toJobStateFallsBackToUnknown() {
-        assertThat(MachineLearningService.toJobState(null), is(JobState.UNKNOWN));
+        assertThat(MachineLearningService.toJobState((JobStatus) null), is(JobState.UNKNOWN));
         assertThat(MachineLearningService.toJobState(JobStatus.fromString("SomeFutureState")), is(JobState.UNKNOWN));
     }
 

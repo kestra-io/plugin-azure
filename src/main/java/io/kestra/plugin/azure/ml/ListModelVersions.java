@@ -71,7 +71,7 @@ public class ListModelVersions extends AbstractMachineLearningTask implements Ru
         List<Version> versions;
         try {
             versions = manager.modelVersions().list(rResourceGroupName, rWorkspaceName, rModelName).stream()
-                .sorted(Comparator.comparing((ModelVersion v) -> v.systemData().createdAt()).reversed())
+                .sorted(Comparator.comparing((ModelVersion v) -> v.systemData() != null ? v.systemData().createdAt() : null, Comparator.nullsFirst(Comparator.naturalOrder())).reversed())
                 .map(
                     modelVersion -> Version.builder()
                         .version(modelVersion.name())

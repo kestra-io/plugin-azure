@@ -71,7 +71,7 @@ public class ListDataVersions extends AbstractMachineLearningTask implements Run
         List<Version> versions;
         try {
             versions = manager.dataVersions().list(rResourceGroupName, rWorkspaceName, rDataName).stream()
-                .sorted(Comparator.comparing((DataVersionBase v) -> v.systemData().createdAt()).reversed())
+                .sorted(Comparator.comparing((DataVersionBase v) -> v.systemData() != null ? v.systemData().createdAt() : null, Comparator.nullsFirst(Comparator.naturalOrder())).reversed())
                 .map(
                     dataVersion -> Version.builder()
                         .version(dataVersion.name())

@@ -108,8 +108,18 @@ public class CancelJob extends AbstractMachineLearningTask implements RunnableTa
             } else if (statusCode == 400) {
                 // A 400 can also mean "already terminal", but unlike 409 it is not exclusively that — confirm
                 // against the job's actual state instead of assuming, so a genuine bad-request error still surfaces.
-                JobBase current = manager.jobs().get(rResourceGroupName, rWorkspaceName, rJobName);
-                JobState currentState = MachineLearningService.toJobState(current.properties().status());
+                JobBase current;
+                try {
+                    current = manager.jobs().get(rResourceGroupName, rWorkspaceName, rJobName);
+                } catch (ManagementException checkException) {
+                    if (checkException.getResponse() != null && checkException.getResponse().getStatusCode() == 404) {
+                        throw new IllegalArgumentException(
+                            "Job '%s' was not found in workspace '%s' — check `jobName`, `resourceGroupName` and `workspaceName`".formatted(rJobName, rWorkspaceName), checkException
+                        );
+                    }
+                    throw checkException;
+                }
+                JobState currentState = MachineLearningService.toJobState(current);
                 if (!currentState.isTerminal()) {
                     throw e;
                 }
@@ -127,7 +137,7 @@ public class CancelJob extends AbstractMachineLearningTask implements RunnableTa
             JobState reportedState = JobState.CANCEL_REQUESTED;
             if (cancelOutcomeUnknown) {
                 JobBase current = manager.jobs().get(rResourceGroupName, rWorkspaceName, rJobName);
-                reportedState = MachineLearningService.toJobState(current.properties().status());
+                reportedState = MachineLearningService.toJobState(current);
             }
             return Output.builder()
                 .jobName(rJobName)
@@ -141,6 +151,7 @@ public class CancelJob extends AbstractMachineLearningTask implements RunnableTa
         JobBase finalJob;
         try {
             finalJob = MachineLearningService.awaitTerminalState(
+                runContext,
                 () -> manager.jobs().get(rResourceGroupName, rWorkspaceName, rJobName),
                 interval,
                 maxDuration
@@ -149,7 +160,7 @@ public class CancelJob extends AbstractMachineLearningTask implements RunnableTa
             throw new IllegalStateException("Job '%s' did not reach a terminal state within %s after cancellation was requested".formatted(rJobName, maxDuration));
         }
 
-        JobState state = MachineLearningService.toJobState(finalJob.properties().status());
+        JobState state = MachineLearningService.toJobState(finalJob);
         logger.info("Job '{}' is now in terminal state '{}'", rJobName, state);
 
         return Output.builder()

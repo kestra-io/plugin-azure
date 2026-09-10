@@ -181,8 +181,9 @@ public class SubmitPipelineJob extends AbstractMachineLearningTask implements Ru
         if (!Boolean.TRUE.equals(runContext.render(this.wait).as(Boolean.class).orElseThrow())) {
             return Output.builder()
                 .jobName(jobName)
-                .status(MachineLearningService.toJobState(job.properties().status()))
+                .status(MachineLearningService.toJobState(job))
                 .studioUrl(studioUrl(runContext, jobName))
+                .outputs(Map.of())
                 .build();
         }
 
@@ -192,7 +193,7 @@ public class SubmitPipelineJob extends AbstractMachineLearningTask implements Ru
 
         JobBase finalJob = MachineLearningService.awaitCompletion(runContext, manager, rResourceGroupName, rWorkspaceName, jobName, interval, maxDuration, rCancelOnTimeout);
 
-        JobState state = MachineLearningService.toJobState(finalJob.properties().status());
+        JobState state = MachineLearningService.toJobState(finalJob);
         if (state.isFailure()) {
             throw new IllegalStateException(
                 "Pipeline job '%s' finished with status '%s' — check the run logs in Azure ML Studio: %s".formatted(jobName, state, studioUrl(runContext, jobName))

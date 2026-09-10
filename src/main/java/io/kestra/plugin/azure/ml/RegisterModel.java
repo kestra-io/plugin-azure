@@ -157,8 +157,16 @@ public class RegisterModel extends AbstractMachineLearningTask implements Runnab
         String modelUri = switch (rSource) {
             case JOB_OUTPUT -> resolveFromJobOutput(runContext, manager, rResourceGroupName, rWorkspaceName);
             case INTERNAL_STORAGE -> resolveFromInternalStorage(runContext, manager, rResourceGroupName, rWorkspaceName, rModelName, rVersion);
-            case DATASTORE_URI -> runContext.render(this.datastoreUri).as(String.class)
-                .orElseThrow(() -> new IllegalArgumentException("`datastoreUri` is required when `source=DATASTORE_URI`"));
+            case DATASTORE_URI -> {
+                String rDatastoreUri = runContext.render(this.datastoreUri).as(String.class)
+                    .orElseThrow(() -> new IllegalArgumentException("`datastoreUri` is required when `source=DATASTORE_URI`"));
+                try {
+                    URI.create(rDatastoreUri);
+                } catch (IllegalArgumentException e) {
+                    throw new IllegalArgumentException("`datastoreUri` is not a valid URI: '%s'".formatted(rDatastoreUri), e);
+                }
+                yield rDatastoreUri;
+            }
         };
 
         ModelVersionProperties properties = new ModelVersionProperties()

@@ -56,6 +56,20 @@ public abstract class AbstractComputeInstanceLifecycle extends AbstractMachineLe
 
     protected abstract void invokeAction(MachineLearningManager manager, String resourceGroupName, String workspaceName, String computeName);
 
+    /**
+     * JOB_RUNNING counts as having reached RUNNING: a compute instance already executing a job is up and usable,
+     * the same notion of "usable" MachineLearningComputeService.ensureComputeUsable() already applies when
+     * deciding whether a compute instance can accept a submitted job. A poll loop that instead demanded an exact
+     * match on RUNNING could wait out the full timeout on an instance that started and immediately picked up
+     * a queued job, having never actually failed to start.
+     */
+    private boolean reachedTarget(ComputeInstanceState state) {
+        if (state == targetState()) {
+            return true;
+        }
+        return targetState() == ComputeInstanceState.RUNNING && state == ComputeInstanceState.JOB_RUNNING;
+    }
+
     private static boolean isFailureState(ComputeInstanceState state) {
         return state == ComputeInstanceState.CREATE_FAILED
             || state == ComputeInstanceState.SETUP_FAILED
@@ -87,7 +101,7 @@ public abstract class AbstractComputeInstanceLifecycle extends AbstractMachineLe
         }
 
         ComputeInstanceState currentState = computeInstance.properties() != null ? computeInstance.properties().state() : null;
-        if (currentState == targetState()) {
+        if (reachedTarget(currentState)) {
             logger.info("Compute instance '{}' is already {}", rComputeName, targetState().toString().toLowerCase());
             return Output.builder().computeName(rComputeName).state(currentState.toString()).build();
         }
@@ -136,7 +150,7 @@ public abstract class AbstractComputeInstanceLifecycle extends AbstractMachineLe
                         // a state that will never arrive.
                         throw new IllegalStateException("Compute instance '%s' reached failure state '%s' while waiting for '%s'".formatted(rComputeName, state, targetState()));
                     }
-                    return state == targetState();
+                    return reachedTarget(state);
                 },
                 pollInterval,
                 maxDuration

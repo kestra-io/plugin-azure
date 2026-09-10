@@ -122,7 +122,8 @@ public class ScaleCluster extends AbstractMachineLearningTask implements Runnabl
         CompletableFuture<ComputeResource> future = CompletableFuture.supplyAsync(() ->
             compute.update()
                 .withProperties(new ScaleSettingsInformation().withScaleSettings(scaleSettings))
-                .apply()
+                .apply(),
+            MachineLearningService.EXECUTOR
         );
         try {
             future.get(2, TimeUnit.MINUTES);

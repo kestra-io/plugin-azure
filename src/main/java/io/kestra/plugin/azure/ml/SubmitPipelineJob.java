@@ -144,11 +144,15 @@ public class SubmitPipelineJob extends AbstractMachineLearningTask implements Ru
         JobBase job;
         boolean created = false;
         try {
-            job = manager.jobs()
-                .define(jobName)
-                .withExistingWorkspace(rResourceGroupName, rWorkspaceName)
-                .withProperties(pipelineJob)
-                .create();
+            job = MachineLearningService.withTimeout(
+                () -> manager.jobs()
+                    .define(jobName)
+                    .withExistingWorkspace(rResourceGroupName, rWorkspaceName)
+                    .withProperties(pipelineJob)
+                    .create(),
+                Duration.ofMinutes(2),
+                () -> "Submitting job '%s' did not complete within 2 minutes".formatted(jobName)
+            );
             created = true;
         } catch (ManagementException e) {
             int statusCode = e.getResponse() != null ? e.getResponse().getStatusCode() : 0;

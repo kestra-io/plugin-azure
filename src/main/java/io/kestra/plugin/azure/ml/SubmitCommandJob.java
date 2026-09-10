@@ -193,11 +193,15 @@ public class SubmitCommandJob extends AbstractMachineLearningTask implements Run
         JobBase job;
         boolean created = false;
         try {
-            job = manager.jobs()
-                .define(jobName)
-                .withExistingWorkspace(rResourceGroupName, rWorkspaceName)
-                .withProperties(commandJob)
-                .create();
+            job = MachineLearningService.withTimeout(
+                () -> manager.jobs()
+                    .define(jobName)
+                    .withExistingWorkspace(rResourceGroupName, rWorkspaceName)
+                    .withProperties(commandJob)
+                    .create(),
+                Duration.ofMinutes(2),
+                () -> "Submitting job '%s' did not complete within 2 minutes".formatted(jobName)
+            );
             created = true;
         } catch (ManagementException e) {
             throw translateSubmitError(e, jobName, rWorkspaceName, rComputeName);

@@ -52,7 +52,7 @@ final class CancellableJob {
             // The cancel action (cancelQuietly) already contains its own error handling; this only guards against
             // a genuinely unexpected failure inside it, which would otherwise vanish silently into an unobserved
             // future instead of at least being logged.
-            CompletableFuture.runAsync(current)
+            CompletableFuture.runAsync(current, MachineLearningService.EXECUTOR)
                 .exceptionally(e -> {
                     LOG.warn("Unexpected error while cancelling an Azure Machine Learning job", e);
                     return null;

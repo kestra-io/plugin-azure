@@ -104,34 +104,34 @@ public class DownloadModel extends AbstractMachineLearningTask implements Runnab
         BlobLocation location = resolveBlobLocation(manager, rResourceGroupName, rWorkspaceName, modelUri);
         BlobContainerClient container = MachineLearningService.blobContainerClient(credentials(runContext), location.accountName(), location.containerName());
 
+        // Check for files under the folder prefix FIRST: a folder-based model can carry a zero-byte placeholder
+        // blob named exactly after its own folder path (left behind by tools like Storage Explorer/azcopy), which
+        // would otherwise be indistinguishable from a genuine single-file model at that same path.
+        String prefix = location.blobPath().endsWith("/") ? location.blobPath() : location.blobPath() + "/";
+        List<BlobItem> folderFiles = container.listBlobs(new ListBlobsOptions().setPrefix(prefix), Duration.ofSeconds(30)).stream()
+            .filter(file -> !file.getName().equals(prefix))
+            .toList();
+
         URI resultUri;
         boolean archive;
-        if (container.getBlobClient(location.blobPath()).exists()) {
-            archive = false;
-            File tempFile = runContext.workingDir().createTempFile().toFile();
-            container.getBlobClient(location.blobPath()).downloadToFile(tempFile.getAbsolutePath(), true);
-            resultUri = runContext.storage().putFile(tempFile);
-        } else {
+        if (!folderFiles.isEmpty()) {
             archive = true;
-            String prefix = location.blobPath().endsWith("/") ? location.blobPath() : location.blobPath() + "/";
-            List<BlobItem> files = container.listBlobs(new ListBlobsOptions().setPrefix(prefix), Duration.ofSeconds(30)).stream()
-                // Some tools leave a zero-byte placeholder blob named exactly after the folder path; it carries no
-                // content of its own and would otherwise produce an invalid empty zip entry name.
-                .filter(file -> !file.getName().equals(prefix))
-                .toList();
-            if (files.isEmpty()) {
-                throw new IllegalStateException("No files found for model '%s' version '%s' at '%s'".formatted(rModelName, modelVersion.name(), modelUri));
-            }
-
             File archiveFile = runContext.workingDir().createTempFile(".zip").toFile();
             try (var zip = new ZipOutputStream(new BufferedOutputStream(new FileOutputStream(archiveFile)))) {
-                for (BlobItem file : files) {
+                for (BlobItem file : folderFiles) {
                     zip.putNextEntry(new ZipEntry(file.getName().substring(prefix.length())));
                     container.getBlobClient(file.getName()).downloadStream(zip);
                     zip.closeEntry();
                 }
             }
             resultUri = runContext.storage().putFile(archiveFile);
+        } else if (container.getBlobClient(location.blobPath()).exists()) {
+            archive = false;
+            File tempFile = runContext.workingDir().createTempFile().toFile();
+            container.getBlobClient(location.blobPath()).downloadToFile(tempFile.getAbsolutePath(), true);
+            resultUri = runContext.storage().putFile(tempFile);
+        } else {
+            throw new IllegalStateException("No files found for model '%s' version '%s' at '%s'".formatted(rModelName, modelVersion.name(), modelUri));
         }
 
         logger.info("Downloaded model '{}' version '{}' to internal storage", rModelName, modelVersion.name());

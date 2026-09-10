@@ -6,6 +6,7 @@ import java.util.List;
 
 import com.azure.core.management.exception.ManagementException;
 import com.azure.resourcemanager.machinelearning.MachineLearningManager;
+import com.azure.resourcemanager.machinelearning.models.ModelVersion;
 
 import io.kestra.core.models.annotations.Example;
 import io.kestra.core.models.annotations.Plugin;
@@ -70,6 +71,7 @@ public class ListModelVersions extends AbstractMachineLearningTask implements Ru
         List<Version> versions;
         try {
             versions = manager.modelVersions().list(rResourceGroupName, rWorkspaceName, rModelName).stream()
+                .sorted(Comparator.comparing((ModelVersion v) -> v.systemData().createdAt()).reversed())
                 .map(
                     modelVersion -> Version.builder()
                         .version(modelVersion.name())
@@ -77,7 +79,6 @@ public class ListModelVersions extends AbstractMachineLearningTask implements Ru
                         .modelType(modelVersion.properties().modelType())
                         .build()
                 )
-                .sorted(Comparator.comparing(Version::getVersion, MachineLearningService.VERSION_COMPARATOR).reversed())
                 .toList();
         } catch (ManagementException e) {
             if (e.getResponse() != null && e.getResponse().getStatusCode() == 404) {

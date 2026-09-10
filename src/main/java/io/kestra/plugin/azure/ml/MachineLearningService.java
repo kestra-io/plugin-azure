@@ -137,7 +137,9 @@ final class MachineLearningService {
         } catch (TimeoutException e) {
             if (cancelOnTimeout) {
                 // Goes through the same cancelQuietly() path a kill signal uses, instead of issuing its own raw
-                // cancel() call, so the two triggers can't race each other with uncoordinated, duplicate requests.
+                // cancel() call. A kill and this timeout can still both invoke it around the same moment — that is
+                // fine, cancelQuietly()'s own retry/error handling tolerates a duplicate or already-in-flight cancel
+                // request; this only avoids the two paths diverging in how they call and interpret the ARM API.
                 cancelQuietly(runContext, manager, resourceGroupName, workspaceName, jobName);
 
                 // Cancellation is itself asynchronous (a job can sit in CANCEL_REQUESTED for minutes) — confirm it
@@ -277,52 +279,34 @@ final class MachineLearningService {
                 return result;
             }
         } catch (Exception e) {
+            // A blocking call in this method (e.g. the token fetch) wraps a thread interruption as an unchecked
+            // exception rather than surfacing InterruptedException directly — restore the interrupt status instead
+            // of silently swallowing it along with every other best-effort failure, so a kill signal delivered
+            // while this call was blocked is still observable by the caller.
+            if (e instanceof InterruptedException || e.getCause() instanceof InterruptedException) {
+                Thread.currentThread().interrupt();
+            }
             runContext.logger().warn("Unable to fetch MLflow metrics for job '{}': {}", jobName, e.getMessage());
             return Map.of();
         }
     }
 
     /**
-     * Azure Machine Learning version identifiers are strings but, unless a caller supplies a custom scheme, they
-     * are Azure-assigned monotonically increasing integers; comparing numerically resolves "latest" correctly for
-     * that default scheme, falling back to lexicographic order for custom string versions.
+     * "Latest" is resolved by actual creation time ({@code systemData().createdAt()}), not by comparing version
+     * identifiers — Azure's default scheme assigns monotonically increasing integers, but a caller may register an
+     * explicit non-numeric version at any point, and a version-string comparator has no universally correct way to
+     * rank a numeric version against a custom one (whichever side "wins" the comparison, it does so forever,
+     * permanently hiding one kind of version from "latest" resolution). Creation time carries no such ambiguity.
      */
-    static final Comparator<String> VERSION_COMPARATOR = (a, b) -> {
-        Long na = tryParseLong(a);
-        Long nb = tryParseLong(b);
-        if (na != null && nb != null) {
-            return Long.compare(na, nb);
-        }
-        if (na != null) {
-            // Numeric versions always sort before non-numeric ones — an arbitrary but fixed, transitive rule.
-            // A mixed comparator that instead falls through to String.compareTo for any non-numeric pair (without
-            // a fixed cross-group rule) is not guaranteed transitive across three-way comparisons, e.g.
-            // "21" > "3" and "3" > "21x" but "21" < "21x" — Comparator's contract, and correct sorting, both break.
-            return -1;
-        }
-        if (nb != null) {
-            return 1;
-        }
-        return a.compareTo(b);
-    };
-
-    private static Long tryParseLong(String version) {
-        try {
-            return Long.parseLong(version);
-        } catch (NumberFormatException e) {
-            return null;
-        }
-    }
-
     static ModelVersion latestModelVersion(MachineLearningManager manager, String resourceGroupName, String workspaceName, String modelName) {
         return manager.modelVersions().list(resourceGroupName, workspaceName, modelName).stream()
-            .max(Comparator.comparing(ModelVersion::name, VERSION_COMPARATOR))
+            .max(Comparator.comparing(v -> v.systemData().createdAt()))
             .orElse(null);
     }
 
     static DataVersionBase latestDataVersion(MachineLearningManager manager, String resourceGroupName, String workspaceName, String dataName) {
         return manager.dataVersions().list(resourceGroupName, workspaceName, dataName).stream()
-            .max(Comparator.comparing(DataVersionBase::name, VERSION_COMPARATOR))
+            .max(Comparator.comparing(v -> v.systemData().createdAt()))
             .orElse(null);
     }
 

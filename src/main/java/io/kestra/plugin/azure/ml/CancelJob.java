@@ -97,27 +97,27 @@ public class CancelJob extends AbstractMachineLearningTask implements RunnableTa
                 );
             }
             if (statusCode == 409) {
-                logger.warn("Job '{}' could not be cancelled, it is likely already in a terminal state: {}", rJobName, e.getMessage());
-                JobBase current = manager.jobs().get(rResourceGroupName, rWorkspaceName, rJobName);
-                return Output.builder()
-                    .jobName(rJobName)
-                    .status(MachineLearningService.toJobState(current.properties().status()))
-                    .build();
-            }
-            if (statusCode == 400) {
+                // Unlike the 400 branch below, a 409 here is Azure telling us outright that a cancel is redundant
+                // (already requested, or already terminal) — not necessarily that it has landed yet. Fall through
+                // to the same wait/poll logic used after a successful cancel request instead of returning whatever
+                // status happens to be current right now, so `wait=true` still waits for an actual terminal state.
+                logger.warn("Job '{}' could not be cancelled, cancellation was likely already requested or the job is already in a terminal state: {}", rJobName, e.getMessage());
+            } else if (statusCode == 400) {
                 // A 400 can also mean "already terminal", but unlike 409 it is not exclusively that — confirm
                 // against the job's actual state instead of assuming, so a genuine bad-request error still surfaces.
                 JobBase current = manager.jobs().get(rResourceGroupName, rWorkspaceName, rJobName);
                 JobState currentState = MachineLearningService.toJobState(current.properties().status());
-                if (currentState.isTerminal()) {
-                    logger.warn("Job '{}' could not be cancelled, it is already in a terminal state '{}': {}", rJobName, currentState, e.getMessage());
-                    return Output.builder()
-                        .jobName(rJobName)
-                        .status(currentState)
-                        .build();
+                if (!currentState.isTerminal()) {
+                    throw e;
                 }
+                logger.warn("Job '{}' could not be cancelled, it is already in a terminal state '{}': {}", rJobName, currentState, e.getMessage());
+                return Output.builder()
+                    .jobName(rJobName)
+                    .status(currentState)
+                    .build();
+            } else {
+                throw e;
             }
-            throw e;
         }
 
         if (!Boolean.TRUE.equals(runContext.render(this.wait).as(Boolean.class).orElseThrow())) {

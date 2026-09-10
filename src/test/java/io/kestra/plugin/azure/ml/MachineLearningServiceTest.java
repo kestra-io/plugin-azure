@@ -57,17 +57,6 @@ class MachineLearningServiceTest {
     }
 
     @Test
-    void versionComparatorOrdersNumericVersionsNumerically() {
-        assertThat(MachineLearningService.VERSION_COMPARATOR.compare("2", "10") < 0, is(true));
-        assertThat(MachineLearningService.VERSION_COMPARATOR.compare("10", "2") > 0, is(true));
-    }
-
-    @Test
-    void versionComparatorFallsBackToLexicographicForNonNumericVersions() {
-        assertThat(MachineLearningService.VERSION_COMPARATOR.compare("custom-a", "custom-b") < 0, is(true));
-    }
-
-    @Test
     void namedOutputsExtractsUriFileAndFolderOutputs() {
         var outputs = Map.<String, com.azure.resourcemanager.machinelearning.models.JobOutput> of(
             "model_dir", new UriFolderJobOutput().withUri("azureml://datastores/workspaceblobstore/paths/outputs/model"),

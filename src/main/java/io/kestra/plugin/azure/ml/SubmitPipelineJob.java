@@ -137,14 +137,15 @@ public class SubmitPipelineJob extends AbstractMachineLearningTask implements Ru
         this.lifecycle.arm(() -> MachineLearningService.cancelQuietly(runContext, manager, rResourceGroupName, rWorkspaceName, jobName));
 
         JobBase job;
+        boolean created = false;
         try {
             job = manager.jobs()
                 .define(jobName)
                 .withExistingWorkspace(rResourceGroupName, rWorkspaceName)
                 .withProperties(pipelineJob)
                 .create();
+            created = true;
         } catch (ManagementException e) {
-            this.lifecycle.disarm();
             int statusCode = e.getResponse() != null ? e.getResponse().getStatusCode() : 0;
             if (statusCode == 409) {
                 throw new IllegalArgumentException(
@@ -161,6 +162,13 @@ public class SubmitPipelineJob extends AbstractMachineLearningTask implements Ru
                 );
             }
             throw new IllegalArgumentException("Failed to submit pipeline job '%s': %s".formatted(jobName, e.getValue() != null ? e.getValue().getMessage() : e.getMessage()), e);
+        } finally {
+            // Disarm on ANY failure to submit, not just a ManagementException — there is otherwise nothing of this
+            // execution's making to cancel, and leaving the action armed risks a later kill signal acting on an
+            // unrelated job that happens to hold the same name.
+            if (!created) {
+                this.lifecycle.disarm();
+            }
         }
 
         logger.info("Submitted Azure Machine Learning pipeline job '{}'", jobName);

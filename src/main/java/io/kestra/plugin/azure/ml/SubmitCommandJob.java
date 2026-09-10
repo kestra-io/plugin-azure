@@ -186,15 +186,23 @@ public class SubmitCommandJob extends AbstractMachineLearningTask implements Run
         this.lifecycle.arm(() -> MachineLearningService.cancelQuietly(runContext, manager, rResourceGroupName, rWorkspaceName, jobName));
 
         JobBase job;
+        boolean created = false;
         try {
             job = manager.jobs()
                 .define(jobName)
                 .withExistingWorkspace(rResourceGroupName, rWorkspaceName)
                 .withProperties(commandJob)
                 .create();
+            created = true;
         } catch (ManagementException e) {
-            this.lifecycle.disarm();
             throw translateSubmitError(e, jobName, rWorkspaceName, rComputeName);
+        } finally {
+            // Disarm on ANY failure to submit, not just a ManagementException — there is otherwise nothing of this
+            // execution's making to cancel, and leaving the action armed risks a later kill signal acting on an
+            // unrelated job that happens to hold the same name.
+            if (!created) {
+                this.lifecycle.disarm();
+            }
         }
 
         logger.info("Submitted Azure Machine Learning command job '{}' on compute '{}'", jobName, rComputeName);

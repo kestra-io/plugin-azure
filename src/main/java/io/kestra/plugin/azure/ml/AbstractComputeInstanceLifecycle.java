@@ -85,7 +85,16 @@ public abstract class AbstractComputeInstanceLifecycle extends AbstractMachineLe
             return Output.builder().computeName(rComputeName).state(currentState.toString()).build();
         }
 
-        invokeAction(manager, rResourceGroupName, rWorkspaceName, rComputeName);
+        try {
+            invokeAction(manager, rResourceGroupName, rWorkspaceName, rComputeName);
+        } catch (ManagementException e) {
+            if (e.getResponse() != null && e.getResponse().getStatusCode() == 409) {
+                throw new IllegalStateException(
+                    "Could not %s compute instance '%s' — it is likely already transitioning between states (e.g. still stopping); wait for it to settle and retry".formatted(actionVerb(), rComputeName), e
+                );
+            }
+            throw e;
+        }
         logger.info("Requested to {} compute instance '{}'", actionVerb(), rComputeName);
 
         if (!Boolean.TRUE.equals(runContext.render(this.wait).as(Boolean.class).orElseThrow())) {

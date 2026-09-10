@@ -3,6 +3,7 @@ package io.kestra.plugin.azure.ml;
 import java.net.URI;
 import java.time.Duration;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 
 import org.slf4j.Logger;
@@ -121,9 +122,13 @@ public class SubmitPipelineJob extends AbstractMachineLearningTask implements Ru
 
         String rResourceGroupName = rResourceGroupName(runContext);
         String rWorkspaceName = rWorkspaceName(runContext);
-        String jobName = runContext.render(this.name).as(String.class).orElse(UUID.randomUUID().toString());
+        Optional<String> explicitName = runContext.render(this.name).as(String.class);
+        String jobName = explicitName.orElseGet(() -> UUID.randomUUID().toString());
 
         MachineLearningManager manager = machineLearningManager(runContext);
+        if (explicitName.isPresent()) {
+            MachineLearningService.ensureJobNameAvailable(manager, rResourceGroupName, rWorkspaceName, jobName);
+        }
 
         PipelineJob pipelineJob = new PipelineJob()
             .withJobs(runContext.render(this.jobs).asMap(String.class, Object.class));
@@ -163,11 +168,11 @@ public class SubmitPipelineJob extends AbstractMachineLearningTask implements Ru
             }
             throw new IllegalArgumentException("Failed to submit pipeline job '%s': %s".formatted(jobName, e.getValue() != null ? e.getValue().getMessage() : e.getMessage()), e);
         } finally {
-            // Disarm on ANY failure to submit, not just a ManagementException — there is otherwise nothing of this
-            // execution's making to cancel, and leaving the action armed risks a later kill signal acting on an
-            // unrelated job that happens to hold the same name.
+            // A failure here does not prove the job was never created (create() is a long-running operation) —
+            // confirm before disarming, so we never silently drop the only cancel path for a job that is, in
+            // fact, running in Azure.
             if (!created) {
-                this.lifecycle.disarm();
+                MachineLearningService.disarmIfJobDoesNotExist(this.lifecycle, manager, rResourceGroupName, rWorkspaceName, jobName);
             }
         }
 

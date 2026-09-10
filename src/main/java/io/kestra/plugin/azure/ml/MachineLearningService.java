@@ -105,6 +105,10 @@ final class MachineLearningService {
      */
     static JobBase awaitTerminalState(Supplier<JobBase> fetch, Duration interval, Duration maxDuration) throws TimeoutException {
         AtomicReference<JobBase> last = new AtomicReference<>();
+        // Await.until checks the timeout only between sleeps, not during one — an interval larger than maxDuration
+        // would otherwise sleep straight through the whole timeout budget before the first check even happens.
+        // Capping the poll interval to maxDuration keeps the timeout bound close to what is actually configured.
+        Duration pollInterval = interval.compareTo(maxDuration) > 0 ? maxDuration : interval;
         Await.until(
             () ->
             {
@@ -112,7 +116,7 @@ final class MachineLearningService {
                 last.set(job);
                 return toJobState(job.properties().status()).isTerminal();
             },
-            interval,
+            pollInterval,
             maxDuration
         );
         return last.get();
@@ -194,6 +198,48 @@ final class MachineLearningService {
     }
 
     /**
+     * Checked only for an explicitly-supplied {@code name} (an auto-generated UUID essentially never collides).
+     * The kill lifecycle is armed against {@code jobName} before {@code create()} is called, so that a kill signal
+     * arriving while the request is in flight is not lost — but that means a kill delivered in that same window,
+     * before an eventual 409 name-collision is even detected, would otherwise cancel whatever unrelated job already
+     * holds that name. Failing fast here, before ever arming, closes that window for the realistic case.
+     */
+    static void ensureJobNameAvailable(MachineLearningManager manager, String resourceGroupName, String workspaceName, String jobName) {
+        try {
+            manager.jobs().get(resourceGroupName, workspaceName, jobName);
+        } catch (ManagementException e) {
+            if (e.getResponse() != null && e.getResponse().getStatusCode() == 404) {
+                return;
+            }
+            throw e;
+        }
+        throw new IllegalArgumentException(
+            "Job '%s' already exists in workspace '%s' — Azure ML job names are unique per workspace; set a different `name` or leave it empty to auto-generate one"
+                .formatted(jobName, workspaceName)
+        );
+    }
+
+    /**
+     * Called after job submission itself threw, to decide whether the armed cancel action should be cleared.
+     * Azure's create() call is a long-running operation: a client-side failure (a timeout polling it to
+     * completion, a network blip after the initial request landed) does not guarantee the job was never created
+     * server-side. Disarming unconditionally on any exception would risk silently dropping the only cancel path
+     * for a job that is, in fact, running (and billing) in Azure — so this confirms non-existence first, and
+     * stays conservative (leaves the action armed) whenever that confirmation itself cannot be made.
+     */
+    static void disarmIfJobDoesNotExist(CancellableJob lifecycle, MachineLearningManager manager, String resourceGroupName, String workspaceName, String jobName) {
+        try {
+            manager.jobs().get(resourceGroupName, workspaceName, jobName);
+            // It exists — leave the cancel action armed; a later kill signal must still be able to reach it.
+        } catch (ManagementException e) {
+            if (e.getResponse() != null && e.getResponse().getStatusCode() == 404) {
+                lifecycle.disarm();
+            }
+            // Any other failure checking: stay conservative and leave the action armed.
+        }
+    }
+
+    /**
      * A job's declared outputs live on its concrete properties subtype ({@code CommandJob} or {@code PipelineJob}
      * today); this extracts them regardless of which kind of job was submitted, instead of silently returning none
      * for job types other than the caller happened to assume.
@@ -202,7 +248,7 @@ final class MachineLearningService {
         return switch (job.properties()) {
             case CommandJob commandJob -> commandJob.outputs();
             case PipelineJob pipelineJob -> pipelineJob.outputs();
-            default -> null;
+            case null, default -> null;
         };
     }
 

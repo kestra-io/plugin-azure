@@ -4,6 +4,7 @@ import java.net.URI;
 import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 
 import org.slf4j.Logger;
@@ -147,11 +148,15 @@ public class SubmitCommandJob extends AbstractMachineLearningTask implements Run
         String rWorkspaceName = rWorkspaceName(runContext);
         String rComputeName = runContext.render(this.computeName).as(String.class).orElseThrow();
         String rCommand = runContext.render(this.command).as(String.class).orElseThrow();
-        String jobName = runContext.render(this.name).as(String.class).orElse(UUID.randomUUID().toString());
+        Optional<String> explicitName = runContext.render(this.name).as(String.class);
+        String jobName = explicitName.orElseGet(() -> UUID.randomUUID().toString());
 
         MachineLearningManager manager = machineLearningManager(runContext);
 
         MachineLearningComputeService.ensureComputeUsable(manager, rResourceGroupName, rWorkspaceName, rComputeName);
+        if (explicitName.isPresent()) {
+            MachineLearningService.ensureJobNameAvailable(manager, rResourceGroupName, rWorkspaceName, jobName);
+        }
 
         CommandJob commandJob = new CommandJob()
             .withCommand(rCommand)
@@ -197,11 +202,11 @@ public class SubmitCommandJob extends AbstractMachineLearningTask implements Run
         } catch (ManagementException e) {
             throw translateSubmitError(e, jobName, rWorkspaceName, rComputeName);
         } finally {
-            // Disarm on ANY failure to submit, not just a ManagementException — there is otherwise nothing of this
-            // execution's making to cancel, and leaving the action armed risks a later kill signal acting on an
-            // unrelated job that happens to hold the same name.
+            // A failure here does not prove the job was never created (create() is a long-running operation) —
+            // confirm before disarming, so we never silently drop the only cancel path for a job that is, in
+            // fact, running in Azure.
             if (!created) {
-                this.lifecycle.disarm();
+                MachineLearningService.disarmIfJobDoesNotExist(this.lifecycle, manager, rResourceGroupName, rWorkspaceName, jobName);
             }
         }
 

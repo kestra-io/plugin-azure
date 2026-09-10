@@ -86,6 +86,7 @@ public class CancelJob extends AbstractMachineLearningTask implements RunnableTa
 
         MachineLearningManager manager = machineLearningManager(runContext);
 
+        boolean cancelOutcomeUnknown = false;
         try {
             manager.jobs().cancel(rResourceGroupName, rWorkspaceName, rJobName);
             logger.info("Cancellation requested for Azure Machine Learning job '{}'", rJobName);
@@ -101,7 +102,9 @@ public class CancelJob extends AbstractMachineLearningTask implements RunnableTa
                 // (already requested, or already terminal) — not necessarily that it has landed yet. Fall through
                 // to the same wait/poll logic used after a successful cancel request instead of returning whatever
                 // status happens to be current right now, so `wait=true` still waits for an actual terminal state.
+                // With `wait=false`, the actual current state is fetched below rather than assumed CANCEL_REQUESTED.
                 logger.warn("Job '{}' could not be cancelled, cancellation was likely already requested or the job is already in a terminal state: {}", rJobName, e.getMessage());
+                cancelOutcomeUnknown = true;
             } else if (statusCode == 400) {
                 // A 400 can also mean "already terminal", but unlike 409 it is not exclusively that — confirm
                 // against the job's actual state instead of assuming, so a genuine bad-request error still surfaces.
@@ -121,9 +124,14 @@ public class CancelJob extends AbstractMachineLearningTask implements RunnableTa
         }
 
         if (!Boolean.TRUE.equals(runContext.render(this.wait).as(Boolean.class).orElseThrow())) {
+            JobState reportedState = JobState.CANCEL_REQUESTED;
+            if (cancelOutcomeUnknown) {
+                JobBase current = manager.jobs().get(rResourceGroupName, rWorkspaceName, rJobName);
+                reportedState = MachineLearningService.toJobState(current.properties().status());
+            }
             return Output.builder()
                 .jobName(rJobName)
-                .status(JobState.CANCEL_REQUESTED)
+                .status(reportedState)
                 .build();
         }
 

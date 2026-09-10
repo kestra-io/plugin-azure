@@ -113,9 +113,18 @@ public class ScaleCluster extends AbstractMachineLearningTask implements Runnabl
             .withMaxNodeCount(rMaxNodeCount);
         runContext.render(this.nodeIdleTimeBeforeScaleDown).as(Duration.class).ifPresent(scaleSettings::withNodeIdleTimeBeforeScaleDown);
 
-        compute.update()
-            .withProperties(new ScaleSettingsInformation().withScaleSettings(scaleSettings))
-            .apply();
+        try {
+            compute.update()
+                .withProperties(new ScaleSettingsInformation().withScaleSettings(scaleSettings))
+                .apply();
+        } catch (ManagementException e) {
+            if (e.getResponse() != null && e.getResponse().getStatusCode() == 409) {
+                throw new IllegalStateException(
+                    "Could not update compute cluster '%s' — an update is likely already in progress; wait for it to settle and retry".formatted(rComputeName), e
+                );
+            }
+            throw e;
+        }
 
         logger.info("Updated autoscale settings of compute cluster '{}': min={}, max={}", rComputeName, rMinNodeCount, rMaxNodeCount);
 

@@ -281,7 +281,19 @@ public class SubmitCommandJob extends AbstractMachineLearningTask implements Run
         @Schema(title = "Studio URL", description = "Deep link to the run in Azure ML Studio")
         private String studioUrl;
 
-        @Schema(title = "Metrics", description = "MLflow-backed metrics logged by the run, keyed by metric name; empty when `wait=false` or when metrics could not be retrieved")
+        @Schema(
+            title = "Metrics",
+            description = """
+                Metrics logged by the run, keyed by metric name. Always empty when `wait=false`, since the job has not \
+                necessarily finished logging anything yet.
+
+                Azure Machine Learning logs job metrics through MLflow, not through the ARM control-plane API used \
+                for everything else in this task. This value is fetched best-effort by reading the workspace's MLflow \
+                tracking URI and calling its REST API directly with the same Azure AD bearer token used to authenticate \
+                this task. If that call fails (e.g. the service principal lacks the required scope, or the endpoint is \
+                unreachable), a warning is logged and this field is an empty map — the task does not fail because of it.
+                """
+        )
         private Map<String, Double> metrics;
 
         @Schema(title = "Outputs", description = "Named job outputs, keyed by output name, pointing to their storage URI")

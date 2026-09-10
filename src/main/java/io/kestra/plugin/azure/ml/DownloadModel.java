@@ -24,6 +24,7 @@ import io.kestra.core.models.annotations.PluginProperty;
 import io.kestra.core.models.property.Property;
 import io.kestra.core.models.tasks.RunnableTask;
 import io.kestra.core.runners.RunContext;
+import io.kestra.plugin.azure.storage.blob.services.BlobService;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotNull;
@@ -130,9 +131,9 @@ public class DownloadModel extends AbstractMachineLearningTask implements Runnab
                 resultUri = runContext.storage().putFile(archiveFile);
             } else if (container.getBlobClient(location.blobPath()).exists()) {
                 archive = false;
-                File tempFile = runContext.workingDir().createTempFile().toFile();
-                container.getBlobClient(location.blobPath()).downloadToFile(tempFile.getAbsolutePath(), true);
-                resultUri = runContext.storage().putFile(tempFile);
+                // Reuses the same helper storage/blob/Download and Downloads already use, instead of a hand-rolled
+                // copy that would silently skip its file.size metric and checksum validation.
+                resultUri = BlobService.download(runContext, container.getBlobClient(location.blobPath())).getRight();
             } else {
                 throw new IllegalStateException("No files found for model '%s' version '%s' at '%s'".formatted(rModelName, modelVersion.name(), modelUri));
             }

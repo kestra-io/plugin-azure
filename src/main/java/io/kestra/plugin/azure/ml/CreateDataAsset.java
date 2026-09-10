@@ -150,11 +150,20 @@ public class CreateDataAsset extends AbstractMachineLearningTask implements Runn
                 throw e;
             }
         }
-        return manager.dataContainers()
-            .define(dataName)
-            .withExistingWorkspace(resourceGroupName, workspaceName)
-            .withProperties(new DataContainerProperties().withDataType(DataType.fromString(dataAssetType.wireValue())))
-            .create();
+        try {
+            return manager.dataContainers()
+                .define(dataName)
+                .withExistingWorkspace(resourceGroupName, workspaceName)
+                .withProperties(new DataContainerProperties().withDataType(DataType.fromString(dataAssetType.wireValue())))
+                .create();
+        } catch (ManagementException e) {
+            if (e.getResponse() != null && e.getResponse().getStatusCode() == 409) {
+                // A concurrent execution created the container between our get() and this create() — it exists
+                // now, which is exactly what this method is asked to return.
+                return manager.dataContainers().get(resourceGroupName, workspaceName, dataName);
+            }
+            throw e;
+        }
     }
 
     @SuperBuilder

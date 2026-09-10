@@ -21,6 +21,16 @@ final class CancellableJob {
         }
     }
 
+    /**
+     * Clears a previously armed action, e.g. after job submission itself failed — there is then nothing of this
+     * execution's making to cancel, and leaving the action armed risks a later kill signal acting on an unrelated
+     * job that happens to hold the same name (a submit failing on a 409 name collision). Does nothing once the
+     * action has already fired, since that cancellation attempt already happened and cannot be undone.
+     */
+    synchronized void disarm() {
+        this.action = null;
+    }
+
     synchronized void kill() {
         killed.set(true);
         fire();

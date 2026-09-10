@@ -136,18 +136,19 @@ final class MachineLearningService {
             return awaitTerminalState(() -> manager.jobs().get(resourceGroupName, workspaceName, jobName), interval, maxDuration);
         } catch (TimeoutException e) {
             if (cancelOnTimeout) {
-                try {
-                    manager.jobs().cancel(resourceGroupName, workspaceName, jobName);
-                } catch (ManagementException cancelException) {
-                    runContext.logger().warn("Could not cancel job '{}' after timeout: {}", jobName, cancelException.getMessage());
-                }
+                // Goes through the same cancelQuietly() path a kill signal uses, instead of issuing its own raw
+                // cancel() call, so the two triggers can't race each other with uncoordinated, duplicate requests.
+                cancelQuietly(runContext, manager, resourceGroupName, workspaceName, jobName);
 
                 // Cancellation is itself asynchronous (a job can sit in CANCEL_REQUESTED for minutes) — confirm it
                 // actually reached a terminal state within a short, bounded grace period instead of just asserting
-                // it happened; if it hasn't landed yet, say so rather than lying about the job's real state.
-                Duration cancelGrace = interval.multipliedBy(3).compareTo(Duration.ofSeconds(30)) > 0 ? Duration.ofSeconds(30) : interval.multipliedBy(3);
+                // it happened; if it hasn't landed yet, say so rather than lying about the job's real state. The
+                // poll cadence is capped along with the grace period itself — reusing the caller's (possibly much
+                // larger) interval here would mean a single poll could outlast the whole grace window.
+                Duration cancelGrace = Duration.ofSeconds(30);
+                Duration cancelPollInterval = interval.compareTo(Duration.ofSeconds(5)) < 0 ? interval : Duration.ofSeconds(5);
                 try {
-                    JobBase cancelled = awaitTerminalState(() -> manager.jobs().get(resourceGroupName, workspaceName, jobName), interval, cancelGrace);
+                    JobBase cancelled = awaitTerminalState(() -> manager.jobs().get(resourceGroupName, workspaceName, jobName), cancelPollInterval, cancelGrace);
                     JobState finalState = toJobState(cancelled.properties().status());
                     throw new IllegalStateException("Job '%s' did not reach a terminal state within %s; cancellation was requested and confirmed (final status '%s')".formatted(jobName, maxDuration, finalState));
                 } catch (TimeoutException confirmTimeout) {
@@ -287,12 +288,31 @@ final class MachineLearningService {
      * that default scheme, falling back to lexicographic order for custom string versions.
      */
     static final Comparator<String> VERSION_COMPARATOR = (a, b) -> {
-        try {
-            return Long.compare(Long.parseLong(a), Long.parseLong(b));
-        } catch (NumberFormatException e) {
-            return a.compareTo(b);
+        Long na = tryParseLong(a);
+        Long nb = tryParseLong(b);
+        if (na != null && nb != null) {
+            return Long.compare(na, nb);
         }
+        if (na != null) {
+            // Numeric versions always sort before non-numeric ones — an arbitrary but fixed, transitive rule.
+            // A mixed comparator that instead falls through to String.compareTo for any non-numeric pair (without
+            // a fixed cross-group rule) is not guaranteed transitive across three-way comparisons, e.g.
+            // "21" > "3" and "3" > "21x" but "21" < "21x" — Comparator's contract, and correct sorting, both break.
+            return -1;
+        }
+        if (nb != null) {
+            return 1;
+        }
+        return a.compareTo(b);
     };
+
+    private static Long tryParseLong(String version) {
+        try {
+            return Long.parseLong(version);
+        } catch (NumberFormatException e) {
+            return null;
+        }
+    }
 
     static ModelVersion latestModelVersion(MachineLearningManager manager, String resourceGroupName, String workspaceName, String modelName) {
         return manager.modelVersions().list(resourceGroupName, workspaceName, modelName).stream()

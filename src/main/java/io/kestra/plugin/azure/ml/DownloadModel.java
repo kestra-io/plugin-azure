@@ -157,6 +157,9 @@ public class DownloadModel extends AbstractMachineLearningTask implements Runnab
         }
 
         URI uri = URI.create(modelUri);
+        if (uri.getHost() == null) {
+            throw new IllegalArgumentException("Unsupported model URI '%s': expected an `azureml://datastores/.../paths/...` or a blob container URI with a host and a path".formatted(modelUri));
+        }
         String accountName = uri.getHost().split("\\.", 2)[0];
         String[] pathParts = uri.getPath().replaceFirst("^/", "").split("/", 2);
         if (pathParts.length < 2) {

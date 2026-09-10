@@ -144,6 +144,7 @@ public class SubmitPipelineJob extends AbstractMachineLearningTask implements Ru
                 .withProperties(pipelineJob)
                 .create();
         } catch (ManagementException e) {
+            this.lifecycle.disarm();
             int statusCode = e.getResponse() != null ? e.getResponse().getStatusCode() : 0;
             if (statusCode == 409) {
                 throw new IllegalArgumentException(

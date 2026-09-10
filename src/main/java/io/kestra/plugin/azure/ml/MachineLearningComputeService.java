@@ -7,8 +7,10 @@ import com.azure.resourcemanager.machinelearning.models.ComputeInstanceState;
 import com.azure.resourcemanager.machinelearning.models.ComputeResource;
 
 /**
- * Pre-checks shared by every task that submits work to a compute target, so a missing or stopped compute surfaces
- * an actionable message instead of an opaque ARM 404/409.
+ * Pre-checks the named compute target so a missing or stopped compute surfaces an actionable message instead of an
+ * opaque ARM 404/409. Called by {@link SubmitCommandJob}, which submits against a single named compute; there is no
+ * equivalent single {@code computeName} on {@link SubmitPipelineJob} to check — its steps are a raw, user-supplied
+ * pipeline graph where each step names its own compute independently.
  */
 final class MachineLearningComputeService {
     private MachineLearningComputeService() {

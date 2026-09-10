@@ -252,11 +252,20 @@ public class RegisterModel extends AbstractMachineLearningTask implements Runnab
                 throw e;
             }
         }
-        return manager.modelContainers()
-            .define(modelName)
-            .withExistingWorkspace(resourceGroupName, workspaceName)
-            .withProperties(new ModelContainerProperties())
-            .create();
+        try {
+            return manager.modelContainers()
+                .define(modelName)
+                .withExistingWorkspace(resourceGroupName, workspaceName)
+                .withProperties(new ModelContainerProperties())
+                .create();
+        } catch (ManagementException e) {
+            if (e.getResponse() != null && e.getResponse().getStatusCode() == 409) {
+                // A concurrent execution created the container between our get() and this create() — it exists
+                // now, which is exactly what this method is asked to return.
+                return manager.modelContainers().get(resourceGroupName, workspaceName, modelName);
+            }
+            throw e;
+        }
     }
 
     @SuperBuilder

@@ -193,6 +193,7 @@ public class SubmitCommandJob extends AbstractMachineLearningTask implements Run
                 .withProperties(commandJob)
                 .create();
         } catch (ManagementException e) {
+            this.lifecycle.disarm();
             throw translateSubmitError(e, jobName, rWorkspaceName, rComputeName);
         }
 

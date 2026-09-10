@@ -5,7 +5,6 @@ import java.util.Map;
 
 import com.azure.core.management.exception.ManagementException;
 import com.azure.resourcemanager.machinelearning.MachineLearningManager;
-import com.azure.resourcemanager.machinelearning.models.CommandJob;
 import com.azure.resourcemanager.machinelearning.models.JobBase;
 
 import io.kestra.core.models.annotations.Example;
@@ -89,7 +88,9 @@ public class GetJob extends AbstractMachineLearningTask implements RunnableTask<
         Map<String, Double> metrics = MachineLearningService.mlflowMetrics(
             runContext,
             credentials(runContext),
-            manager.workspaces().getByResourceGroup(rResourceGroupName, rWorkspaceName).mlFlowTrackingUri(),
+            manager,
+            rResourceGroupName,
+            rWorkspaceName,
             rJobName
         );
 
@@ -98,7 +99,7 @@ public class GetJob extends AbstractMachineLearningTask implements RunnableTask<
             .status(state)
             .studioUrl(studioUrl(runContext, rJobName))
             .metrics(metrics)
-            .outputs(MachineLearningService.namedOutputs(job.properties() instanceof CommandJob resolved ? resolved.outputs() : null))
+            .outputs(MachineLearningService.namedOutputs(MachineLearningService.jobOutputs(job)))
             .build();
     }
 

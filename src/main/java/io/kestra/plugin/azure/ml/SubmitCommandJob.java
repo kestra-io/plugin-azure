@@ -218,7 +218,9 @@ public class SubmitCommandJob extends AbstractMachineLearningTask implements Run
         Map<String, Double> metrics = MachineLearningService.mlflowMetrics(
             runContext,
             credentials(runContext),
-            manager.workspaces().getByResourceGroup(rResourceGroupName, rWorkspaceName).mlFlowTrackingUri(),
+            manager,
+            rResourceGroupName,
+            rWorkspaceName,
             jobName
         );
 

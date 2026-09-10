@@ -140,8 +140,8 @@ public class NewModelVersionTrigger extends AbstractTrigger implements PollingTr
         GetModel.Output latest;
         try {
             latest = task.run(runContext);
-        } catch (IllegalArgumentException e) {
-            // no version registered yet for this model
+        } catch (GetModel.NoModelVersionRegisteredException e) {
+            // the model exists but has no version registered yet — not an error, just nothing to fire on
             return Optional.empty();
         }
 

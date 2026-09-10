@@ -144,7 +144,7 @@ public class CreateDataAsset extends AbstractMachineLearningTask implements Runn
         return manager.dataContainers()
             .define(dataName)
             .withExistingWorkspace(resourceGroupName, workspaceName)
-            .withProperties(new DataContainerProperties().withDataType(DataType.fromString(dataAssetType.name())))
+            .withProperties(new DataContainerProperties().withDataType(DataType.fromString(dataAssetType.wireValue())))
             .create();
     }
 

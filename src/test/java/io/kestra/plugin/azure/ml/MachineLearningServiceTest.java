@@ -57,14 +57,14 @@ class MachineLearningServiceTest {
     }
 
     @Test
-    void versionOrdinalParsesNumericVersions() {
-        assertThat(MachineLearningService.versionOrdinal("1"), is(1L));
-        assertThat(MachineLearningService.versionOrdinal("10"), is(10L));
+    void versionComparatorOrdersNumericVersionsNumerically() {
+        assertThat(MachineLearningService.VERSION_COMPARATOR.compare("2", "10") < 0, is(true));
+        assertThat(MachineLearningService.VERSION_COMPARATOR.compare("10", "2") > 0, is(true));
     }
 
     @Test
-    void versionOrdinalFallsBackForNonNumericVersions() {
-        assertThat(MachineLearningService.versionOrdinal("custom-version"), is(Long.MIN_VALUE));
+    void versionComparatorFallsBackToLexicographicForNonNumericVersions() {
+        assertThat(MachineLearningService.VERSION_COMPARATOR.compare("custom-a", "custom-b") < 0, is(true));
     }
 
     @Test

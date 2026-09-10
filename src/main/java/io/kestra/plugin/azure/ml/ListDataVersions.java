@@ -4,6 +4,7 @@ import java.net.URI;
 import java.util.Comparator;
 import java.util.List;
 
+import com.azure.core.management.exception.ManagementException;
 import com.azure.resourcemanager.machinelearning.MachineLearningManager;
 
 import io.kestra.core.models.annotations.Example;
@@ -66,15 +67,23 @@ public class ListDataVersions extends AbstractMachineLearningTask implements Run
 
         MachineLearningManager manager = machineLearningManager(runContext);
 
-        List<Version> versions = manager.dataVersions().list(rResourceGroupName, rWorkspaceName, rDataName).stream()
-            .map(
-                dataVersion -> Version.builder()
-                    .version(dataVersion.name())
-                    .uri(URI.create(dataVersion.properties().dataUri()))
-                    .build()
-            )
-            .sorted(Comparator.comparingLong((Version v) -> MachineLearningService.versionOrdinal(v.getVersion())).reversed())
-            .toList();
+        List<Version> versions;
+        try {
+            versions = manager.dataVersions().list(rResourceGroupName, rWorkspaceName, rDataName).stream()
+                .map(
+                    dataVersion -> Version.builder()
+                        .version(dataVersion.name())
+                        .uri(URI.create(dataVersion.properties().dataUri()))
+                        .build()
+                )
+                .sorted(Comparator.comparing(Version::getVersion, MachineLearningService.VERSION_COMPARATOR).reversed())
+                .toList();
+        } catch (ManagementException e) {
+            if (e.getResponse() != null && e.getResponse().getStatusCode() == 404) {
+                throw new IllegalArgumentException("Data asset '%s' was not found in workspace '%s'".formatted(rDataName, rWorkspaceName), e);
+            }
+            throw e;
+        }
 
         return Output.builder()
             .dataName(rDataName)

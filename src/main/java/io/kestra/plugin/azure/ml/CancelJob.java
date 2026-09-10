@@ -96,13 +96,26 @@ public class CancelJob extends AbstractMachineLearningTask implements RunnableTa
                     "Job '%s' was not found in workspace '%s' — check `jobName`, `resourceGroupName` and `workspaceName`".formatted(rJobName, rWorkspaceName), e
                 );
             }
-            if (statusCode == 400 || statusCode == 409) {
+            if (statusCode == 409) {
                 logger.warn("Job '{}' could not be cancelled, it is likely already in a terminal state: {}", rJobName, e.getMessage());
                 JobBase current = manager.jobs().get(rResourceGroupName, rWorkspaceName, rJobName);
                 return Output.builder()
                     .jobName(rJobName)
                     .status(MachineLearningService.toJobState(current.properties().status()))
                     .build();
+            }
+            if (statusCode == 400) {
+                // A 400 can also mean "already terminal", but unlike 409 it is not exclusively that — confirm
+                // against the job's actual state instead of assuming, so a genuine bad-request error still surfaces.
+                JobBase current = manager.jobs().get(rResourceGroupName, rWorkspaceName, rJobName);
+                JobState currentState = MachineLearningService.toJobState(current.properties().status());
+                if (currentState.isTerminal()) {
+                    logger.warn("Job '{}' could not be cancelled, it is already in a terminal state '{}': {}", rJobName, currentState, e.getMessage());
+                    return Output.builder()
+                        .jobName(rJobName)
+                        .status(currentState)
+                        .build();
+                }
             }
             throw e;
         }

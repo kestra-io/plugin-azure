@@ -19,12 +19,14 @@ import com.azure.core.credential.TokenRequestContext;
 import com.azure.core.management.exception.ManagementException;
 import com.azure.resourcemanager.machinelearning.MachineLearningManager;
 import com.azure.resourcemanager.machinelearning.models.AzureBlobDatastore;
+import com.azure.resourcemanager.machinelearning.models.CommandJob;
 import com.azure.resourcemanager.machinelearning.models.DataVersionBase;
 import com.azure.resourcemanager.machinelearning.models.Datastore;
 import com.azure.resourcemanager.machinelearning.models.JobBase;
 import com.azure.resourcemanager.machinelearning.models.JobOutput;
 import com.azure.resourcemanager.machinelearning.models.JobStatus;
 import com.azure.resourcemanager.machinelearning.models.ModelVersion;
+import com.azure.resourcemanager.machinelearning.models.PipelineJob;
 import com.azure.resourcemanager.machinelearning.models.UriFileJobOutput;
 import com.azure.resourcemanager.machinelearning.models.UriFolderJobOutput;
 import com.azure.storage.blob.BlobContainerClient;
@@ -158,6 +160,19 @@ final class MachineLearningService {
         }
     }
 
+    /**
+     * A job's declared outputs live on its concrete properties subtype ({@code CommandJob} or {@code PipelineJob}
+     * today); this extracts them regardless of which kind of job was submitted, instead of silently returning none
+     * for job types other than the caller happened to assume.
+     */
+    static Map<String, JobOutput> jobOutputs(JobBase job) {
+        return switch (job.properties()) {
+            case CommandJob commandJob -> commandJob.outputs();
+            case PipelineJob pipelineJob -> pipelineJob.outputs();
+            default -> null;
+        };
+    }
+
     static Map<String, URI> namedOutputs(Map<String, JobOutput> outputs) {
         Map<String, URI> result = new HashMap<>();
         if (outputs == null) {
@@ -183,12 +198,13 @@ final class MachineLearningService {
      * failure (missing scope, unreachable endpoint) is logged and yields an empty map rather than failing the task.
      */
     @SuppressWarnings("unchecked")
-    static Map<String, Double> mlflowMetrics(RunContext runContext, TokenCredential credential, String mlflowTrackingUri, String jobName) {
-        if (mlflowTrackingUri == null || mlflowTrackingUri.isBlank()) {
-            return Map.of();
-        }
-
+    static Map<String, Double> mlflowMetrics(RunContext runContext, TokenCredential credential, MachineLearningManager manager, String resourceGroupName, String workspaceName, String jobName) {
         try {
+            String mlflowTrackingUri = manager.workspaces().getByResourceGroup(resourceGroupName, workspaceName).mlFlowTrackingUri();
+            if (mlflowTrackingUri == null || mlflowTrackingUri.isBlank()) {
+                return Map.of();
+            }
+
             String baseUrl = mlflowTrackingUri.replaceFirst("^azureml://", "https://");
             String token = credential.getToken(new TokenRequestContext().addScopes("https://ml.azure.com/.default"))
                 .block()
@@ -228,26 +244,26 @@ final class MachineLearningService {
 
     /**
      * Azure Machine Learning version identifiers are strings but, unless a caller supplies a custom scheme, they
-     * are Azure-assigned monotonically increasing integers; sorting numerically resolves "latest" correctly for
+     * are Azure-assigned monotonically increasing integers; comparing numerically resolves "latest" correctly for
      * that default scheme, falling back to lexicographic order for custom string versions.
      */
-    static long versionOrdinal(String version) {
+    static final Comparator<String> VERSION_COMPARATOR = (a, b) -> {
         try {
-            return Long.parseLong(version);
+            return Long.compare(Long.parseLong(a), Long.parseLong(b));
         } catch (NumberFormatException e) {
-            return Long.MIN_VALUE;
+            return a.compareTo(b);
         }
-    }
+    };
 
     static ModelVersion latestModelVersion(MachineLearningManager manager, String resourceGroupName, String workspaceName, String modelName) {
         return manager.modelVersions().list(resourceGroupName, workspaceName, modelName).stream()
-            .max(Comparator.comparing(v -> versionOrdinal(v.name())))
+            .max(Comparator.comparing(ModelVersion::name, VERSION_COMPARATOR))
             .orElse(null);
     }
 
     static DataVersionBase latestDataVersion(MachineLearningManager manager, String resourceGroupName, String workspaceName, String dataName) {
         return manager.dataVersions().list(resourceGroupName, workspaceName, dataName).stream()
-            .max(Comparator.comparing(v -> versionOrdinal(v.name())))
+            .max(Comparator.comparing(DataVersionBase::name, VERSION_COMPARATOR))
             .orElse(null);
     }
 

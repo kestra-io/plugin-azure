@@ -4,7 +4,6 @@ import java.net.URI;
 
 import com.azure.core.management.exception.ManagementException;
 import com.azure.resourcemanager.machinelearning.MachineLearningManager;
-import com.azure.resourcemanager.machinelearning.models.CommandJob;
 import com.azure.resourcemanager.machinelearning.models.JobBase;
 import com.azure.resourcemanager.machinelearning.models.ModelContainer;
 import com.azure.resourcemanager.machinelearning.models.ModelContainerProperties;
@@ -210,7 +209,7 @@ public class RegisterModel extends AbstractMachineLearningTask implements Runnab
             throw e;
         }
 
-        var outputs = MachineLearningService.namedOutputs(job.properties() instanceof CommandJob resolved ? resolved.outputs() : null);
+        var outputs = MachineLearningService.namedOutputs(MachineLearningService.jobOutputs(job));
         URI output = outputs.get(rJobOutputName);
         if (output == null) {
             throw new IllegalArgumentException("Job '%s' has no output named '%s' — available outputs: %s".formatted(rJobName, rJobOutputName, outputs.keySet()));

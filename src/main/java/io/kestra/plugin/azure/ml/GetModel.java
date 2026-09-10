@@ -89,7 +89,7 @@ public class GetModel extends AbstractMachineLearningTask implements RunnableTas
         }
 
         if (modelVersion == null) {
-            throw new IllegalArgumentException("Model '%s' has no registered version in workspace '%s'".formatted(rModelName, rWorkspaceName));
+            throw new NoModelVersionRegisteredException("Model '%s' has no registered version in workspace '%s'".formatted(rModelName, rWorkspaceName));
         }
 
         return Output.builder()
@@ -115,5 +115,17 @@ public class GetModel extends AbstractMachineLearningTask implements RunnableTas
 
         @Schema(title = "Model type", description = "Model framework flavor, e.g. `custom_model`, `mlflow_model`")
         private String modelType;
+    }
+
+    /**
+     * Distinguishes "the model exists but has zero registered versions yet" from every other {@link
+     * IllegalArgumentException} this task throws (e.g. the model itself was not found) — callers such as {@link
+     * NewModelVersionTrigger} that need to treat "no version yet" as a benign, poll-again condition can catch this
+     * specific type instead of masking a real misconfiguration behind a blanket {@code IllegalArgumentException} catch.
+     */
+    static final class NoModelVersionRegisteredException extends IllegalArgumentException {
+        NoModelVersionRegisteredException(String message) {
+            super(message);
+        }
     }
 }

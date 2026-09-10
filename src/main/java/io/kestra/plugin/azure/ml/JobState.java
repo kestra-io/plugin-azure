@@ -21,7 +21,7 @@ public enum JobState {
     UNKNOWN;
 
     public boolean isTerminal() {
-        return this == COMPLETED || this == FAILED || this == CANCELED;
+        return this == COMPLETED || this == FAILED || this == CANCELED || this == NOT_RESPONDING;
     }
 
     public boolean isFailure() {

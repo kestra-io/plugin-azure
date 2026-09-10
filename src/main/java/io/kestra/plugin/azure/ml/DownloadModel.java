@@ -149,7 +149,7 @@ public class DownloadModel extends AbstractMachineLearningTask implements Runnab
                     "Datastore '%s' backing this model is not an Azure Blob datastore, downloading is not supported for this datastore type".formatted(datastorePath.datastoreName())
                 );
             }
-            return new BlobLocation(blobDatastore.accountName(), blobDatastore.containerName(), ensureTrailingSlash(datastorePath.path()));
+            return new BlobLocation(blobDatastore.accountName(), blobDatastore.containerName(), datastorePath.path());
         }
 
         URI uri = URI.create(modelUri);
@@ -158,11 +158,7 @@ public class DownloadModel extends AbstractMachineLearningTask implements Runnab
         if (pathParts.length < 2) {
             throw new IllegalArgumentException("Unsupported model URI '%s': expected an `azureml://datastores/.../paths/...` or a blob container URI with a path".formatted(modelUri));
         }
-        return new BlobLocation(accountName, pathParts[0], ensureTrailingSlash(pathParts[1]));
-    }
-
-    private static String ensureTrailingSlash(String path) {
-        return path.endsWith("/") ? path : path + "/";
+        return new BlobLocation(accountName, pathParts[0], pathParts[1]);
     }
 
     private record BlobLocation(String accountName, String containerName, String blobPath) {

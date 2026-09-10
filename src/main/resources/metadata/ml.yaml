@@ -1,0 +1,8 @@
+group: io.kestra.plugin.azure.ml
+name: "ml"
+title: "Azure Machine Learning"
+description: "Tasks and triggers to interact with Azure Machine Learning."
+body: "Submit and monitor training jobs and pipelines, register and retrieve model and data asset versions, and control compute clusters and instances directly within Kestra data pipelines."
+videos: []
+createdBy: "Kestra Core Team"
+managedBy: "Kestra Core Team"

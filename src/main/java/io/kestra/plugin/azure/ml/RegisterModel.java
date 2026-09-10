@@ -179,9 +179,12 @@ public class RegisterModel extends AbstractMachineLearningTask implements Runnab
                     throw e;
                 }
                 if (explicitVersion.isPresent() || attempt >= 4) {
-                    throw new IllegalArgumentException(
-                        "Model '%s' version '%s' already exists — model versions are immutable, set a different `modelVersion` or omit it to auto-increment".formatted(rModelName, rVersion), e
-                    );
+                    if (MachineLearningService.modelVersionExists(manager, rResourceGroupName, rWorkspaceName, rModelName, rVersion)) {
+                        throw new IllegalArgumentException(
+                            "Model '%s' version '%s' already exists — model versions are immutable, set a different `modelVersion` or omit it to auto-increment".formatted(rModelName, rVersion), e
+                        );
+                    }
+                    throw new IllegalStateException("Failed to register model '%s' version '%s': %s".formatted(rModelName, rVersion, e.getValue() != null ? e.getValue().getMessage() : e.getMessage()), e);
                 }
                 // Auto-incremented version raced with a concurrent registration; re-read the container's next
                 // version and retry, instead of failing on a version number that is already known to be stale.

@@ -121,11 +121,14 @@ public class CreateDataAsset extends AbstractMachineLearningTask implements Runn
                     throw e;
                 }
                 if (explicitVersion.isPresent() || attempt >= 4) {
-                    throw new IllegalArgumentException(
-                        "Data asset '%s' version '%s' already exists — data asset versions are immutable, set a different `dataVersion` or omit it to auto-increment"
-                            .formatted(rDataName, rVersion),
-                        e
-                    );
+                    if (MachineLearningService.dataVersionExists(manager, rResourceGroupName, rWorkspaceName, rDataName, rVersion)) {
+                        throw new IllegalArgumentException(
+                            "Data asset '%s' version '%s' already exists — data asset versions are immutable, set a different `dataVersion` or omit it to auto-increment"
+                                .formatted(rDataName, rVersion),
+                            e
+                        );
+                    }
+                    throw new IllegalStateException("Failed to register data asset '%s' version '%s': %s".formatted(rDataName, rVersion, e.getValue() != null ? e.getValue().getMessage() : e.getMessage()), e);
                 }
                 // Auto-incremented version raced with a concurrent registration; re-read the container's next
                 // version and retry, instead of failing on a version number that is already known to be stale.

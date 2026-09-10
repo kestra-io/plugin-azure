@@ -15,6 +15,7 @@ import com.azure.resourcemanager.machinelearning.models.AzureBlobDatastore;
 import com.azure.resourcemanager.machinelearning.models.ModelVersion;
 import com.azure.storage.blob.BlobContainerClient;
 import com.azure.storage.blob.models.BlobItem;
+import com.azure.storage.blob.models.BlobStorageException;
 import com.azure.storage.blob.models.ListBlobsOptions;
 
 import io.kestra.core.models.annotations.Example;
@@ -108,30 +109,37 @@ public class DownloadModel extends AbstractMachineLearningTask implements Runnab
         // blob named exactly after its own folder path (left behind by tools like Storage Explorer/azcopy), which
         // would otherwise be indistinguishable from a genuine single-file model at that same path.
         String prefix = location.blobPath().endsWith("/") ? location.blobPath() : location.blobPath() + "/";
-        List<BlobItem> folderFiles = container.listBlobs(new ListBlobsOptions().setPrefix(prefix), Duration.ofSeconds(30)).stream()
-            .filter(file -> !file.getName().equals(prefix))
-            .toList();
 
         URI resultUri;
         boolean archive;
-        if (!folderFiles.isEmpty()) {
-            archive = true;
-            File archiveFile = runContext.workingDir().createTempFile(".zip").toFile();
-            try (var zip = new ZipOutputStream(new BufferedOutputStream(new FileOutputStream(archiveFile)))) {
-                for (BlobItem file : folderFiles) {
-                    zip.putNextEntry(new ZipEntry(file.getName().substring(prefix.length())));
-                    container.getBlobClient(file.getName()).downloadStream(zip);
-                    zip.closeEntry();
+        try {
+            List<BlobItem> folderFiles = container.listBlobs(new ListBlobsOptions().setPrefix(prefix), Duration.ofSeconds(30)).stream()
+                .filter(file -> !file.getName().equals(prefix))
+                .toList();
+
+            if (!folderFiles.isEmpty()) {
+                archive = true;
+                File archiveFile = runContext.workingDir().createTempFile(".zip").toFile();
+                try (var zip = new ZipOutputStream(new BufferedOutputStream(new FileOutputStream(archiveFile)))) {
+                    for (BlobItem file : folderFiles) {
+                        zip.putNextEntry(new ZipEntry(file.getName().substring(prefix.length())));
+                        container.getBlobClient(file.getName()).downloadStream(zip);
+                        zip.closeEntry();
+                    }
                 }
+                resultUri = runContext.storage().putFile(archiveFile);
+            } else if (container.getBlobClient(location.blobPath()).exists()) {
+                archive = false;
+                File tempFile = runContext.workingDir().createTempFile().toFile();
+                container.getBlobClient(location.blobPath()).downloadToFile(tempFile.getAbsolutePath(), true);
+                resultUri = runContext.storage().putFile(tempFile);
+            } else {
+                throw new IllegalStateException("No files found for model '%s' version '%s' at '%s'".formatted(rModelName, modelVersion.name(), modelUri));
             }
-            resultUri = runContext.storage().putFile(archiveFile);
-        } else if (container.getBlobClient(location.blobPath()).exists()) {
-            archive = false;
-            File tempFile = runContext.workingDir().createTempFile().toFile();
-            container.getBlobClient(location.blobPath()).downloadToFile(tempFile.getAbsolutePath(), true);
-            resultUri = runContext.storage().putFile(tempFile);
-        } else {
-            throw new IllegalStateException("No files found for model '%s' version '%s' at '%s'".formatted(rModelName, modelVersion.name(), modelUri));
+        } catch (BlobStorageException e) {
+            throw new IllegalStateException(
+                "Failed to download model '%s' version '%s' from blob storage — check the workspace's managed identity/service principal has read access to the backing storage account: %s".formatted(rModelName, modelVersion.name(), e.getMessage()), e
+            );
         }
 
         logger.info("Downloaded model '{}' version '{}' to internal storage", rModelName, modelVersion.name());

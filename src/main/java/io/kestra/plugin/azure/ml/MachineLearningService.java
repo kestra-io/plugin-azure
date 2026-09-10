@@ -404,6 +404,35 @@ final class MachineLearningService {
         return container.properties().nextVersion();
     }
 
+    /**
+     * A 409 on a version {@code create()} call almost always means the version already exists, but not
+     * exclusively — this confirms it before blaming a version collision, so an unrelated conflict (e.g. transient
+     * container-property propagation) doesn't get mislabeled and mask the real cause.
+     */
+    static boolean modelVersionExists(MachineLearningManager manager, String resourceGroupName, String workspaceName, String modelName, String version) {
+        try {
+            manager.modelVersions().get(resourceGroupName, workspaceName, modelName, version);
+            return true;
+        } catch (ManagementException e) {
+            if (e.getResponse() != null && e.getResponse().getStatusCode() == 404) {
+                return false;
+            }
+            return true;
+        }
+    }
+
+    static boolean dataVersionExists(MachineLearningManager manager, String resourceGroupName, String workspaceName, String dataName, String version) {
+        try {
+            manager.dataVersions().get(resourceGroupName, workspaceName, dataName, version);
+            return true;
+        } catch (ManagementException e) {
+            if (e.getResponse() != null && e.getResponse().getStatusCode() == 404) {
+                return false;
+            }
+            return true;
+        }
+    }
+
     static String requireNextVersion(DataContainer container, String dataName) {
         if (container.properties() == null) {
             throw new IllegalStateException("Could not determine the next version for data asset '%s' — its container properties are not yet available, retry shortly".formatted(dataName));
@@ -444,7 +473,7 @@ final class MachineLearningService {
 
     static Datastore defaultDatastore(MachineLearningManager manager, String resourceGroupName, String workspaceName) {
         return manager.datastores().list(resourceGroupName, workspaceName).stream()
-            .filter(datastore -> Boolean.TRUE.equals(datastore.properties().isDefault()))
+            .filter(datastore -> datastore.properties() != null && Boolean.TRUE.equals(datastore.properties().isDefault()))
             .findFirst()
             .orElseThrow(
                 () -> new IllegalStateException(

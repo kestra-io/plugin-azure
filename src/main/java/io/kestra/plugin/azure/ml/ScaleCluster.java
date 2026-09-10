@@ -127,9 +127,15 @@ public class ScaleCluster extends AbstractMachineLearningTask implements Runnabl
         try {
             future.get(2, TimeUnit.MINUTES);
         } catch (TimeoutException e) {
-            // Best-effort: this attempts to interrupt the underlying blocking call rather than leaving it running
-            // unobserved on a shared thread pool after this task has already reported failure.
+            // future.cancel(true) cannot actually stop this: the SDK's .apply() is a synchronous blocking call
+            // that does not observe thread interruption, so the update may still land in Azure after this task
+            // has already reported failure. At least log that outcome instead of leaving it fully unobserved.
             future.cancel(true);
+            future.whenComplete((result, throwable) -> {
+                if (throwable == null) {
+                    logger.warn("Autoscale update for compute cluster '{}' landed after this task had already timed out and reported failure", rComputeName);
+                }
+            });
             throw new IllegalStateException("Updating autoscale settings for compute cluster '%s' did not complete within 2 minutes".formatted(rComputeName), e);
         } catch (ExecutionException e) {
             Throwable cause = e.getCause();

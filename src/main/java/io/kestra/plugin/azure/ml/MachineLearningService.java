@@ -361,6 +361,23 @@ final class MachineLearningService {
      * rank a numeric version against a custom one (whichever side "wins" the comparison, it does so forever,
      * permanently hiding one kind of version from "latest" resolution). Creation time carries no such ambiguity.
      */
+    /**
+     * A model version's {@code properties()} is not guaranteed non-null, matching the same nullability every other
+     * ARM resource in this package already accounts for. A missing storage URI means the version is unusable
+     * regardless, so this fails with an actionable message rather than deferring to an NPE at the call site.
+     */
+    static String requireModelUri(ModelVersion modelVersion, String modelName) {
+        String modelUri = modelVersion.properties() != null ? modelVersion.properties().modelUri() : null;
+        if (modelUri == null) {
+            throw new IllegalStateException("Model '%s' version '%s' has no storage URI recorded — this model version appears to be malformed or incomplete".formatted(modelName, modelVersion.name()));
+        }
+        return modelUri;
+    }
+
+    static String modelType(ModelVersion modelVersion) {
+        return modelVersion.properties() != null ? modelVersion.properties().modelType() : null;
+    }
+
     static ModelVersion latestModelVersion(MachineLearningManager manager, String resourceGroupName, String workspaceName, String modelName) {
         return manager.modelVersions().list(resourceGroupName, workspaceName, modelName).stream()
             .max(Comparator.comparing((ModelVersion v) -> v.systemData() != null ? v.systemData().createdAt() : null, Comparator.nullsFirst(Comparator.naturalOrder())))

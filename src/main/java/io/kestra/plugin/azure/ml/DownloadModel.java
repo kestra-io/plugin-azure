@@ -100,7 +100,7 @@ public class DownloadModel extends AbstractMachineLearningTask implements Runnab
             throw new IllegalArgumentException("Model '%s' has no registered version in workspace '%s'".formatted(rModelName, rWorkspaceName));
         }
 
-        String modelUri = modelVersion.properties().modelUri();
+        String modelUri = MachineLearningService.requireModelUri(modelVersion, rModelName);
         BlobLocation location = resolveBlobLocation(manager, rResourceGroupName, rWorkspaceName, modelUri);
         BlobContainerClient container = MachineLearningService.blobContainerClient(credentials(runContext), location.accountName(), location.containerName());
 

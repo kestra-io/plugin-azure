@@ -75,8 +75,8 @@ public class ListModelVersions extends AbstractMachineLearningTask implements Ru
                 .map(
                     modelVersion -> Version.builder()
                         .version(modelVersion.name())
-                        .modelUri(URI.create(modelVersion.properties().modelUri()))
-                        .modelType(modelVersion.properties().modelType())
+                        .modelUri(URI.create(MachineLearningService.requireModelUri(modelVersion, rModelName)))
+                        .modelType(MachineLearningService.modelType(modelVersion))
                         .build()
                 )
                 .toList();

@@ -104,17 +104,29 @@ public abstract class AbstractComputeInstanceLifecycle extends AbstractMachineLe
         Duration interval = runContext.render(this.checkFrequency.getInterval()).as(Duration.class).orElseThrow();
         Duration maxDuration = runContext.render(this.checkFrequency.getMaxDuration()).as(Duration.class).orElseThrow();
 
+        // Await.until checks the timeout only between sleeps, not during one — capped the same way as the job
+        // poll loop in MachineLearningService.awaitTerminalState, and for the same reason.
+        Duration pollInterval = interval.compareTo(maxDuration) > 0 ? maxDuration : interval;
+
         AtomicReference<ComputeInstanceState> lastState = new AtomicReference<>(currentState);
         try {
             Await.until(
                 () ->
                 {
-                    ComputeResource refreshed = manager.computes().get(rResourceGroupName, rWorkspaceName, rComputeName);
+                    ComputeResource refreshed;
+                    try {
+                        refreshed = manager.computes().get(rResourceGroupName, rWorkspaceName, rComputeName);
+                    } catch (ManagementException e) {
+                        // A single transient ARM error must not fail a wait that can span minutes to hours — log
+                        // and keep polling; a persistent problem still surfaces via the timeout below.
+                        logger.warn("Transient error polling compute instance '{}' status, will retry: {}", rComputeName, e.getMessage());
+                        return false;
+                    }
                     ComputeInstanceState state = refreshed.properties() instanceof ComputeInstance ci && ci.properties() != null ? ci.properties().state() : null;
                     lastState.set(state);
                     return state == targetState();
                 },
-                interval,
+                pollInterval,
                 maxDuration
             );
         } catch (TimeoutException e) {

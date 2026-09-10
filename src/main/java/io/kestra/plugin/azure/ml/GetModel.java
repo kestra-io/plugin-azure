@@ -95,8 +95,8 @@ public class GetModel extends AbstractMachineLearningTask implements RunnableTas
         return Output.builder()
             .modelName(rModelName)
             .version(modelVersion.name())
-            .modelUri(URI.create(modelVersion.properties().modelUri()))
-            .modelType(modelVersion.properties().modelType())
+            .modelUri(URI.create(MachineLearningService.requireModelUri(modelVersion, rModelName)))
+            .modelType(MachineLearningService.modelType(modelVersion))
             .build();
     }
 

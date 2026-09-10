@@ -117,15 +117,19 @@ public class ScaleCluster extends AbstractMachineLearningTask implements Runnabl
             .withMaxNodeCount(rMaxNodeCount);
         runContext.render(this.nodeIdleTimeBeforeScaleDown).as(Duration.class).ifPresent(scaleSettings::withNodeIdleTimeBeforeScaleDown);
 
+        // .apply() blocks with no client-side timeout of its own — bound it explicitly so a stalled ARM
+        // long-running operation fails cleanly instead of hanging the task indefinitely.
+        CompletableFuture<ComputeResource> future = CompletableFuture.supplyAsync(() ->
+            compute.update()
+                .withProperties(new ScaleSettingsInformation().withScaleSettings(scaleSettings))
+                .apply()
+        );
         try {
-            // .apply() blocks with no client-side timeout of its own — bound it explicitly so a stalled ARM
-            // long-running operation fails cleanly instead of hanging the task indefinitely.
-            CompletableFuture.supplyAsync(() ->
-                compute.update()
-                    .withProperties(new ScaleSettingsInformation().withScaleSettings(scaleSettings))
-                    .apply()
-            ).get(2, TimeUnit.MINUTES);
+            future.get(2, TimeUnit.MINUTES);
         } catch (TimeoutException e) {
+            // Best-effort: this attempts to interrupt the underlying blocking call rather than leaving it running
+            // unobserved on a shared thread pool after this task has already reported failure.
+            future.cancel(true);
             throw new IllegalStateException("Updating autoscale settings for compute cluster '%s' did not complete within 2 minutes".formatted(rComputeName), e);
         } catch (ExecutionException e) {
             Throwable cause = e.getCause();

@@ -3,6 +3,9 @@ package io.kestra.plugin.azure.ml;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 /**
  * Backs the {@code kill()} lifecycle hook shared by {@link SubmitCommandJob} and {@link SubmitPipelineJob}: once the
  * remote job id is known, {@link #arm(Runnable)} records how to cancel it, and {@link #kill()} runs that action at
@@ -15,6 +18,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * lifecycle callback, on a thread shared with other jobs' kill signals and dispatch, and must return promptly.</p>
  */
 final class CancellableJob {
+    private static final Logger LOG = LoggerFactory.getLogger(CancellableJob.class);
+
     private final AtomicBoolean killed = new AtomicBoolean(false);
     private final AtomicBoolean fired = new AtomicBoolean(false);
     private volatile Runnable action;
@@ -44,7 +49,14 @@ final class CancellableJob {
     private void fire() {
         Runnable current = action;
         if (current != null && fired.compareAndSet(false, true)) {
-            CompletableFuture.runAsync(current);
+            // The cancel action (cancelQuietly) already contains its own error handling; this only guards against
+            // a genuinely unexpected failure inside it, which would otherwise vanish silently into an unobserved
+            // future instead of at least being logged.
+            CompletableFuture.runAsync(current)
+                .exceptionally(e -> {
+                    LOG.warn("Unexpected error while cancelling an Azure Machine Learning job", e);
+                    return null;
+                });
         }
     }
 }

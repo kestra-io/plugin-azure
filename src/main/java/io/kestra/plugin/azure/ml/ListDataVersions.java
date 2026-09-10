@@ -75,7 +75,7 @@ public class ListDataVersions extends AbstractMachineLearningTask implements Run
                 .map(
                     dataVersion -> Version.builder()
                         .version(dataVersion.name())
-                        .uri(URI.create(dataVersion.properties().dataUri()))
+                        .uri(URI.create(MachineLearningService.requireDataUri(dataVersion, rDataName)))
                         .build()
                 )
                 .toList();

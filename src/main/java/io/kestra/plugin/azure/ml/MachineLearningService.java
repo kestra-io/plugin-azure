@@ -20,11 +20,13 @@ import com.azure.core.management.exception.ManagementException;
 import com.azure.resourcemanager.machinelearning.MachineLearningManager;
 import com.azure.resourcemanager.machinelearning.models.AzureBlobDatastore;
 import com.azure.resourcemanager.machinelearning.models.CommandJob;
+import com.azure.resourcemanager.machinelearning.models.DataContainer;
 import com.azure.resourcemanager.machinelearning.models.DataVersionBase;
 import com.azure.resourcemanager.machinelearning.models.Datastore;
 import com.azure.resourcemanager.machinelearning.models.JobBase;
 import com.azure.resourcemanager.machinelearning.models.JobOutput;
 import com.azure.resourcemanager.machinelearning.models.JobStatus;
+import com.azure.resourcemanager.machinelearning.models.ModelContainer;
 import com.azure.resourcemanager.machinelearning.models.ModelVersion;
 import com.azure.resourcemanager.machinelearning.models.PipelineJob;
 import com.azure.resourcemanager.machinelearning.models.UriFileJobOutput;
@@ -197,14 +199,16 @@ final class MachineLearningService {
                         if (e.getResponse() != null && e.getResponse().getStatusCode() == 404) {
                             // A kill signal can arrive while the job is still being submitted (arm() runs before
                             // the create() call returns) — the job id is known client-side before Azure
-                            // acknowledges it server-side, so retry briefly instead of giving up immediately.
+                            // acknowledges it server-side, so retry until it shows up rather than giving up too
+                            // soon. This runs off-thread (see CancellableJob), so a generous window costs nothing
+                            // beyond the worker's own kill-signal timeout — unlike blocking the caller directly.
                             return false;
                         }
                         throw e;
                     }
                 },
                 Duration.ofSeconds(2),
-                Duration.ofSeconds(20)
+                Duration.ofMinutes(2)
             );
             runContext.logger().info("Cancelled Azure Machine Learning job '{}'", jobName);
         } catch (TimeoutException timeoutException) {
@@ -376,6 +380,35 @@ final class MachineLearningService {
 
     static String modelType(ModelVersion modelVersion) {
         return modelVersion.properties() != null ? modelVersion.properties().modelType() : null;
+    }
+
+    /**
+     * Same nullability concern as {@link #requireModelUri}, for data asset versions.
+     */
+    static String requireDataUri(DataVersionBase dataVersion, String dataName) {
+        String dataUri = dataVersion.properties() != null ? dataVersion.properties().dataUri() : null;
+        if (dataUri == null) {
+            throw new IllegalStateException("Data asset '%s' version '%s' has no storage URI recorded — this version appears to be malformed or incomplete".formatted(dataName, dataVersion.name()));
+        }
+        return dataUri;
+    }
+
+    /**
+     * A container's {@code properties()} is not guaranteed non-null (e.g. transiently, right after creation) —
+     * fail with an actionable message instead of an NPE when computing the version to auto-increment to.
+     */
+    static String requireNextVersion(ModelContainer container, String modelName) {
+        if (container.properties() == null) {
+            throw new IllegalStateException("Could not determine the next version for model '%s' — its container properties are not yet available, retry shortly".formatted(modelName));
+        }
+        return container.properties().nextVersion();
+    }
+
+    static String requireNextVersion(DataContainer container, String dataName) {
+        if (container.properties() == null) {
+            throw new IllegalStateException("Could not determine the next version for data asset '%s' — its container properties are not yet available, retry shortly".formatted(dataName));
+        }
+        return container.properties().nextVersion();
     }
 
     static ModelVersion latestModelVersion(MachineLearningManager manager, String resourceGroupName, String workspaceName, String modelName) {

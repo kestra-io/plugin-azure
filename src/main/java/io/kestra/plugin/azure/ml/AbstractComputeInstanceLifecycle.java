@@ -56,6 +56,13 @@ public abstract class AbstractComputeInstanceLifecycle extends AbstractMachineLe
 
     protected abstract void invokeAction(MachineLearningManager manager, String resourceGroupName, String workspaceName, String computeName);
 
+    private static boolean isFailureState(ComputeInstanceState state) {
+        return state == ComputeInstanceState.CREATE_FAILED
+            || state == ComputeInstanceState.SETUP_FAILED
+            || state == ComputeInstanceState.USER_SETUP_FAILED
+            || state == ComputeInstanceState.UNUSABLE;
+    }
+
     @Override
     public Output run(RunContext runContext) throws Exception {
         var logger = runContext.logger();
@@ -124,6 +131,11 @@ public abstract class AbstractComputeInstanceLifecycle extends AbstractMachineLe
                     }
                     ComputeInstanceState state = refreshed.properties() instanceof ComputeInstance ci && ci.properties() != null ? ci.properties().state() : null;
                     lastState.set(state);
+                    if (isFailureState(state)) {
+                        // A definitive failure is already known — don't burn the rest of maxDuration waiting for
+                        // a state that will never arrive.
+                        throw new IllegalStateException("Compute instance '%s' reached failure state '%s' while waiting for '%s'".formatted(rComputeName, state, targetState()));
+                    }
                     return state == targetState();
                 },
                 pollInterval,

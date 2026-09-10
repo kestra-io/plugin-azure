@@ -107,7 +107,7 @@ public class CreateDataAsset extends AbstractMachineLearningTask implements Runn
         };
         runContext.render(this.dataDescription).as(String.class).ifPresent(properties::withDescription);
 
-        String rVersion = explicitVersion.orElseGet(() -> container.properties().nextVersion());
+        String rVersion = explicitVersion.orElseGet(() -> MachineLearningService.requireNextVersion(container, rDataName));
         DataVersionBase createdDataVersion = null;
         for (int attempt = 0; createdDataVersion == null; attempt++) {
             try {
@@ -129,7 +129,7 @@ public class CreateDataAsset extends AbstractMachineLearningTask implements Runn
                 }
                 // Auto-incremented version raced with a concurrent registration; re-read the container's next
                 // version and retry, instead of failing on a version number that is already known to be stale.
-                rVersion = manager.dataContainers().get(rResourceGroupName, rWorkspaceName, rDataName).properties().nextVersion();
+                rVersion = MachineLearningService.requireNextVersion(manager.dataContainers().get(rResourceGroupName, rWorkspaceName, rDataName), rDataName);
             }
         }
 

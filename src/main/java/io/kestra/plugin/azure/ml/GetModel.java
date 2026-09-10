@@ -70,7 +70,7 @@ public class GetModel extends AbstractMachineLearningTask implements RunnableTas
         String rResourceGroupName = rResourceGroupName(runContext);
         String rWorkspaceName = rWorkspaceName(runContext);
         String rModelName = runContext.render(this.modelName).as(String.class).orElseThrow();
-        String rVersion = runContext.render(this.modelVersion).as(String.class).orElse("latest");
+        String rVersion = runContext.render(this.modelVersion).as(String.class).filter(v -> !v.isBlank()).orElse("latest");
 
         MachineLearningManager manager = machineLearningManager(runContext);
 

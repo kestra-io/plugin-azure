@@ -136,8 +136,17 @@ public class CancelJob extends AbstractMachineLearningTask implements RunnableTa
         if (!Boolean.TRUE.equals(runContext.render(this.wait).as(Boolean.class).orElseThrow())) {
             JobState reportedState = JobState.CANCEL_REQUESTED;
             if (cancelOutcomeUnknown) {
-                JobBase current = manager.jobs().get(rResourceGroupName, rWorkspaceName, rJobName);
-                reportedState = MachineLearningService.toJobState(current);
+                try {
+                    JobBase current = manager.jobs().get(rResourceGroupName, rWorkspaceName, rJobName);
+                    reportedState = MachineLearningService.toJobState(current);
+                } catch (ManagementException e) {
+                    if (e.getResponse() != null && e.getResponse().getStatusCode() == 404) {
+                        throw new IllegalArgumentException(
+                            "Job '%s' was not found in workspace '%s' — check `jobName`, `resourceGroupName` and `workspaceName`".formatted(rJobName, rWorkspaceName), e
+                        );
+                    }
+                    throw e;
+                }
             }
             return Output.builder()
                 .jobName(rJobName)

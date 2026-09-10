@@ -1,6 +1,7 @@
 package io.kestra.plugin.azure.ml;
 
 import java.net.URI;
+import java.util.Optional;
 
 import com.azure.core.management.exception.ManagementException;
 import com.azure.resourcemanager.machinelearning.MachineLearningManager;
@@ -97,7 +98,7 @@ public class CreateDataAsset extends AbstractMachineLearningTask implements Runn
         MachineLearningManager manager = machineLearningManager(runContext);
 
         DataContainer container = getOrCreateDataContainer(manager, rResourceGroupName, rWorkspaceName, rDataName, rDataAssetType);
-        String rVersion = runContext.render(this.dataVersion).as(String.class).orElseGet(() -> container.properties().nextVersion());
+        Optional<String> explicitVersion = runContext.render(this.dataVersion).as(String.class).filter(v -> !v.isBlank());
 
         DataVersionBaseProperties properties = switch (rDataAssetType) {
             case URI_FILE -> new UriFileDataVersion().withDataUri(rUri);
@@ -106,22 +107,30 @@ public class CreateDataAsset extends AbstractMachineLearningTask implements Runn
         };
         runContext.render(this.dataDescription).as(String.class).ifPresent(properties::withDescription);
 
-        DataVersionBase createdDataVersion;
-        try {
-            createdDataVersion = manager.dataVersions()
-                .define(rVersion)
-                .withExistingData(rResourceGroupName, rWorkspaceName, rDataName)
-                .withProperties(properties)
-                .create();
-        } catch (ManagementException e) {
-            if (e.getResponse() != null && e.getResponse().getStatusCode() == 409) {
-                throw new IllegalArgumentException(
-                    "Data asset '%s' version '%s' already exists — data asset versions are immutable, set a different `dataVersion` or omit it to auto-increment"
-                        .formatted(rDataName, rVersion),
-                    e
-                );
+        String rVersion = explicitVersion.orElseGet(() -> container.properties().nextVersion());
+        DataVersionBase createdDataVersion = null;
+        for (int attempt = 0; createdDataVersion == null; attempt++) {
+            try {
+                createdDataVersion = manager.dataVersions()
+                    .define(rVersion)
+                    .withExistingData(rResourceGroupName, rWorkspaceName, rDataName)
+                    .withProperties(properties)
+                    .create();
+            } catch (ManagementException e) {
+                if (e.getResponse() == null || e.getResponse().getStatusCode() != 409) {
+                    throw e;
+                }
+                if (explicitVersion.isPresent() || attempt >= 4) {
+                    throw new IllegalArgumentException(
+                        "Data asset '%s' version '%s' already exists — data asset versions are immutable, set a different `dataVersion` or omit it to auto-increment"
+                            .formatted(rDataName, rVersion),
+                        e
+                    );
+                }
+                // Auto-incremented version raced with a concurrent registration; re-read the container's next
+                // version and retry, instead of failing on a version number that is already known to be stale.
+                rVersion = manager.dataContainers().get(rResourceGroupName, rWorkspaceName, rDataName).properties().nextVersion();
             }
-            throw e;
         }
 
         logger.info("Registered data asset '{}' version '{}' from '{}'", rDataName, rVersion, rUri);

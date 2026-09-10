@@ -114,7 +114,11 @@ public class DownloadModel extends AbstractMachineLearningTask implements Runnab
         } else {
             archive = true;
             String prefix = location.blobPath().endsWith("/") ? location.blobPath() : location.blobPath() + "/";
-            List<BlobItem> files = container.listBlobs(new ListBlobsOptions().setPrefix(prefix), Duration.ofSeconds(30)).stream().toList();
+            List<BlobItem> files = container.listBlobs(new ListBlobsOptions().setPrefix(prefix), Duration.ofSeconds(30)).stream()
+                // Some tools leave a zero-byte placeholder blob named exactly after the folder path; it carries no
+                // content of its own and would otherwise produce an invalid empty zip entry name.
+                .filter(file -> !file.getName().equals(prefix))
+                .toList();
             if (files.isEmpty()) {
                 throw new IllegalStateException("No files found for model '%s' version '%s' at '%s'".formatted(rModelName, modelVersion.name(), modelUri));
             }

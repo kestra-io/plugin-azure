@@ -141,7 +141,18 @@ final class MachineLearningService {
                 } catch (ManagementException cancelException) {
                     runContext.logger().warn("Could not cancel job '{}' after timeout: {}", jobName, cancelException.getMessage());
                 }
-                throw new IllegalStateException("Job '%s' did not reach a terminal state within %s and was cancelled".formatted(jobName, maxDuration));
+
+                // Cancellation is itself asynchronous (a job can sit in CANCEL_REQUESTED for minutes) — confirm it
+                // actually reached a terminal state within a short, bounded grace period instead of just asserting
+                // it happened; if it hasn't landed yet, say so rather than lying about the job's real state.
+                Duration cancelGrace = interval.multipliedBy(3).compareTo(Duration.ofSeconds(30)) > 0 ? Duration.ofSeconds(30) : interval.multipliedBy(3);
+                try {
+                    JobBase cancelled = awaitTerminalState(() -> manager.jobs().get(resourceGroupName, workspaceName, jobName), interval, cancelGrace);
+                    JobState finalState = toJobState(cancelled.properties().status());
+                    throw new IllegalStateException("Job '%s' did not reach a terminal state within %s; cancellation was requested and confirmed (final status '%s')".formatted(jobName, maxDuration, finalState));
+                } catch (TimeoutException confirmTimeout) {
+                    throw new IllegalStateException("Job '%s' did not reach a terminal state within %s; cancellation was requested but not yet confirmed — check its status in Azure ML Studio".formatted(jobName, maxDuration));
+                }
             }
             throw new IllegalStateException("Job '%s' did not reach a terminal state within %s; it is still running in Azure Machine Learning".formatted(jobName, maxDuration));
         }
@@ -153,8 +164,27 @@ final class MachineLearningService {
      */
     static void cancelQuietly(RunContext runContext, MachineLearningManager manager, String resourceGroupName, String workspaceName, String jobName) {
         try {
-            manager.jobs().cancel(resourceGroupName, workspaceName, jobName);
+            Await.until(
+                () -> {
+                    try {
+                        manager.jobs().cancel(resourceGroupName, workspaceName, jobName);
+                        return true;
+                    } catch (ManagementException e) {
+                        if (e.getResponse() != null && e.getResponse().getStatusCode() == 404) {
+                            // A kill signal can arrive while the job is still being submitted (arm() runs before
+                            // the create() call returns) — the job id is known client-side before Azure
+                            // acknowledges it server-side, so retry briefly instead of giving up immediately.
+                            return false;
+                        }
+                        throw e;
+                    }
+                },
+                Duration.ofSeconds(2),
+                Duration.ofSeconds(20)
+            );
             runContext.logger().info("Cancelled Azure Machine Learning job '{}'", jobName);
+        } catch (TimeoutException timeoutException) {
+            runContext.logger().warn("Could not cancel job '{}': it was never found within the retry window — it may not have been created", jobName);
         } catch (ManagementException e) {
             runContext.logger().warn("Could not cancel job '{}' (it may already be in a terminal state): {}", jobName, e.getMessage());
         }
@@ -171,6 +201,15 @@ final class MachineLearningService {
             case PipelineJob pipelineJob -> pipelineJob.outputs();
             default -> null;
         };
+    }
+
+    /**
+     * A job's {@code computeId} property is not the bare compute name but its full ARM resource ID — the Azure ML
+     * REST API rejects a bare name here (unlike, e.g., {@code computes().get(...)}, which does take a bare name).
+     */
+    static String computeResourceId(String subscriptionId, String resourceGroupName, String workspaceName, String computeName) {
+        return "/subscriptions/%s/resourceGroups/%s/providers/Microsoft.MachineLearningServices/workspaces/%s/computes/%s"
+            .formatted(subscriptionId, resourceGroupName, workspaceName, computeName);
     }
 
     static Map<String, URI> namedOutputs(Map<String, JobOutput> outputs) {
@@ -207,7 +246,7 @@ final class MachineLearningService {
 
             String baseUrl = mlflowTrackingUri.replaceFirst("^azureml://", "https://");
             String token = credential.getToken(new TokenRequestContext().addScopes("https://ml.azure.com/.default"))
-                .block()
+                .block(Duration.ofSeconds(15))
                 .getToken();
 
             URI uri = URI.create(baseUrl + "/api/2.0/mlflow/runs/get?run_id=" + jobName);

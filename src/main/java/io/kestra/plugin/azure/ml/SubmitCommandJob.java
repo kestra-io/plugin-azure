@@ -155,7 +155,7 @@ public class SubmitCommandJob extends AbstractMachineLearningTask implements Run
 
         CommandJob commandJob = new CommandJob()
             .withCommand(rCommand)
-            .withComputeId(rComputeName)
+            .withComputeId(MachineLearningService.computeResourceId(rSubscriptionId(runContext), rResourceGroupName, rWorkspaceName, rComputeName))
             .withResources(new JobResourceConfiguration().withInstanceCount(runContext.render(this.instanceCount).as(Integer.class).orElse(1)));
 
         String rEnvironmentId = runContext.render(this.environmentId).as(String.class).orElse(null);
@@ -180,6 +180,11 @@ public class SubmitCommandJob extends AbstractMachineLearningTask implements Run
         runContext.render(this.experimentName).as(String.class).ifPresent(commandJob::withExperimentName);
         runContext.render(this.displayName).as(String.class).ifPresent(commandJob::withDisplayName);
 
+        // The job name is known before submission, so arm the kill lifecycle now: a kill signal arriving while
+        // create() is still in flight (including after Azure has already provisioned the job server-side but
+        // before this call returns) is then captured instead of having nothing to act on.
+        this.lifecycle.arm(() -> MachineLearningService.cancelQuietly(runContext, manager, rResourceGroupName, rWorkspaceName, jobName));
+
         JobBase job;
         try {
             job = manager.jobs()
@@ -192,8 +197,6 @@ public class SubmitCommandJob extends AbstractMachineLearningTask implements Run
         }
 
         logger.info("Submitted Azure Machine Learning command job '{}' on compute '{}'", jobName, rComputeName);
-
-        this.lifecycle.arm(() -> MachineLearningService.cancelQuietly(runContext, manager, rResourceGroupName, rWorkspaceName, jobName));
 
         if (!Boolean.TRUE.equals(runContext.render(this.wait).as(Boolean.class).orElseThrow())) {
             return Output.builder()

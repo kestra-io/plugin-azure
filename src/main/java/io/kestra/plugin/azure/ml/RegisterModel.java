@@ -1,6 +1,7 @@
 package io.kestra.plugin.azure.ml;
 
 import java.net.URI;
+import java.util.Optional;
 
 import com.azure.core.management.exception.ManagementException;
 import com.azure.resourcemanager.machinelearning.MachineLearningManager;
@@ -157,27 +158,35 @@ public class RegisterModel extends AbstractMachineLearningTask implements Runnab
         };
 
         ModelContainer container = getOrCreateModelContainer(manager, rResourceGroupName, rWorkspaceName, rModelName);
-        String rVersion = runContext.render(this.modelVersion).as(String.class).orElseGet(() -> container.properties().nextVersion());
+        Optional<String> explicitVersion = runContext.render(this.modelVersion).as(String.class).filter(v -> !v.isBlank());
 
         ModelVersionProperties properties = new ModelVersionProperties()
             .withModelUri(modelUri)
             .withModelType(runContext.render(this.modelType).as(String.class).orElse("custom_model"));
         runContext.render(this.modelDescription).as(String.class).ifPresent(properties::withDescription);
 
-        ModelVersion createdModelVersion;
-        try {
-            createdModelVersion = manager.modelVersions()
-                .define(rVersion)
-                .withExistingModel(rResourceGroupName, rWorkspaceName, rModelName)
-                .withProperties(properties)
-                .create();
-        } catch (ManagementException e) {
-            if (e.getResponse() != null && e.getResponse().getStatusCode() == 409) {
-                throw new IllegalArgumentException(
-                    "Model '%s' version '%s' already exists — model versions are immutable, set a different `modelVersion` or omit it to auto-increment".formatted(rModelName, rVersion), e
-                );
+        String rVersion = explicitVersion.orElseGet(() -> container.properties().nextVersion());
+        ModelVersion createdModelVersion = null;
+        for (int attempt = 0; createdModelVersion == null; attempt++) {
+            try {
+                createdModelVersion = manager.modelVersions()
+                    .define(rVersion)
+                    .withExistingModel(rResourceGroupName, rWorkspaceName, rModelName)
+                    .withProperties(properties)
+                    .create();
+            } catch (ManagementException e) {
+                if (e.getResponse() == null || e.getResponse().getStatusCode() != 409) {
+                    throw e;
+                }
+                if (explicitVersion.isPresent() || attempt >= 4) {
+                    throw new IllegalArgumentException(
+                        "Model '%s' version '%s' already exists — model versions are immutable, set a different `modelVersion` or omit it to auto-increment".formatted(rModelName, rVersion), e
+                    );
+                }
+                // Auto-incremented version raced with a concurrent registration; re-read the container's next
+                // version and retry, instead of failing on a version number that is already known to be stale.
+                rVersion = manager.modelContainers().get(rResourceGroupName, rWorkspaceName, rModelName).properties().nextVersion();
             }
-            throw e;
         }
 
         logger.info("Registered model '{}' version '{}' from '{}'", rModelName, rVersion, modelUri);

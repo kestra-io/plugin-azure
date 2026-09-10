@@ -54,12 +54,12 @@ import lombok.experimental.SuperBuilder;
                     jobs:
                       prepare:
                         type: command
-                        computeId: cpu-cluster
+                        computeId: "/subscriptions/{{ secret('AZURE_SUBSCRIPTION_ID') }}/resourceGroups/ml-rg/providers/Microsoft.MachineLearningServices/workspaces/ml-workspace/computes/cpu-cluster"
                         command: "python prepare.py"
                         environmentId: "azureml:AzureML-sklearn-1.5:1"
                       train:
                         type: command
-                        computeId: cpu-cluster
+                        computeId: "/subscriptions/{{ secret('AZURE_SUBSCRIPTION_ID') }}/resourceGroups/ml-rg/providers/Microsoft.MachineLearningServices/workspaces/ml-workspace/computes/cpu-cluster"
                         command: "python train.py"
                         environmentId: "azureml:AzureML-sklearn-1.5:1"
                 """
@@ -68,7 +68,7 @@ import lombok.experimental.SuperBuilder;
 )
 @Schema(
     title = "Submit a multi-step pipeline job to Azure Machine Learning",
-    description = "Submits a pipeline job made of several child jobs (e.g. a data-preparation step followed by a training step) and, by default, waits for it to reach a terminal state. `jobs` is the raw pipeline job graph as accepted by the Azure Machine Learning REST API: a map of step name to step definition (`type`, `computeId`, `command`, `environmentId`, `inputs`, `outputs`, ...). Killing the Kestra execution cancels the whole pipeline job. Defaults: wait=true, checkFrequency.interval=PT10S, checkFrequency.maxDuration=PT1H, cancelOnTimeout=true."
+    description = "Submits a pipeline job made of several child jobs (e.g. a data-preparation step followed by a training step) and, by default, waits for it to reach a terminal state. `jobs` is the raw pipeline job graph as accepted by the Azure Machine Learning REST API: a map of step name to step definition (`type`, `computeId`, `command`, `environmentId`, `inputs`, `outputs`, ...). Each step's `computeId` must be the compute's full ARM resource ID (`/subscriptions/.../resourceGroups/.../providers/Microsoft.MachineLearningServices/workspaces/.../computes/<name>`) — a bare compute name is rejected by the API. Killing the Kestra execution cancels the whole pipeline job. Defaults: wait=true, checkFrequency.interval=PT10S, checkFrequency.maxDuration=PT1H, cancelOnTimeout=true."
 )
 public class SubmitPipelineJob extends AbstractMachineLearningTask implements RunnableTask<SubmitPipelineJob.Output> {
     @Schema(title = "Job name", description = "Unique job name within the workspace; a random UUID is generated when not set")
@@ -131,6 +131,11 @@ public class SubmitPipelineJob extends AbstractMachineLearningTask implements Ru
         runContext.render(this.experimentName).as(String.class).ifPresent(pipelineJob::withExperimentName);
         runContext.render(this.displayName).as(String.class).ifPresent(pipelineJob::withDisplayName);
 
+        // The job name is known before submission, so arm the kill lifecycle now: a kill signal arriving while
+        // create() is still in flight (including after Azure has already provisioned the job server-side but
+        // before this call returns) is then captured instead of having nothing to act on.
+        this.lifecycle.arm(() -> MachineLearningService.cancelQuietly(runContext, manager, rResourceGroupName, rWorkspaceName, jobName));
+
         JobBase job;
         try {
             job = manager.jobs()
@@ -158,8 +163,6 @@ public class SubmitPipelineJob extends AbstractMachineLearningTask implements Ru
         }
 
         logger.info("Submitted Azure Machine Learning pipeline job '{}'", jobName);
-
-        this.lifecycle.arm(() -> MachineLearningService.cancelQuietly(runContext, manager, rResourceGroupName, rWorkspaceName, jobName));
 
         if (!Boolean.TRUE.equals(runContext.render(this.wait).as(Boolean.class).orElseThrow())) {
             return Output.builder()

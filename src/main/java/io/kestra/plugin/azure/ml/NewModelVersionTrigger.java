@@ -64,7 +64,7 @@ import lombok.experimental.SuperBuilder;
 )
 @Schema(
     title = "Trigger a flow when a new Azure Machine Learning model version is registered",
-    description = "Polls a model's latest version on a schedule and starts an execution when a new version is detected. The last-seen version is persisted in the flow's namespace KV Store so the trigger does not re-fire for a version it already delivered."
+    description = "Polls a model's latest version on a schedule and starts an execution when a new version is detected. The last-seen version is persisted in the flow's namespace KV Store so the trigger does not re-fire for a version it already delivered. Only the latest version at each poll is compared against the last-seen one: if several versions are registered between two polls, only the latest of them fires and the intermediate ones are not individually delivered — the same interval-bound characteristic as every other stateful polling trigger in this plugin."
 )
 public class NewModelVersionTrigger extends AbstractTrigger implements PollingTriggerInterface, TriggerOutput<NewModelVersionTrigger.Output>, StatefulTriggerInterface {
     @Schema(title = "Azure AD tenant ID (GUID)")

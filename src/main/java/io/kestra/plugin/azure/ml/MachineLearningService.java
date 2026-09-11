@@ -411,7 +411,7 @@ final class MachineLearningService {
             }
 
             String baseUrl = mlflowTrackingUri.replaceFirst("^azureml://", "https://");
-            String token = credential.getToken(new TokenRequestContext().addScopes("https://ml.azure.com/.default"))
+            String token = credential.getToken(new TokenRequestContext().addScopes("https://management.azure.com/.default"))
                 .block(Duration.ofSeconds(15))
                 .getToken();
 

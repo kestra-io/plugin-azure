@@ -1,16 +1,23 @@
 package io.kestra.plugin.azure.ml;
 
 import java.net.URI;
+import java.time.Duration;
 import java.util.Map;
 
 import org.junit.jupiter.api.Test;
 
+import com.azure.resourcemanager.machinelearning.models.JobBase;
 import com.azure.resourcemanager.machinelearning.models.JobStatus;
 import com.azure.resourcemanager.machinelearning.models.UriFileJobOutput;
 import com.azure.resourcemanager.machinelearning.models.UriFolderJobOutput;
 
+import io.kestra.core.runners.RunContext;
+
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.*;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 /**
  * Pure unit tests for the shared status-mapping and URI-parsing logic, which do not require live Azure credentials
@@ -73,5 +80,22 @@ class MachineLearningServiceTest {
     @Test
     void namedOutputsReturnsEmptyMapForNullInput() {
         assertThat(MachineLearningService.namedOutputs(null).isEmpty(), is(true));
+    }
+
+    @Test
+    void awaitTerminalStateFailsFastOnUnknownStatus() {
+        JobBase job = mock(JobBase.class);
+        when(job.name()).thenReturn("test-job");
+        when(job.properties()).thenReturn(null);
+
+        RunContext runContext = mock(RunContext.class);
+
+        var exception = assertThrows(
+            IllegalStateException.class,
+            () -> MachineLearningService.awaitTerminalState(runContext, () -> job, Duration.ofMillis(10), Duration.ofSeconds(1))
+        );
+
+        assertThat(exception.getMessage(), containsString("test-job"));
+        assertThat(exception.getMessage(), containsString("unrecognized/malformed status"));
     }
 }

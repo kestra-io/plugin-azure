@@ -1,10 +1,6 @@
 package io.kestra.plugin.azure.ml;
 
 import java.time.Duration;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 
 import com.azure.core.management.exception.ManagementException;
 import com.azure.resourcemanager.machinelearning.MachineLearningManager;
@@ -71,17 +67,13 @@ public class ScaleCluster extends AbstractMachineLearningTask implements Runnabl
 
     @Schema(title = "Minimum node count", description = "Minimum number of nodes kept available; 0 (default) scales the cluster down to no nodes when idle")
     @lombok.Builder.Default
-    @Min(0)
-    @Max(1000)
     @PluginProperty(group = "main")
-    private Property<Integer> minNodeCount = Property.ofValue(0);
+    private Property<@Min(0) @Max(1000) Integer> minNodeCount = Property.ofValue(0);
 
     @Schema(title = "Maximum node count", description = "Maximum number of nodes the cluster can scale out to")
     @NotNull
-    @Min(1)
-    @Max(1000)
     @PluginProperty(group = "main")
-    private Property<Integer> maxNodeCount;
+    private Property<@Min(1) @Max(1000) Integer> maxNodeCount;
 
     @Schema(title = "Node idle time before scale down", description = "How long a node stays idle before being deallocated; defaults to Azure's own setting when not provided")
     @PluginProperty(group = "advanced")
@@ -119,36 +111,16 @@ public class ScaleCluster extends AbstractMachineLearningTask implements Runnabl
 
         // .apply() blocks with no client-side timeout of its own — bound it explicitly so a stalled ARM
         // long-running operation fails cleanly instead of hanging the task indefinitely.
-        CompletableFuture<ComputeResource> future = CompletableFuture.supplyAsync(() ->
-            compute.update()
-                .withProperties(new ScaleSettingsInformation().withScaleSettings(scaleSettings))
-                .apply(),
-            MachineLearningService.EXECUTOR
-        );
         try {
-            future.get(2, TimeUnit.MINUTES);
-        } catch (TimeoutException e) {
-            // future.cancel(true) cannot actually stop this: the SDK's .apply() is a synchronous blocking call
-            // that does not observe thread interruption, so the update may still land in Azure after this task
-            // has already reported failure. At least log that outcome instead of leaving it fully unobserved.
-            future.cancel(true);
-            future.whenComplete((result, throwable) -> {
-                if (throwable == null) {
-                    logger.warn("Autoscale update for compute cluster '{}' landed after this task had already timed out and reported failure", rComputeName);
-                }
-            });
-            throw new IllegalStateException("Updating autoscale settings for compute cluster '%s' did not complete within 2 minutes".formatted(rComputeName), e);
-        } catch (ExecutionException e) {
-            Throwable cause = e.getCause();
-            if (cause instanceof ManagementException managementException) {
-                throw translateScaleError(managementException, rComputeName);
-            }
-            throw new IllegalStateException("Failed to update autoscale settings for compute cluster '%s': %s".formatted(rComputeName, cause.getMessage()), cause);
+            MachineLearningService.withTimeout(
+                () -> compute.update()
+                    .withProperties(new ScaleSettingsInformation().withScaleSettings(scaleSettings))
+                    .apply(),
+                Duration.ofMinutes(2),
+                () -> "Updating autoscale settings for compute cluster '%s' did not complete within 2 minutes".formatted(rComputeName)
+            );
         } catch (ManagementException e) {
             throw translateScaleError(e, rComputeName);
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            throw new IllegalStateException("Interrupted while updating autoscale settings for compute cluster '%s'".formatted(rComputeName), e);
         }
 
         logger.info("Updated autoscale settings of compute cluster '{}': min={}, max={}", rComputeName, rMinNodeCount, rMaxNodeCount);
@@ -166,7 +138,9 @@ public class ScaleCluster extends AbstractMachineLearningTask implements Runnabl
                 "Could not update compute cluster '%s' — an update is likely already in progress; wait for it to settle and retry".formatted(computeName), e
             );
         }
-        return new IllegalStateException("Failed to update autoscale settings for compute cluster '%s': %s".formatted(computeName, e.getValue() != null ? e.getValue().getMessage() : e.getMessage()), e);
+        return new IllegalStateException(
+            "Failed to update autoscale settings for compute cluster '%s': %s".formatted(computeName, e.getValue() != null ? e.getValue().getMessage() : e.getMessage()), e
+        );
     }
 
     @SuperBuilder

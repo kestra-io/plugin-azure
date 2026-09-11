@@ -1,6 +1,7 @@
 package io.kestra.plugin.azure.ml;
 
 import java.net.URI;
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 
@@ -62,29 +63,40 @@ public class ListModelVersions extends AbstractMachineLearningTask implements Ru
 
     @Override
     public Output run(RunContext runContext) throws Exception {
+        var logger = runContext.logger();
         String rResourceGroupName = rResourceGroupName(runContext);
         String rWorkspaceName = rWorkspaceName(runContext);
         String rModelName = runContext.render(this.modelName).as(String.class).orElseThrow();
 
         MachineLearningManager manager = machineLearningManager(runContext);
 
-        List<Version> versions;
+        List<ModelVersion> modelVersions;
         try {
-            versions = manager.modelVersions().list(rResourceGroupName, rWorkspaceName, rModelName).stream()
+            modelVersions = manager.modelVersions().list(rResourceGroupName, rWorkspaceName, rModelName).stream()
                 .sorted(Comparator.comparing((ModelVersion v) -> v.systemData() != null ? v.systemData().createdAt() : null, Comparator.nullsFirst(Comparator.naturalOrder())).reversed())
-                .map(
-                    modelVersion -> Version.builder()
-                        .version(modelVersion.name())
-                        .modelUri(URI.create(MachineLearningService.requireModelUri(modelVersion, rModelName)))
-                        .modelType(MachineLearningService.modelType(modelVersion))
-                        .build()
-                )
                 .toList();
         } catch (ManagementException e) {
             if (e.getResponse() != null && e.getResponse().getStatusCode() == 404) {
                 throw new IllegalArgumentException("Model '%s' was not found in workspace '%s'".formatted(rModelName, rWorkspaceName), e);
             }
             throw e;
+        }
+
+        // A single malformed version (e.g. null properties) must not abort listing every other, otherwise valid
+        // version of the model — skip it and keep going, the same way a per-version 404 is already tolerated.
+        List<Version> versions = new ArrayList<>();
+        for (ModelVersion modelVersion : modelVersions) {
+            try {
+                versions.add(
+                    Version.builder()
+                        .version(modelVersion.name())
+                        .modelUri(URI.create(MachineLearningService.requireModelUri(modelVersion, rModelName)))
+                        .modelType(MachineLearningService.modelType(modelVersion))
+                        .build()
+                );
+            } catch (ManagementException | IllegalStateException e) {
+                logger.warn("Skipping model '{}' version '{}' — could not resolve its details: {}", rModelName, modelVersion.name(), e.getMessage());
+            }
         }
 
         return Output.builder()

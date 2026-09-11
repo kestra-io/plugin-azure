@@ -112,8 +112,12 @@ public class NewModelVersionTrigger extends AbstractTrigger implements PollingTr
     @Builder.Default
     private final Property<On> on = Property.ofValue(On.CREATE_OR_UPDATE);
 
+    @Schema(title = "State key", description = "Custom key used to store the last-seen model version.")
+    @PluginProperty(group = "advanced")
     private Property<String> stateKey;
 
+    @Schema(title = "State TTL", description = "How long the last-seen model version state is retained.")
+    @PluginProperty(group = "advanced")
     private Property<Duration> stateTtl;
 
     @Override

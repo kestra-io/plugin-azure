@@ -103,7 +103,8 @@ public abstract class AbstractComputeInstanceLifecycle extends AbstractMachineLe
         ComputeInstanceState currentState = computeInstance.properties() != null ? computeInstance.properties().state() : null;
         if (reachedTarget(currentState)) {
             logger.info("Compute instance '{}' is already {}", rComputeName, targetState().toString().toLowerCase());
-            return Output.builder().computeName(rComputeName).state(currentState.toString()).build();
+            boolean rWait = runContext.render(this.wait).as(Boolean.class).orElseThrow();
+            return Output.builder().computeName(rComputeName).state(rWait ? currentState.toString() : null).build();
         }
 
         try {
@@ -111,7 +112,9 @@ public abstract class AbstractComputeInstanceLifecycle extends AbstractMachineLe
         } catch (ManagementException e) {
             if (e.getResponse() != null && e.getResponse().getStatusCode() == 409) {
                 throw new IllegalStateException(
-                    "Could not %s compute instance '%s' — it is likely already transitioning between states (e.g. still stopping); wait for it to settle and retry".formatted(actionVerb(), rComputeName), e
+                    "Could not %s compute instance '%s' — it is likely already transitioning between states (e.g. still stopping); wait for it to settle and retry"
+                        .formatted(actionVerb(), rComputeName),
+                    e
                 );
             }
             throw e;

@@ -1,6 +1,8 @@
 package io.kestra.plugin.azure.ml;
 
 import java.net.URI;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 
 import com.azure.core.management.exception.ManagementException;
@@ -154,9 +156,12 @@ public class RegisterModel extends AbstractMachineLearningTask implements Runnab
         Optional<String> explicitVersion = runContext.render(this.modelVersion).as(String.class).filter(v -> !v.isBlank());
         String rVersion = explicitVersion.orElseGet(() -> MachineLearningService.requireNextVersion(container, rModelName));
 
-        String modelUri = switch (rSource) {
+        // For JOB_OUTPUT and DATASTORE_URI the artifact location does not depend on the version being registered,
+        // so it is resolved once, outside the retry loop below. INTERNAL_STORAGE is resolved per-attempt instead —
+        // see the loop for why.
+        String staticModelUri = switch (rSource) {
             case JOB_OUTPUT -> resolveFromJobOutput(runContext, manager, rResourceGroupName, rWorkspaceName);
-            case INTERNAL_STORAGE -> resolveFromInternalStorage(runContext, manager, rResourceGroupName, rWorkspaceName, rModelName, rVersion);
+            case INTERNAL_STORAGE -> null;
             case DATASTORE_URI -> {
                 String rDatastoreUri = runContext.render(this.datastoreUri).as(String.class)
                     .orElseThrow(() -> new IllegalArgumentException("`datastoreUri` is required when `source=DATASTORE_URI`"));
@@ -170,34 +175,57 @@ public class RegisterModel extends AbstractMachineLearningTask implements Runnab
         };
 
         ModelVersionProperties properties = new ModelVersionProperties()
-            .withModelUri(modelUri)
             .withModelType(runContext.render(this.modelType).as(String.class).orElse("custom_model"));
         runContext.render(this.modelDescription).as(String.class).ifPresent(properties::withDescription);
 
+        List<String> uploadedBlobPaths = new ArrayList<>();
         ModelVersion createdModelVersion = null;
-        for (int attempt = 0; createdModelVersion == null; attempt++) {
-            try {
-                createdModelVersion = manager.modelVersions()
-                    .define(rVersion)
-                    .withExistingModel(rResourceGroupName, rWorkspaceName, rModelName)
-                    .withProperties(properties)
-                    .create();
-            } catch (ManagementException e) {
-                if (e.getResponse() == null || e.getResponse().getStatusCode() != 409) {
-                    throw e;
+        String modelUri = staticModelUri;
+        try {
+            for (int attempt = 0; createdModelVersion == null; attempt++) {
+                if (rSource == ModelSource.INTERNAL_STORAGE) {
+                    // Re-uploaded on every retry, keyed on the current attempt's version: two executions racing to
+                    // the same pre-retry version number must not end up pointing at each other's blob path.
+                    InternalStorageUpload upload = resolveFromInternalStorage(runContext, manager, rResourceGroupName, rWorkspaceName, rModelName, rVersion);
+                    modelUri = upload.modelUri();
+                    uploadedBlobPaths.add(upload.destinationPath());
                 }
-                if (explicitVersion.isPresent() || attempt >= 4) {
-                    if (MachineLearningService.modelVersionExists(manager, rResourceGroupName, rWorkspaceName, rModelName, rVersion)) {
-                        throw new IllegalArgumentException(
-                            "Model '%s' version '%s' already exists — model versions are immutable, set a different `modelVersion` or omit it to auto-increment".formatted(rModelName, rVersion), e
+                properties.withModelUri(modelUri);
+
+                try {
+                    createdModelVersion = manager.modelVersions()
+                        .define(rVersion)
+                        .withExistingModel(rResourceGroupName, rWorkspaceName, rModelName)
+                        .withProperties(properties)
+                        .create();
+                } catch (ManagementException e) {
+                    if (e.getResponse() == null || e.getResponse().getStatusCode() != 409) {
+                        throw e;
+                    }
+                    if (explicitVersion.isPresent() || attempt >= 4) {
+                        if (MachineLearningService.modelVersionExists(manager, rResourceGroupName, rWorkspaceName, rModelName, rVersion)) {
+                            throw new IllegalArgumentException(
+                                "Model '%s' version '%s' already exists — model versions are immutable, set a different `modelVersion` or omit it to auto-increment"
+                                    .formatted(rModelName, rVersion),
+                                e
+                            );
+                        }
+                        throw new IllegalStateException(
+                            "Failed to register model '%s' version '%s': %s".formatted(rModelName, rVersion, e.getValue() != null ? e.getValue().getMessage() : e.getMessage()), e
                         );
                     }
-                    throw new IllegalStateException("Failed to register model '%s' version '%s': %s".formatted(rModelName, rVersion, e.getValue() != null ? e.getValue().getMessage() : e.getMessage()), e);
+                    // Auto-incremented version raced with a concurrent registration; re-read the container's next
+                    // version and retry, instead of failing on a version number that is already known to be stale.
+                    rVersion = MachineLearningService.requireNextVersion(manager.modelContainers().get(rResourceGroupName, rWorkspaceName, rModelName), rModelName);
                 }
-                // Auto-incremented version raced with a concurrent registration; re-read the container's next
-                // version and retry, instead of failing on a version number that is already known to be stale.
-                rVersion = MachineLearningService.requireNextVersion(manager.modelContainers().get(rResourceGroupName, rWorkspaceName, rModelName), rModelName);
             }
+        } catch (RuntimeException e) {
+            // Every blob uploaded above is orphaned the moment this method fails to register a version for it —
+            // nothing else will ever reference them, so clean them up rather than leaking storage indefinitely.
+            for (String path : uploadedBlobPaths) {
+                MachineLearningService.deleteFromDefaultDatastore(runContext, manager, credentials(runContext), rResourceGroupName, rWorkspaceName, path);
+            }
+            throw e;
         }
 
         logger.info("Registered model '{}' version '{}' from '{}'", rModelName, rVersion, modelUri);
@@ -244,7 +272,8 @@ public class RegisterModel extends AbstractMachineLearningTask implements Runnab
         return output.toString();
     }
 
-    private String resolveFromInternalStorage(RunContext runContext, MachineLearningManager manager, String resourceGroupName, String workspaceName, String modelName, String version) throws Exception {
+    private InternalStorageUpload resolveFromInternalStorage(RunContext runContext, MachineLearningManager manager, String resourceGroupName, String workspaceName, String modelName,
+        String version) throws Exception {
         String rFrom = runContext.render(this.from).as(String.class)
             .orElseThrow(() -> new IllegalArgumentException("`from` is required when `source=INTERNAL_STORAGE`"));
         URI internalStorageUri = URI.create(rFrom);
@@ -253,7 +282,7 @@ public class RegisterModel extends AbstractMachineLearningTask implements Runnab
         // same-named source file (a common filename like model.pkl) must not silently overwrite one another's blob.
         String destinationPath = "kestra/models/%s/%s/%s".formatted(modelName, version, fileName);
 
-        return MachineLearningService.uploadToDefaultDatastore(
+        String modelUri = MachineLearningService.uploadToDefaultDatastore(
             runContext,
             manager,
             credentials(runContext),
@@ -262,6 +291,10 @@ public class RegisterModel extends AbstractMachineLearningTask implements Runnab
             internalStorageUri,
             destinationPath
         );
+        return new InternalStorageUpload(modelUri, destinationPath);
+    }
+
+    private record InternalStorageUpload(String modelUri, String destinationPath) {
     }
 
     private static ModelContainer getOrCreateModelContainer(MachineLearningManager manager, String resourceGroupName, String workspaceName, String modelName) {

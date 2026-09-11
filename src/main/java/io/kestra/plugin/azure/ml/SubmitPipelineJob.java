@@ -187,6 +187,7 @@ public class SubmitPipelineJob extends AbstractMachineLearningTask implements Ru
                 .jobName(jobName)
                 .status(MachineLearningService.toJobState(job))
                 .studioUrl(studioUrl(runContext, jobName))
+                .metrics(Map.of())
                 .outputs(Map.of())
                 .build();
         }
@@ -205,10 +206,20 @@ public class SubmitPipelineJob extends AbstractMachineLearningTask implements Ru
         }
         logger.info("Pipeline job '{}' finished with status '{}'", jobName, state);
 
+        Map<String, Double> metrics = MachineLearningService.mlflowMetrics(
+            runContext,
+            credentials(runContext),
+            manager,
+            rResourceGroupName,
+            rWorkspaceName,
+            jobName
+        );
+
         return Output.builder()
             .jobName(jobName)
             .status(state)
             .studioUrl(studioUrl(runContext, jobName))
+            .metrics(metrics)
             .outputs(MachineLearningService.namedOutputs(finalJob.properties() instanceof PipelineJob resolved ? resolved.outputs() : null))
             .build();
     }
@@ -230,6 +241,21 @@ public class SubmitPipelineJob extends AbstractMachineLearningTask implements Ru
 
         @Schema(title = "Studio URL", description = "Deep link to the run in Azure ML Studio")
         private String studioUrl;
+
+        @Schema(
+            title = "Metrics",
+            description = """
+                Metrics logged by the run, keyed by metric name. Always empty when `wait=false`, since the pipeline \
+                has not necessarily finished logging anything yet.
+
+                Azure Machine Learning logs job metrics through MLflow, not through the ARM control-plane API used \
+                for everything else in this task. This value is fetched best-effort by reading the workspace's MLflow \
+                tracking URI and calling its REST API directly with the same Azure AD bearer token used to authenticate \
+                this task. If that call fails (e.g. the service principal lacks the required scope, or the endpoint is \
+                unreachable), a warning is logged and this field is an empty map — the task does not fail because of it.
+                """
+        )
+        private Map<String, Double> metrics;
 
         @Schema(title = "Outputs", description = "Named pipeline outputs, keyed by output name, pointing to their storage URI")
         private Map<String, URI> outputs;

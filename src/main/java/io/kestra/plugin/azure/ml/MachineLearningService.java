@@ -15,6 +15,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.BooleanSupplier;
 import java.util.function.Supplier;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -58,7 +59,8 @@ final class MachineLearningService {
      * used by unrelated code throughout the JVM and can be starved by several concurrent, minutes-long blocking
      * calls.
      */
-    static final ExecutorService EXECUTOR = Executors.newCachedThreadPool(runnable -> {
+    static final ExecutorService EXECUTOR = Executors.newCachedThreadPool(runnable ->
+    {
         Thread thread = new Thread(runnable, "azure-ml-async");
         thread.setDaemon(true);
         return thread;
@@ -177,7 +179,16 @@ final class MachineLearningService {
                     return false;
                 }
                 last.set(job);
-                return toJobState(job).isTerminal();
+                JobState state = toJobState(job);
+                if (state == JobState.UNKNOWN) {
+                    // A malformed/partial ARM response (null properties or an unrecognized status) never becomes
+                    // terminal on its own — polling until maxDuration would just hide it behind a generic timeout.
+                    throw new IllegalStateException(
+                        "Job '%s' returned an unrecognized/malformed status from Azure ML; last raw status: %s"
+                            .formatted(job.name(), job.properties() != null ? job.properties().status() : null)
+                    );
+                }
+                return state.isTerminal();
             },
             pollInterval,
             maxDuration
@@ -219,13 +230,28 @@ final class MachineLearningService {
                 try {
                     JobBase cancelled = awaitTerminalState(runContext, () -> manager.jobs().get(resourceGroupName, workspaceName, jobName), cancelPollInterval, cancelGrace);
                     JobState finalState = toJobState(cancelled);
-                    throw new IllegalStateException("Job '%s' did not reach a terminal state within %s; cancellation was requested and confirmed (final status '%s')".formatted(jobName, maxDuration, finalState));
+                    throw new IllegalStateException(
+                        "Job '%s' did not reach a terminal state within %s; cancellation was requested and confirmed (final status '%s')".formatted(jobName, maxDuration, finalState)
+                    );
                 } catch (TimeoutException confirmTimeout) {
-                    throw new IllegalStateException("Job '%s' did not reach a terminal state within %s; cancellation was requested but not yet confirmed — check its status in Azure ML Studio".formatted(jobName, maxDuration));
+                    throw new IllegalStateException(
+                        "Job '%s' did not reach a terminal state within %s; cancellation was requested but not yet confirmed — check its status in Azure ML Studio"
+                            .formatted(jobName, maxDuration)
+                    );
                 }
             }
             throw new IllegalStateException("Job '%s' did not reach a terminal state within %s; it is still running in Azure Machine Learning".formatted(jobName, maxDuration));
         }
+    }
+
+    /**
+     * Retries {@code attempt} until it reports success, tolerating a transient 404 (returning {@code false}) for a
+     * short, bounded window — a job id is known client-side before Azure ARM acknowledges it server-side, so a
+     * single immediate GET/cancel can 404 even though the job is, in fact, being created. Shared by every call site
+     * in this class that needs to tell "the job was never created" apart from "the job isn't visible yet".
+     */
+    private static void retryTolerating404(BooleanSupplier attempt) throws TimeoutException {
+        Await.until(attempt, Duration.ofSeconds(2), Duration.ofMinutes(2));
     }
 
     /**
@@ -234,26 +260,20 @@ final class MachineLearningService {
      */
     static void cancelQuietly(RunContext runContext, MachineLearningManager manager, String resourceGroupName, String workspaceName, String jobName) {
         try {
-            Await.until(
-                () -> {
-                    try {
-                        manager.jobs().cancel(resourceGroupName, workspaceName, jobName);
-                        return true;
-                    } catch (ManagementException e) {
-                        if (e.getResponse() != null && e.getResponse().getStatusCode() == 404) {
-                            // A kill signal can arrive while the job is still being submitted (arm() runs before
-                            // the create() call returns) — the job id is known client-side before Azure
-                            // acknowledges it server-side, so retry until it shows up rather than giving up too
-                            // soon. This runs off-thread (see CancellableJob), so a generous window costs nothing
-                            // beyond the worker's own kill-signal timeout — unlike blocking the caller directly.
-                            return false;
-                        }
-                        throw e;
+            retryTolerating404(() ->
+            {
+                try {
+                    manager.jobs().cancel(resourceGroupName, workspaceName, jobName);
+                    return true;
+                } catch (ManagementException e) {
+                    if (e.getResponse() != null && e.getResponse().getStatusCode() == 404) {
+                        // This runs off-thread (see CancellableJob), so a generous window costs nothing beyond the
+                        // worker's own kill-signal timeout — unlike blocking the caller directly.
+                        return false;
                     }
-                },
-                Duration.ofSeconds(2),
-                Duration.ofMinutes(2)
-            );
+                    throw e;
+                }
+            });
             runContext.logger().info("Cancelled Azure Machine Learning job '{}'", jobName);
         } catch (TimeoutException timeoutException) {
             runContext.logger().warn("Could not cancel job '{}': it was never found within the retry window — it may not have been created", jobName);
@@ -271,7 +291,11 @@ final class MachineLearningService {
      */
     static void ensureJobNameAvailable(MachineLearningManager manager, String resourceGroupName, String workspaceName, String jobName) {
         try {
-            manager.jobs().get(resourceGroupName, workspaceName, jobName);
+            withTimeout(
+                () -> manager.jobs().get(resourceGroupName, workspaceName, jobName),
+                Duration.ofSeconds(30),
+                () -> "Checking whether job name '%s' is available did not complete within 30 seconds".formatted(jobName)
+            );
         } catch (ManagementException e) {
             if (e.getResponse() != null && e.getResponse().getStatusCode() == 404) {
                 return;
@@ -290,16 +314,30 @@ final class MachineLearningService {
      * completion, a network blip after the initial request landed) does not guarantee the job was never created
      * server-side. Disarming unconditionally on any exception would risk silently dropping the only cancel path
      * for a job that is, in fact, running (and billing) in Azure — so this confirms non-existence first, and
-     * stays conservative (leaves the action armed) whenever that confirmation itself cannot be made.
+     * stays conservative (leaves the action armed) whenever that confirmation itself cannot be made. Tolerates a
+     * 404 for the same short, bounded window {@link #cancelQuietly} already does: a job created moments after this
+     * check runs is not yet guaranteed to be visible via GET, and a single unretried 404 would otherwise disarm the
+     * only cancel path for a job that is about to exist.
      */
     static void disarmIfJobDoesNotExist(CancellableJob lifecycle, MachineLearningManager manager, String resourceGroupName, String workspaceName, String jobName) {
         try {
-            manager.jobs().get(resourceGroupName, workspaceName, jobName);
+            retryTolerating404(() ->
+            {
+                try {
+                    manager.jobs().get(resourceGroupName, workspaceName, jobName);
+                    return true;
+                } catch (ManagementException e) {
+                    if (e.getResponse() != null && e.getResponse().getStatusCode() == 404) {
+                        return false;
+                    }
+                    throw e;
+                }
+            });
             // It exists — leave the cancel action armed; a later kill signal must still be able to reach it.
+        } catch (TimeoutException timeoutException) {
+            // Never found within the retry window — safe to disarm.
+            lifecycle.disarm();
         } catch (ManagementException e) {
-            if (e.getResponse() != null && e.getResponse().getStatusCode() == 404) {
-                lifecycle.disarm();
-            }
             // Any other failure checking: stay conservative and leave the action armed.
         }
     }
@@ -351,7 +389,8 @@ final class MachineLearningService {
      * failure (missing scope, unreachable endpoint) is logged and yields an empty map rather than failing the task.
      */
     @SuppressWarnings("unchecked")
-    static Map<String, Double> mlflowMetrics(RunContext runContext, TokenCredential credential, MachineLearningManager manager, String resourceGroupName, String workspaceName, String jobName) {
+    static Map<String, Double> mlflowMetrics(RunContext runContext, TokenCredential credential, MachineLearningManager manager, String resourceGroupName, String workspaceName,
+        String jobName) {
         try {
             String mlflowTrackingUri = manager.workspaces().getByResourceGroup(resourceGroupName, workspaceName).mlFlowTrackingUri();
             if (mlflowTrackingUri == null || mlflowTrackingUri.isBlank()) {
@@ -417,7 +456,9 @@ final class MachineLearningService {
     static String requireModelUri(ModelVersion modelVersion, String modelName) {
         String modelUri = modelVersion.properties() != null ? modelVersion.properties().modelUri() : null;
         if (modelUri == null) {
-            throw new IllegalStateException("Model '%s' version '%s' has no storage URI recorded — this model version appears to be malformed or incomplete".formatted(modelName, modelVersion.name()));
+            throw new IllegalStateException(
+                "Model '%s' version '%s' has no storage URI recorded — this model version appears to be malformed or incomplete".formatted(modelName, modelVersion.name())
+            );
         }
         return modelUri;
     }
@@ -432,7 +473,9 @@ final class MachineLearningService {
     static String requireDataUri(DataVersionBase dataVersion, String dataName) {
         String dataUri = dataVersion.properties() != null ? dataVersion.properties().dataUri() : null;
         if (dataUri == null) {
-            throw new IllegalStateException("Data asset '%s' version '%s' has no storage URI recorded — this version appears to be malformed or incomplete".formatted(dataName, dataVersion.name()));
+            throw new IllegalStateException(
+                "Data asset '%s' version '%s' has no storage URI recorded — this version appears to be malformed or incomplete".formatted(dataName, dataVersion.name())
+            );
         }
         return dataUri;
     }
@@ -489,12 +532,6 @@ final class MachineLearningService {
     static ModelVersion latestModelVersion(MachineLearningManager manager, String resourceGroupName, String workspaceName, String modelName) {
         return manager.modelVersions().list(resourceGroupName, workspaceName, modelName).stream()
             .max(Comparator.comparing((ModelVersion v) -> v.systemData() != null ? v.systemData().createdAt() : null, Comparator.nullsFirst(Comparator.naturalOrder())))
-            .orElse(null);
-    }
-
-    static DataVersionBase latestDataVersion(MachineLearningManager manager, String resourceGroupName, String workspaceName, String dataName) {
-        return manager.dataVersions().list(resourceGroupName, workspaceName, dataName).stream()
-            .max(Comparator.comparing((DataVersionBase v) -> v.systemData() != null ? v.systemData().createdAt() : null, Comparator.nullsFirst(Comparator.naturalOrder())))
             .orElse(null);
     }
 
@@ -555,5 +592,31 @@ final class MachineLearningService {
         }
 
         return "azureml://datastores/%s/paths/%s".formatted(datastore.name(), destinationPath);
+    }
+
+    /**
+     * Counterpart to {@link #uploadToDefaultDatastore}, used to clean up a blob this same execution just uploaded
+     * once it turns out nothing will ever reference it (e.g. the model version it was meant to back never got
+     * registered). Best-effort: a failure here is logged and swallowed rather than masking the original failure
+     * that triggered the cleanup, or orphaning nothing worse than what already existed before this call.
+     */
+    static void deleteFromDefaultDatastore(
+        RunContext runContext,
+        MachineLearningManager manager,
+        TokenCredential credential,
+        String resourceGroupName,
+        String workspaceName,
+        String destinationPath) {
+        try {
+            Datastore datastore = defaultDatastore(manager, resourceGroupName, workspaceName);
+            if (!(datastore.properties() instanceof AzureBlobDatastore blobDatastore)) {
+                return;
+            }
+            blobContainerClient(credential, blobDatastore.accountName(), blobDatastore.containerName())
+                .getBlobClient(destinationPath)
+                .deleteIfExists();
+        } catch (Exception e) {
+            runContext.logger().warn("Could not delete orphaned blob '{}' from the default datastore: {}", destinationPath, e.getMessage());
+        }
     }
 }

@@ -68,15 +68,17 @@ public class Push extends AbstractMonitoringTask implements RunnableTask<Push.Ou
         var rPath = runContext.render(path).as(String.class).orElseThrow();
         var rMetrics = runContext.render(metrics).asMap(String.class, Object.class);
 
-        if (rMetrics == null || rMetrics.isEmpty()) {
-            throw new IllegalArgumentException("metrics is required and must contain at least one field");
+        if (rMetrics == null) {
+            throw new IllegalArgumentException("metrics is required");
         }
 
         var matcher = DCR_PATH.matcher(rPath);
         if (!matcher.find()) {
-            throw new IllegalArgumentException(
-                "path must be a Data Collection Rule ingestion path of the form /dataCollectionRules/{immutableId}/streams/{stream}, got '%s'".formatted(rPath)
-            );
+            // any other Azure Monitor ingestion endpoint still goes out as it did before, Azure decides if it is valid
+            var response = postVerbatim(runContext, rPath, rMetrics);
+            runContext.logger().info("Ingestion request completed with status {}", response.getStatus());
+
+            return Output.builder().body(response.getBody()).build();
         }
 
         var ruleId = matcher.group("ruleId");
@@ -94,8 +96,7 @@ public class Push extends AbstractMonitoringTask implements RunnableTask<Push.Ou
     @Builder
     @Getter
     public static class Output implements io.kestra.core.models.tasks.Output {
-        // the Logs Ingestion API answers 204 with no content, kept so existing flows referencing it still resolve
-        @Schema(title = "Ingestion response body", description = "Always null, the Logs Ingestion API returns no content on success")
+        @Schema(title = "Ingestion response body", description = "Null for Data Collection Rule paths, the Logs Ingestion API returns no content. Otherwise the raw response body")
         private final Map<String, Object> body;
     }
 }

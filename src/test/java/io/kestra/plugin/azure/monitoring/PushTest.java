@@ -1,9 +1,13 @@
 package io.kestra.plugin.azure.monitoring;
 
+import java.util.List;
 import java.util.Map;
 
 import org.junit.jupiter.api.Test;
 
+import com.azure.monitor.ingestion.LogsIngestionClient;
+
+import io.kestra.core.http.HttpResponse;
 import io.kestra.core.junit.annotations.KestraTest;
 import io.kestra.core.models.property.Property;
 import io.kestra.core.runners.RunContext;
@@ -12,16 +16,18 @@ import io.kestra.core.runners.RunContextFactory;
 import jakarta.inject.Inject;
 
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.*;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.doReturn;
-import static org.mockito.Mockito.spy;
+import static org.hamcrest.Matchers.hasEntry;
+import static org.hamcrest.Matchers.nullValue;
+import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.*;
 
 @KestraTest
 class PushTest {
     private static final String ENDPOINT = "https://my-dce-a1b2.westeurope.ingest.monitor.azure.com";
-    private static final String DCR_PATH = "/dataCollectionRules/dcr-0123456789abcdef/streams/Custom-MyStream";
+    private static final String RULE_ID = "dcr-0123456789abcdef";
+    private static final String STREAM = "Custom-MyStream";
+    private static final String DCR_PATH = "/dataCollectionRules/%s/streams/%s".formatted(RULE_ID, STREAM);
+    private static final Map<String, Object> RECORD = Map.of("TimeGenerated", "2024-01-01T00:00:00Z", "Computer", "worker-01");
 
     @Inject
     private RunContextFactory runContextFactory;
@@ -33,68 +39,52 @@ class PushTest {
             .tenantId(Property.ofValue("tenant"))
             .endpoint(Property.ofValue(ENDPOINT))
             .path(Property.ofValue(DCR_PATH))
-            .metrics(Property.ofValue(Map.of("TimeGenerated", "2024-01-01T00:00:00Z", "Computer", "worker-01")));
+            .metrics(Property.ofValue(RECORD));
     }
 
-    /** Stubs only the client factory, so the real SDK still builds the request. */
-    private static Push sending(Push task, IngestionStub stub) throws Exception {
+    /** Stubs both routes, so a test asserts which one the path selected. */
+    private static Push sending(Push task, LogsIngestionClient client) throws Exception {
         Push spied = spy(task);
-        doReturn(stub.client(ENDPOINT)).when(spied).ingestionClient(any(RunContext.class));
+        doReturn(client).when(spied).ingestionClient(any(RunContext.class));
+        doReturn(HttpResponse.of(HttpResponse.Status.OK, Map.<String, Object> of("accepted", true)))
+            .when(spied).postVerbatim(any(RunContext.class), anyString(), any());
 
         return spied;
     }
 
     @Test
-    void shouldUploadTheRecordThroughTheSdk() throws Exception {
-        var stub = IngestionStub.respondingWith(204);
+    void shouldUploadThroughTheSdk() throws Exception {
+        var client = mock(LogsIngestionClient.class);
+        var task = sending(task().build(), client);
 
-        var output = sending(task().build(), stub).run(runContextFactory.of());
+        var output = task.run(runContextFactory.of());
 
-        assertThat(output, notNullValue());
-        assertThat(stub.requestMethod(), is("POST"));
-        assertThat(stub.requestUrl(), startsWith(ENDPOINT + DCR_PATH));
-        // the hand-rolled version never sent api-version, which the Logs Ingestion API requires
-        assertThat(stub.requestUrl(), containsString("api-version="));
-
-        // the API takes an array of records, the previous implementation posted a bare object
-        var body = stub.requestBody();
-        assertThat(body, startsWith("["));
-        assertThat(body, containsString("\"Computer\":\"worker-01\""));
+        // the API takes an array of records, the pre-SDK version posted a bare object
+        verify(client).upload(RULE_ID, STREAM, List.of(RECORD));
+        verify(task, never()).postVerbatim(any(), anyString(), any());
+        assertThat(output.getBody(), nullValue());
     }
 
     @Test
-    void shouldGzipThePayload() throws Exception {
-        var stub = IngestionStub.respondingWith(204);
+    void shouldIgnoreAnApiVersionQueryOnThePath() throws Exception {
+        var client = mock(LogsIngestionClient.class);
 
-        sending(task().build(), stub).run(runContextFactory.of());
-
-        assertThat(stub.gzipped(), is(true));
-    }
-
-    @Test
-    void shouldAcceptAPathCarryingAnApiVersionQuery() throws Exception {
-        var stub = IngestionStub.respondingWith(204);
-
-        sending(task().path(Property.ofValue(DCR_PATH + "?api-version=2023-01-01")).build(), stub)
+        sending(task().path(Property.ofValue(DCR_PATH + "?api-version=2023-01-01")).build(), client)
             .run(runContextFactory.of());
 
-        assertThat(stub.requestUrl(), startsWith(ENDPOINT + DCR_PATH));
+        verify(client).upload(RULE_ID, STREAM, List.of(RECORD));
     }
 
     @Test
-    void shouldRejectAPathThatIsNotADcrIngestionPath() throws Exception {
-        var task = sending(task().path(Property.ofValue("/v1/metrics")).build(), IngestionStub.respondingWith(204));
+    void shouldPostVerbatimWhenThePathIsNotADataCollectionRule() throws Exception {
+        var legacyPath = "/subscriptions/sub/resourceGroups/rg/providers/Microsoft.Compute/virtualMachines/vm1/metrics";
+        var client = mock(LogsIngestionClient.class);
+        var task = sending(task().path(Property.ofValue(legacyPath)).build(), client);
 
-        var exception = assertThrows(IllegalArgumentException.class, () -> task.run(runContextFactory.of()));
-        assertThat(exception.getMessage(), containsString("/dataCollectionRules/"));
-        assertThat(exception.getMessage(), containsString("/v1/metrics"));
-    }
+        var output = task.run(runContextFactory.of());
 
-    @Test
-    void shouldRejectAnEmptyRecord() throws Exception {
-        var task = sending(task().metrics(Property.ofValue(Map.of())).build(), IngestionStub.respondingWith(204));
-
-        var exception = assertThrows(IllegalArgumentException.class, () -> task.run(runContextFactory.of()));
-        assertThat(exception.getMessage(), containsString("metrics is required"));
+        verify(task).postVerbatim(any(RunContext.class), eq(legacyPath), eq(RECORD));
+        verifyNoInteractions(client);
+        assertThat(output.getBody(), hasEntry("accepted", true));
     }
 }

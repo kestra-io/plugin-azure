@@ -2,6 +2,7 @@ package io.kestra.plugin.azure.ml;
 
 import java.net.URI;
 import java.time.Duration;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
@@ -10,6 +11,8 @@ import org.slf4j.Logger;
 
 import com.azure.core.management.exception.ManagementException;
 import com.azure.resourcemanager.machinelearning.MachineLearningManager;
+import com.azure.resourcemanager.machinelearning.models.ComponentContainerProperties;
+import com.azure.resourcemanager.machinelearning.models.ComponentVersionProperties;
 import com.azure.resourcemanager.machinelearning.models.JobBase;
 import com.azure.resourcemanager.machinelearning.models.PipelineJob;
 
@@ -69,7 +72,7 @@ import lombok.experimental.SuperBuilder;
 )
 @Schema(
     title = "Submit a multi-step pipeline job to Azure Machine Learning",
-    description = "Submits a pipeline job made of several child jobs (e.g. a data-preparation step followed by a training step) and, by default, waits for it to reach a terminal state. `jobs` is the raw pipeline job graph as accepted by the Azure Machine Learning REST API: a map of step name to step definition (`type`, `computeId`, `command`, `environmentId`, `inputs`, `outputs`, ...). Each step's `computeId` must be the compute's full ARM resource ID (`/subscriptions/.../resourceGroups/.../providers/Microsoft.MachineLearningServices/workspaces/.../computes/<name>`) — a bare compute name is rejected by the API. Killing the Kestra execution cancels the whole pipeline job. Defaults: wait=true, checkFrequency.interval=PT10S, checkFrequency.maxDuration=PT1H, cancelOnTimeout=true."
+    description = "Submits a pipeline job made of several child jobs (e.g. a data-preparation step followed by a training step) and, by default, waits for it to reach a terminal state. `jobs` is the raw pipeline job graph as accepted by the Azure Machine Learning REST API: a map of step name to step definition (`type`, `computeId`, `command`, `environmentId`, `inputs`, `outputs`, ...). Each step's `computeId` must be the compute's full ARM resource ID (`/subscriptions/.../resourceGroups/.../providers/Microsoft.MachineLearningServices/workspaces/.../computes/<name>`) — a bare compute name is rejected by the API. A `type: command` step that has no `componentId` gets a minimal Azure Machine Learning component automatically registered from its `command`/`environmentId` (named `<job name>-<step name>`, version `1`), since Azure's pipeline job API only accepts steps that reference a component, unlike a standalone command job — set `componentId` explicitly on a step to reference an existing component instead and skip auto-registration for it. Killing the Kestra execution cancels the whole pipeline job. Defaults: wait=true, checkFrequency.interval=PT10S, checkFrequency.maxDuration=PT1H, cancelOnTimeout=true."
 )
 public class SubmitPipelineJob extends AbstractMachineLearningTask implements RunnableTask<SubmitPipelineJob.Output> {
     @Schema(title = "Job name", description = "Unique job name within the workspace; a random UUID is generated when not set")
@@ -130,8 +133,15 @@ public class SubmitPipelineJob extends AbstractMachineLearningTask implements Ru
             MachineLearningService.ensureJobNameAvailable(manager, rResourceGroupName, rWorkspaceName, jobName);
         }
 
-        PipelineJob pipelineJob = new PipelineJob()
-            .withJobs(runContext.render(this.jobs).asMap(String.class, Object.class));
+        Map<String, Object> rJobs = registerMissingComponents(
+            manager,
+            rSubscriptionId(runContext),
+            rResourceGroupName,
+            rWorkspaceName,
+            jobName,
+            runContext.render(this.jobs).asMap(String.class, Object.class)
+        );
+        PipelineJob pipelineJob = new PipelineJob().withJobs(rJobs);
 
         runContext.render(this.experimentName).as(String.class).ifPresent(pipelineJob::withExperimentName);
         runContext.render(this.displayName).as(String.class).ifPresent(pipelineJob::withDisplayName);
@@ -227,6 +237,134 @@ public class SubmitPipelineJob extends AbstractMachineLearningTask implements Ru
     @Override
     public void kill() {
         this.lifecycle.kill();
+    }
+
+    /**
+     * Azure's ARM pipeline job API rejects an inline {@code command}/{@code environmentId} step the way
+     * {@link SubmitCommandJob} accepts one standalone — each {@code type: command} step must instead reference a
+     * pre-registered {@code Component} ARM resource. The Python/CLI convenience layer auto-registers an anonymous
+     * component behind the scenes for this exact case; this raw ARM SDK does not, so this does it here: for every
+     * {@code command} step missing a {@code componentId} (a step that already sets one is left untouched), a
+     * minimal component wrapping its {@code command}/{@code environmentId} is registered and swapped in as
+     * {@code componentId}. Any other step {@code type} is passed through unchanged.
+     * Package-private (not {@code private}) so it can be unit-tested directly against a mocked
+     * {@link MachineLearningManager}, without needing live Azure credentials.
+     */
+    static Map<String, Object> registerMissingComponents(
+        MachineLearningManager manager,
+        String subscriptionId,
+        String resourceGroupName,
+        String workspaceName,
+        String jobName,
+        Map<String, Object> jobs) {
+        Map<String, Object> result = new LinkedHashMap<>();
+        jobs.forEach((stepKey, stepValue) ->
+        {
+            if (!(stepValue instanceof Map<?, ?> rawStep) || !"command".equals(rawStep.get("type")) || rawStep.containsKey("componentId")) {
+                result.put(stepKey, stepValue);
+                return;
+            }
+
+            @SuppressWarnings("unchecked")
+            Map<String, Object> step = new LinkedHashMap<>((Map<String, Object>) rawStep);
+            Object command = step.remove("command");
+            Object environmentId = step.remove("environmentId");
+            if (command == null || environmentId == null) {
+                throw new IllegalArgumentException(
+                    "Pipeline step '%s' has `type: command` and no `componentId` — either set `componentId` to a pre-registered component, or provide both `command` and `environmentId` so one can be auto-registered"
+                        .formatted(stepKey)
+                );
+            }
+
+            String componentName = sanitizeComponentName(jobName + "-" + stepKey);
+            String componentVersion = "1";
+
+            getOrCreateComponentContainer(manager, resourceGroupName, workspaceName, componentName);
+            getOrCreateComponentVersion(
+                manager,
+                resourceGroupName,
+                workspaceName,
+                componentName,
+                componentVersion,
+                Map.of(
+                    "name", componentName,
+                    "version", componentVersion,
+                    "type", "command",
+                    "command", command,
+                    "environment", environmentId,
+                    "inputs", Map.of(),
+                    "outputs", Map.of()
+                )
+            );
+
+            step.put(
+                "componentId",
+                "/subscriptions/%s/resourceGroups/%s/providers/Microsoft.MachineLearningServices/workspaces/%s/components/%s/versions/%s"
+                    .formatted(subscriptionId, resourceGroupName, workspaceName, componentName, componentVersion)
+            );
+            result.put(stepKey, step);
+        });
+        return result;
+    }
+
+    /**
+     * Azure Machine Learning asset names must start with a letter or digit and contain only letters, digits, `-`
+     * or `_`, up to 255 characters — sanitized here instead of letting an arbitrary job/step name reach the ARM API
+     * and fail with an opaque validation error.
+     */
+    static String sanitizeComponentName(String raw) {
+        String sanitized = raw.replaceAll("[^a-zA-Z0-9_-]", "-");
+        if (sanitized.isEmpty() || !Character.isLetterOrDigit(sanitized.charAt(0))) {
+            sanitized = "c-" + sanitized;
+        }
+        return sanitized.length() > 255 ? sanitized.substring(0, 255) : sanitized;
+    }
+
+    private static void getOrCreateComponentContainer(MachineLearningManager manager, String resourceGroupName, String workspaceName, String componentName) {
+        try {
+            manager.componentContainers().get(resourceGroupName, workspaceName, componentName);
+            return;
+        } catch (ManagementException e) {
+            if (e.getResponse() == null || e.getResponse().getStatusCode() != 404) {
+                throw e;
+            }
+        }
+        try {
+            manager.componentContainers()
+                .define(componentName)
+                .withExistingWorkspace(resourceGroupName, workspaceName)
+                .withProperties(new ComponentContainerProperties())
+                .create();
+        } catch (ManagementException e) {
+            if (e.getResponse() == null || e.getResponse().getStatusCode() != 409) {
+                throw e;
+            }
+            // A concurrent execution created the container between our get() and this create() — it exists now,
+            // which is exactly what this method is asked to ensure.
+        }
+    }
+
+    private static void getOrCreateComponentVersion(
+        MachineLearningManager manager,
+        String resourceGroupName,
+        String workspaceName,
+        String componentName,
+        String componentVersion,
+        Map<String, Object> componentSpec) {
+        try {
+            manager.componentVersions()
+                .define(componentVersion)
+                .withExistingComponent(resourceGroupName, workspaceName, componentName)
+                .withProperties(new ComponentVersionProperties().withComponentSpec(componentSpec))
+                .create();
+        } catch (ManagementException e) {
+            if (e.getResponse() == null || e.getResponse().getStatusCode() != 409) {
+                throw e;
+            }
+            // A prior identical submission (e.g. a retried pipeline job under the same name) already registered
+            // this exact component version — component reuse here has no lineage/immutability concerns the way
+            // model/data versions do, so this is reused rather than treated as an error.
+        }
     }
 
     @SuperBuilder

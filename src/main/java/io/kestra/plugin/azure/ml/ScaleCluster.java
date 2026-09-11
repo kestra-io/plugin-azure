@@ -1,12 +1,15 @@
 package io.kestra.plugin.azure.ml;
 
 import java.time.Duration;
+import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicReference;
 
 import com.azure.core.management.exception.ManagementException;
 import com.azure.resourcemanager.machinelearning.MachineLearningManager;
 import com.azure.resourcemanager.machinelearning.models.AmlCompute;
 import com.azure.resourcemanager.machinelearning.models.ClusterUpdateParameters;
 import com.azure.resourcemanager.machinelearning.models.ComputeResource;
+import com.azure.resourcemanager.machinelearning.models.ProvisioningState;
 import com.azure.resourcemanager.machinelearning.models.ScaleSettings;
 import com.azure.resourcemanager.machinelearning.models.ScaleSettingsInformation;
 
@@ -16,6 +19,7 @@ import io.kestra.core.models.annotations.PluginProperty;
 import io.kestra.core.models.property.Property;
 import io.kestra.core.models.tasks.RunnableTask;
 import io.kestra.core.runners.RunContext;
+import io.kestra.core.utils.Await;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Max;
@@ -110,25 +114,35 @@ public class ScaleCluster extends AbstractMachineLearningTask implements Runnabl
             .withMaxNodeCount(rMaxNodeCount);
         runContext.render(this.nodeIdleTimeBeforeScaleDown).as(Duration.class).ifPresent(scaleSettings::withNodeIdleTimeBeforeScaleDown);
 
-        // The fluent ComputeResource$Update.apply() mishandles the 202-Accepted interim response this endpoint
-        // returns — it throws even though the update actually lands on Azure's side (confirmed live against a real
-        // cluster). Drive the lower-level client's explicit long-running-operation poller instead, which does not
-        // go through the same buggy path. beginUpdate() itself returns immediately after issuing the request; the
-        // poller's own blocking wait has no client-side timeout of its own, so it is still bounded the same way
-        // every other blocking ARM call in this package already is.
+        // Neither the fluent ComputeResource$Update.apply() nor the lower-level ComputesClient.beginUpdate(...)
+        // .getFinalResult() can be trusted to block until this specific endpoint's update actually completes: both
+        // throw on the 202-Accepted interim response this operation returns, even though the underlying PATCH
+        // request Azure receives succeeds and lands the requested scale settings regardless (confirmed live against
+        // a real cluster, on both attempts — most likely the initial 202 for this operation is missing or has a
+        // malformed Azure-AsyncOperation/Location header that azure-core's default LRO poll strategy needs to keep
+        // polling, so the SDK surfaces it as a terminal error instead). So beginUpdate(...) is only used to fire the
+        // request — its poller is never awaited — and completion is instead confirmed the same way
+        // AbstractComputeInstanceLifecycle already does: by manually polling the resource's own GET endpoint until
+        // its provisioning state reaches a terminal value.
         try {
             MachineLearningService.withTimeout(
                 () -> manager.serviceClient().getComputes()
                     .beginUpdate(
                         rResourceGroupName, rWorkspaceName, rComputeName, new ClusterUpdateParameters().withProperties(new ScaleSettingsInformation().withScaleSettings(scaleSettings))
-                    )
-                    .getFinalResult(),
+                    ),
                 Duration.ofMinutes(2),
                 () -> "Updating autoscale settings for compute cluster '%s' did not complete within 2 minutes".formatted(rComputeName)
             );
         } catch (ManagementException e) {
-            throw translateScaleError(e, rComputeName);
+            // A 202 surfaced as an exception here is exactly the spurious case described above — the update was
+            // actually accepted, so proceed to polling instead of failing. Any other status (400/404/409...) is a
+            // genuine rejection and must still propagate.
+            if (e.getResponse() == null || e.getResponse().getStatusCode() != 202) {
+                throw translateScaleError(e, rComputeName);
+            }
         }
+
+        awaitProvisioningSucceeded(runContext, manager, rResourceGroupName, rWorkspaceName, rComputeName);
 
         logger.info("Updated autoscale settings of compute cluster '{}': min={}, max={}", rComputeName, rMinNodeCount, rMaxNodeCount);
 
@@ -137,6 +151,47 @@ public class ScaleCluster extends AbstractMachineLearningTask implements Runnabl
             .minNodeCount(rMinNodeCount)
             .maxNodeCount(rMaxNodeCount)
             .build();
+    }
+
+    /**
+     * Polls the compute cluster's own GET endpoint (the same {@code manager.computes().get(...)} call used to
+     * fetch it above) until its {@link AmlCompute#provisioningState()} reaches a terminal value, mirroring
+     * {@link AbstractComputeInstanceLifecycle}'s poll loop — the SDK's own LRO poller cannot be trusted to do this
+     * for this specific operation, see the comment above this method's call site.
+     */
+    private static void awaitProvisioningSucceeded(RunContext runContext, MachineLearningManager manager, String resourceGroupName, String workspaceName, String computeName) {
+        var logger = runContext.logger();
+        AtomicReference<ProvisioningState> lastState = new AtomicReference<>();
+        try {
+            Await.until(
+                () ->
+                {
+                    ComputeResource refreshed;
+                    try {
+                        refreshed = manager.computes().get(resourceGroupName, workspaceName, computeName);
+                    } catch (ManagementException e) {
+                        // A single transient ARM error must not fail a wait that spans up to 2 minutes — log and
+                        // keep polling; a persistent problem still surfaces via the timeout below.
+                        logger.warn("Transient error polling compute cluster '{}' provisioning state, will retry: {}", computeName, e.getMessage());
+                        return false;
+                    }
+                    ProvisioningState state = refreshed.properties() instanceof AmlCompute amlCompute ? amlCompute.provisioningState() : null;
+                    lastState.set(state);
+                    if (state == ProvisioningState.FAILED || state == ProvisioningState.CANCELED) {
+                        // A definitive failure is already known — don't burn the rest of the timeout waiting for a
+                        // state that will never arrive.
+                        throw new IllegalStateException("Updating autoscale settings for compute cluster '%s' failed (provisioning state '%s')".formatted(computeName, state));
+                    }
+                    return state == ProvisioningState.SUCCEEDED;
+                },
+                Duration.ofSeconds(5),
+                Duration.ofMinutes(2)
+            );
+        } catch (TimeoutException e) {
+            throw new IllegalStateException(
+                "Updating autoscale settings for compute cluster '%s' did not complete within 2 minutes; last observed provisioning state was '%s'".formatted(computeName, lastState.get())
+            );
+        }
     }
 
     private static IllegalStateException translateScaleError(ManagementException e, String computeName) {

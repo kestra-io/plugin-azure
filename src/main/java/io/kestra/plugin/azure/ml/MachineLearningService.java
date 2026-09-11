@@ -53,6 +53,19 @@ final class MachineLearningService {
     private static final Pattern DATASTORE_URI = Pattern.compile("^azureml://datastores/([^/]+)/paths/(.+)$");
 
     /**
+     * The valid URI forms accepted by Azure's {@code ModelVersion}/{@code DataVersion} {@code create()} APIs, as
+     * confirmed by the exact regex echoed back in a live 400 response body. {@link #DATASTORE_URI} (the short,
+     * documented form this plugin exposes to users) is deliberately not one of them — Azure only accepts the fully
+     * qualified {@code azureml://subscriptions/.../datastores/.../paths/...} form; see {@link #qualifyDatastoreUri}.
+     */
+    private static final Pattern FULLY_QUALIFIED_DATASTORE_URI = Pattern
+        .compile("^azureml://subscriptions/([^/?]+)/resourceGroups/([^/?]+)/workspaces/([^/?]+)/datastores/([^/?]+)/paths/(.+)$");
+    private static final Pattern JOB_OUTPUT_URI = Pattern.compile("^azureml://jobs/([^/]+)/outputs/([^/]+)(.*)$");
+    private static final Pattern RUN_URI = Pattern.compile("^runs:/([^/?]+)/(.+)$");
+    private static final Pattern DATASET_URI = Pattern.compile("^azureml://datasets/([^/]+)$");
+    private static final Pattern BLOB_URI = Pattern.compile("^https://(.+?)\\.blob\\.core\\.(.+?)/(.+?)$");
+
+    /**
      * Backs every bounded/off-thread ARM call in this package (a submit call's create() timeout, ScaleCluster's
      * autoscale update, CancellableJob's async cancel dispatch) with dedicated daemon threads, instead of each one
      * separately competing for the JVM-wide {@link java.util.concurrent.ForkJoinPool#commonPool()}, which is also
@@ -538,12 +551,54 @@ final class MachineLearningService {
     record DatastorePath(String datastoreName, String path) {
     }
 
+    /**
+     * Matches both the short {@code azureml://datastores/<name>/paths/<path>} form and the fully qualified
+     * {@code azureml://subscriptions/.../datastores/<name>/paths/<path>} form {@link #qualifyDatastoreUri} now
+     * produces — a model/data version registered through this plugin has its {@code modelUri}/{@code dataUri}
+     * stored and echoed back by Azure in the fully qualified form, so a later read (e.g. {@code DownloadModel})
+     * must still be able to resolve the backing datastore from it. The subscription/resource group/workspace
+     * segments of the fully qualified form are intentionally not compared against the caller's own — same as the
+     * short form, resolution always uses the caller's own workspace context to look up the datastore.
+     */
     static DatastorePath parseDatastoreUri(String uri) {
-        Matcher matcher = DATASTORE_URI.matcher(uri);
-        if (!matcher.matches()) {
-            return null;
+        Matcher shortForm = DATASTORE_URI.matcher(uri);
+        if (shortForm.matches()) {
+            return new DatastorePath(shortForm.group(1), shortForm.group(2));
         }
-        return new DatastorePath(matcher.group(1), matcher.group(2));
+        Matcher fullyQualified = FULLY_QUALIFIED_DATASTORE_URI.matcher(uri);
+        if (fullyQualified.matches()) {
+            return new DatastorePath(fullyQualified.group(4), fullyQualified.group(5));
+        }
+        return null;
+    }
+
+    /**
+     * Expands the short, user-facing {@code azureml://datastores/<name>/paths/<path>} form into the fully qualified
+     * {@code azureml://subscriptions/<sub>/resourceGroups/<rg>/workspaces/<ws>/datastores/<name>/paths/<path>} form
+     * Azure's {@code ModelVersion}/{@code DataVersion} {@code create()} APIs actually require — confirmed live: the
+     * short form 400s with an error body echoing a validation regex that has no short-form alternative in it at
+     * all. Any other already-valid form ({@code azureml://jobs/...}, {@code runs:/...}, {@code azureml://datasets/...},
+     * {@code https://...blob...}) or anything unrecognized is returned unchanged; a malformed URI is left for
+     * Azure's own validation to reject rather than this method inventing new validation of its own.
+     */
+    static String qualifyDatastoreUri(String subscriptionId, String resourceGroupName, String workspaceName, String uri) {
+        if (
+            uri == null
+                || FULLY_QUALIFIED_DATASTORE_URI.matcher(uri).matches()
+                || JOB_OUTPUT_URI.matcher(uri).matches()
+                || RUN_URI.matcher(uri).matches()
+                || DATASET_URI.matcher(uri).matches()
+                || BLOB_URI.matcher(uri).matches()
+        ) {
+            return uri;
+        }
+
+        DatastorePath shortForm = parseDatastoreUri(uri);
+        if (shortForm == null) {
+            return uri;
+        }
+        return "azureml://subscriptions/%s/resourceGroups/%s/workspaces/%s/datastores/%s/paths/%s"
+            .formatted(subscriptionId, resourceGroupName, workspaceName, shortForm.datastoreName(), shortForm.path());
     }
 
     static BlobContainerClient blobContainerClient(TokenCredential credential, String accountName, String containerName) {
@@ -574,6 +629,7 @@ final class MachineLearningService {
         RunContext runContext,
         MachineLearningManager manager,
         TokenCredential credential,
+        String subscriptionId,
         String resourceGroupName,
         String workspaceName,
         URI internalStorageUri,
@@ -591,7 +647,14 @@ final class MachineLearningService {
             container.getBlobClient(destinationPath).upload(inputStream, true);
         }
 
-        return "azureml://datastores/%s/paths/%s".formatted(datastore.name(), destinationPath);
+        // The short form is what a user would write by hand, but Azure's ModelVersion/DataVersion create() APIs
+        // only accept the fully qualified form — see qualifyDatastoreUri().
+        return qualifyDatastoreUri(
+            subscriptionId,
+            resourceGroupName,
+            workspaceName,
+            "azureml://datastores/%s/paths/%s".formatted(datastore.name(), destinationPath)
+        );
     }
 
     /**

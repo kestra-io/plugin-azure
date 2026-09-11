@@ -5,6 +5,7 @@ import java.time.Duration;
 import com.azure.core.management.exception.ManagementException;
 import com.azure.resourcemanager.machinelearning.MachineLearningManager;
 import com.azure.resourcemanager.machinelearning.models.AmlCompute;
+import com.azure.resourcemanager.machinelearning.models.ClusterUpdateParameters;
 import com.azure.resourcemanager.machinelearning.models.ComputeResource;
 import com.azure.resourcemanager.machinelearning.models.ScaleSettings;
 import com.azure.resourcemanager.machinelearning.models.ScaleSettingsInformation;
@@ -109,13 +110,19 @@ public class ScaleCluster extends AbstractMachineLearningTask implements Runnabl
             .withMaxNodeCount(rMaxNodeCount);
         runContext.render(this.nodeIdleTimeBeforeScaleDown).as(Duration.class).ifPresent(scaleSettings::withNodeIdleTimeBeforeScaleDown);
 
-        // .apply() blocks with no client-side timeout of its own — bound it explicitly so a stalled ARM
-        // long-running operation fails cleanly instead of hanging the task indefinitely.
+        // The fluent ComputeResource$Update.apply() mishandles the 202-Accepted interim response this endpoint
+        // returns — it throws even though the update actually lands on Azure's side (confirmed live against a real
+        // cluster). Drive the lower-level client's explicit long-running-operation poller instead, which does not
+        // go through the same buggy path. beginUpdate() itself returns immediately after issuing the request; the
+        // poller's own blocking wait has no client-side timeout of its own, so it is still bounded the same way
+        // every other blocking ARM call in this package already is.
         try {
             MachineLearningService.withTimeout(
-                () -> compute.update()
-                    .withProperties(new ScaleSettingsInformation().withScaleSettings(scaleSettings))
-                    .apply(),
+                () -> manager.serviceClient().getComputes()
+                    .beginUpdate(
+                        rResourceGroupName, rWorkspaceName, rComputeName, new ClusterUpdateParameters().withProperties(new ScaleSettingsInformation().withScaleSettings(scaleSettings))
+                    )
+                    .getFinalResult(),
                 Duration.ofMinutes(2),
                 () -> "Updating autoscale settings for compute cluster '%s' did not complete within 2 minutes".formatted(rComputeName)
             );

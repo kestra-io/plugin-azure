@@ -93,7 +93,14 @@ public class CreateDataAsset extends AbstractMachineLearningTask implements Runn
         String rWorkspaceName = rWorkspaceName(runContext);
         String rDataName = runContext.render(this.dataName).as(String.class).orElseThrow();
         DataAssetType rDataAssetType = runContext.render(this.dataAssetType).as(DataAssetType.class).orElseThrow();
-        String rUri = runContext.render(this.uri).as(String.class).orElseThrow();
+        // The documented short `azureml://datastores/<name>/paths/<path>` form is not accepted by Azure's
+        // DataVersion create() API — silently expand it to the fully qualified form it actually requires.
+        String rUri = MachineLearningService.qualifyDatastoreUri(
+            rSubscriptionId(runContext),
+            rResourceGroupName,
+            rWorkspaceName,
+            runContext.render(this.uri).as(String.class).orElseThrow()
+        );
 
         MachineLearningManager manager = machineLearningManager(runContext);
 
@@ -128,7 +135,9 @@ public class CreateDataAsset extends AbstractMachineLearningTask implements Runn
                             e
                         );
                     }
-                    throw new IllegalStateException("Failed to register data asset '%s' version '%s': %s".formatted(rDataName, rVersion, e.getValue() != null ? e.getValue().getMessage() : e.getMessage()), e);
+                    throw new IllegalStateException(
+                        "Failed to register data asset '%s' version '%s': %s".formatted(rDataName, rVersion, e.getValue() != null ? e.getValue().getMessage() : e.getMessage()), e
+                    );
                 }
                 // Auto-incremented version raced with a concurrent registration; re-read the container's next
                 // version and retry, instead of failing on a version number that is already known to be stale.

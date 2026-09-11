@@ -170,7 +170,9 @@ public class RegisterModel extends AbstractMachineLearningTask implements Runnab
                 } catch (IllegalArgumentException e) {
                     throw new IllegalArgumentException("`datastoreUri` is not a valid URI: '%s'".formatted(rDatastoreUri), e);
                 }
-                yield rDatastoreUri;
+                // The documented short `azureml://datastores/<name>/paths/<path>` form is not accepted by Azure's
+                // ModelVersion create() API — silently expand it to the fully qualified form it actually requires.
+                yield MachineLearningService.qualifyDatastoreUri(rSubscriptionId(runContext), rResourceGroupName, rWorkspaceName, rDatastoreUri);
             }
         };
 
@@ -286,6 +288,7 @@ public class RegisterModel extends AbstractMachineLearningTask implements Runnab
             runContext,
             manager,
             credentials(runContext),
+            rSubscriptionId(runContext),
             resourceGroupName,
             workspaceName,
             internalStorageUri,

@@ -64,6 +64,56 @@ class MachineLearningServiceTest {
     }
 
     @Test
+    void parseDatastoreUriExtractsNameAndPathFromFullyQualifiedForm() {
+        var parsed = MachineLearningService.parseDatastoreUri(
+            "azureml://subscriptions/sub-id/resourceGroups/ml-rg/workspaces/ml-workspace/datastores/workspaceblobstore/paths/models/v1/model.pkl"
+        );
+
+        assertThat(parsed, is(notNullValue()));
+        assertThat(parsed.datastoreName(), is("workspaceblobstore"));
+        assertThat(parsed.path(), is("models/v1/model.pkl"));
+    }
+
+    @Test
+    void qualifyDatastoreUriExpandsShortForm() {
+        String qualified = MachineLearningService.qualifyDatastoreUri(
+            "sub-id", "ml-rg", "ml-workspace", "azureml://datastores/workspaceblobstore/paths/models/v1/model.pkl"
+        );
+
+        assertThat(
+            qualified,
+            is("azureml://subscriptions/sub-id/resourceGroups/ml-rg/workspaces/ml-workspace/datastores/workspaceblobstore/paths/models/v1/model.pkl")
+        );
+    }
+
+    @Test
+    void qualifyDatastoreUriLeavesFullyQualifiedFormUnchanged() {
+        String alreadyQualified = "azureml://subscriptions/sub-id/resourceGroups/ml-rg/workspaces/ml-workspace/datastores/workspaceblobstore/paths/models/v1/model.pkl";
+
+        assertThat(MachineLearningService.qualifyDatastoreUri("sub-id", "ml-rg", "ml-workspace", alreadyQualified), is(alreadyQualified));
+    }
+
+    @Test
+    void qualifyDatastoreUriLeavesOtherValidFormsUnchanged() {
+        assertThat(
+            MachineLearningService.qualifyDatastoreUri("sub-id", "ml-rg", "ml-workspace", "azureml://jobs/my-job/outputs/model_dir"),
+            is("azureml://jobs/my-job/outputs/model_dir")
+        );
+        assertThat(
+            MachineLearningService.qualifyDatastoreUri("sub-id", "ml-rg", "ml-workspace", "runs:/my-run/model"),
+            is("runs:/my-run/model")
+        );
+        assertThat(
+            MachineLearningService.qualifyDatastoreUri("sub-id", "ml-rg", "ml-workspace", "azureml://datasets/my-dataset"),
+            is("azureml://datasets/my-dataset")
+        );
+        assertThat(
+            MachineLearningService.qualifyDatastoreUri("sub-id", "ml-rg", "ml-workspace", "https://myaccount.blob.core.windows.net/container/path"),
+            is("https://myaccount.blob.core.windows.net/container/path")
+        );
+    }
+
+    @Test
     void namedOutputsExtractsUriFileAndFolderOutputs() {
         var outputs = Map.<String, com.azure.resourcemanager.machinelearning.models.JobOutput> of(
             "model_dir", new UriFolderJobOutput().withUri("azureml://datastores/workspaceblobstore/paths/outputs/model"),

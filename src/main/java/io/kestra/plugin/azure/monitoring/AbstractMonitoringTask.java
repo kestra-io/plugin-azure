@@ -8,6 +8,8 @@ import java.util.Map;
 import com.azure.core.credential.AccessToken;
 import com.azure.core.credential.TokenCredential;
 import com.azure.core.credential.TokenRequestContext;
+import com.azure.monitor.ingestion.LogsIngestionClient;
+import com.azure.monitor.ingestion.LogsIngestionClientBuilder;
 import com.azure.monitor.query.metrics.MetricsClient;
 import com.azure.monitor.query.metrics.MetricsClientBuilder;
 import com.azure.monitor.query.metrics.MetricsServiceVersion;
@@ -18,6 +20,7 @@ import io.kestra.core.http.HttpResponse;
 import io.kestra.core.http.client.HttpClient;
 import io.kestra.core.http.client.HttpClientException;
 import io.kestra.core.http.client.configurations.HttpConfiguration;
+import io.kestra.core.models.annotations.PluginProperty;
 import io.kestra.core.models.property.Property;
 import io.kestra.core.runners.RunContext;
 import io.kestra.plugin.azure.shared.AbstractAzureIdentityConnection;
@@ -26,7 +29,6 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotNull;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
-import io.kestra.core.models.annotations.PluginProperty;
 
 @SuperBuilder
 @ToString
@@ -36,7 +38,7 @@ import io.kestra.core.models.annotations.PluginProperty;
 public abstract class AbstractMonitoringTask extends AbstractAzureIdentityConnection {
     @Schema(
         title = "Azure Monitor regional endpoint",
-        description = "Regional metrics endpoint, e.g. https://westeurope.metrics.monitor.azure.com"
+        description = "For queries, the regional metrics endpoint, e.g. https://westeurope.metrics.monitor.azure.com. For ingestion, the Data Collection Endpoint, e.g. https://my-dce-a1b2.westeurope.ingest.monitor.azure.com"
     )
     @NotNull
     @PluginProperty(group = "main")
@@ -58,11 +60,23 @@ public abstract class AbstractMonitoringTask extends AbstractAzureIdentityConnec
             .buildClient();
     }
 
-    protected HttpResponse<Map<String, Object>> ingestMetrics(RunContext runContext, String path, Map<String, Object> body) throws Exception {
-        var rEndpoint = runContext.render(endpoint).as(String.class).orElseThrow();
-        TokenCredential credential = this.credentials(runContext);
+    /** Overridable so tests can swap the client, the SDK exposes no base URL seam of its own. */
+    protected LogsIngestionClient ingestionClient(RunContext runContext) throws IllegalVariableEvaluationException {
+        // the SDK sets the monitor.azure.com ingestion audience itself, so no scope wrapper is needed here
+        return new LogsIngestionClientBuilder()
+            .credential(this.credentials(runContext))
+            .endpoint(runContext.render(endpoint).as(String.class).orElseThrow())
+            .buildClient();
+    }
 
-        AccessToken token = credential
+    /**
+     * Pre-SDK behaviour, kept for any path the ingestion client cannot address so Azure stays the authority on
+     * what is a valid endpoint rather than a regex here.
+     */
+    protected HttpResponse<Map<String, Object>> postVerbatim(RunContext runContext, String path, Map<String, Object> body) throws Exception {
+        var rEndpoint = runContext.render(endpoint).as(String.class).orElseThrow();
+
+        AccessToken token = this.credentials(runContext)
             .getToken(new TokenRequestContext().addScopes("https://monitor.azure.com/.default"))
             .block();
 
@@ -70,12 +84,10 @@ public abstract class AbstractMonitoringTask extends AbstractAzureIdentityConnec
             throw new IllegalStateException("Failed to acquire Azure access token for ingestion");
         }
 
-        URI uri = URI.create(rEndpoint + path);
-
         HttpRequest.HttpRequestBuilder builder = HttpRequest.builder()
-            .uri(uri)
+            .uri(URI.create("%s%s".formatted(rEndpoint, path)))
             .method("POST")
-            .addHeader("Authorization", "Bearer " + token.getToken())
+            .addHeader("Authorization", "Bearer %s".formatted(token.getToken()))
             .addHeader("Content-Type", "application/json")
             .body(HttpRequest.JsonRequestBody.builder().content(body).build());
 

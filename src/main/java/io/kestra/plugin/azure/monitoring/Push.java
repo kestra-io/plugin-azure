@@ -50,8 +50,8 @@ import lombok.experimental.SuperBuilder;
     }
 )
 public class Push extends AbstractMonitoringTask implements RunnableTask<Push.Output> {
-    // tolerates a full URL and a trailing ?api-version=, which the hand-rolled version required callers to append
-    private static final Pattern DCR_PATH = Pattern.compile("/dataCollectionRules/(?<ruleId>[^/?]+)/streams/(?<stream>[^/?]+)");
+    // anchored so a path with extra segments is not silently truncated, the trailing query is what callers had to append themselves
+    private static final Pattern DCR_PATH = Pattern.compile("/dataCollectionRules/(?<ruleId>[^/?]+)/streams/(?<stream>[^/?]+)/?(\\?.*)?");
 
     @Schema(title = "DCR ingestion path", description = "Path portion of the Data Collection Rule ingestion URL (e.g., /dataCollectionRules/{id}/streams/{stream})")
     @NotNull
@@ -73,7 +73,7 @@ public class Push extends AbstractMonitoringTask implements RunnableTask<Push.Ou
         }
 
         var matcher = DCR_PATH.matcher(rPath);
-        if (!matcher.find()) {
+        if (!matcher.matches()) {
             // any other Azure Monitor ingestion endpoint still goes out as it did before, Azure decides if it is valid
             var response = postVerbatim(runContext, rPath, rMetrics);
             runContext.logger().info("Ingestion request completed with status {}", response.getStatus());

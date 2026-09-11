@@ -76,6 +76,19 @@ class PushTest {
     }
 
     @Test
+    void shouldPostVerbatimWhenThePathOnlyContainsADataCollectionRule() throws Exception {
+        // an unanchored match would upload to dcr-1/S here and silently drop /foo and /extra
+        var wrapped = "/foo" + DCR_PATH + "/extra";
+        var client = mock(LogsIngestionClient.class);
+        var task = sending(task().path(Property.ofValue(wrapped)).build(), client);
+
+        task.run(runContextFactory.of());
+
+        verify(task).postVerbatim(any(RunContext.class), eq(wrapped), eq(RECORD));
+        verifyNoInteractions(client);
+    }
+
+    @Test
     void shouldPostVerbatimWhenThePathIsNotADataCollectionRule() throws Exception {
         var legacyPath = "/subscriptions/sub/resourceGroups/rg/providers/Microsoft.Compute/virtualMachines/vm1/metrics";
         var client = mock(LogsIngestionClient.class);

@@ -56,7 +56,7 @@ public class AdlsFile {
                     ? Base64.getEncoder().encodeToString(dataLakeFileClient.getProperties().getContentMd5())
                     : null
             )
-            .lastModifed(dataLakeFileClient.getProperties().getCreationTime().toInstant())
+            .creationTime(dataLakeFileClient.getProperties().getCreationTime().toInstant())
             .lastModifed(dataLakeFileClient.getProperties().getLastModified().toInstant())
             .eTag(dataLakeFileClient.getProperties().getETag())
             .isDirectory(dataLakeFileClient.getProperties().isDirectory())

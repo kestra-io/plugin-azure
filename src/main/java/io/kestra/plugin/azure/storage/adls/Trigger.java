@@ -3,6 +3,7 @@ package io.kestra.plugin.azure.storage.adls;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Stream;
 
 import com.azure.storage.file.datalake.DataLakeFileClient;
@@ -128,6 +129,17 @@ public class Trigger extends AbstractTrigger
 
     private Property<Duration> stateTtl;
 
+    @Builder.Default
+    @lombok.Getter(lombok.AccessLevel.NONE)
+    private transient AtomicReference<Runnable> currentKillAction = new AtomicReference<>();
+
+    @Override
+    public void kill() {
+        if (currentKillAction != null && currentKillAction.get() != null) {
+            currentKillAction.get().run();
+        }
+    }
+
     @Override
     public Optional<Execution> evaluate(ConditionContext conditionContext, TriggerContext context) throws Exception {
         RunContext runContext = conditionContext.getRunContext();
@@ -149,7 +161,11 @@ public class Trigger extends AbstractTrigger
             .maxFiles(this.maxFiles)
             .build();
 
+        if (currentKillAction != null)
+            currentKillAction.set(task::kill);
         List.Output run = task.run(runContext);
+        if (currentKillAction != null)
+            currentKillAction.set(null);
 
         if (run.getFiles().isEmpty()) {
             return Optional.empty();
@@ -183,7 +199,12 @@ public class Trigger extends AbstractTrigger
                         .filePath(Property.ofValue(file.getName()))
                         .build();
 
+                    if (currentKillAction != null)
+                        currentKillAction.set(read::kill);
                     Read.Output readOutput = read.run(runContext);
+                    if (currentKillAction != null)
+                        currentKillAction.set(null);
+
                     AdlsFile downloadedFile = readOutput.getFile();
 
                     return Stream.of(

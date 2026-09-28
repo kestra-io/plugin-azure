@@ -1,10 +1,8 @@
 package io.kestra.plugin.azure.storage.adls;
 
-import com.azure.storage.file.datalake.DataLakeFileSystemClient;
-import com.azure.storage.file.datalake.DataLakeServiceClient;
-
 import io.kestra.core.models.annotations.Example;
 import io.kestra.core.models.annotations.Plugin;
+import io.kestra.core.models.annotations.PluginProperty;
 import io.kestra.core.models.property.Property;
 import io.kestra.core.models.tasks.RunnableTask;
 import io.kestra.core.runners.RunContext;
@@ -17,7 +15,6 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotNull;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
-import io.kestra.core.models.annotations.PluginProperty;
 
 @SuperBuilder
 @ToString
@@ -57,7 +54,7 @@ import io.kestra.core.models.annotations.PluginProperty;
     title = "Upload a file to Azure Data Lake Storage",
     description = "Upload a file to Azure Data Lake Storage using the Azure SDK."
 )
-public class List extends AbstractDataLakeConnection implements RunnableTask<List.Output>, AbstractDataLakeStorageInterface {
+public class List extends AbstractDataLakeConnection implements RunnableTask<List.Output>, AbstractDataLakeStorageInterface, io.kestra.core.models.WorkerJobLifecycle {
     @Schema(title = "Directory path", description = "Full path to the directory")
     @NotNull
     @PluginProperty(group = "main")
@@ -74,25 +71,96 @@ public class List extends AbstractDataLakeConnection implements RunnableTask<Lis
     @PluginProperty(group = "processing")
     private Property<Integer> maxFiles = Property.ofValue(25);
 
+    @lombok.Builder.Default
+    @lombok.Getter(lombok.AccessLevel.NONE)
+    private transient java.util.concurrent.atomic.AtomicReference<reactor.core.Disposable> disposable = new java.util.concurrent.atomic.AtomicReference<>();
+
+    @lombok.Builder.Default
+    @lombok.Getter(lombok.AccessLevel.NONE)
+    private transient java.util.concurrent.atomic.AtomicBoolean killed = new java.util.concurrent.atomic.AtomicBoolean(false);
+
+    @lombok.Builder.Default
+    @lombok.Getter(lombok.AccessLevel.NONE)
+    private transient java.util.concurrent.atomic.AtomicReference<java.util.concurrent.CountDownLatch> latchRef = new java.util.concurrent.atomic.AtomicReference<>();
+
+    public void kill() {
+        killed.set(true);
+        reactor.core.Disposable current = disposable.getAndSet(null);
+        if (current != null) {
+            current.dispose();
+        }
+        java.util.concurrent.CountDownLatch latch = latchRef.get();
+        if (latch != null) {
+            latch.countDown();
+        }
+    }
+
     @Override
     public List.Output run(RunContext runContext) throws Exception {
-        DataLakeServiceClient dataLakeServiceClient = this.dataLakeServiceClient(runContext);
-        DataLakeFileSystemClient fileSystemClient = dataLakeServiceClient.getFileSystemClient(runContext.render(fileSystem).as(String.class).orElseThrow());
+        com.azure.storage.file.datalake.DataLakeServiceAsyncClient dataLakeServiceAsyncClient = DataLakeService.asyncClient(
+            runContext.render(this.endpoint).as(String.class).orElse(null),
+            runContext.render(this.connectionString).as(String.class).orElse(null),
+            runContext.render(this.sharedKeyAccountName).as(String.class).orElse(null),
+            runContext.render(this.sharedKeyAccountAccessKey).as(String.class).orElse(null),
+            runContext.render(this.sasToken).as(String.class).orElse(null),
+            runContext
+        );
+        com.azure.storage.file.datalake.DataLakeFileSystemAsyncClient fileSystemAsyncClient = dataLakeServiceAsyncClient
+            .getFileSystemAsyncClient(runContext.render(fileSystem).as(String.class).orElseThrow());
 
-        java.util.List<AdlsFile> fileList = DataLakeService.list(fileSystemClient, runContext.render(directoryPath).as(String.class).orElseThrow());
-
+        String rDirectoryPath = runContext.render(directoryPath).as(String.class).orElseThrow();
+        com.azure.storage.file.datalake.models.ListPathsOptions options = new com.azure.storage.file.datalake.models.ListPathsOptions();
+        options.setPath(rDirectoryPath);
         Integer rMaxFiles = runContext.render(this.maxFiles).as(Integer.class).orElse(25);
 
-        if (fileList.size() > rMaxFiles) {
-            runContext.logger().warn(
-                "Listing returned {} files but maxFiles limit is {}. "
-                    + "Only the first {} files will be returned. "
-                    + "Increase the maxFiles property if you need more files.",
-                fileList.size(),
-                rMaxFiles,
-                rMaxFiles
+        java.util.concurrent.CountDownLatch latch = new java.util.concurrent.CountDownLatch(1);
+        this.latchRef.set(latch);
+        java.util.concurrent.atomic.AtomicReference<Throwable> error = new java.util.concurrent.atomic.AtomicReference<>();
+        java.util.List<AdlsFile> fileList = new java.util.ArrayList<>();
+
+        reactor.core.Disposable d = fileSystemAsyncClient.listPaths(options)
+            .map(
+                item -> AdlsFile.builder()
+                    .fileSystem(fileSystemAsyncClient.getFileSystemName())
+                    .name(item.getName())
+                    .fileName(item.getName().substring(item.getName().lastIndexOf('/') + 1))
+                    .size(item.getContentLength())
+                    .eTag(item.getETag())
+                    .lastModifed(item.getLastModified() != null ? item.getLastModified().toInstant() : null)
+                    .creationTime(item.getCreationTime() != null ? item.getCreationTime().toInstant() : null)
+                    .isDirectory(Boolean.TRUE.equals(item.isDirectory()))
+                    .owner(item.getOwner())
+                    .group(item.getGroup())
+                    .permissions(item.getPermissions())
+                    .build()
+            )
+            .take(rMaxFiles)
+            .subscribe(
+                fileList::add,
+                err ->
+                {
+                    error.set(err);
+                    latch.countDown();
+                },
+                latch::countDown
             );
-            fileList = fileList.subList(0, rMaxFiles);
+        this.disposable.set(d);
+        if (killed.get()) {
+            this.kill();
+        }
+
+        latch.await();
+        this.disposable.set(null);
+        this.latchRef.set(null);
+
+        if (killed.get()) {
+            throw new InterruptedException("Task was killed");
+        }
+
+        if (error.get() != null) {
+            if (error.get() instanceof Exception e)
+                throw e;
+            throw new Exception(error.get());
         }
 
         return Output.builder()

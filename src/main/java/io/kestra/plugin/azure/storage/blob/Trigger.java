@@ -4,6 +4,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Stream;
 
 import com.fasterxml.jackson.annotation.JsonUnwrapped;
@@ -19,9 +20,9 @@ import io.kestra.core.runners.RunContext;
 import io.kestra.plugin.azure.shared.AbstractConnectionInterface;
 import io.kestra.plugin.azure.shared.AzureClientWithSasInterface;
 import io.kestra.plugin.azure.shared.storage.blob.abstracts.AbstractBlobStorageContainerInterface;
-import io.kestra.plugin.azure.storage.blob.abstracts.ActionInterface;
 import io.kestra.plugin.azure.shared.storage.blob.abstracts.ListInterface;
 import io.kestra.plugin.azure.shared.storage.blob.models.Blob;
+import io.kestra.plugin.azure.storage.blob.abstracts.ActionInterface;
 import io.kestra.plugin.azure.storage.blob.services.BlobService;
 
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -30,7 +31,6 @@ import lombok.experimental.SuperBuilder;
 
 import static io.kestra.core.models.triggers.StatefulTriggerService.*;
 import static io.kestra.core.utils.Rethrow.throwFunction;
-import io.kestra.core.models.annotations.PluginProperty;
 
 @SuperBuilder
 @NoArgsConstructor
@@ -124,6 +124,7 @@ import io.kestra.core.models.annotations.PluginProperty;
     }
 )
 public class Trigger extends AbstractTrigger implements PollingTriggerInterface, TriggerOutput<Trigger.Output>, AbstractConnectionInterface, ListInterface, ActionInterface,
+    io.kestra.core.models.WorkerJobLifecycle,
     AbstractBlobStorageContainerInterface, AzureClientWithSasInterface, StatefulTriggerInterface {
 
     @Builder.Default
@@ -172,6 +173,17 @@ public class Trigger extends AbstractTrigger implements PollingTriggerInterface,
 
     private Property<Duration> stateTtl;
 
+    @Builder.Default
+    @lombok.Getter(lombok.AccessLevel.NONE)
+    private transient AtomicReference<Runnable> currentKillAction = new AtomicReference<>();
+
+    @Override
+    public void kill() {
+        if (currentKillAction != null && currentKillAction.get() != null) {
+            currentKillAction.get().run();
+        }
+    }
+
     @Override
     public Optional<Execution> evaluate(ConditionContext conditionContext, TriggerContext context) throws Exception {
         RunContext runContext = conditionContext.getRunContext();
@@ -194,7 +206,12 @@ public class Trigger extends AbstractTrigger implements PollingTriggerInterface,
             .delimiter(this.delimiter)
             .maxFiles(this.maxFiles)
             .build();
+
+        if (currentKillAction != null)
+            currentKillAction.set(task::kill);
         List.Output run = task.run(runContext);
+        if (currentKillAction != null)
+            currentKillAction.set(null);
 
         if (run.getBlobs().isEmpty()) {
             return Optional.empty();
@@ -230,7 +247,12 @@ public class Trigger extends AbstractTrigger implements PollingTriggerInterface,
                         .name(Property.ofValue(blob.getName()))
                         .build();
 
+                    if (currentKillAction != null)
+                        currentKillAction.set(download::kill);
                     Download.Output downloadOutput = download.run(runContext);
+                    if (currentKillAction != null)
+                        currentKillAction.set(null);
+
                     Blob downloadedBlob = blob.withUri(downloadOutput.getBlob().getUri());
                     actionBlobs.add(blob);
 

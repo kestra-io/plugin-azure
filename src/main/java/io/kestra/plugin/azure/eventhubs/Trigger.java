@@ -7,6 +7,7 @@ import java.util.Optional;
 
 import io.kestra.core.models.annotations.Example;
 import io.kestra.core.models.annotations.Plugin;
+import io.kestra.core.models.annotations.PluginProperty;
 import io.kestra.core.models.conditions.ConditionContext;
 import io.kestra.core.models.executions.Execution;
 import io.kestra.core.models.property.Property;
@@ -19,7 +20,6 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotNull;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
-import io.kestra.core.models.annotations.PluginProperty;
 
 /**
  * The {@link Trigger} can be used for triggering flow based on events received from Azure Event Hubs.
@@ -110,7 +110,7 @@ public class Trigger extends AbstractTrigger implements EventHubConsumerInterfac
     @PluginProperty(group = "advanced")
     private Property<StartingPosition> partitionStartingPosition = Property.ofValue(StartingPosition.EARLIEST);
 
-    @Schema(title = "Start from enqueue time", description = "Optional enqueue time filter (ISO-8601); overrides starting position")
+    @Schema(title = "Start from enqueue time", description = "ISO-8601 datetime applied only when partitionStartingPosition is set to INSTANT; ignored for EARLIEST and LATEST")
     @PluginProperty(group = "advanced")
     private Property<String> enqueueTime;
 

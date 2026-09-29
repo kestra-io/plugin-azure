@@ -41,10 +41,9 @@ class TriggerEvaluateTest {
 
         TestTrigger trigger = new TestTrigger("trg-" + IdUtils.create(), Property.ofValue("Completed"), polled);
 
-        Map.Entry<ConditionContext, io.kestra.core.models.triggers.Trigger> context =
-            TestsUtils.mockTrigger(runContextFactory, trigger);
+        Map.Entry<ConditionContext, io.kestra.core.scheduler.model.TriggerState> context = TestsUtils.mockTrigger(runContextFactory, trigger);
 
-        Optional<Execution> first = trigger.evaluate(context.getKey(), context.getValue());
+        Optional<Execution> first = trigger.evaluate(context.getKey(), context.getValue().context());
         assertThat(first.isPresent(), is(true));
 
         @SuppressWarnings("unchecked")
@@ -52,7 +51,7 @@ class TriggerEvaluateTest {
         assertThat(fired, hasSize(1));
 
         // same instance, still Completed, polled a second time: must not refire
-        Optional<Execution> second = trigger.evaluate(context.getKey(), context.getValue());
+        Optional<Execution> second = trigger.evaluate(context.getKey(), context.getValue().context());
         assertThat(second.isPresent(), is(false));
     }
 
@@ -61,10 +60,9 @@ class TriggerEvaluateTest {
         ListInstances.Output polled = ListInstances.Output.builder().instances(List.of()).size(0L).build();
         TestTrigger trigger = new TestTrigger("trg-" + IdUtils.create(), Property.ofValue("Completed"), polled);
 
-        Map.Entry<ConditionContext, io.kestra.core.models.triggers.Trigger> context =
-            TestsUtils.mockTrigger(runContextFactory, trigger);
+        Map.Entry<ConditionContext, io.kestra.core.scheduler.model.TriggerState> context = TestsUtils.mockTrigger(runContextFactory, trigger);
 
-        Optional<Execution> execution = trigger.evaluate(context.getKey(), context.getValue());
+        Optional<Execution> execution = trigger.evaluate(context.getKey(), context.getValue().context());
 
         assertThat(execution.isPresent(), is(false));
     }
@@ -80,22 +78,25 @@ class TriggerEvaluateTest {
                 .build()
         );
 
-        Map.Entry<ConditionContext, io.kestra.core.models.triggers.Trigger> context =
-            TestsUtils.mockTrigger(runContextFactory, trigger);
+        Map.Entry<ConditionContext, io.kestra.core.scheduler.model.TriggerState> context = TestsUtils.mockTrigger(runContextFactory, trigger);
 
-        Optional<Execution> first = trigger.evaluate(context.getKey(), context.getValue());
+        Optional<Execution> first = trigger.evaluate(context.getKey(), context.getValue().context());
         assertThat(first.isPresent(), is(true));
 
         // a different instance id reaches Completed on the next poll: must fire again
-        trigger.setCanned(ListInstances.Output.builder()
-            .instances(List.of(
-                Map.of("instance_id", "i-1", "status", "Completed"),
-                Map.of("instance_id", "i-2", "status", "Completed")
-            ))
-            .size(2L)
-            .build());
+        trigger.setCanned(
+            ListInstances.Output.builder()
+                .instances(
+                    List.of(
+                        Map.of("instance_id", "i-1", "status", "Completed"),
+                        Map.of("instance_id", "i-2", "status", "Completed")
+                    )
+                )
+                .size(2L)
+                .build()
+        );
 
-        Optional<Execution> second = trigger.evaluate(context.getKey(), context.getValue());
+        Optional<Execution> second = trigger.evaluate(context.getKey(), context.getValue().context());
         assertThat(second.isPresent(), is(true));
 
         @SuppressWarnings("unchecked")

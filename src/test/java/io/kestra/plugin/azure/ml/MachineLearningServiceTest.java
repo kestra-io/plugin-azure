@@ -1,0 +1,151 @@
+package io.kestra.plugin.azure.ml;
+
+import java.net.URI;
+import java.time.Duration;
+import java.util.Map;
+
+import org.junit.jupiter.api.Test;
+
+import com.azure.resourcemanager.machinelearning.models.JobBase;
+import com.azure.resourcemanager.machinelearning.models.JobStatus;
+import com.azure.resourcemanager.machinelearning.models.UriFileJobOutput;
+import com.azure.resourcemanager.machinelearning.models.UriFolderJobOutput;
+
+import io.kestra.core.runners.RunContext;
+
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.*;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+
+/**
+ * Pure unit tests for the shared status-mapping and URI-parsing logic, which do not require live Azure credentials
+ * and therefore run unconditionally in CI, unlike the credential-gated integration tests for the tasks themselves.
+ */
+class MachineLearningServiceTest {
+    @Test
+    void toJobStateMapsKnownStatuses() {
+        assertThat(MachineLearningService.toJobState(JobStatus.COMPLETED), is(JobState.COMPLETED));
+        assertThat(MachineLearningService.toJobState(JobStatus.RUNNING), is(JobState.RUNNING));
+        assertThat(MachineLearningService.toJobState(JobStatus.CANCEL_REQUESTED), is(JobState.CANCEL_REQUESTED));
+    }
+
+    @Test
+    void toJobStateFallsBackToUnknown() {
+        assertThat(MachineLearningService.toJobState((JobStatus) null), is(JobState.UNKNOWN));
+        assertThat(MachineLearningService.toJobState(JobStatus.fromString("SomeFutureState")), is(JobState.UNKNOWN));
+    }
+
+    @Test
+    void jobStateTerminalAndFailureFlags() {
+        assertThat(JobState.COMPLETED.isTerminal(), is(true));
+        assertThat(JobState.FAILED.isTerminal(), is(true));
+        assertThat(JobState.CANCELED.isTerminal(), is(true));
+        assertThat(JobState.RUNNING.isTerminal(), is(false));
+
+        assertThat(JobState.FAILED.isFailure(), is(true));
+        assertThat(JobState.CANCELED.isFailure(), is(true));
+        assertThat(JobState.COMPLETED.isFailure(), is(false));
+    }
+
+    @Test
+    void parseDatastoreUriExtractsNameAndPath() {
+        var parsed = MachineLearningService.parseDatastoreUri("azureml://datastores/workspaceblobstore/paths/models/v1/model.pkl");
+
+        assertThat(parsed, is(notNullValue()));
+        assertThat(parsed.datastoreName(), is("workspaceblobstore"));
+        assertThat(parsed.path(), is("models/v1/model.pkl"));
+    }
+
+    @Test
+    void parseDatastoreUriReturnsNullForNonMatchingUri() {
+        assertThat(MachineLearningService.parseDatastoreUri("https://myaccount.blob.core.windows.net/container/path"), is(nullValue()));
+    }
+
+    @Test
+    void parseDatastoreUriExtractsNameAndPathFromFullyQualifiedForm() {
+        var parsed = MachineLearningService.parseDatastoreUri(
+            "azureml://subscriptions/sub-id/resourceGroups/ml-rg/workspaces/ml-workspace/datastores/workspaceblobstore/paths/models/v1/model.pkl"
+        );
+
+        assertThat(parsed, is(notNullValue()));
+        assertThat(parsed.datastoreName(), is("workspaceblobstore"));
+        assertThat(parsed.path(), is("models/v1/model.pkl"));
+    }
+
+    @Test
+    void qualifyDatastoreUriExpandsShortForm() {
+        String qualified = MachineLearningService.qualifyDatastoreUri(
+            "sub-id", "ml-rg", "ml-workspace", "azureml://datastores/workspaceblobstore/paths/models/v1/model.pkl"
+        );
+
+        assertThat(
+            qualified,
+            is("azureml://subscriptions/sub-id/resourceGroups/ml-rg/workspaces/ml-workspace/datastores/workspaceblobstore/paths/models/v1/model.pkl")
+        );
+    }
+
+    @Test
+    void qualifyDatastoreUriLeavesFullyQualifiedFormUnchanged() {
+        String alreadyQualified = "azureml://subscriptions/sub-id/resourceGroups/ml-rg/workspaces/ml-workspace/datastores/workspaceblobstore/paths/models/v1/model.pkl";
+
+        assertThat(MachineLearningService.qualifyDatastoreUri("sub-id", "ml-rg", "ml-workspace", alreadyQualified), is(alreadyQualified));
+    }
+
+    @Test
+    void qualifyDatastoreUriLeavesOtherValidFormsUnchanged() {
+        assertThat(
+            MachineLearningService.qualifyDatastoreUri("sub-id", "ml-rg", "ml-workspace", "azureml://jobs/my-job/outputs/model_dir"),
+            is("azureml://jobs/my-job/outputs/model_dir")
+        );
+        assertThat(
+            MachineLearningService.qualifyDatastoreUri("sub-id", "ml-rg", "ml-workspace", "runs:/my-run/model"),
+            is("runs:/my-run/model")
+        );
+        assertThat(
+            MachineLearningService.qualifyDatastoreUri("sub-id", "ml-rg", "ml-workspace", "azureml://datasets/my-dataset"),
+            is("azureml://datasets/my-dataset")
+        );
+        assertThat(
+            MachineLearningService.qualifyDatastoreUri("sub-id", "ml-rg", "ml-workspace", "https://myaccount.blob.core.windows.net/container/path"),
+            is("https://myaccount.blob.core.windows.net/container/path")
+        );
+    }
+
+    @Test
+    void namedOutputsExtractsUriFileAndFolderOutputs() {
+        var outputs = Map.<String, com.azure.resourcemanager.machinelearning.models.JobOutput> of(
+            "model_dir", new UriFolderJobOutput().withUri("azureml://datastores/workspaceblobstore/paths/outputs/model"),
+            "report", new UriFileJobOutput().withUri("azureml://datastores/workspaceblobstore/paths/outputs/report.json")
+        );
+
+        var named = MachineLearningService.namedOutputs(outputs);
+
+        assertThat(named.size(), is(2));
+        assertThat(named.get("model_dir"), is(URI.create("azureml://datastores/workspaceblobstore/paths/outputs/model")));
+        assertThat(named.get("report"), is(URI.create("azureml://datastores/workspaceblobstore/paths/outputs/report.json")));
+    }
+
+    @Test
+    void namedOutputsReturnsEmptyMapForNullInput() {
+        assertThat(MachineLearningService.namedOutputs(null).isEmpty(), is(true));
+    }
+
+    @Test
+    void awaitTerminalStateFailsFastOnUnknownStatus() {
+        JobBase job = mock(JobBase.class);
+        when(job.name()).thenReturn("test-job");
+        when(job.properties()).thenReturn(null);
+
+        RunContext runContext = mock(RunContext.class);
+
+        var exception = assertThrows(
+            IllegalStateException.class,
+            () -> MachineLearningService.awaitTerminalState(runContext, () -> job, Duration.ofMillis(10), Duration.ofSeconds(1))
+        );
+
+        assertThat(exception.getMessage(), containsString("test-job"));
+        assertThat(exception.getMessage(), containsString("unrecognized/malformed status"));
+    }
+}

@@ -46,7 +46,7 @@ Most tasks require an `endpoint` property pointing to the Azure service endpoint
 
 Tasks span the most commonly used Azure services. The `storage.blob` and `storage.adls` packages cover uploads, downloads, copies, deletions, and file-arrival triggers for Blob Storage and ADLS Gen2. For messaging, `eventhubs` and `servicebus` each offer produce, consume, a polling `Trigger`, and a `RealtimeTrigger` — use `Trigger` for batch processing on a schedule and `RealtimeTrigger` for per-message executions.
 
-For data and compute, `datafactory` triggers pipeline runs, `synapse.SparkBatchJobCreate` submits Spark jobs, and `batch` manages HPC pools and jobs. `storage.cosmosdb` and `storage.table` cover NoSQL reads and writes, and `function.HttpFunction` invokes Azure Functions. Use `cli.AzCLI` for operations not covered by a dedicated task.
+For data and compute, `datafactory` triggers pipeline runs, `synapse.SparkBatchJobCreate` submits Spark jobs, and `batch` manages HPC pools and jobs. `storage.cosmosdb` and `storage.table` cover NoSQL reads and writes, and `function.HttpFunction` invokes Azure Functions. For observability, the `monitoring` package queries Azure Monitor metrics (`Query`), pushes custom metrics (`Push`), and can trigger flows when a metric query returns data (`Trigger`), while `streamanalytics.GetJob` retrieves the details of an Azure Stream Analytics job. Use `cli.AzCLI` for operations not covered by a dedicated task.
 
 ## Azure HorizonDB
 
@@ -70,3 +70,40 @@ The `logicapps` package provides tasks and triggers for Azure Logic Apps workflo
 - `logicapps.Trigger` - stateful polling trigger that starts Kestra executions for newly observed workflow runs matching configured statuses.
 
 These support service principal and certificate authentication consistent with other Azure tasks. Use the `statusFilter` or `statuses` properties to scope runs, and the `Trigger` provides deduplication and state TTL controls.
+
+
+## Azure AI Foundry
+
+The `aifoundry` package provides tasks and a trigger for interacting with Azure AI Foundry:
+
+- `aifoundry.ChatCompletion` - Call a deployed model for chat completions.
+- `aifoundry.Embeddings` - Generate vector embeddings from text input.
+- `aifoundry.RunAgent` - Create and run an Azure AI Foundry agent, returning the conversation result.
+- `aifoundry.CreateEvaluation` - Submit a new evaluation job using a dataset and a set of evaluators.
+- `aifoundry.GetDeployment` - Retrieve deployment status and configuration.
+- `aifoundry.Trigger` - Poll Azure AI Foundry for newly completed evaluations and fire an execution. Use the `statuses` and `maxEvaluations` properties to scope evaluations; the trigger provides deduplication and state TTL controls.
+
+### Authentication for Azure AI Foundry
+
+- Tasks like `ChatCompletion` and `Embeddings` support API-key authentication (via the `apiKey` property) or Entra ID (`DefaultAzureCredential`).
+- Tasks that use the Azure AI Projects SDK (like `RunAgent`, `CreateEvaluation`, `GetDeployment`, and `Trigger`) **require** Entra ID (`DefaultAzureCredential`) as API keys are not supported by the underlying client. Do not provide the `apiKey` property when using these tasks.
+
+## Azure Machine Learning
+
+The `ml` package provides tasks and a trigger for Azure Machine Learning, using service principal or certificate authentication (`tenantId`/`clientId`/`clientSecret`/`pemCertificate`) as described above, plus `subscriptionId`, `resourceGroupName` and `workspaceName` to locate the workspace.
+
+- `ml.SubmitCommandJob` - submit a single command job (e.g. a training script) to a compute cluster or instance; waits for completion by default and exposes MLflow-backed `metrics` as outputs. Killing the Kestra execution cancels the underlying Azure ML job.
+- `ml.SubmitPipelineJob` - submit a multi-step pipeline job from a raw `jobs` graph, following the same wait/cancel/kill semantics as `SubmitCommandJob`.
+- `ml.GetJob` - read a job's status, MLflow-backed metrics, and named outputs.
+- `ml.CancelJob` - request cancellation of a job and, by default, wait until it is actually in a terminal state (cancellation is asynchronous in Azure ML).
+- `ml.RegisterModel` - register a model version from a job output, a file in Kestra's internal storage, or an existing datastore URI.
+- `ml.GetModel` / `ml.ListModelVersions` - retrieve a specific (or `latest`) model version, or list every version of a model.
+- `ml.DownloadModel` - download a model's artifact(s) to Kestra's internal storage, packaging multi-file models into a single ZIP archive.
+- `ml.CreateDataAsset` / `ml.ListDataVersions` - register a `URI_FILE`, `URI_FOLDER` or `MLTABLE` data asset version, or list every version of one.
+- `ml.ScaleCluster` - update the min/max node autoscale settings of a compute cluster.
+- `ml.StartComputeInstance` / `ml.StopComputeInstance` - start or stop a compute instance, waiting by default until it reaches the target state; a no-op when already there.
+- `ml.NewModelVersionTrigger` - polling trigger that fires when a model's latest version changes, with the same deduplication/state conventions as the other Azure polling triggers in this plugin.
+
+Model and data asset versions are immutable in Azure ML: leave `version` unset on `RegisterModel`/`CreateDataAsset` to auto-increment from the asset's current latest version, or set it explicitly and expect a clear error on a 409 conflict rather than a silent overwrite.
+
+Job metrics are logged through MLflow rather than exposed by the Azure Resource Manager control-plane API used for everything else in this package. `GetJob` and `SubmitCommandJob` read the workspace's MLflow tracking URI and call its REST API directly with the same Azure AD credentials; if that call fails (e.g. the service principal lacks the required scope), `metrics` comes back empty and a warning is logged instead of failing the task.

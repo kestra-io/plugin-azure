@@ -4,15 +4,16 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.junit.jupiter.api.Test;
+
+import io.kestra.core.models.triggers.StatefulTriggerInterface.On;
+import io.kestra.core.models.triggers.StatefulTriggerService;
+
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.empty;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
-import org.junit.jupiter.api.Test;
-
-import io.kestra.core.models.triggers.StatefulTriggerInterface.On;
-import io.kestra.core.models.triggers.StatefulTriggerService;
 
 class TriggerComputeFiredTest {
     @Test

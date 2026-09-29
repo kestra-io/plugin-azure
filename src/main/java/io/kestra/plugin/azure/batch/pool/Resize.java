@@ -6,6 +6,7 @@ import com.microsoft.azure.batch.protocol.models.PoolState;
 
 import io.kestra.core.models.annotations.Example;
 import io.kestra.core.models.annotations.Plugin;
+import io.kestra.core.models.annotations.PluginProperty;
 import io.kestra.core.models.property.Property;
 import io.kestra.core.models.tasks.RunnableTask;
 import io.kestra.core.runners.RunContext;
@@ -17,7 +18,6 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotNull;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
-import io.kestra.core.models.annotations.PluginProperty;
 
 @SuperBuilder
 @ToString
@@ -35,8 +35,11 @@ import io.kestra.core.models.annotations.PluginProperty;
                 tasks:
                   - id: resize
                     type: io.kestra.plugin.azure.batch.pool.Resize
+                    endpoint: https://my.francecentral.batch.azure.com
+                    account: "{{ secret('AZURE_ACCOUNT') }}"
+                    accessKey: "{{ secret('AZURE_ACCESS_KEY') }}"
                     poolId: "<your-pool-id>"
-                    targetDedicatedNodes: "12"
+                    targetDedicatedNodes: 12
                 """
         )
     }

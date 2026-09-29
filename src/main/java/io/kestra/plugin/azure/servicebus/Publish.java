@@ -36,11 +36,11 @@ import static io.kestra.core.utils.Rethrow.throwFunction;
         @Example(
             full = true,
             code = """
-                id: azure_cosmos_service_bus_publish
+                id: azure_service_bus_publish
                 namespace: company.team
 
                 tasks:
-                  - id: create
+                  - id: publish
                     type: io.kestra.plugin.azure.servicebus.Publish
                     queueName: your-queue-name
                     tenantId: "{{ secret('AZURE_TENANT_ID') }}"
@@ -142,7 +142,6 @@ public class Publish extends AbstractServiceBusTask implements RunnableTask<Publ
     }
 
     public record Output(
-        @Schema(title = "Messages count")
-        Integer messagesCount) implements io.kestra.core.models.tasks.Output {
+        @Schema(title = "Messages count") Integer messagesCount) implements io.kestra.core.models.tasks.Output {
     }
 }

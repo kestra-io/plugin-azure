@@ -41,7 +41,7 @@ import static io.kestra.core.utils.Rethrow.throwFunction;
 @Schema(
     title = "Trigger a flow on a new file arrival in an Azure Blob Storage container",
     description = "This trigger will poll the specified Azure Blob Storage container every `interval`. "
-        + "Using the `from` and `regExp` properties, you can define which files' arrival will trigger the flow. "
+        + "Using the `prefix` and `regexp` properties, you can define which files' arrival will trigger the flow. "
         + "Under the hood, we use the Azure Blob Storage API to list the files in a specified location and "
         + "download them to the internal storage and process them with the declared `action`. "
         + "You can use the `action` property to move or delete the files from the container after processing "
@@ -61,13 +61,13 @@ import static io.kestra.core.utils.Rethrow.throwFunction;
 
                 tasks:
                   - id: each
-                    type: io.kestra.plugin.core.flow.ForEach
+                    type: io.kestra.plugin.core.flow.Loop
                     concurrencyLimit: 1
                     values: "{{ trigger.blobs | jq('.[].uri') }}"
                     tasks:
                       - id: return
                         type: io.kestra.plugin.core.debug.Return
-                        format: "{{ taskrun.value }}"
+                        format: "{{ item.value }}"
 
                 triggers:
                   - id: watch
@@ -94,19 +94,19 @@ import static io.kestra.core.utils.Rethrow.throwFunction;
 
                 tasks:
                   - id: each
-                    type: io.kestra.plugin.core.flow.ForEach
+                    type: io.kestra.plugin.core.flow.Loop
                     values: "{{ trigger.blobs | jq('.[].name') }}"
                     tasks:
                       - id: return
                         type: io.kestra.plugin.core.debug.Return
-                        format: "{{ taskrun.value }}"
+                        format: "{{ item.value }}"
 
                       - id: delete
                         type: io.kestra.plugin.azure.storage.blob.Delete
                         endpoint: "https://yourblob.blob.core.windows.net"
                         connectionString: "{{ secret('AZURE_CONNECTION_STRING') }}"
                         container: myBlobContainer
-                        name: "{{ taskrun.value }}"
+                        name: "{{ item.value }}"
 
                 triggers:
                   - id: watch

@@ -8,6 +8,7 @@ import com.azure.messaging.servicebus.models.SubQueue;
 
 import io.kestra.core.models.annotations.Example;
 import io.kestra.core.models.annotations.Plugin;
+import io.kestra.core.models.annotations.PluginProperty;
 import io.kestra.core.models.conditions.ConditionContext;
 import io.kestra.core.models.executions.Execution;
 import io.kestra.core.models.property.Property;
@@ -21,7 +22,6 @@ import lombok.experimental.SuperBuilder;
 
 import static io.kestra.plugin.azure.servicebus.AbstractServiceBusTask.*;
 import static io.kestra.plugin.azure.servicebus.Consume.*;
-import io.kestra.core.models.annotations.PluginProperty;
 
 @SuperBuilder
 @ToString
@@ -43,7 +43,7 @@ import io.kestra.core.models.annotations.PluginProperty;
                 tasks:
                   - id: log_messages
                     type: io.kestra.plugin.core.log.Log
-                    message: "Trigger body: {{trigger.body}}."
+                    message: "Received {{ trigger.count }} messages, stored at {{ trigger.uri }}."
 
                 triggers:
                   - id: watch

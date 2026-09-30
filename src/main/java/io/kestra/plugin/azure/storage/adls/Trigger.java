@@ -6,6 +6,8 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
+import org.slf4j.LoggerFactory;
+
 import com.azure.storage.file.datalake.models.ListPathsOptions;
 import com.fasterxml.jackson.annotation.JsonUnwrapped;
 
@@ -128,34 +130,51 @@ public class Trigger extends AbstractTrigger
     private Property<Duration> stateTtl;
 
     @Builder.Default
-    @lombok.Getter(lombok.AccessLevel.NONE)
-    @lombok.ToString.Exclude
+    @ToString.Exclude
+    @Getter(AccessLevel.NONE)
     private transient AtomicReference<Disposable> disposable = new AtomicReference<>();
 
     @Builder.Default
-    @lombok.Getter(lombok.AccessLevel.NONE)
-    @lombok.ToString.Exclude
+    @ToString.Exclude
+    @Getter(AccessLevel.NONE)
     private transient AtomicBoolean killed = new AtomicBoolean(false);
 
     @Builder.Default
-    @lombok.Getter(lombok.AccessLevel.NONE)
-    @lombok.ToString.Exclude
+    @ToString.Exclude
+    @Getter(AccessLevel.NONE)
     private transient AtomicReference<CountDownLatch> latchRef = new AtomicReference<>();
 
     @Override
     public void kill() {
-        if (killed.compareAndSet(false, true)) {
-            Disposable current = disposable.getAndSet(null);
-            if (current != null) {
-                try {
-                    current.dispose();
-                } catch (Exception ignored) {
-                }
+        killed.compareAndSet(false, true);
+        cancelInFlight();
+    }
+
+    private void cancelInFlight() {
+        Disposable current = disposable.getAndSet(null);
+        if (current != null) {
+            try {
+                current.dispose();
+            } catch (Exception e) {
+                LoggerFactory.getLogger(this.getClass()).warn("Failed to dispose subscription", e);
             }
-            CountDownLatch latch = latchRef.get();
-            if (latch != null) {
-                latch.countDown();
-            }
+        }
+        CountDownLatch latch = latchRef.get();
+        if (latch != null) {
+            latch.countDown();
+        }
+    }
+
+    private void await(CountDownLatch latch, Disposable currentDisposable) throws InterruptedException {
+        this.latchRef.set(latch);
+        this.disposable.set(currentDisposable);
+        if (killed.get()) {
+            this.cancelInFlight();
+        }
+        try {
+            latch.await();
+        } finally {
+            this.cancelInFlight();
         }
     }
 
@@ -209,20 +228,10 @@ public class Trigger extends AbstractTrigger
                 listLatch::countDown
             );
 
-        this.disposable.set(listDisposable);
-        this.latchRef.set(listLatch);
-        if (killed.get()) {
-            this.kill();
-        }
-        try {
-            listLatch.await();
-        } finally {
-            this.disposable.set(null);
-            this.latchRef.set(null);
-        }
+        this.await(listLatch, listDisposable);
 
         if (killed.get())
-            throw new InterruptedException("Trigger was killed");
+            return Optional.empty();
         if (error.get() != null) {
             if (error.get() instanceof Exception e)
                 throw e;
@@ -238,7 +247,7 @@ public class Trigger extends AbstractTrigger
 
         for (var file : fileList) {
             if (killed.get())
-                throw new InterruptedException("Trigger was killed");
+                return Optional.empty();
 
             var uri = String.format("adls://%s/%s", runContext.render(fileSystem).as(String.class).orElse(""), file.getName());
             var modifiedAt = java.util.Optional.ofNullable(file.getLastModifed()).orElse(java.time.Instant.now());
@@ -269,20 +278,10 @@ public class Trigger extends AbstractTrigger
                         dlLatch::countDown
                     );
 
-                this.disposable.set(dlDisposable);
-                this.latchRef.set(dlLatch);
-                if (killed.get()) {
-                    this.kill();
-                }
-                try {
-                    dlLatch.await();
-                } finally {
-                    this.disposable.set(null);
-                    this.latchRef.set(null);
-                }
+                this.await(dlLatch, dlDisposable);
 
                 if (killed.get())
-                    throw new InterruptedException("Trigger was killed");
+                    return Optional.empty();
                 if (error.get() != null) {
                     if (error.get() instanceof Exception e)
                         throw e;
@@ -301,6 +300,15 @@ public class Trigger extends AbstractTrigger
             }
         }
 
+        if (toFire.isEmpty()) {
+            return Optional.empty();
+        }
+
+        if (killed.get()) {
+            return Optional.empty();
+        }
+
+        // --- ATOMIC COMMIT PHASE ---
         if (Action.MOVE.equals(runContext.render(this.action).as(Action.class).orElseThrow())) {
             final String toDirPath = runContext.render(this.moveTo.getDirectoryPath()).as(String.class).orElseThrow();
             syncClient.getFileSystemClient(runContext.render(this.moveTo.getFileSystem()).as(String.class).orElseThrow())
@@ -308,8 +316,6 @@ public class Trigger extends AbstractTrigger
         }
 
         for (var file : toFire) {
-            if (killed.get())
-                throw new InterruptedException("Trigger was killed");
             var adlsFile = file.getFile();
 
             switch (runContext.render(this.action).as(Action.class).orElseThrow()) {
@@ -341,10 +347,6 @@ public class Trigger extends AbstractTrigger
         }
 
         writeState(runContext, rStateKey, state, rStateTtl);
-
-        if (toFire.isEmpty()) {
-            return Optional.empty();
-        }
 
         var output = Output.builder().files(toFire).build();
         var execution = TriggerService.generateExecution(this, conditionContext, context, output);

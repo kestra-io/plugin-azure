@@ -6,6 +6,8 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
+import org.slf4j.LoggerFactory;
+
 import com.azure.storage.blob.models.BlobItem;
 import com.azure.storage.blob.models.BlobProperties;
 import com.azure.storage.blob.models.ListBlobsOptions;
@@ -127,7 +129,7 @@ import static io.kestra.core.models.triggers.StatefulTriggerService.*;
     }
 )
 public class Trigger extends AbstractTrigger implements PollingTriggerInterface, TriggerOutput<Trigger.Output>, AbstractConnectionInterface, ListInterface, ActionInterface,
-    io.kestra.core.models.WorkerJobLifecycle,
+
     AbstractBlobStorageContainerInterface, AzureClientWithSasInterface, StatefulTriggerInterface {
 
     @Builder.Default
@@ -177,34 +179,51 @@ public class Trigger extends AbstractTrigger implements PollingTriggerInterface,
     private Property<Duration> stateTtl;
 
     @Builder.Default
-    @lombok.Getter(lombok.AccessLevel.NONE)
-    @lombok.ToString.Exclude
+    @ToString.Exclude
+    @Getter(AccessLevel.NONE)
     private transient AtomicReference<Disposable> disposable = new AtomicReference<>();
 
     @Builder.Default
-    @lombok.Getter(lombok.AccessLevel.NONE)
-    @lombok.ToString.Exclude
+    @ToString.Exclude
+    @Getter(AccessLevel.NONE)
     private transient AtomicBoolean killed = new AtomicBoolean(false);
 
     @Builder.Default
-    @lombok.Getter(lombok.AccessLevel.NONE)
-    @lombok.ToString.Exclude
+    @ToString.Exclude
+    @Getter(AccessLevel.NONE)
     private transient AtomicReference<CountDownLatch> latchRef = new AtomicReference<>();
 
     @Override
     public void kill() {
-        if (killed.compareAndSet(false, true)) {
-            Disposable current = disposable.getAndSet(null);
-            if (current != null) {
-                try {
-                    current.dispose();
-                } catch (Exception ignored) {
-                }
+        killed.compareAndSet(false, true);
+        cancelInFlight();
+    }
+
+    private void cancelInFlight() {
+        Disposable current = disposable.getAndSet(null);
+        if (current != null) {
+            try {
+                current.dispose();
+            } catch (Exception e) {
+                LoggerFactory.getLogger(this.getClass()).warn("Failed to dispose subscription", e);
             }
-            CountDownLatch latch = latchRef.get();
-            if (latch != null) {
-                latch.countDown();
-            }
+        }
+        CountDownLatch latch = latchRef.get();
+        if (latch != null) {
+            latch.countDown();
+        }
+    }
+
+    private void await(CountDownLatch latch, Disposable currentDisposable) throws InterruptedException {
+        this.latchRef.set(latch);
+        this.disposable.set(currentDisposable);
+        if (killed.get()) {
+            this.cancelInFlight();
+        }
+        try {
+            latch.await();
+        } finally {
+            this.cancelInFlight();
         }
     }
 
@@ -257,20 +276,10 @@ public class Trigger extends AbstractTrigger implements PollingTriggerInterface,
                 listLatch::countDown
             );
 
-        this.disposable.set(listDisposable);
-        this.latchRef.set(listLatch);
-        if (killed.get()) {
-            this.kill();
-        }
-        try {
-            listLatch.await();
-        } finally {
-            this.disposable.set(null);
-            this.latchRef.set(null);
-        }
+        this.await(listLatch, listDisposable);
 
         if (killed.get())
-            throw new InterruptedException("Trigger was killed");
+            return Optional.empty();
         if (error.get() != null) {
             if (error.get() instanceof Exception e)
                 throw e;
@@ -287,7 +296,7 @@ public class Trigger extends AbstractTrigger implements PollingTriggerInterface,
 
         for (var blob : list) {
             if (killed.get())
-                throw new InterruptedException("Trigger was killed");
+                return Optional.empty();
 
             var uri = String.format("az://%s/%s", runContext.render(container).as(String.class).orElse(""), blob.getName());
             var modifiedAt = java.util.Optional.ofNullable(blob.getLastModified()).map(java.time.OffsetDateTime::toInstant).orElse(java.time.Instant.now());
@@ -319,20 +328,10 @@ public class Trigger extends AbstractTrigger implements PollingTriggerInterface,
                         },
                         dlLatch::countDown
                     );
-                this.disposable.set(dlDisposable);
-                this.latchRef.set(dlLatch);
-                if (killed.get()) {
-                    this.kill();
-                }
-                try {
-                    dlLatch.await();
-                } finally {
-                    this.disposable.set(null);
-                    this.latchRef.set(null);
-                }
+                this.await(dlLatch, dlDisposable);
 
                 if (killed.get())
-                    throw new InterruptedException("Trigger was killed");
+                    return Optional.empty();
                 if (error.get() != null) {
                     if (error.get() instanceof Exception e)
                         throw e;
@@ -355,21 +354,19 @@ public class Trigger extends AbstractTrigger implements PollingTriggerInterface,
             }
         }
 
-        writeState(runContext, rStateKey, previousState, rStateTtl);
-
         if (toFire.isEmpty()) {
             return Optional.empty();
         }
 
-        if (killed.get())
-            throw new InterruptedException("Trigger was killed");
+        if (killed.get()) {
+            return Optional.empty();
+        }
 
+        // --- ATOMIC COMMIT PHASE ---
+        writeState(runContext, rStateKey, previousState, rStateTtl);
         BlobService.archive(actionBlobs, runContext.render(this.action).as(ActionInterface.Action.class).orElse(null), this.moveTo, runContext, this, this);
-
         var output = Output.builder().blobs(toFire).build();
-        var execution = TriggerService.generateExecution(this, conditionContext, context, output);
-
-        return Optional.of(execution);
+        return Optional.of(TriggerService.generateExecution(this, conditionContext, context, output));
     }
 
     @Builder

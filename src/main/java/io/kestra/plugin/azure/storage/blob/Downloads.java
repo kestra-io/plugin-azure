@@ -14,14 +14,15 @@ import com.azure.storage.blob.models.BlobProperties;
 
 import io.kestra.core.models.annotations.Example;
 import io.kestra.core.models.annotations.Plugin;
+import io.kestra.core.models.annotations.PluginProperty;
 import io.kestra.core.models.property.Property;
 import io.kestra.core.models.tasks.RunnableTask;
 import io.kestra.core.runners.RunContext;
 import io.kestra.plugin.azure.shared.storage.blob.abstracts.AbstractBlobStorageContainerInterface;
 import io.kestra.plugin.azure.shared.storage.blob.abstracts.AbstractBlobStorageWithSas;
-import io.kestra.plugin.azure.storage.blob.abstracts.ActionInterface;
 import io.kestra.plugin.azure.shared.storage.blob.abstracts.ListInterface;
 import io.kestra.plugin.azure.shared.storage.blob.models.Blob;
+import io.kestra.plugin.azure.storage.blob.abstracts.ActionInterface;
 import io.kestra.plugin.azure.storage.blob.services.BlobService;
 import io.kestra.plugin.azure.storage.services.ChecksumValidatedInterface;
 import io.kestra.plugin.azure.storage.services.ChecksumValidator;
@@ -31,7 +32,6 @@ import lombok.*;
 import lombok.experimental.SuperBuilder;
 
 import static io.kestra.core.utils.Rethrow.throwFunction;
-import io.kestra.core.models.annotations.PluginProperty;
 
 @SuperBuilder
 @ToString
@@ -54,6 +54,7 @@ import io.kestra.core.models.annotations.PluginProperty;
                     container: "mydata"
                     prefix: "sub-dir"
                     delimiter: "/"
+                    action: NONE
                 """
         )
     }
@@ -62,7 +63,8 @@ import io.kestra.core.models.annotations.PluginProperty;
     title = "Download multiple blobs to Kestra storage",
     description = "Lists blobs with optional prefix/regex, downloads them to internal storage, and optionally archives or moves according to action."
 )
-public class Downloads extends AbstractBlobStorageWithSas implements RunnableTask<Downloads.Output>, ListInterface, ActionInterface, AbstractBlobStorageContainerInterface, ChecksumValidatedInterface {
+public class Downloads extends AbstractBlobStorageWithSas
+    implements RunnableTask<Downloads.Output>, ListInterface, ActionInterface, AbstractBlobStorageContainerInterface, ChecksumValidatedInterface {
     @Schema(title = "Container", description = "Target container to list and download from")
     @PluginProperty(group = "main")
     private Property<String> container;

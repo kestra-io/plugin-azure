@@ -48,35 +48,34 @@ import static io.kestra.core.utils.Rethrow.throwConsumer;
                 id: azure_storage_blob_delete_list
                 namespace: company.team
 
-                pluginDefaults:
-                  - type: io.kestra.plugin.azure.storage.adls
-                    values:
-                      connectionString: "{{ secret('AZURE_CONNECTION_STRING') }}"
-                      fileSystem: "tasks"
-                      endpoint: "https://yourblob.blob.core.windows.net"
-
                 tasks:
                   - id: for_each
-                    type: io.kestra.plugin.core.flow.EachSequential
-                    value: ["pikachu", "charmander"]
+                    type: io.kestra.plugin.core.flow.Loop
+                    values: ["pikachu", "charmander"]
                     tasks:
                       - id: download_request
                         type: io.kestra.plugin.core.http.Download
-                        uri: https://pokeapi.co/api/v2/pokemon/{{ taskrun.value }}
+                        uri: https://pokeapi.co/api/v2/pokemon/{{ item.value }}
 
                       - id: to_ion
                         type: io.kestra.plugin.serdes.json.JsonToIon
-                        from: "{{ currentEachOutput(outputs.download_request).uri }}"
+                        from: "{{ outputs.download_request[item.value].uri }}"
 
                       - id: upload_file
                         type: io.kestra.plugin.azure.storage.adls.Upload
-                        fileName: "adls/pokemon/{{ taskrun.value }}.json"
-                        from: "{{ currentEachOutput(outputs.to_ion).uri }}"
+                        filePath: "adls/pokemon/{{ item.value }}.json"
+                        from: "{{ outputs.to_ion[item.value].uri }}"
+                        connectionString: "{{ secret('AZURE_CONNECTION_STRING') }}"
+                        fileSystem: "tasks"
+                        endpoint: "https://yourblob.blob.core.windows.net"
 
                   - id: delete_file
                     type: io.kestra.plugin.azure.storage.adls.DeleteFiles
                     concurrent: 2
                     directoryPath: "adls/pokemon/"
+                    connectionString: "{{ secret('AZURE_CONNECTION_STRING') }}"
+                    fileSystem: "tasks"
+                    endpoint: "https://yourblob.blob.core.windows.net"
                 """
         )
     },

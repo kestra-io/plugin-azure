@@ -13,6 +13,9 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Properties;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import io.kestra.core.models.annotations.PluginProperty;
 import io.kestra.core.models.property.Property;
 import io.kestra.core.models.tasks.Output;
@@ -29,8 +32,6 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.ToString;
 import lombok.experimental.SuperBuilder;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * Shared connection handling for Azure HorizonDB tasks: opens a JDBC connection using either
@@ -189,8 +190,7 @@ public abstract class AbstractHorizonDb<T extends Output> extends Task implement
         String password,
         String tenantId,
         String clientId,
-        String clientSecret
-    ) {
+        String clientSecret) {
         Properties props = new Properties();
         props.setProperty("sslmode", ssl ? "require" : "prefer");
         if (username != null) {

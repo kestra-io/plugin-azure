@@ -39,11 +39,11 @@ import lombok.experimental.SuperBuilder;
                   - id: copy
                     type: io.kestra.plugin.azure.storage.blob.Copy
                     from:
-                      container: "my-bucket"
-                      key: "path/to/file"
+                      container: "my-container"
+                      name: "path/to/file"
                     to:
-                      container: "my-bucket2"
-                      key: "path/to/file2"
+                      container: "my-container2"
+                      name: "path/to/file2"
                 """
         )
     }

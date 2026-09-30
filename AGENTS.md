@@ -25,6 +25,12 @@ Infrastructure dependencies (Docker Compose services):
 
 ### Key Plugin Classes
 
+- `io.kestra.plugin.azure.aifoundry.ChatCompletion`
+- `io.kestra.plugin.azure.aifoundry.CreateEvaluation`
+- `io.kestra.plugin.azure.aifoundry.Embeddings`
+- `io.kestra.plugin.azure.aifoundry.GetDeployment`
+- `io.kestra.plugin.azure.aifoundry.RunAgent`
+- `io.kestra.plugin.azure.aifoundry.Trigger`
 - `io.kestra.plugin.azure.auth.OauthAccessToken`
 - `io.kestra.plugin.azure.batch.job.Create`
 - `io.kestra.plugin.azure.batch.pool.Resize`
@@ -49,6 +55,20 @@ Infrastructure dependencies (Docker Compose services):
 - `io.kestra.plugin.azure.logicapps.ListRuns`
 - `io.kestra.plugin.azure.logicapps.Run`
 - `io.kestra.plugin.azure.logicapps.Trigger`
+- `io.kestra.plugin.azure.ml.SubmitCommandJob`
+- `io.kestra.plugin.azure.ml.SubmitPipelineJob`
+- `io.kestra.plugin.azure.ml.GetJob`
+- `io.kestra.plugin.azure.ml.CancelJob`
+- `io.kestra.plugin.azure.ml.RegisterModel`
+- `io.kestra.plugin.azure.ml.GetModel`
+- `io.kestra.plugin.azure.ml.ListModelVersions`
+- `io.kestra.plugin.azure.ml.DownloadModel`
+- `io.kestra.plugin.azure.ml.CreateDataAsset`
+- `io.kestra.plugin.azure.ml.ListDataVersions`
+- `io.kestra.plugin.azure.ml.ScaleCluster`
+- `io.kestra.plugin.azure.ml.StartComputeInstance`
+- `io.kestra.plugin.azure.ml.StopComputeInstance`
+- `io.kestra.plugin.azure.ml.NewModelVersionTrigger`
 - `io.kestra.plugin.azure.monitoring.Push`
 - `io.kestra.plugin.azure.monitoring.Query`
 - `io.kestra.plugin.azure.monitoring.Trigger`
@@ -86,6 +106,7 @@ Infrastructure dependencies (Docker Compose services):
 - `io.kestra.plugin.azure.storage.table.Get`
 - `io.kestra.plugin.azure.storage.table.List`
 - `io.kestra.plugin.azure.synapse.SparkBatchJobCreate`
+
 
 ### Project Structure
 

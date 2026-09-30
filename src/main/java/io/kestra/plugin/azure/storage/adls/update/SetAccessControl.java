@@ -7,6 +7,7 @@ import com.azure.storage.file.datalake.models.RolePermissions;
 
 import io.kestra.core.models.annotations.Example;
 import io.kestra.core.models.annotations.Plugin;
+import io.kestra.core.models.annotations.PluginProperty;
 import io.kestra.core.models.property.Property;
 import io.kestra.core.models.tasks.RunnableTask;
 import io.kestra.core.models.tasks.VoidOutput;
@@ -16,7 +17,6 @@ import io.kestra.plugin.azure.storage.adls.abstracts.AbstractDataLakeWithFile;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
-import io.kestra.core.models.annotations.PluginProperty;
 
 @SuperBuilder
 @ToString
@@ -32,19 +32,19 @@ import io.kestra.core.models.annotations.PluginProperty;
                 namespace: company.team
 
                 tasks:
-                  - id: lease_file
+                  - id: set_access_control
                     type: io.kestra.plugin.azure.storage.adls.update.SetAccessControl
                     endpoint: "https://yourblob.blob.core.windows.net"
                     sasToken: "{{ secret('SAS_TOKEN') }}"
                     fileSystem: "mydata"
                     filePath: "path/to/myfile"
                     groupPermissions:
-                      readPermissions: true
+                      readPermission: true
                     ownerPermissions:
-                      readPermissions: true
-                      writePermissions: true
+                      readPermission: true
+                      writePermission: true
                     otherPermissions:
-                      readPermissions: true
+                      readPermission: true
                 """
         )
     }

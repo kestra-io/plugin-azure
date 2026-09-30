@@ -237,8 +237,7 @@ public class Trigger extends AbstractTrigger implements PollingTriggerInterface,
     static List<Map<String, Object>> computeFired(
         List<Map<String, Object>> instances,
         Map<String, StatefulTriggerService.Entry> state,
-        On on
-    ) {
+        On on) {
         List<Map<String, Object>> fired = new ArrayList<>();
         for (Map<String, Object> instance : instances) {
             Object instanceId = instance.get("instance_id");

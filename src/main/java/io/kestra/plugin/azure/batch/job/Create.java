@@ -111,8 +111,8 @@ import static io.kestra.core.utils.Rethrow.throwRunnable;
                   - id: create
                     type: io.kestra.plugin.azure.batch.job.Create
                     endpoint: https://***.francecentral.batch.azure.com
-                    account: <batch-account>
-                    accessKey: <access-key>
+                    account: "{{ secret('AZURE_ACCOUNT') }}"
+                    accessKey: "{{ secret('AZURE_ACCESS_KEY') }}"
                     poolId: <pool-id>
                     job:
                       id: <job-name>

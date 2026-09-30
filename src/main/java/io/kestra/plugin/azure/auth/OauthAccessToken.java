@@ -34,7 +34,7 @@ import lombok.experimental.SuperBuilder;
 
                 tasks:
                   - id: get_access_token
-                    type: io.kestra.plugin.azure.oauth.OauthAccessToken
+                    type: io.kestra.plugin.azure.auth.OauthAccessToken
                     tenantId: "{{ secret('SERVICE_PRINCIPAL_TENANT_ID') }}"
                     clientId: "{{ secret('SERVICE_PRINCIPAL_CLIENT_ID') }}"
                     clientSecret: "{{ secret('SERVICE_PRINCIPAL_CLIENT_SECRET') }}"

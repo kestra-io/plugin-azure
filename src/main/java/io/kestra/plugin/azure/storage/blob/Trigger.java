@@ -1,12 +1,14 @@
 package io.kestra.plugin.azure.storage.blob;
 
 import java.time.Duration;
-import java.time.Instant;
-import java.util.ArrayList;
 import java.util.Optional;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.stream.Stream;
 
+import com.azure.storage.blob.models.BlobItem;
+import com.azure.storage.blob.models.BlobProperties;
+import com.azure.storage.blob.models.ListBlobsOptions;
 import com.fasterxml.jackson.annotation.JsonUnwrapped;
 
 import io.kestra.core.models.annotations.Example;
@@ -14,9 +16,9 @@ import io.kestra.core.models.annotations.Plugin;
 import io.kestra.core.models.annotations.PluginProperty;
 import io.kestra.core.models.conditions.ConditionContext;
 import io.kestra.core.models.executions.Execution;
+import io.kestra.core.models.executions.metrics.Counter;
 import io.kestra.core.models.property.Property;
 import io.kestra.core.models.triggers.*;
-import io.kestra.core.runners.RunContext;
 import io.kestra.plugin.azure.shared.AbstractConnectionInterface;
 import io.kestra.plugin.azure.shared.AzureClientWithSasInterface;
 import io.kestra.plugin.azure.shared.storage.blob.abstracts.AbstractBlobStorageContainerInterface;
@@ -28,9 +30,10 @@ import io.kestra.plugin.azure.storage.blob.services.BlobService;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
+import reactor.core.Disposable;
+import reactor.core.publisher.Flux;
 
 import static io.kestra.core.models.triggers.StatefulTriggerService.*;
-import static io.kestra.core.utils.Rethrow.throwFunction;
 
 @SuperBuilder
 @NoArgsConstructor
@@ -175,98 +178,182 @@ public class Trigger extends AbstractTrigger implements PollingTriggerInterface,
 
     @Builder.Default
     @lombok.Getter(lombok.AccessLevel.NONE)
-    private transient AtomicReference<Runnable> currentKillAction = new AtomicReference<>();
+    @lombok.ToString.Exclude
+    private transient AtomicReference<Disposable> disposable = new AtomicReference<>();
+
+    @Builder.Default
+    @lombok.Getter(lombok.AccessLevel.NONE)
+    @lombok.ToString.Exclude
+    private transient AtomicBoolean killed = new AtomicBoolean(false);
+
+    @Builder.Default
+    @lombok.Getter(lombok.AccessLevel.NONE)
+    @lombok.ToString.Exclude
+    private transient AtomicReference<CountDownLatch> latchRef = new AtomicReference<>();
 
     @Override
     public void kill() {
-        if (currentKillAction != null && currentKillAction.get() != null) {
-            currentKillAction.get().run();
+        if (killed.compareAndSet(false, true)) {
+            Disposable current = disposable.getAndSet(null);
+            if (current != null) {
+                try {
+                    current.dispose();
+                } catch (Exception ignored) {
+                }
+            }
+            CountDownLatch latch = latchRef.get();
+            if (latch != null) {
+                latch.countDown();
+            }
         }
     }
 
     @Override
     public Optional<Execution> evaluate(ConditionContext conditionContext, TriggerContext context) throws Exception {
-        RunContext runContext = conditionContext.getRunContext();
+        var runContext = conditionContext.getRunContext();
         var rOn = runContext.render(on).as(On.class).orElse(On.CREATE_OR_UPDATE);
         var rStateKey = runContext.render(stateKey).as(String.class).orElse(StatefulTriggerService.defaultKey(context.getNamespace(), context.getFlowId(), id));
         var rStateTtl = runContext.render(stateTtl).as(Duration.class);
 
-        var task = List.builder()
-            .id(this.id)
-            .type(List.class.getName())
-            .endpoint(this.endpoint)
-            .connectionString(this.connectionString)
-            .sharedKeyAccountName(this.sharedKeyAccountName)
-            .sharedKeyAccountAccessKey(this.sharedKeyAccountAccessKey)
-            .sasToken(this.sasToken)
-            .container(this.container)
-            .prefix(this.prefix)
-            .delimiter(this.delimiter)
-            .regexp(this.regexp)
-            .delimiter(this.delimiter)
-            .maxFiles(this.maxFiles)
-            .build();
+        var asyncClient = BlobService.asyncClient(
+            this.endpoint, this.connectionString, this.sharedKeyAccountName, this.sharedKeyAccountAccessKey, this.sasToken, runContext
+        );
+        var containerAsyncClient = asyncClient.getBlobContainerAsyncClient(runContext.render(this.container).as(String.class).orElseThrow());
 
-        if (currentKillAction != null)
-            currentKillAction.set(task::kill);
-        List.Output run = task.run(runContext);
-        if (currentKillAction != null)
-            currentKillAction.set(null);
+        var options = new ListBlobsOptions().setPrefix(runContext.render(this.prefix).as(String.class).orElse(null));
 
-        if (run.getBlobs().isEmpty()) {
+        var rDelimiter = runContext.render(this.delimiter).as(String.class).orElse(null);
+        Flux<BlobItem> flux = rDelimiter != null ? containerAsyncClient.listBlobsByHierarchy(rDelimiter, options) : containerAsyncClient.listBlobs(options);
+
+        var renderedRegexp = runContext.render(this.regexp).as(String.class).orElse(null);
+        var renderedFilter = runContext.render(this.filter).as(Filter.class).orElse(Filter.FILES);
+        var rMaxFiles = runContext.render(this.maxFiles).as(Integer.class).orElse(25);
+
+        var listLatch = new CountDownLatch(1);
+        var error = new AtomicReference<Throwable>();
+        var list = new java.util.ArrayList<Blob>();
+
+        var listDisposable = flux
+            .filter(item ->
+            {
+                boolean isDir = Boolean.TRUE.equals(item.isPrefix()) || (item.getProperties() != null && item.getProperties().getContentType() == null);
+                if (renderedFilter == Filter.FILES && isDir)
+                    return false;
+                if (renderedFilter == Filter.DIRECTORY && !isDir)
+                    return false;
+                if (renderedRegexp != null && !item.getName().matches(renderedRegexp))
+                    return false;
+                return true;
+            })
+            .map(item -> Blob.of(containerAsyncClient.getBlobContainerName(), item))
+            .take(rMaxFiles)
+            .subscribe(
+                list::add,
+                err ->
+                {
+                    error.set(err);
+                    listLatch.countDown();
+                },
+                listLatch::countDown
+            );
+
+        this.disposable.set(listDisposable);
+        this.latchRef.set(listLatch);
+        if (killed.get()) {
+            this.kill();
+        }
+        try {
+            listLatch.await();
+        } finally {
+            this.disposable.set(null);
+            this.latchRef.set(null);
+        }
+
+        if (killed.get())
+            throw new InterruptedException("Trigger was killed");
+        if (error.get() != null) {
+            if (error.get() instanceof Exception e)
+                throw e;
+            throw new Exception(error.get());
+        }
+
+        if (list.isEmpty()) {
             return Optional.empty();
         }
 
         var previousState = readState(runContext, rStateKey, rStateTtl);
+        var actionBlobs = new java.util.ArrayList<Blob>();
+        var toFire = new java.util.ArrayList<TriggeredBlob>();
 
-        var actionBlobs = new ArrayList<Blob>();
+        for (var blob : list) {
+            if (killed.get())
+                throw new InterruptedException("Trigger was killed");
 
-        var toFire = run.getBlobs().stream()
-            .flatMap(throwFunction(blob ->
-            {
-                var uri = String.format("az://%s/%s", runContext.render(container).as(String.class).orElse(""), blob.getName());
-                var modifiedAt = Optional.ofNullable(blob.getLastModified()).map(java.time.OffsetDateTime::toInstant).orElse(Instant.now());
-                var version = Optional.ofNullable(blob.getETag()).orElse(String.valueOf(modifiedAt.toEpochMilli()));
+            var uri = String.format("az://%s/%s", runContext.render(container).as(String.class).orElse(""), blob.getName());
+            var modifiedAt = java.util.Optional.ofNullable(blob.getLastModified()).map(java.time.OffsetDateTime::toInstant).orElse(java.time.Instant.now());
+            var version = java.util.Optional.ofNullable(blob.getETag()).orElse(String.valueOf(modifiedAt.toEpochMilli()));
 
-                var candidate = StatefulTriggerService.Entry.candidate(uri, version, modifiedAt);
+            var candidate = StatefulTriggerService.Entry.candidate(uri, version, modifiedAt);
+            var stateChange = computeAndUpdateState(previousState, candidate, rOn);
 
-                var stateChange = computeAndUpdateState(previousState, candidate, rOn);
+            if (stateChange.fire()) {
+                var changeType = stateChange.isNew() ? ChangeType.CREATE : ChangeType.UPDATE;
 
-                if (stateChange.fire()) {
-                    var changeType = stateChange.isNew() ? ChangeType.CREATE : ChangeType.UPDATE;
+                var tempFile = runContext.workingDir().createTempFile(io.kestra.core.utils.FileUtils.getExtension(blob.getName())).toFile();
+                var dlLatch = new CountDownLatch(1);
+                error.set(null);
+                var propsRef = new AtomicReference<BlobProperties>();
 
-                    Download download = Download.builder()
-                        .id(this.id)
-                        .type(Download.class.getName())
-                        .endpoint(this.endpoint)
-                        .connectionString(this.connectionString)
-                        .sharedKeyAccountName(this.sharedKeyAccountName)
-                        .sharedKeyAccountAccessKey(this.sharedKeyAccountAccessKey)
-                        .sasToken(this.sasToken)
-                        .container(this.container)
-                        .name(Property.ofValue(blob.getName()))
-                        .build();
-
-                    if (currentKillAction != null)
-                        currentKillAction.set(download::kill);
-                    Download.Output downloadOutput = download.run(runContext);
-                    if (currentKillAction != null)
-                        currentKillAction.set(null);
-
-                    Blob downloadedBlob = blob.withUri(downloadOutput.getBlob().getUri());
-                    actionBlobs.add(blob);
-
-                    return Stream.of(
-                        TriggeredBlob.builder()
-                            .blob(downloadedBlob)
-                            .changeType(changeType)
-                            .build()
+                var blobAsyncClient = containerAsyncClient.getBlobAsyncClient(blob.getName());
+                var dlDisposable = blobAsyncClient.downloadToFile(tempFile.getAbsolutePath(), true)
+                    .subscribe(
+                        props ->
+                        {
+                            propsRef.set(props);
+                            dlLatch.countDown();
+                        },
+                        err ->
+                        {
+                            error.set(err);
+                            dlLatch.countDown();
+                        },
+                        dlLatch::countDown
                     );
+                this.disposable.set(dlDisposable);
+                this.latchRef.set(dlLatch);
+                if (killed.get()) {
+                    this.kill();
+                }
+                try {
+                    dlLatch.await();
+                } finally {
+                    this.disposable.set(null);
+                    this.latchRef.set(null);
                 }
 
-                return Stream.empty();
-            }))
-            .toList();
+                if (killed.get())
+                    throw new InterruptedException("Trigger was killed");
+                if (error.get() != null) {
+                    if (error.get() instanceof Exception e)
+                        throw e;
+                    throw new Exception(error.get());
+                }
+
+                var blobProperties = propsRef.get();
+                runContext.metric(Counter.of("file.size", blobProperties.getBlobSize()));
+
+                var readFileUri = runContext.storage().putFile(tempFile);
+                var downloadedBlob = blob.withUri(readFileUri);
+                actionBlobs.add(blob);
+
+                toFire.add(
+                    TriggeredBlob.builder()
+                        .blob(downloadedBlob)
+                        .changeType(changeType)
+                        .build()
+                );
+            }
+        }
 
         writeState(runContext, rStateKey, previousState, rStateTtl);
 
@@ -274,10 +361,13 @@ public class Trigger extends AbstractTrigger implements PollingTriggerInterface,
             return Optional.empty();
         }
 
+        if (killed.get())
+            throw new InterruptedException("Trigger was killed");
+
         BlobService.archive(actionBlobs, runContext.render(this.action).as(ActionInterface.Action.class).orElse(null), this.moveTo, runContext, this, this);
 
         var output = Output.builder().blobs(toFire).build();
-        Execution execution = TriggerService.generateExecution(this, conditionContext, context, output);
+        var execution = TriggerService.generateExecution(this, conditionContext, context, output);
 
         return Optional.of(execution);
     }

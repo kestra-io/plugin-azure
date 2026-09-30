@@ -2,6 +2,9 @@ package io.kestra.plugin.azure.storage.blob;
 
 import java.net.URI;
 
+import org.apache.commons.lang3.tuple.Pair;
+
+import com.azure.storage.blob.BlobClient;
 import com.azure.storage.blob.models.BlobProperties;
 
 import io.kestra.core.models.annotations.Example;
@@ -68,32 +71,7 @@ import lombok.experimental.SuperBuilder;
     title = "Download a blob to Kestra storage",
     description = "Fetches a blob and stores it in internal storage, returning metadata and the downloaded URI."
 )
-public class Download extends AbstractBlobStorageWithSasObject implements RunnableTask<Download.Output>, SingleFileChecksumValidatedInterface, io.kestra.core.models.WorkerJobLifecycle {
-
-    @lombok.Builder.Default
-    @lombok.Getter(lombok.AccessLevel.NONE)
-    private transient java.util.concurrent.atomic.AtomicReference<reactor.core.Disposable> disposable = new java.util.concurrent.atomic.AtomicReference<>();
-
-    @lombok.Builder.Default
-    @lombok.Getter(lombok.AccessLevel.NONE)
-    private transient java.util.concurrent.atomic.AtomicBoolean killed = new java.util.concurrent.atomic.AtomicBoolean(false);
-
-    @lombok.Builder.Default
-    @lombok.Getter(lombok.AccessLevel.NONE)
-    private transient java.util.concurrent.atomic.AtomicReference<java.util.concurrent.CountDownLatch> latchRef = new java.util.concurrent.atomic.AtomicReference<>();
-
-    public void kill() {
-        killed.set(true);
-        reactor.core.Disposable current = disposable.getAndSet(null);
-        if (current != null) {
-            current.dispose();
-        }
-        java.util.concurrent.CountDownLatch latch = latchRef.get();
-        if (latch != null) {
-            latch.countDown();
-        }
-    }
-
+public class Download extends AbstractBlobStorageWithSasObject implements RunnableTask<Download.Output>, SingleFileChecksumValidatedInterface {
     private Property<Boolean> validateChecksum;
 
     private Property<Boolean> failOnMissingChecksum;
@@ -104,85 +82,17 @@ public class Download extends AbstractBlobStorageWithSasObject implements Runnab
 
     @Override
     public Output run(RunContext runContext) throws Exception {
-        com.azure.storage.blob.BlobServiceAsyncClient asyncClient = BlobService.asyncClient(
-            this.endpoint,
-            this.connectionString,
-            this.sharedKeyAccountName,
-            this.sharedKeyAccountAccessKey,
-            this.sasToken,
-            runContext
-        );
-        com.azure.storage.blob.BlobContainerAsyncClient containerClient = asyncClient.getBlobContainerAsyncClient(runContext.render(this.container).as(String.class).orElseThrow());
-        com.azure.storage.blob.BlobAsyncClient blobAsyncClient = containerClient.getBlobAsyncClient(runContext.render(this.name).as(String.class).orElseThrow());
-
+        BlobClient blobClient = this.blobClient(runContext);
         ChecksumValidator.Options checksumOptions = ChecksumValidator.resolve(
             runContext, validateChecksum, failOnMissingChecksum, expectedChecksum, checksumAlgorithm
         );
-
-        java.io.File tempFile = runContext.workingDir().createTempFile(io.kestra.core.utils.FileUtils.getExtension(blobAsyncClient.getBlobName())).toFile();
-
-        java.util.concurrent.CountDownLatch latch = new java.util.concurrent.CountDownLatch(1);
-        this.latchRef.set(latch);
-        java.util.concurrent.atomic.AtomicReference<Throwable> error = new java.util.concurrent.atomic.AtomicReference<>();
-        java.util.concurrent.atomic.AtomicReference<BlobProperties> propsRef = new java.util.concurrent.atomic.AtomicReference<>();
-
-        reactor.core.Disposable d = blobAsyncClient.downloadToFile(tempFile.getAbsolutePath(), true)
-            .subscribe(
-                props ->
-                {
-                    propsRef.set(props);
-                    latch.countDown();
-                },
-                err ->
-                {
-                    error.set(err);
-                    latch.countDown();
-                },
-                latch::countDown
-            );
-        this.disposable.set(d);
-        if (killed.get()) {
-            this.kill();
-        }
-
-        latch.await();
-        this.disposable.set(null);
-        this.latchRef.set(null);
-
-        if (killed.get()) {
-            throw new InterruptedException("Task was killed");
-        }
-
-        if (error.get() != null) {
-            if (error.get() instanceof Exception e)
-                throw e;
-            throw new Exception(error.get());
-        }
-
-        BlobProperties blobProperties = propsRef.get();
-        runContext.metric(io.kestra.core.models.executions.metrics.Counter.of("file.size", blobProperties.getBlobSize()));
-
-        ChecksumValidator.verify(
-            runContext,
-            tempFile,
-            blobProperties.getContentMd5(),
-            checksumOptions,
-            blobAsyncClient.getBlobName()
-        );
-
-        URI uri = runContext.storage().putFile(tempFile);
+        Pair<BlobProperties, URI> download = BlobService.download(runContext, blobClient, checksumOptions);
 
         return Output
             .builder()
             .blob(
-                Blob.builder()
-                    .name(blobAsyncClient.getBlobName())
-                    .container(containerClient.getBlobContainerName())
-                    .size(blobProperties.getBlobSize())
-                    .lastModified(blobProperties.getLastModified())
-                    .eTag(blobProperties.getETag())
-                    .uri(uri)
-                    .build()
+                Blob.of(blobClient, download.getLeft())
+                    .withUri(download.getRight())
             )
             .build();
     }

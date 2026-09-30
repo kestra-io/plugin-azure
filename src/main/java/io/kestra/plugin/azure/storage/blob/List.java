@@ -1,5 +1,8 @@
 package io.kestra.plugin.azure.storage.blob;
 
+import com.azure.storage.blob.BlobContainerClient;
+import com.azure.storage.blob.BlobServiceClient;
+
 import io.kestra.core.models.annotations.Example;
 import io.kestra.core.models.annotations.Metric;
 import io.kestra.core.models.annotations.Plugin;
@@ -12,7 +15,7 @@ import io.kestra.plugin.azure.shared.storage.blob.abstracts.AbstractBlobStorageC
 import io.kestra.plugin.azure.shared.storage.blob.abstracts.AbstractBlobStorageWithSas;
 import io.kestra.plugin.azure.shared.storage.blob.abstracts.ListInterface;
 import io.kestra.plugin.azure.shared.storage.blob.models.Blob;
-import io.kestra.plugin.azure.storage.blob.services.BlobService;
+import io.kestra.plugin.azure.shared.storage.blob.services.BlobService;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.*;
@@ -50,32 +53,7 @@ import lombok.experimental.SuperBuilder;
     title = "List blob objects in an Azure Blob Storage container",
     description = "List blob objects in an Azure Blob Storage container using the Azure SDK."
 )
-public class List extends AbstractBlobStorageWithSas implements RunnableTask<List.Output>, ListInterface, AbstractBlobStorageContainerInterface, io.kestra.core.models.WorkerJobLifecycle {
-
-    @Builder.Default
-    @lombok.Getter(lombok.AccessLevel.NONE)
-    private transient java.util.concurrent.atomic.AtomicReference<reactor.core.Disposable> disposable = new java.util.concurrent.atomic.AtomicReference<>();
-
-    @Builder.Default
-    @lombok.Getter(lombok.AccessLevel.NONE)
-    private transient java.util.concurrent.atomic.AtomicBoolean killed = new java.util.concurrent.atomic.AtomicBoolean(false);
-
-    @Builder.Default
-    @lombok.Getter(lombok.AccessLevel.NONE)
-    private transient java.util.concurrent.atomic.AtomicReference<java.util.concurrent.CountDownLatch> latchRef = new java.util.concurrent.atomic.AtomicReference<>();
-
-    public void kill() {
-        killed.set(true);
-        reactor.core.Disposable current = disposable.getAndSet(null);
-        if (current != null) {
-            current.dispose();
-        }
-        java.util.concurrent.CountDownLatch latch = latchRef.get();
-        if (latch != null) {
-            latch.countDown();
-        }
-    }
-
+public class List extends AbstractBlobStorageWithSas implements RunnableTask<List.Output>, ListInterface, AbstractBlobStorageContainerInterface {
     @PluginProperty(group = "main")
     private Property<String> container;
 
@@ -102,68 +80,10 @@ public class List extends AbstractBlobStorageWithSas implements RunnableTask<Lis
 
     @Override
     public Output run(RunContext runContext) throws Exception {
-        com.azure.storage.blob.BlobServiceAsyncClient asyncClient = BlobService.asyncClient(
-            this.endpoint,
-            this.connectionString,
-            this.sharedKeyAccountName,
-            this.sharedKeyAccountAccessKey,
-            this.sasToken,
-            runContext
-        );
-        com.azure.storage.blob.BlobContainerAsyncClient containerClient = asyncClient.getBlobContainerAsyncClient(runContext.render(this.container).as(String.class).orElse(null));
+        BlobServiceClient client = this.client(runContext);
+        BlobContainerClient containerClient = client.getBlobContainerClient(runContext.render(this.container).as(String.class).orElse(null));
 
-        com.azure.storage.blob.models.ListBlobsOptions options = new com.azure.storage.blob.models.ListBlobsOptions()
-            .setPrefix(runContext.render(this.prefix).as(String.class).orElse(null));
-
-        String renderedRegexp = runContext.render(this.regexp).as(String.class).orElse(null);
-        Filter renderedFilter = runContext.render(this.filter).as(Filter.class).orElse(Filter.FILES);
-        Integer rMaxFiles = runContext.render(this.maxFiles).as(Integer.class).orElse(25);
-
-        java.util.concurrent.CountDownLatch latch = new java.util.concurrent.CountDownLatch(1);
-        this.latchRef.set(latch);
-        java.util.concurrent.atomic.AtomicReference<Throwable> error = new java.util.concurrent.atomic.AtomicReference<>();
-        java.util.List<Blob> list = new java.util.ArrayList<>();
-
-        reactor.core.Disposable d = containerClient.listBlobs(options)
-            .filter(item ->
-            {
-                if (renderedFilter == Filter.FILES && Boolean.TRUE.equals(item.isPrefix()))
-                    return false;
-                if (renderedFilter == Filter.DIRECTORY && !Boolean.TRUE.equals(item.isPrefix()))
-                    return false;
-                if (renderedRegexp != null && !item.getName().matches(renderedRegexp))
-                    return false;
-                return true;
-            })
-            .map(item -> Blob.of(containerClient.getBlobContainerName(), item))
-            .take(rMaxFiles)
-            .subscribe(
-                list::add,
-                err ->
-                {
-                    error.set(err);
-                    latch.countDown();
-                },
-                latch::countDown
-            );
-        this.disposable.set(d);
-        if (killed.get()) {
-            this.kill();
-        }
-
-        latch.await();
-        this.disposable.set(null);
-        this.latchRef.set(null);
-
-        if (killed.get()) {
-            throw new InterruptedException("Task was killed");
-        }
-
-        if (error.get() != null) {
-            if (error.get() instanceof Exception e)
-                throw e;
-            throw new Exception(error.get());
-        }
+        java.util.List<Blob> list = BlobService.list(runContext, containerClient, this);
 
         runContext.metric(Counter.of("blobs.count", list.size()));
 
@@ -174,6 +94,20 @@ public class List extends AbstractBlobStorageWithSas implements RunnableTask<Lis
             runContext.render(regexp).as(String.class).orElse(null),
             runContext.render(prefix).as(String.class).orElse(null)
         );
+
+        Integer rMaxFiles = runContext.render(this.maxFiles).as(Integer.class).orElse(25);
+
+        if (list.size() > rMaxFiles) {
+            runContext.logger().warn(
+                "Listing returned {} blobs but maxFiles limit is {}. "
+                    + "Only the first {} blobs will be returned. "
+                    + "Increase the maxFiles property if you need more blobs.",
+                list.size(),
+                rMaxFiles,
+                rMaxFiles
+            );
+            list = list.subList(0, rMaxFiles);
+        }
 
         return Output.builder()
             .blobs(list)

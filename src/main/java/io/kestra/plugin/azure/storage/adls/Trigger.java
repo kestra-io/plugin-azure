@@ -1,6 +1,8 @@
 package io.kestra.plugin.azure.storage.adls;
 
 import java.time.Duration;
+import java.time.Instant;
+import java.util.ArrayList;
 import java.util.Optional;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -18,6 +20,7 @@ import io.kestra.core.models.conditions.ConditionContext;
 import io.kestra.core.models.executions.Execution;
 import io.kestra.core.models.property.Property;
 import io.kestra.core.models.triggers.*;
+import io.kestra.core.utils.FileUtils;
 import io.kestra.plugin.azure.shared.AbstractConnectionInterface;
 import io.kestra.plugin.azure.shared.AzureClientWithSasInterface;
 import io.kestra.plugin.azure.storage.adls.models.AdlsFile;
@@ -203,7 +206,7 @@ public class Trigger extends AbstractTrigger
 
         var listLatch = new CountDownLatch(1);
         var error = new AtomicReference<Throwable>();
-        var fileList = new java.util.ArrayList<AdlsFile>();
+        var fileList = new ArrayList<AdlsFile>();
 
         var syncClient = DataLakeService.client(
             runContext.render(this.endpoint).as(String.class).orElse(null),
@@ -243,15 +246,15 @@ public class Trigger extends AbstractTrigger
         }
 
         var state = readState(runContext, rStateKey, rStateTtl);
-        var toFire = new java.util.ArrayList<TriggeredFile>();
+        var toFire = new ArrayList<TriggeredFile>();
 
         for (var file : fileList) {
             if (killed.get())
                 return Optional.empty();
 
             var uri = String.format("adls://%s/%s", runContext.render(fileSystem).as(String.class).orElse(""), file.getName());
-            var modifiedAt = java.util.Optional.ofNullable(file.getLastModifed()).orElse(java.time.Instant.now());
-            var version = java.util.Optional.ofNullable(file.getETag()).orElse(String.valueOf(modifiedAt.toEpochMilli()));
+            var modifiedAt = Optional.ofNullable(file.getLastModifed()).orElse(Instant.now());
+            var version = Optional.ofNullable(file.getETag()).orElse(String.valueOf(modifiedAt.toEpochMilli()));
 
             var candidate = StatefulTriggerService.Entry.candidate(uri, version, modifiedAt);
             var stateChange = computeAndUpdateState(state, candidate, rOn);
@@ -259,7 +262,7 @@ public class Trigger extends AbstractTrigger
             if (stateChange.fire()) {
                 var changeType = stateChange.isNew() ? ChangeType.CREATE : ChangeType.UPDATE;
 
-                var tempFile = runContext.workingDir().createTempFile(io.kestra.core.utils.FileUtils.getExtension(file.getFileName())).toFile();
+                var tempFile = runContext.workingDir().createTempFile(FileUtils.getExtension(file.getFileName())).toFile();
                 var dlLatch = new CountDownLatch(1);
                 error.set(null);
 
@@ -309,6 +312,7 @@ public class Trigger extends AbstractTrigger
         }
 
         // --- ATOMIC COMMIT PHASE ---
+        // Create the target directory in the target fileSystem for MOVE action
         if (Action.MOVE.equals(runContext.render(this.action).as(Action.class).orElseThrow())) {
             final String toDirPath = runContext.render(this.moveTo.getDirectoryPath()).as(String.class).orElseThrow();
             syncClient.getFileSystemClient(runContext.render(this.moveTo.getFileSystem()).as(String.class).orElseThrow())

@@ -33,8 +33,7 @@ public class DataLakeService {
     public static URI read(
         RunContext runContext,
         DataLakeFileClient client,
-        ChecksumValidator.Options checksumOptions
-    ) throws IOException {
+        ChecksumValidator.Options checksumOptions) throws IOException {
         File tempFile = runContext.workingDir().createTempFile(FileUtils.getExtension(client.getFileName())).toFile();
         PathProperties pathProperties = client.readToFile(tempFile.getAbsolutePath(), true);
 
@@ -75,6 +74,26 @@ public class DataLakeService {
         String sharedKeyAccountAccessKey,
         String sasToken,
         RunContext runContext) throws IllegalVariableEvaluationException {
+        return clientBuilder(endpoint, connectionString, sharedKeyAccountName, sharedKeyAccountAccessKey, sasToken, runContext).buildClient();
+    }
+
+    public static com.azure.storage.file.datalake.DataLakeServiceAsyncClient asyncClient(
+        String endpoint,
+        String connectionString,
+        String sharedKeyAccountName,
+        String sharedKeyAccountAccessKey,
+        String sasToken,
+        RunContext runContext) throws IllegalVariableEvaluationException {
+        return clientBuilder(endpoint, connectionString, sharedKeyAccountName, sharedKeyAccountAccessKey, sasToken, runContext).buildAsyncClient();
+    }
+
+    private static DataLakeServiceClientBuilder clientBuilder(
+        String endpoint,
+        String connectionString,
+        String sharedKeyAccountName,
+        String sharedKeyAccountAccessKey,
+        String sasToken,
+        RunContext runContext) throws IllegalVariableEvaluationException {
         DataLakeServiceClientBuilder builder = new DataLakeServiceClientBuilder();
 
         if (endpoint != null) {
@@ -96,6 +115,6 @@ public class DataLakeService {
             builder.credential(new DefaultAzureCredentialBuilder().build());
         }
 
-        return builder.buildClient();
+        return builder;
     }
 }

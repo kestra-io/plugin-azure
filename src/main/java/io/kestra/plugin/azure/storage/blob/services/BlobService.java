@@ -23,10 +23,10 @@ import io.kestra.core.runners.RunContext;
 import io.kestra.core.utils.FileUtils;
 import io.kestra.plugin.azure.shared.AbstractConnectionInterface;
 import io.kestra.plugin.azure.shared.AzureClientWithSasInterface;
+import io.kestra.plugin.azure.shared.storage.blob.models.Blob;
 import io.kestra.plugin.azure.storage.blob.Copy;
 import io.kestra.plugin.azure.storage.blob.Delete;
 import io.kestra.plugin.azure.storage.blob.abstracts.ActionInterface;
-import io.kestra.plugin.azure.shared.storage.blob.models.Blob;
 import io.kestra.plugin.azure.storage.services.ChecksumValidator;
 
 public class BlobService {
@@ -37,8 +37,7 @@ public class BlobService {
     public static Pair<BlobProperties, URI> download(
         RunContext runContext,
         BlobClient client,
-        ChecksumValidator.Options checksumOptions
-    ) throws IOException {
+        ChecksumValidator.Options checksumOptions) throws IOException {
         File tempFile = runContext.workingDir().createTempFile(FileUtils.getExtension(client.getBlobName())).toFile();
         BlobProperties blobProperties = client.downloadToFile(tempFile.getAbsolutePath(), true);
 
@@ -118,6 +117,26 @@ public class BlobService {
         Property<String> sharedKeyAccountAccessKey,
         Property<String> sasToken,
         RunContext runContext) throws IllegalVariableEvaluationException {
+        return clientBuilder(endpoint, connectionString, sharedKeyAccountName, sharedKeyAccountAccessKey, sasToken, runContext).buildClient();
+    }
+
+    public static com.azure.storage.blob.BlobServiceAsyncClient asyncClient(
+        Property<String> endpoint,
+        Property<String> connectionString,
+        Property<String> sharedKeyAccountName,
+        Property<String> sharedKeyAccountAccessKey,
+        Property<String> sasToken,
+        RunContext runContext) throws IllegalVariableEvaluationException {
+        return clientBuilder(endpoint, connectionString, sharedKeyAccountName, sharedKeyAccountAccessKey, sasToken, runContext).buildAsyncClient();
+    }
+
+    private static BlobServiceClientBuilder clientBuilder(
+        Property<String> endpoint,
+        Property<String> connectionString,
+        Property<String> sharedKeyAccountName,
+        Property<String> sharedKeyAccountAccessKey,
+        Property<String> sasToken,
+        RunContext runContext) throws IllegalVariableEvaluationException {
         BlobServiceClientBuilder builder = new BlobServiceClientBuilder();
 
         String renderedEndpoint = endpoint != null ? runContext.render(endpoint).as(String.class).orElse(null) : null;
@@ -145,6 +164,6 @@ public class BlobService {
             builder.credential(new DefaultAzureCredentialBuilder().build());
         }
 
-        return builder.buildClient();
+        return builder;
     }
 }

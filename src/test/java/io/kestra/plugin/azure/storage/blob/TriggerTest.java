@@ -177,4 +177,67 @@ class TriggerTest extends AbstractTest {
         Optional<Execution> updateExecution = trigger.evaluate(context.getKey(), context.getValue().context());
         assertThat(updateExecution.isPresent(), is(true));
     }
+
+    @Test
+    void testCancellation() throws Exception {
+        Trigger trigger = Trigger.builder()
+            .id("blob-" + IdUtils.create())
+            .type(Trigger.class.getName())
+            .endpoint(Property.ofValue(storageEndpoint))
+            .connectionString(Property.ofValue(connectionString))
+            .container(Property.ofValue(container))
+            .prefix(Property.ofValue("trigger/blob/cancel"))
+            .action(Property.ofValue(ActionInterface.Action.NONE))
+            .interval(Duration.ofSeconds(10))
+            .build();
+
+        var asyncClientMock = org.mockito.Mockito.mock(com.azure.storage.blob.BlobServiceAsyncClient.class);
+        var containerMock = org.mockito.Mockito.mock(com.azure.storage.blob.BlobContainerAsyncClient.class);
+        org.mockito.Mockito.when(asyncClientMock.getBlobContainerAsyncClient(org.mockito.Mockito.anyString())).thenReturn(containerMock);
+        org.mockito.Mockito.when(containerMock.listBlobs(org.mockito.Mockito.any())).thenReturn(reactor.core.publisher.Flux.never());
+
+        try (
+            org.mockito.MockedStatic<io.kestra.plugin.azure.storage.blob.services.BlobService> mockedStatic = org.mockito.Mockito
+                .mockStatic(io.kestra.plugin.azure.storage.blob.services.BlobService.class)
+        ) {
+            mockedStatic.when(
+                () -> io.kestra.plugin.azure.storage.blob.services.BlobService.asyncClient(
+                    org.mockito.Mockito.any(), org.mockito.Mockito.any(), org.mockito.Mockito.any(), org.mockito.Mockito.any(), org.mockito.Mockito.any(), org.mockito.Mockito.any()
+                )
+            ).thenReturn(asyncClientMock);
+
+            Map.Entry<ConditionContext, io.kestra.core.scheduler.model.TriggerState> context = TestsUtils.mockTrigger(runContextFactory, trigger);
+
+            // Test 1: kill before evaluate
+            trigger.kill();
+            Optional<Execution> executionBefore = trigger.evaluate(context.getKey(), context.getValue().context());
+            assertThat(executionBefore.isEmpty(), is(true));
+
+            // Test 2: kill during evaluate
+            Trigger trigger2 = trigger.toBuilder().id("blob-" + IdUtils.create()).build();
+            Map.Entry<ConditionContext, io.kestra.core.scheduler.model.TriggerState> context2 = TestsUtils.mockTrigger(runContextFactory, trigger2);
+
+            java.util.concurrent.atomic.AtomicReference<Optional<Execution>> result = new java.util.concurrent.atomic.AtomicReference<>();
+            java.util.concurrent.atomic.AtomicReference<Exception> error = new java.util.concurrent.atomic.AtomicReference<>();
+
+            Thread t = new Thread(() ->
+            {
+                try {
+                    result.set(trigger2.evaluate(context2.getKey(), context2.getValue().context()));
+                } catch (Exception e) {
+                    error.set(e);
+                }
+            });
+
+            t.start();
+            Thread.sleep(100);
+            trigger2.kill();
+            t.join(2000);
+
+            assertThat(t.isAlive(), is(false));
+            if (error.get() != null)
+                throw error.get();
+            assertThat(result.get().isEmpty(), is(true));
+        }
+    }
 }

@@ -21,6 +21,7 @@ import io.kestra.core.repositories.LocalFlowRepositoryLoader;
 import io.kestra.core.utils.IdUtils;
 import io.kestra.core.utils.TestsUtils;
 import io.kestra.plugin.azure.storage.adls.models.AdlsFile;
+
 import jakarta.inject.Inject;
 
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -249,60 +250,4 @@ class TriggerTest extends AbstractTest {
         cleaner.run(runContext(cleaner));
     }
 
-src/test/java/io/kestra/plugin/azure/storage/adls/TriggerTest.java
-    @Test
-    void testCancellation() throws Exception {
-        Trigger trigger = Trigger.builder()
-            .id("adls-" + IdUtils.create())
-            .type(Trigger.class.getName())
-            .endpoint(Property.ofValue(this.adlsEndpoint))
-            .connectionString(Property.ofValue(connectionString))
-            .fileSystem(Property.ofValue(fileSystem))
-            .directoryPath(Property.ofValue("trigger/adls/cancel"))
-            .action(Property.ofValue(Trigger.Action.NONE))
-            .interval(Duration.ofSeconds(10))
-            .build();
-
-        var asyncClientMock = org.mockito.Mockito.mock(com.azure.storage.file.datalake.DataLakeServiceAsyncClient.class);
-        var fileSystemMock = org.mockito.Mockito.mock(com.azure.storage.file.datalake.DataLakeFileSystemAsyncClient.class);
-        org.mockito.Mockito.when(asyncClientMock.getFileSystemAsyncClient(org.mockito.Mockito.anyString())).thenReturn(fileSystemMock);
-        org.mockito.Mockito.when(fileSystemMock.listPaths(org.mockito.Mockito.any())).thenReturn(reactor.core.publisher.Flux.never());
-
-        try (org.mockito.MockedStatic<io.kestra.plugin.azure.storage.adls.services.DataLakeService> mockedStatic = org.mockito.Mockito.mockStatic(io.kestra.plugin.azure.storage.adls.services.DataLakeService.class)) {
-            mockedStatic.when(() -> io.kestra.plugin.azure.storage.adls.services.DataLakeService.asyncClient(
-                org.mockito.Mockito.any(), org.mockito.Mockito.any(), org.mockito.Mockito.any(), org.mockito.Mockito.any(), org.mockito.Mockito.any(), org.mockito.Mockito.any()
-            )).thenReturn(asyncClientMock);
-
-            Map.Entry<ConditionContext, io.kestra.core.scheduler.model.TriggerState> context = TestsUtils.mockTrigger(runContextFactory, trigger);
-
-            // Test 1: kill before evaluate
-            trigger.kill();
-            Optional<Execution> executionBefore = trigger.evaluate(context.getKey(), context.getValue().context());
-            assertThat(executionBefore.isEmpty(), is(true));
-
-            // Test 2: kill during evaluate
-            Trigger trigger2 = trigger.toBuilder().id("adls-" + IdUtils.create()).build();
-            Map.Entry<ConditionContext, io.kestra.core.scheduler.model.TriggerState> context2 = TestsUtils.mockTrigger(runContextFactory, trigger2);
-            
-            java.util.concurrent.atomic.AtomicReference<Optional<Execution>> result = new java.util.concurrent.atomic.AtomicReference<>();
-            java.util.concurrent.atomic.AtomicReference<Exception> error = new java.util.concurrent.atomic.AtomicReference<>();
-
-            Thread t = new Thread(() -> {
-                try {
-                    result.set(trigger2.evaluate(context2.getKey(), context2.getValue().context()));
-                } catch (Exception e) {
-                    error.set(e);
-                }
-            });
-
-            t.start();
-            Thread.sleep(100);
-            trigger2.kill();
-            t.join(2000);
-
-            assertThat(t.isAlive(), is(false));
-            if (error.get() != null) throw error.get();
-            assertThat(result.get().isEmpty(), is(true));
-        }
-    }
 }

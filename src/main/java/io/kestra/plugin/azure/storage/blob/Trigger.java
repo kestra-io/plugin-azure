@@ -1,6 +1,9 @@
 package io.kestra.plugin.azure.storage.blob;
 
 import java.time.Duration;
+import java.time.Instant;
+import java.time.OffsetDateTime;
+import java.util.ArrayList;
 import java.util.Optional;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -21,6 +24,7 @@ import io.kestra.core.models.executions.Execution;
 import io.kestra.core.models.executions.metrics.Counter;
 import io.kestra.core.models.property.Property;
 import io.kestra.core.models.triggers.*;
+import io.kestra.core.utils.FileUtils;
 import io.kestra.plugin.azure.shared.AbstractConnectionInterface;
 import io.kestra.plugin.azure.shared.AzureClientWithSasInterface;
 import io.kestra.plugin.azure.shared.storage.blob.abstracts.AbstractBlobStorageContainerInterface;
@@ -250,7 +254,7 @@ public class Trigger extends AbstractTrigger implements PollingTriggerInterface,
 
         var listLatch = new CountDownLatch(1);
         var error = new AtomicReference<Throwable>();
-        var list = new java.util.ArrayList<Blob>();
+        var list = new ArrayList<Blob>();
 
         var listDisposable = flux
             .filter(item ->
@@ -291,16 +295,16 @@ public class Trigger extends AbstractTrigger implements PollingTriggerInterface,
         }
 
         var previousState = readState(runContext, rStateKey, rStateTtl);
-        var actionBlobs = new java.util.ArrayList<Blob>();
-        var toFire = new java.util.ArrayList<TriggeredBlob>();
+        var actionBlobs = new ArrayList<Blob>();
+        var toFire = new ArrayList<TriggeredBlob>();
 
         for (var blob : list) {
             if (killed.get())
                 return Optional.empty();
 
             var uri = String.format("az://%s/%s", runContext.render(container).as(String.class).orElse(""), blob.getName());
-            var modifiedAt = java.util.Optional.ofNullable(blob.getLastModified()).map(java.time.OffsetDateTime::toInstant).orElse(java.time.Instant.now());
-            var version = java.util.Optional.ofNullable(blob.getETag()).orElse(String.valueOf(modifiedAt.toEpochMilli()));
+            var modifiedAt = Optional.ofNullable(blob.getLastModified()).map(OffsetDateTime::toInstant).orElse(Instant.now());
+            var version = Optional.ofNullable(blob.getETag()).orElse(String.valueOf(modifiedAt.toEpochMilli()));
 
             var candidate = StatefulTriggerService.Entry.candidate(uri, version, modifiedAt);
             var stateChange = computeAndUpdateState(previousState, candidate, rOn);
@@ -308,7 +312,7 @@ public class Trigger extends AbstractTrigger implements PollingTriggerInterface,
             if (stateChange.fire()) {
                 var changeType = stateChange.isNew() ? ChangeType.CREATE : ChangeType.UPDATE;
 
-                var tempFile = runContext.workingDir().createTempFile(io.kestra.core.utils.FileUtils.getExtension(blob.getName())).toFile();
+                var tempFile = runContext.workingDir().createTempFile(FileUtils.getExtension(blob.getName())).toFile();
                 var dlLatch = new CountDownLatch(1);
                 error.set(null);
                 var propsRef = new AtomicReference<BlobProperties>();

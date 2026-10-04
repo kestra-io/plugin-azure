@@ -72,6 +72,7 @@ dependencies {
     api(group: 'com.azure', name: 'azure-messaging-eventhubs-checkpointstore-blob', kestraProvidedJackson)
     api(group: 'com.azure', name: 'azure-storage-file-datalake', kestraProvidedJackson)
     api(group: 'com.azure', name: 'azure-monitor-query-metrics', kestraProvidedJackson)
+    api(group: 'com.azure', name: 'azure-monitor-query-logs', kestraProvidedJackson)
     api(group: 'com.azure', name: 'azure-monitor-ingestion', kestraProvidedJackson)
 
     implementation("com.azure:azure-cosmos:4.82.0", kestraProvidedJackson)
@@ -158,6 +159,7 @@ dependencies {
     testImplementation "org.hamcrest:hamcrest"
     testImplementation "org.hamcrest:hamcrest-library"
     testImplementation 'org.mockito:mockito-inline:5.2.0'
+    testImplementation 'org.wiremock:wiremock-jetty12'
 }
 
 /**********************************************************************************************************************\

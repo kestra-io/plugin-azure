@@ -220,15 +220,17 @@ public class Trigger extends AbstractTrigger implements PollingTriggerInterface,
         }
     }
 
-    private void await(CountDownLatch latch, Disposable currentDisposable) throws InterruptedException, TimeoutException {
+    private void await(CountDownLatch latch, Disposable currentDisposable, Duration timeout) throws InterruptedException, TimeoutException {
         this.latchRef.set(latch);
         this.disposable.set(currentDisposable);
         if (killed.get()) {
             this.cancelInFlight();
         }
         try {
-            if (!latch.await(30, TimeUnit.SECONDS)) {
-                throw new java.util.concurrent.TimeoutException("Listing did not complete within 30s");
+            if (timeout == null) {
+                latch.await();
+            } else if (!latch.await(timeout.toMillis(), TimeUnit.MILLISECONDS)) {
+                throw new TimeoutException("Listing did not complete within " + timeout.toSeconds() + "s");
             }
         } finally {
             this.cancelInFlight();
@@ -284,7 +286,7 @@ public class Trigger extends AbstractTrigger implements PollingTriggerInterface,
                 listLatch::countDown
             );
 
-        this.await(listLatch, listDisposable);
+        this.await(listLatch, listDisposable, Duration.ofSeconds(30));
 
         if (killed.get())
             return Optional.empty();
@@ -340,7 +342,7 @@ public class Trigger extends AbstractTrigger implements PollingTriggerInterface,
                         },
                         dlLatch::countDown
                     );
-                this.await(dlLatch, dlDisposable);
+                this.await(dlLatch, dlDisposable, null);
 
                 if (killed.get())
                     return Optional.empty();

@@ -1,5 +1,6 @@
 package io.kestra.plugin.azure.aifoundry;
 
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.slf4j.Logger;
@@ -29,18 +30,18 @@ final class CancellableAgentRun {
         fire();
     }
 
-private void fire() {
-    Runnable current = action;
+    private void fire() {
+        Runnable current = action;
 
-    if (current != null && fired.compareAndSet(false, true)) {
-        try {
-            current.run();
-        } catch (Exception e) {
-            LOG.warn(
-                "Unexpected error while cancelling an Azure AI Foundry agent run",
-                e
-            );
+        if (current != null && fired.compareAndSet(false, true)) {
+            CompletableFuture.runAsync(current)
+                .exceptionally(e -> {
+                    LOG.warn(
+                        "Unexpected error while cancelling an Azure AI Foundry agent run",
+                        e
+                    );
+                    return null;
+                });
         }
     }
-}
 }

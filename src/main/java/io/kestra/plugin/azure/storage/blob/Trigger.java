@@ -6,6 +6,8 @@ import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.Optional;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -218,14 +220,16 @@ public class Trigger extends AbstractTrigger implements PollingTriggerInterface,
         }
     }
 
-    private void await(CountDownLatch latch, Disposable currentDisposable) throws InterruptedException {
+    private void await(CountDownLatch latch, Disposable currentDisposable) throws InterruptedException, TimeoutException {
         this.latchRef.set(latch);
         this.disposable.set(currentDisposable);
         if (killed.get()) {
             this.cancelInFlight();
         }
         try {
-            latch.await();
+            if (!latch.await(30, TimeUnit.SECONDS)) {
+                throw new java.util.concurrent.TimeoutException("Listing did not complete within 30s");
+            }
         } finally {
             this.cancelInFlight();
         }
@@ -292,6 +296,10 @@ public class Trigger extends AbstractTrigger implements PollingTriggerInterface,
 
         if (list.isEmpty()) {
             return Optional.empty();
+        }
+
+        if (list.size() == rMaxFiles) {
+            runContext.logger().warn("Listing returned {} blobs but maxFiles limit is {}. More blobs may remain.", list.size(), rMaxFiles);
         }
 
         var previousState = readState(runContext, rStateKey, rStateTtl);

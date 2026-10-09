@@ -1,3 +1,4 @@
+
 package io.kestra.plugin.azure.aifoundry;
 
 import java.time.Duration;
@@ -29,6 +30,7 @@ import io.kestra.core.runners.RunContext;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotNull;
+import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
@@ -47,19 +49,19 @@ import lombok.experimental.SuperBuilder;
             full = true,
             title = "Run an Azure AI Foundry agent and retrieve the reply",
             code = """
-                    id: azure_ai_run_agent
-                    namespace: company.team
-                    tasks:
-                      - id: run_agent
-                        type: io.kestra.plugin.azure.aifoundry.RunAgent
-                        endpoint: "{{ secret('AZURE_AI_FOUNDRY_ENDPOINT') }}"
-                        tenantId: "{{ secret('AZURE_TENANT_ID') }}"
-                        clientId: "{{ secret('AZURE_CLIENT_ID') }}"
-                        clientSecret: "{{ secret('AZURE_CLIENT_SECRET') }}"
-                        agentId: asst_abc123
-                        prompt: "Summarize last week's sales data."
-                        pollInterval: PT5S
-                        timeout: PT5M
+                id: azure_ai_run_agent
+                namespace: company.team
+                tasks:
+                  - id: run_agent
+                    type: io.kestra.plugin.azure.aifoundry.RunAgent
+                    endpoint: "{{ secret('AZURE_AI_FOUNDRY_ENDPOINT') }}"
+                    tenantId: "{{ secret('AZURE_TENANT_ID') }}"
+                    clientId: "{{ secret('AZURE_CLIENT_ID') }}"
+                    clientSecret: "{{ secret('AZURE_CLIENT_SECRET') }}"
+                    agentId: asst_abc123
+                    prompt: "Summarize last week's sales data."
+                    pollInterval: PT5S
+                    timeout: PT5M
                 """
         )
     }
@@ -73,10 +75,14 @@ import lombok.experimental.SuperBuilder;
 public class RunAgent extends AbstractAiFoundryTask implements RunnableTask<RunAgent.Output> {
 
     private static final Set<RunStatus> TERMINAL_STATUSES = Set.of(
-        RunStatus.COMPLETED, RunStatus.FAILED, RunStatus.CANCELLED, RunStatus.EXPIRED
+        RunStatus.COMPLETED,
+        RunStatus.FAILED,
+        RunStatus.CANCELLED,
+        RunStatus.EXPIRED
     );
+
     private static final long DEFAULT_POLL_INTERVAL_MS = 5_000L;
-    private static final long DEFAULT_TIMEOUT_MS = 300_000L; // 5 minutes
+    private static final long DEFAULT_TIMEOUT_MS = 300_000L;
 
     @Schema(title = "The agent (assistant) ID to run")
     @NotNull
@@ -104,18 +110,33 @@ public class RunAgent extends AbstractAiFoundryTask implements RunnableTask<RunA
     @Builder.Default
     private Property<Duration> timeout = Property.ofValue(Duration.ofMinutes(5));
 
+    // Handles cancellation requests from Kestra.
+    @Getter(AccessLevel.NONE)
+    @EqualsAndHashCode.Exclude
+    @ToString.Exclude
+    @Builder.Default
+    private final CancellableAgentRun lifecycle = new CancellableAgentRun();
+
+    @Override
+    public void kill() {
+        this.lifecycle.kill();
+    }
+
     @Override
     public Output run(RunContext runContext) throws Exception {
         String agentIdRendered = runContext.render(this.agentId)
             .as(String.class)
             .orElseThrow(() -> new IllegalArgumentException("agentId is required"));
+
         String promptRendered = runContext.render(this.prompt)
             .as(String.class)
             .orElseThrow(() -> new IllegalArgumentException("prompt is required"));
+
         long pollMs = runContext.render(this.pollInterval)
             .as(Duration.class)
             .orElse(Duration.ofMillis(DEFAULT_POLL_INTERVAL_MS))
             .toMillis();
+
         long timeoutMs = runContext.render(this.timeout)
             .as(Duration.class)
             .orElse(Duration.ofMillis(DEFAULT_TIMEOUT_MS))
@@ -129,6 +150,7 @@ public class RunAgent extends AbstractAiFoundryTask implements RunnableTask<RunA
         }
 
         TokenCredential token = this.getTokenCredential(runContext);
+
         PersistentAgentsClient agentsClient = new AIProjectClientBuilder()
             .endpoint(this.getEndpoint(runContext))
             .credential(token)
@@ -148,65 +170,103 @@ public class RunAgent extends AbstractAiFoundryTask implements RunnableTask<RunA
         runContext.logger().debug("Posted user message to thread {}", threadId);
 
         // 3. Create run
-        ThreadRun threadRun = runsClient.createRun(new CreateRunOptions(threadId, agentIdRendered));
+        ThreadRun threadRun = runsClient.createRun(
+            new CreateRunOptions(threadId, agentIdRendered)
+        );
+
         String runId = threadRun.getId();
         runContext.logger().info("Created run {} on thread {}", runId, threadId);
 
-        // 4. Poll until terminal
-        long deadline = System.currentTimeMillis() + timeoutMs;
-        RunStatus status = threadRun.getStatus();
-        while (status == null || !TERMINAL_STATUSES.contains(status)) {
-            if (System.currentTimeMillis() > deadline) {
-                throw new IllegalStateException(
-                    "Run " + runId + " did not complete within the configured timeout (" +
-                        Duration.ofMillis(timeoutMs) + "). Last status: " + status + "."
+        this.lifecycle.arm(() -> {
+            try {
+                runsClient.cancelRun(threadId, runId);
+                runContext.logger().info(
+                    "Requested cancellation of Azure AI Foundry run {} on thread {}",
+                    runId,
+                    threadId
+                );
+            } catch (Exception e) {
+                runContext.logger().warn(
+                    "Failed to cancel Azure AI Foundry run {} on thread {}",
+                    runId,
+                    threadId,
+                    e
                 );
             }
-            Thread.sleep(pollMs);
-            threadRun = runsClient.getRun(threadId, runId);
-            status = threadRun.getStatus();
-            runContext.logger().debug("Run {} status: {}", runId, status);
+        });
+
+        try {
+            // 4. Poll until terminal
+            long deadline = System.currentTimeMillis() + timeoutMs;
+            RunStatus status = threadRun.getStatus();
+
+            while (status == null || !TERMINAL_STATUSES.contains(status)) {
+                if (System.currentTimeMillis() > deadline) {
+                    // Stop the remote run before reporting the timeout.
+                    this.lifecycle.kill();
+
+                    throw new IllegalStateException(
+                        "Run " + runId + " did not complete within the configured timeout (" +
+                            Duration.ofMillis(timeoutMs) + "). Last status: " + status + "."
+                    );
+                }
+
+                Thread.sleep(pollMs);
+
+                threadRun = runsClient.getRun(threadId, runId);
+                status = threadRun.getStatus();
+
+                runContext.logger().debug("Run {} status: {}", runId, status);
+            }
+
+            if (!RunStatus.COMPLETED.equals(status)) {
+                String errorMsg = threadRun.getLastError() != null
+                    ? threadRun.getLastError().getMessage()
+                    : "no error details available";
+
+                throw new IllegalStateException(
+                    "Run " + runId + " finished with non-completed status " + status +
+                        ". Error: " + errorMsg
+                );
+            }
+
+            // 5. Retrieve last assistant message
+            List<ThreadMessage> messages = messagesClient
+                .listMessages(threadId, null, null, ListSortOrder.DESCENDING, null, null)
+                .stream()
+                .toList();
+
+            String assistantReply = messages.stream()
+                .filter(m -> MessageRole.AGENT.equals(m.getRole()))
+                .findFirst()
+                .map(m -> extractText(m.getContent()))
+                .orElseThrow(
+                    () -> new IllegalStateException(
+                        "Run " + runId +
+                            " completed but no assistant message was found in thread " + threadId + "."
+                    )
+                );
+
+            runContext.logger().info("Run {} completed successfully.", runId);
+
+            return Output.builder()
+                .result(assistantReply)
+                .threadId(threadId)
+                .runId(runId)
+                .build();
+        } finally {
+            // Prevent a later kill signal from cancelling a completed run.
+            this.lifecycle.disarm();
         }
-
-        if (!RunStatus.COMPLETED.equals(status)) {
-            String errorMsg = threadRun.getLastError() != null
-                ? threadRun.getLastError().getMessage()
-                : "no error details available";
-            throw new IllegalStateException(
-                "Run " + runId + " finished with non-completed status " + status +
-                    ". Error: " + errorMsg
-            );
-        }
-
-        // 5. Retrieve last assistant message
-        List<ThreadMessage> messages = messagesClient
-            .listMessages(threadId, null, null, ListSortOrder.DESCENDING, null, null)
-            .stream()
-            .toList();
-        String assistantReply = messages.stream()
-            .filter(m -> MessageRole.AGENT.equals(m.getRole()))
-            .findFirst()
-            .map(m -> extractText(m.getContent()))
-            .orElseThrow(
-                () -> new IllegalStateException(
-                    "Run " + runId + " completed but no assistant message was found in thread " + threadId + "."
-                )
-            );
-
-        runContext.logger().info("Run {} completed successfully.", runId);
-
-        return Output.builder()
-            .result(assistantReply)
-            .threadId(threadId)
-            .runId(runId)
-            .build();
     }
 
     private String extractText(List<MessageContent> contents) {
         if (contents == null || contents.isEmpty()) {
             return "";
         }
+
         StringBuilder sb = new StringBuilder();
+
         for (MessageContent content : contents) {
             if (content instanceof MessageTextContent textContent) {
                 if (textContent.getText() != null) {
@@ -214,6 +274,7 @@ public class RunAgent extends AbstractAiFoundryTask implements RunnableTask<RunA
                 }
             }
         }
+
         return sb.toString();
     }
 

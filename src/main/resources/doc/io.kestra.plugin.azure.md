@@ -107,3 +107,48 @@ The `ml` package provides tasks and a trigger for Azure Machine Learning, using 
 Model and data asset versions are immutable in Azure ML: leave `version` unset on `RegisterModel`/`CreateDataAsset` to auto-increment from the asset's current latest version, or set it explicitly and expect a clear error on a 409 conflict rather than a silent overwrite.
 
 Job metrics are logged through MLflow rather than exposed by the Azure Resource Manager control-plane API used for everything else in this package. `GetJob` and `SubmitCommandJob` read the workspace's MLflow tracking URI and call its REST API directly with the same Azure AD credentials; if that call fails (e.g. the service principal lacks the required scope), `metrics` comes back empty and a warning is logged instead of failing the task.
+
+## Microsoft Sentinel
+
+The `sentinel` package integrates Microsoft Sentinel incident response with Kestra. Incident and comment operations use the Azure Resource Manager SecurityInsights REST API version `2024-09-01`; KQL uses the Azure Monitor Logs SDK.
+
+### Authentication and workspace identifiers
+
+Use the Azure identity properties described above. Incident tasks and `Trigger` require `subscriptionId`, `resourceGroup`, and `workspaceName` (the ARM resource name of the Sentinel-enabled Log Analytics workspace). `Query` instead requires `workspaceId`, the Log Analytics workspace/customer GUID; an ARM resource ID or workspace name is not interchangeable with this GUID.
+
+Grant the identity [Microsoft Sentinel Reader](https://learn.microsoft.com/en-us/azure/sentinel/roles) access for incident reads and polling, and Microsoft Sentinel Responder access for incident updates and comment creation, scoped to the dedicated resource group, or to both the workspace and its SecurityInsights solution resource. Log queries require workspace query access, for example [Log Analytics Reader](https://learn.microsoft.com/en-us/azure/azure-monitor/logs/manage-access). ARM operations request `https://management.azure.com/.default`; the Logs SDK uses the Log Analytics audience. These tasks target Azure's public cloud endpoints.
+
+### Tasks and results
+
+- `ListIncidents` combines an optional raw OData `filter` with severity and status filters using parenthesized AND groups, orders by modification time descending, and follows every page. `top` is a page size (default 100, range 1–1000), not a total result limit.
+- `GetIncident` returns `incident`; set `includeAlerts: true` to also fetch `alerts` using the incident's POST alerts endpoint.
+- `UpdateIncident` reads the current incident before updating it with its existing ETag. Omitted fields are retained. Use `incidentDescription` to change the incident description; `description` remains Kestra task documentation. Supplied owner fields merge into the current owner. Supplied labels replace user labels while retaining system labels; an empty list removes user labels. Classification values are never inferred. Concurrency conflicts fail the task so a workflow can explicitly decide whether to retry against the new state.
+- `ListComments` returns all pages in `comments`, plus `count`.
+- `AddComment` generates a UUID and creates a comment, returning `commentId` and `createdTimeUtc`. Retrying this task can create another comment.
+- `Query` executes KQL against `workspaceId`. Its lookback `timespan` defaults to `P1D`, and `timeout` defaults to `PT3M`; both must be positive, and timeout cannot exceed ten minutes. Outputs include column names/types and normalized row values from the primary result table. Partial-query errors fail the task instead of returning incomplete success.
+
+`ListIncidents` and `Query` both default to `fetchType: STORE` and always return `count`:
+
+| Fetch type | ListIncidents output | Query output |
+| --- | --- | --- |
+| `STORE` | `uri` to ION incident records | `uri` to ION row records |
+| `FETCH` | `incidents` | `rows` |
+| `FETCH_ONE` | `incident` | `row` |
+
+`FETCH_ONE` returns a count of zero or one. Other fetch modes are rejected. STORE writes incident pages incrementally; inline FETCH results accumulate in memory. The Logs SDK can materialize a query response even with STORE. Use KQL limits and narrow filters for large workspaces.
+
+### Incident polling
+
+`sentinel.Trigger` polls every minute by default and emits one execution containing `incidents` and `count` for each nonempty batch. **The first poll emits existing matching incidents.** Use filters to restrict that initial batch.
+
+State is persisted in namespace KV under `sentinel_watermark_<flowId.length()>_<flowId>_<triggerId>`. It contains the maximum observed modification timestamp and incident/version identities at that timestamp. Later polls use `lastModifiedTimeUtc >= watermark`, suppress unchanged boundary records using the incident identity, modification time, and ETag, and keep distinct equal-timestamp incidents eligible across pages and restarts. All pages must succeed before state advances. Empty polls retain the last watermark; failed requests do not advance it, and wall-clock time is never used as a replacement watermark.
+
+The execution is constructed before successful poll state is saved. Polling observes the incident state returned by Azure: it cannot guarantee exactly-once execution delivery or capture every intermediate edit between polls. Keep downstream actions idempotent. Changing filters or workspace coordinates on an existing trigger retains its state; use a new trigger ID or deliberately remove its KV key to start again and emit the matching incident set.
+
+### Opt-in live validation
+
+`SentinelLiveTest` is skipped unless `AZURE_SENTINEL_LIVE_TEST=true`. It uses the existing Azure service-principal environment convention (`AZURE_TENANT_ID`, `AZURE_CLIENT_ID`, `AZURE_CLIENT_SECRET`) and requires explicit `AZURE_SENTINEL_SUBSCRIPTION_ID`, `AZURE_SENTINEL_RESOURCE_GROUP`, `AZURE_SENTINEL_WORKSPACE_NAME`, `AZURE_SENTINEL_WORKSPACE_ID`, and `AZURE_SENTINEL_INCIDENT_ID`. Supply a dedicated disposable Sentinel-enabled workspace and an existing test incident. The live tests only read the configured incident/comments, list incidents, and issue a constant KQL query; they do not create or provision Azure resources.
+
+Run `./gradlew test --tests '*sentinel.SentinelLiveTest'` in that configured environment. The normal `.github/setup-unit.sh` setup can still configure the rest of the suite; Sentinel's explicit variables are read directly and do not need to be written into a test configuration file. Missing required variables cause an opted-in test to fail. Mocked tests cover writes, pagination, conflicts, storage, and trigger state independently of Azure credentials.
+
+The Sentinel subgroup icon is Microsoft's unmodified `10248-icon-service-Azure-Sentinel.svg` from [Azure Architecture Center icons](https://learn.microsoft.com/en-us/azure/architecture/icons/), [Azure_Public_Service_Icons_V24.zip](https://arch-center.azureedge.net/icons/Azure_Public_Service_Icons_V24.zip), used to identify the Microsoft Sentinel integration.

@@ -19,6 +19,7 @@ import com.azure.storage.blob.models.ListBlobsOptions;
 import com.fasterxml.jackson.annotation.JsonUnwrapped;
 
 import io.kestra.core.models.annotations.Example;
+import io.kestra.core.models.annotations.Metric;
 import io.kestra.core.models.annotations.Plugin;
 import io.kestra.core.models.annotations.PluginProperty;
 import io.kestra.core.models.conditions.ConditionContext;
@@ -60,6 +61,9 @@ import static io.kestra.core.models.triggers.StatefulTriggerService.*;
 )
 
 @Plugin(
+    metrics = {
+        @Metric(name = "file.size", type = Counter.TYPE, description = "The size of the downloaded blob, in bytes.")
+    },
     examples = {
         @Example(
             title = "Run a flow if one or more files arrived in the specified Azure Blob Storage container location. "
@@ -186,23 +190,34 @@ public class Trigger extends AbstractTrigger implements PollingTriggerInterface,
 
     @Builder.Default
     @ToString.Exclude
+    @EqualsAndHashCode.Exclude
     @Getter(AccessLevel.NONE)
     private transient AtomicReference<Disposable> disposable = new AtomicReference<>();
 
     @Builder.Default
     @ToString.Exclude
+    @EqualsAndHashCode.Exclude
     @Getter(AccessLevel.NONE)
     private transient AtomicBoolean killed = new AtomicBoolean(false);
 
     @Builder.Default
     @ToString.Exclude
+    @EqualsAndHashCode.Exclude
     @Getter(AccessLevel.NONE)
     private transient AtomicReference<CountDownLatch> latchRef = new AtomicReference<>();
 
+    // Bounds the listing only; downloads are intentionally unbounded. Overridable for tests.
+    @Builder.Default
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
+    @Getter(AccessLevel.NONE)
+    transient Duration listTimeout = Duration.ofSeconds(30);
+
     @Override
     public void kill() {
-        killed.compareAndSet(false, true);
-        cancelInFlight();
+        if (killed.compareAndSet(false, true)) {
+            cancelInFlight();
+        }
     }
 
     private void cancelInFlight() {
@@ -286,7 +301,7 @@ public class Trigger extends AbstractTrigger implements PollingTriggerInterface,
                 listLatch::countDown
             );
 
-        this.await(listLatch, listDisposable, Duration.ofSeconds(30));
+        this.await(listLatch, listDisposable, listTimeout);
 
         if (killed.get())
             return Optional.empty();
@@ -372,11 +387,11 @@ public class Trigger extends AbstractTrigger implements PollingTriggerInterface,
             return Optional.empty();
         }
 
+        // Last kill check: everything below (state write, archive, execution) must commit as one unit.
         if (killed.get()) {
             return Optional.empty();
         }
 
-        // --- ATOMIC COMMIT PHASE ---
         writeState(runContext, rStateKey, previousState, rStateTtl);
         BlobService.archive(actionBlobs, runContext.render(this.action).as(ActionInterface.Action.class).orElse(null), this.moveTo, runContext, this, this);
         var output = Output.builder().blobs(toFire).build();

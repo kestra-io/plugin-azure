@@ -13,6 +13,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import org.slf4j.LoggerFactory;
 
 import com.azure.storage.file.datalake.models.ListPathsOptions;
+import com.azure.storage.file.datalake.models.PathItem;
 import com.fasterxml.jackson.annotation.JsonUnwrapped;
 
 import io.kestra.core.models.annotations.Example;
@@ -136,23 +137,34 @@ public class Trigger extends AbstractTrigger
 
     @Builder.Default
     @ToString.Exclude
+    @EqualsAndHashCode.Exclude
     @Getter(AccessLevel.NONE)
     private transient AtomicReference<Disposable> disposable = new AtomicReference<>();
 
     @Builder.Default
     @ToString.Exclude
+    @EqualsAndHashCode.Exclude
     @Getter(AccessLevel.NONE)
     private transient AtomicBoolean killed = new AtomicBoolean(false);
 
     @Builder.Default
     @ToString.Exclude
+    @EqualsAndHashCode.Exclude
     @Getter(AccessLevel.NONE)
     private transient AtomicReference<CountDownLatch> latchRef = new AtomicReference<>();
 
+    // Bounds the listing only; downloads are intentionally unbounded. Overridable for tests.
+    @Builder.Default
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
+    @Getter(AccessLevel.NONE)
+    transient Duration listTimeout = Duration.ofSeconds(30);
+
     @Override
     public void kill() {
-        killed.compareAndSet(false, true);
-        cancelInFlight();
+        if (killed.compareAndSet(false, true)) {
+            cancelInFlight();
+        }
     }
 
     private void cancelInFlight() {
@@ -212,7 +224,7 @@ public class Trigger extends AbstractTrigger
 
         var listLatch = new CountDownLatch(1);
         var error = new AtomicReference<Throwable>();
-        var fileList = new ArrayList<AdlsFile>();
+        var pathItems = new ArrayList<PathItem>();
 
         var syncClient = DataLakeService.client(
             runContext.render(this.endpoint).as(String.class).orElse(null),
@@ -225,10 +237,9 @@ public class Trigger extends AbstractTrigger
         var syncFsClient = syncClient.getFileSystemClient(runContext.render(fileSystem).as(String.class).orElseThrow());
 
         var listDisposable = fileSystemAsyncClient.listPaths(options)
-            .map(item -> AdlsFile.of(syncFsClient.getFileClient(item.getName())))
             .take(rMaxFiles)
             .subscribe(
-                fileList::add,
+                pathItems::add,
                 err ->
                 {
                     error.set(err);
@@ -237,7 +248,7 @@ public class Trigger extends AbstractTrigger
                 listLatch::countDown
             );
 
-        this.await(listLatch, listDisposable, Duration.ofSeconds(30));
+        this.await(listLatch, listDisposable, listTimeout);
 
         if (killed.get())
             return Optional.empty();
@@ -247,12 +258,21 @@ public class Trigger extends AbstractTrigger
             throw new Exception(error.get());
         }
 
-        if (fileList.isEmpty()) {
+        if (pathItems.isEmpty()) {
             return Optional.empty();
         }
 
-        if (fileList.size() == rMaxFiles) {
-            runContext.logger().warn("Listing returned {} files but maxFiles limit is {}. More files may remain.", fileList.size(), rMaxFiles);
+        if (pathItems.size() == rMaxFiles) {
+            runContext.logger().warn("Listing returned {} files but maxFiles limit is {}. More files may remain.", pathItems.size(), rMaxFiles);
+        }
+
+        // Enrichment issues one blocking getProperties() call per path: done outside the reactive listing
+        // so it is not charged to the listing timeout and can be interrupted between files by kill().
+        var fileList = new ArrayList<AdlsFile>(pathItems.size());
+        for (var item : pathItems) {
+            if (killed.get())
+                return Optional.empty();
+            fileList.add(AdlsFile.of(syncFsClient.getFileClient(item.getName())));
         }
 
         var state = readState(runContext, rStateKey, rStateTtl);
@@ -317,11 +337,11 @@ public class Trigger extends AbstractTrigger
             return Optional.empty();
         }
 
+        // Last kill check: everything below (actions, state write, execution) must commit as one unit.
         if (killed.get()) {
             return Optional.empty();
         }
 
-        // --- ATOMIC COMMIT PHASE ---
         // Create the target directory in the target fileSystem for MOVE action
         if (Action.MOVE.equals(runContext.render(this.action).as(Action.class).orElseThrow())) {
             final String toDirPath = runContext.render(this.moveTo.getDirectoryPath()).as(String.class).orElseThrow();

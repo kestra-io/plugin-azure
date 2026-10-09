@@ -2,11 +2,18 @@ package io.kestra.plugin.azure.storage.adls;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.Optional;
-import java.util.stream.Stream;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 
-import com.azure.storage.file.datalake.DataLakeFileClient;
-import com.azure.storage.file.datalake.DataLakeServiceClient;
+import org.slf4j.LoggerFactory;
+
+import com.azure.storage.file.datalake.models.ListPathsOptions;
+import com.azure.storage.file.datalake.models.PathItem;
 import com.fasterxml.jackson.annotation.JsonUnwrapped;
 
 import io.kestra.core.models.annotations.Example;
@@ -16,7 +23,7 @@ import io.kestra.core.models.conditions.ConditionContext;
 import io.kestra.core.models.executions.Execution;
 import io.kestra.core.models.property.Property;
 import io.kestra.core.models.triggers.*;
-import io.kestra.core.runners.RunContext;
+import io.kestra.core.utils.FileUtils;
 import io.kestra.plugin.azure.shared.AbstractConnectionInterface;
 import io.kestra.plugin.azure.shared.AzureClientWithSasInterface;
 import io.kestra.plugin.azure.storage.adls.models.AdlsFile;
@@ -26,9 +33,9 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotNull;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
+import reactor.core.Disposable;
 
 import static io.kestra.core.models.triggers.StatefulTriggerService.*;
-import static io.kestra.core.utils.Rethrow.throwFunction;
 
 @SuperBuilder
 @ToString
@@ -128,98 +135,226 @@ public class Trigger extends AbstractTrigger
 
     private Property<Duration> stateTtl;
 
+    @Builder.Default
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
+    @Getter(AccessLevel.NONE)
+    private transient AtomicReference<Disposable> disposable = new AtomicReference<>();
+
+    @Builder.Default
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
+    @Getter(AccessLevel.NONE)
+    private transient AtomicBoolean killed = new AtomicBoolean(false);
+
+    @Builder.Default
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
+    @Getter(AccessLevel.NONE)
+    private transient AtomicReference<CountDownLatch> latchRef = new AtomicReference<>();
+
+    // Bounds the listing only; downloads are intentionally unbounded. Overridable for tests.
+    @Builder.Default
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
+    @Getter(AccessLevel.NONE)
+    transient Duration listTimeout = Duration.ofSeconds(30);
+
+    @Override
+    public void kill() {
+        if (killed.compareAndSet(false, true)) {
+            cancelInFlight();
+        }
+    }
+
+    private void cancelInFlight() {
+        Disposable current = disposable.getAndSet(null);
+        if (current != null) {
+            try {
+                current.dispose();
+            } catch (Exception e) {
+                LoggerFactory.getLogger(this.getClass()).warn("Failed to dispose subscription", e);
+            }
+        }
+        CountDownLatch latch = latchRef.get();
+        if (latch != null) {
+            latch.countDown();
+        }
+    }
+
+    private void await(CountDownLatch latch, Disposable currentDisposable, Duration timeout) throws InterruptedException, TimeoutException {
+        this.latchRef.set(latch);
+        this.disposable.set(currentDisposable);
+        if (killed.get()) {
+            this.cancelInFlight();
+        }
+        try {
+            if (timeout == null) {
+                latch.await();
+            } else if (!latch.await(timeout.toMillis(), TimeUnit.MILLISECONDS)) {
+                throw new TimeoutException("Listing did not complete within " + timeout.toSeconds() + "s");
+            }
+        } finally {
+            this.cancelInFlight();
+        }
+    }
+
     @Override
     public Optional<Execution> evaluate(ConditionContext conditionContext, TriggerContext context) throws Exception {
-        RunContext runContext = conditionContext.getRunContext();
+        var runContext = conditionContext.getRunContext();
 
         var rOn = runContext.render(on).as(On.class).orElse(On.CREATE_OR_UPDATE);
         var rStateKey = runContext.render(stateKey).as(String.class).orElse(StatefulTriggerService.defaultKey(context.getNamespace(), context.getFlowId(), id));
         var rStateTtl = runContext.render(stateTtl).as(Duration.class);
 
-        List task = List.builder()
-            .id(this.id)
-            .type(List.class.getName())
-            .endpoint(this.endpoint)
-            .connectionString(this.connectionString)
-            .sharedKeyAccountName(this.sharedKeyAccountName)
-            .sharedKeyAccountAccessKey(this.sharedKeyAccountAccessKey)
-            .sasToken(this.sasToken)
-            .fileSystem(this.fileSystem)
-            .directoryPath(this.directoryPath)
-            .maxFiles(this.maxFiles)
-            .build();
+        var dataLakeServiceAsyncClient = DataLakeService.asyncClient(
+            runContext.render(this.endpoint).as(String.class).orElse(null),
+            runContext.render(this.connectionString).as(String.class).orElse(null),
+            runContext.render(this.sharedKeyAccountName).as(String.class).orElse(null),
+            runContext.render(this.sharedKeyAccountAccessKey).as(String.class).orElse(null),
+            runContext.render(this.sasToken).as(String.class).orElse(null),
+            runContext
+        );
+        var fileSystemAsyncClient = dataLakeServiceAsyncClient.getFileSystemAsyncClient(runContext.render(fileSystem).as(String.class).orElseThrow());
 
-        List.Output run = task.run(runContext);
+        var rDirectoryPath = runContext.render(directoryPath).as(String.class).orElseThrow();
+        var options = new ListPathsOptions();
+        options.setPath(rDirectoryPath);
+        var rMaxFiles = runContext.render(this.maxFiles).as(Integer.class).orElse(25);
 
-        if (run.getFiles().isEmpty()) {
+        var listLatch = new CountDownLatch(1);
+        var error = new AtomicReference<Throwable>();
+        var pathItems = new ArrayList<PathItem>();
+
+        var syncClient = DataLakeService.client(
+            runContext.render(this.endpoint).as(String.class).orElse(null),
+            runContext.render(this.connectionString).as(String.class).orElse(null),
+            runContext.render(this.sharedKeyAccountName).as(String.class).orElse(null),
+            runContext.render(this.sharedKeyAccountAccessKey).as(String.class).orElse(null),
+            runContext.render(this.sasToken).as(String.class).orElse(null),
+            runContext
+        );
+        var syncFsClient = syncClient.getFileSystemClient(runContext.render(fileSystem).as(String.class).orElseThrow());
+
+        var listDisposable = fileSystemAsyncClient.listPaths(options)
+            .take(rMaxFiles)
+            .subscribe(
+                pathItems::add,
+                err ->
+                {
+                    error.set(err);
+                    listLatch.countDown();
+                },
+                listLatch::countDown
+            );
+
+        this.await(listLatch, listDisposable, listTimeout);
+
+        if (killed.get())
+            return Optional.empty();
+        if (error.get() != null) {
+            if (error.get() instanceof Exception e)
+                throw e;
+            throw new Exception(error.get());
+        }
+
+        if (pathItems.isEmpty()) {
             return Optional.empty();
         }
 
-        var state = readState(runContext, rStateKey, rStateTtl);
-
-        var toFire = run.getFiles().stream()
-            .flatMap(throwFunction(file ->
-            {
-                var uri = String.format("adls://%s/%s", runContext.render(fileSystem).as(String.class).orElse(""), file.getName());
-                var modifiedAt = Optional.ofNullable(file.getLastModifed()).orElse(Instant.now());
-                var version = Optional.ofNullable(file.getETag()).orElse(String.valueOf(modifiedAt.toEpochMilli()));
-
-                var candidate = StatefulTriggerService.Entry.candidate(uri, version, modifiedAt);
-
-                var stateChange = computeAndUpdateState(state, candidate, rOn);
-
-                if (stateChange.fire()) {
-                    var changeType = stateChange.isNew() ? ChangeType.CREATE : ChangeType.UPDATE;
-
-                    Read read = Read.builder()
-                        .id(this.id)
-                        .type(Read.class.getName())
-                        .endpoint(this.endpoint)
-                        .connectionString(this.connectionString)
-                        .sharedKeyAccountName(this.sharedKeyAccountName)
-                        .sharedKeyAccountAccessKey(this.sharedKeyAccountAccessKey)
-                        .sasToken(this.sasToken)
-                        .fileSystem(this.fileSystem)
-                        .filePath(Property.ofValue(file.getName()))
-                        .build();
-
-                    Read.Output readOutput = read.run(runContext);
-                    AdlsFile downloadedFile = readOutput.getFile();
-
-                    return Stream.of(
-                        TriggeredFile.builder()
-                            .file(downloadedFile)
-                            .changeType(changeType)
-                            .build()
-                    );
-                }
-                return Stream.empty();
-            }))
-            .toList();
-
-        DataLakeServiceClient client = DataLakeService.client(
-            runContext.render(endpoint).as(String.class).orElse(null),
-            runContext.render(connectionString).as(String.class).orElse(null),
-            runContext.render(sharedKeyAccountName).as(String.class).orElse(null),
-            runContext.render(sharedKeyAccountAccessKey).as(String.class).orElse(null),
-            runContext.render(sasToken).as(String.class).orElse(null),
-            runContext
-        );
-
-        //Create the target directory in the target fileSystem for MOVE action
-        if (Action.MOVE.equals(runContext.render(this.action).as(Action.class).orElseThrow())) {
-            final String toDirPath = runContext.render(this.moveTo.getDirectoryPath()).as(String.class).orElseThrow();
-            client.getFileSystemClient(runContext.render(this.moveTo.getFileSystem()).as(String.class).orElseThrow())
-                .createDirectoryIfNotExists(toDirPath);
-
+        if (pathItems.size() == rMaxFiles) {
+            runContext.logger().warn("Listing returned {} files but maxFiles limit is {}. More files may remain.", pathItems.size(), rMaxFiles);
         }
 
-        for (TriggeredFile file : toFire) {
+        // Enrichment issues one blocking getProperties() call per path: done outside the reactive listing
+        // so it is not charged to the listing timeout and can be interrupted between files by kill().
+        var fileList = new ArrayList<AdlsFile>(pathItems.size());
+        for (var item : pathItems) {
+            if (killed.get())
+                return Optional.empty();
+            fileList.add(AdlsFile.of(syncFsClient.getFileClient(item.getName())));
+        }
+
+        var state = readState(runContext, rStateKey, rStateTtl);
+        var toFire = new ArrayList<TriggeredFile>();
+
+        for (var file : fileList) {
+            if (killed.get())
+                return Optional.empty();
+
+            var uri = String.format("adls://%s/%s", runContext.render(fileSystem).as(String.class).orElse(""), file.getName());
+            var modifiedAt = Optional.ofNullable(file.getLastModifed()).orElse(Instant.now());
+            var version = Optional.ofNullable(file.getETag()).orElse(String.valueOf(modifiedAt.toEpochMilli()));
+
+            var candidate = StatefulTriggerService.Entry.candidate(uri, version, modifiedAt);
+            var stateChange = computeAndUpdateState(state, candidate, rOn);
+
+            if (stateChange.fire()) {
+                var changeType = stateChange.isNew() ? ChangeType.CREATE : ChangeType.UPDATE;
+
+                var tempFile = runContext.workingDir().createTempFile(FileUtils.getExtension(file.getFileName())).toFile();
+                var dlLatch = new CountDownLatch(1);
+                error.set(null);
+
+                var fileAsyncClient = fileSystemAsyncClient.getFileAsyncClient(file.getName());
+                var dlDisposable = fileAsyncClient.readToFile(tempFile.getAbsolutePath(), true)
+                    .subscribe(
+                        props ->
+                        {
+                            dlLatch.countDown();
+                        },
+                        err ->
+                        {
+                            error.set(err);
+                            dlLatch.countDown();
+                        },
+                        dlLatch::countDown
+                    );
+
+                this.await(dlLatch, dlDisposable, null);
+
+                if (killed.get())
+                    return Optional.empty();
+                if (error.get() != null) {
+                    if (error.get() instanceof Exception e)
+                        throw e;
+                    throw new Exception(error.get());
+                }
+
+                var readFileUri = runContext.storage().putFile(tempFile);
+                var downloadedFile = file.withUri(readFileUri);
+
+                toFire.add(
+                    TriggeredFile.builder()
+                        .file(downloadedFile)
+                        .changeType(changeType)
+                        .build()
+                );
+            }
+        }
+
+        if (toFire.isEmpty()) {
+            return Optional.empty();
+        }
+
+        // Last kill check: everything below (actions, state write, execution) must commit as one unit.
+        if (killed.get()) {
+            return Optional.empty();
+        }
+
+        // Create the target directory in the target fileSystem for MOVE action
+        if (Action.MOVE.equals(runContext.render(this.action).as(Action.class).orElseThrow())) {
+            final String toDirPath = runContext.render(this.moveTo.getDirectoryPath()).as(String.class).orElseThrow();
+            syncClient.getFileSystemClient(runContext.render(this.moveTo.getFileSystem()).as(String.class).orElseThrow())
+                .createDirectoryIfNotExists(toDirPath);
+        }
+
+        for (var file : toFire) {
             var adlsFile = file.getFile();
 
             switch (runContext.render(this.action).as(Action.class).orElseThrow()) {
                 case DELETE -> {
-                    Delete delete = Delete.builder()
+                    var delete = Delete.builder()
                         .id(this.id)
                         .type(Delete.class.getName())
                         .endpoint(this.endpoint)
@@ -233,7 +368,7 @@ public class Trigger extends AbstractTrigger
                     delete.run(runContext);
                 }
                 case MOVE -> {
-                    DataLakeFileClient fileClient = client.getFileSystemClient(runContext.render(this.fileSystem).as(String.class).orElseThrow())
+                    var fileClient = syncClient.getFileSystemClient(runContext.render(this.fileSystem).as(String.class).orElseThrow())
                         .getFileClient(adlsFile.getName());
 
                     fileClient.rename(
@@ -247,12 +382,8 @@ public class Trigger extends AbstractTrigger
 
         writeState(runContext, rStateKey, state, rStateTtl);
 
-        if (toFire.isEmpty()) {
-            return Optional.empty();
-        }
-
         var output = Output.builder().files(toFire).build();
-        Execution execution = TriggerService.generateExecution(this, conditionContext, context, output);
+        var execution = TriggerService.generateExecution(this, conditionContext, context, output);
 
         return Optional.of(execution);
     }

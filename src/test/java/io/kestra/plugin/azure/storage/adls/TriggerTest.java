@@ -21,6 +21,7 @@ import io.kestra.core.repositories.LocalFlowRepositoryLoader;
 import io.kestra.core.utils.IdUtils;
 import io.kestra.core.utils.TestsUtils;
 import io.kestra.plugin.azure.storage.adls.models.AdlsFile;
+
 import jakarta.inject.Inject;
 
 import static org.hamcrest.MatcherAssert.assertThat;

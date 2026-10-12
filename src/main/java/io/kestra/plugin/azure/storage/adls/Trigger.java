@@ -334,6 +334,10 @@ public class Trigger extends AbstractTrigger
         }
 
         if (toFire.isEmpty()) {
+            // Persist the baseline even when nothing fires, otherwise a later update is seen as a new file.
+            if (!killed.get()) {
+                writeState(runContext, rStateKey, state, rStateTtl);
+            }
             return Optional.empty();
         }
 

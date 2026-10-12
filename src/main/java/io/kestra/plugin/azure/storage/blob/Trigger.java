@@ -384,6 +384,10 @@ public class Trigger extends AbstractTrigger implements PollingTriggerInterface,
         }
 
         if (toFire.isEmpty()) {
+            // Persist the baseline even when nothing fires, otherwise a later update is seen as a new blob.
+            if (!killed.get()) {
+                writeState(runContext, rStateKey, previousState, rStateTtl);
+            }
             return Optional.empty();
         }
 

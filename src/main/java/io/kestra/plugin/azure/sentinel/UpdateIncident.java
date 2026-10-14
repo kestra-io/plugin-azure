@@ -41,36 +41,47 @@ import lombok.experimental.SuperBuilder;
 public class UpdateIncident extends AbstractSentinel implements RunnableTask<UpdateIncident.Output> {
     @NotNull
     @Schema(title = "Incident ID")
+    @PluginProperty(group = "main")
     protected Property<String> incidentId;
 
     @Schema(title = "Incident status")
+    @PluginProperty(group = "main")
     protected Property<String> status;
 
     @Schema(title = "Incident severity")
+    @PluginProperty(group = "main")
     protected Property<String> severity;
 
     @Schema(title = "Closure classification")
+    @PluginProperty(group = "main")
     protected Property<String> classification;
 
     @Schema(title = "Closure classification reason")
+    @PluginProperty(group = "main")
     protected Property<String> classificationReason;
 
     @Schema(title = "Closure classification comment")
+    @PluginProperty(group = "main")
     protected Property<String> classificationComment;
 
-    @Schema(title = "Owner email")
+    @Schema(title = "Owner email", description = "Replaces the owner with the supplied owner fields. Use ownerObjectId for the most reliable assignment.")
+    @PluginProperty(group = "main")
     protected Property<String> ownerEmail;
 
-    @Schema(title = "Owner object ID")
+    @Schema(title = "Owner object ID", description = "Most reliable way to assign an incident. Replaces the owner with the supplied owner fields.")
+    @PluginProperty(group = "main")
     protected Property<String> ownerObjectId;
 
     @Schema(title = "Incident title")
+    @PluginProperty(group = "main")
     protected Property<String> title;
 
     @Schema(title = "Incident description")
+    @PluginProperty(group = "main")
     protected Property<String> incidentDescription;
 
     @Schema(title = "User labels", description = "Replace user labels with these names, preserving system labels. An empty list clears user labels; omitted leaves labels unchanged.")
+    @PluginProperty(group = "main")
     protected Property<List<String>> labels;
 
     private static final Set<String> WRITABLE = Set.of(
@@ -119,12 +130,7 @@ public class UpdateIncident extends AbstractSentinel implements RunnableTask<Upd
         });
         properties.putAll(changes);
         if (!ownerChanges.isEmpty()) {
-            Map<String, Object> owner = new LinkedHashMap<>();
-            if (properties.get("owner") instanceof Map<?, ?> previous) {
-                previous.forEach((key, value) -> owner.put((String) key, value));
-            }
-            owner.putAll(ownerChanges);
-            properties.put("owner", owner);
+            properties.put("owner", new LinkedHashMap<>(ownerChanges));
         }
         if (labels != null) {
             List<Map<String, Object>> merged = new ArrayList<>();

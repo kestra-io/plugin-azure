@@ -40,6 +40,7 @@ import lombok.experimental.SuperBuilder;
 public class ListComments extends AbstractSentinel implements RunnableTask<ListComments.Output> {
     @NotNull
     @Schema(title = "Incident ID")
+    @PluginProperty(group = "main")
     protected Property<String> incidentId;
 
     @Override

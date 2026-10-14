@@ -15,7 +15,6 @@ import io.kestra.core.models.annotations.PluginProperty;
 import io.kestra.core.models.conditions.ConditionContext;
 import io.kestra.core.models.executions.Execution;
 import io.kestra.core.models.property.Property;
-import io.kestra.core.models.tasks.common.FetchType;
 import io.kestra.core.models.triggers.AbstractTrigger;
 import io.kestra.core.models.triggers.PollingTriggerInterface;
 import io.kestra.core.models.triggers.TriggerContext;
@@ -39,7 +38,7 @@ import lombok.experimental.SuperBuilder;
 @NoArgsConstructor
 @Schema(
     title = "Trigger flows from Microsoft Sentinel incidents",
-    description = "Emits existing matching incidents on the first poll and newly modified incidents on subsequent polls. A timestamp and boundary versions are persisted in namespace KV. Polling observes returned incident states and cannot guarantee exactly-once delivery or capture every intermediate update."
+    description = "Emits matching incidents within initialLookback on the first poll and newly modified incidents on subsequent polls, up to maxIncidents per execution. A timestamp and boundary versions are persisted in namespace KV. Polling observes returned incident states and cannot guarantee exactly-once delivery or capture every intermediate update."
 )
 @Plugin(examples = @Example(title = "React to high severity Sentinel incidents", full = true, code = """
     id: sentinel_incidents
@@ -58,12 +57,16 @@ import lombok.experimental.SuperBuilder;
         resourceGroup: security
         workspaceName: sentinel-workspace
         severities: [High]
+        initialLookback: P1D
+        maxIncidents: 100
         interval: PT1M
     """))
 public class Trigger extends AbstractTrigger implements PollingTriggerInterface, TriggerOutput<Trigger.Output>, AzureIdentityConnectionInterface {
     @Schema(title = "Tenant ID")
+    @PluginProperty(group = "connection")
     protected Property<String> tenantId;
     @Schema(title = "Client ID")
+    @PluginProperty(group = "connection")
     protected Property<String> clientId;
     @Schema(title = "Client secret")
     @PluginProperty(secret = true, group = "connection")
@@ -75,29 +78,53 @@ public class Trigger extends AbstractTrigger implements PollingTriggerInterface,
     protected Property<String> pemCertificate;
     @NotNull
     @Schema(title = "Subscription ID")
+    @PluginProperty(group = "connection")
     protected Property<String> subscriptionId;
     @NotNull
     @Schema(title = "Resource group")
+    @PluginProperty(group = "connection")
     protected Property<String> resourceGroup;
     @NotNull
     @Schema(title = "Log Analytics workspace name")
+    @PluginProperty(group = "connection")
     protected Property<String> workspaceName;
     @Schema(title = "OData filter", description = "Combined with severity, status, and watermark filters using AND.")
+    @PluginProperty(group = "main")
     protected Property<String> filter;
     @Schema(title = "Incident severities")
+    @PluginProperty(group = "main")
     protected Property<List<String>> severities;
     @Schema(title = "Incident statuses")
+    @PluginProperty(group = "main")
     protected Property<List<String>> statuses;
     @Builder.Default
-    @Schema(title = "Page size", description = "Between 1 and 1000. All pages are fetched before advancing the watermark.")
+    @Schema(title = "Page size", description = "Between 1 and 1000. Controls page size; maxIncidents limits the emitted batch.")
+    @PluginProperty(group = "advanced")
     protected Property<Integer> top = Property.ofValue(100);
     @Builder.Default
+    @Schema(title = "Initial lookback", description = "Positive duration, default P1D. Limits the first poll to recently modified incidents; ignored once a watermark exists.")
+    @PluginProperty(group = "processing")
+    protected Property<Duration> initialLookback = Property.ofValue(Duration.ofDays(1));
+    @Builder.Default
+    @Schema(title = "Maximum incidents", description = "Positive maximum number of fresh incidents per execution, default 100. Remaining incidents are eligible on subsequent polls.")
+    @PluginProperty(group = "processing")
+    protected Property<Integer> maxIncidents = Property.ofValue(100);
+    @Builder.Default
     @Schema(title = "Polling interval")
+    @PluginProperty(group = "advanced")
     private final Duration interval = Duration.ofMinutes(1);
 
     @Override
     public Optional<Execution> evaluate(ConditionContext conditionContext, TriggerContext context) throws Exception {
         RunContext runContext = conditionContext.getRunContext();
+        Duration lookback = runContext.render(initialLookback).as(Duration.class).orElse(Duration.ofDays(1));
+        int limit = runContext.render(maxIncidents).as(Integer.class).orElse(100);
+        if (lookback.isZero() || lookback.isNegative()) {
+            throw new IllegalArgumentException("initialLookback must be positive");
+        }
+        if (limit <= 0) {
+            throw new IllegalArgumentException("maxIncidents must be positive");
+        }
         var kv = runContext.namespaceKv(context.getNamespace());
         String key = stateKey(context.getFlowId(), getId());
         var stored = kv.getValue(key);
@@ -108,51 +135,59 @@ public class Trigger extends AbstractTrigger implements PollingTriggerInterface,
             throw new IllegalStateException("Invalid Sentinel watermark: missing boundary versions");
         }
         String combinedFilter = runContext.render(filter).as(String.class).orElse(null);
-        if (previous.timestamp() != null) {
-            String watermarkFilter = "properties/lastModifiedTimeUtc ge " + previous.timestamp();
-            combinedFilter = combinedFilter == null || combinedFilter.isBlank() ? watermarkFilter : "(" + combinedFilter + ") and (" + watermarkFilter + ")";
-        }
-        List<Map<String, Object>> incidents = pollIncidents(runContext, combinedFilter);
+        Instant lowerBound = previous.timestamp() == null ? now().minus(lookback) : previous.timestamp();
+        String watermarkFilter = "properties/lastModifiedTimeUtc ge " + lowerBound;
+        combinedFilter = combinedFilter == null || combinedFilter.isBlank() ? watermarkFilter : "(" + combinedFilter + ") and (" + watermarkFilter + ")";
         List<Map<String, Object>> fresh = new ArrayList<>();
-        Instant maximum = previous.timestamp();
-        Set<Version> boundary = new HashSet<>(previous.boundary());
         Set<Version> seen = new HashSet<>();
-        for (Map<String, Object> incident : incidents) {
-            Version version = version(incident);
-            Instant modified = version.modified();
-            if (
-                previous.timestamp() != null && (modified.isBefore(previous.timestamp()) ||
-                    (modified.equals(previous.timestamp()) && previous.boundary().contains(version)))
-            ) {
-                continue;
+        pollIncidents(runContext, combinedFilter, page ->
+        {
+            for (Map<String, Object> incident : page) {
+                Version version = version(incident);
+                if (version.modified().isBefore(lowerBound) || previous.boundary().contains(version) || !seen.add(version)) {
+                    continue;
+                }
+                fresh.add(incident);
+                if (fresh.size() == limit) {
+                    return false;
+                }
             }
-            if (!seen.add(version)) {
-                continue;
-            }
-            fresh.add(incident);
-            if (maximum == null || modified.isAfter(maximum)) {
-                maximum = modified;
-                boundary.clear();
-            }
-            if (modified.equals(maximum)) {
-                boundary.add(version);
-            }
-        }
+            return true;
+        });
         if (fresh.isEmpty()) {
             return Optional.empty();
+        }
+        Instant maximum = previous.timestamp();
+        Set<Version> boundary = new HashSet<>(previous.boundary());
+        for (Map<String, Object> incident : fresh) {
+            Version version = version(incident);
+            if (maximum == null || version.modified().isAfter(maximum)) {
+                maximum = version.modified();
+                boundary.clear();
+            }
+            if (version.modified().equals(maximum)) {
+                boundary.add(version);
+            }
         }
         Execution execution = TriggerService.generateExecution(this, conditionContext, context, Output.builder().incidents(fresh).count(fresh.size()).build());
         kv.put(key, new KVValueAndMetadata(new KVMetadata("Sentinel incident watermark", (Duration) null), JacksonMapper.ofJson().writeValueAsBytes(new Watermark(maximum, boundary))));
         return Optional.of(execution);
     }
 
-    protected List<Map<String, Object>> pollIncidents(RunContext runContext, String combinedFilter) throws Exception {
+    protected Instant now() {
+        return Instant.now();
+    }
+
+    protected void pollIncidents(RunContext runContext, String combinedFilter, AbstractSentinel.PageConsumer consumer) throws Exception {
+        incidentTask().incidentPages(runContext, combinedFilter, "properties/lastModifiedTimeUtc asc", consumer);
+    }
+
+    protected ListIncidents incidentTask() {
         return ListIncidents.builder()
             .id(id).type(ListIncidents.class.getName())
             .tenantId(tenantId).clientId(clientId).clientSecret(clientSecret).pemCertificate(pemCertificate)
             .subscriptionId(subscriptionId).resourceGroup(resourceGroup).workspaceName(workspaceName)
-            .filter(Property.ofValue(combinedFilter)).severities(severities).statuses(statuses).top(top)
-            .fetchType(Property.ofValue(FetchType.FETCH)).build().run(runContext).getIncidents();
+            .severities(severities).statuses(statuses).top(top).build();
     }
 
     static String stateKey(String flowId, String triggerId) {

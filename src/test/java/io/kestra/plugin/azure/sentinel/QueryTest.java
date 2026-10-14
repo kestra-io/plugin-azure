@@ -222,6 +222,30 @@ class QueryTest {
     }
 
     @Test
+    void serverTimeoutIsIndependentOfTaskTimeout() throws Exception {
+        response(table("[]"));
+        Query defaults = Query.builder().build();
+        assertNull(defaults.getTimeout());
+        assertEquals(Duration.ofMinutes(3), context().render(defaults.getServerTimeout()).as(Duration.class).orElseThrow());
+        Query task = spy(
+            Query.builder()
+                .id("query").type(Query.class.getName())
+                .workspaceId(Property.ofValue("workspace-guid")).query(Property.ofValue("print value = 1"))
+                .timeout(Property.ofValue(Duration.ofMinutes(15)))
+                .serverTimeout(Property.ofExpression("{{ inputs.serverTimeout }}"))
+                .build()
+        );
+        doReturn(clientBuilder).when(task).clientBuilder(any());
+        RunContext context = runContextFactory.of(Map.of("inputs", Map.of("serverTimeout", "PT1M")));
+        assertEquals(0L, task.run(context).getCount());
+        assertEquals(Duration.ofMinutes(15), context.render(task.getTimeout()).as(Duration.class).orElseThrow());
+        server.verify(
+            postRequestedFor(urlEqualTo("/v1/workspaces/workspace-guid/query"))
+                .withHeader("Prefer", containing("wait=60"))
+        );
+    }
+
+    @Test
     void validatesBeforeSendingRequest() throws Exception {
         assertEquals(FetchType.STORE, context().render(Query.builder().build().getFetchType()).as(FetchType.class).orElseThrow());
         for (Duration span : List.of(Duration.ZERO, Duration.ofSeconds(-1))) {
@@ -235,7 +259,7 @@ class QueryTest {
         for (Duration timeout : List.of(Duration.ZERO, Duration.ofSeconds(-1), Duration.ofMinutes(11))) {
             Query task = spy(
                 Query.builder().workspaceId(Property.ofValue("workspace"))
-                    .query(Property.ofValue("query")).timeout(Property.ofValue(timeout)).build()
+                    .query(Property.ofValue("query")).serverTimeout(Property.ofValue(timeout)).build()
             );
             assertThrows(IllegalArgumentException.class, () -> task.run(context()));
             verify(task, never()).queryClient(any());

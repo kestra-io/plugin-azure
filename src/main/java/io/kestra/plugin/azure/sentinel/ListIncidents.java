@@ -39,49 +39,40 @@ import lombok.experimental.SuperBuilder;
     """))
 public class ListIncidents extends AbstractSentinel implements RunnableTask<ListIncidents.Output> {
     @Schema(title = "OData filter", description = "Raw OData predicate, combined with severity and status filters using AND.")
+    @PluginProperty(group = "main")
     protected Property<String> filter;
 
     @Schema(title = "Incident severities", description = "High, Medium, Low or Informational; values within this list are combined using OR.")
+    @PluginProperty(group = "main")
     protected Property<List<String>> severities;
 
     @Schema(title = "Incident statuses", description = "New, Active or Closed; values within this list are combined using OR.")
+    @PluginProperty(group = "main")
     protected Property<List<String>> statuses;
 
     @Builder.Default
     @Schema(title = "Page size", description = "Between 1 and 1000, defaults to 100. All pages are fetched unless FETCH_ONE is selected.")
+    @PluginProperty(group = "advanced")
     protected Property<Integer> top = Property.ofValue(100);
 
     @Builder.Default
     @Schema(title = "Fetch type", description = "STORE (default) writes ION to internal storage; FETCH returns incidents; FETCH_ONE returns the first incident.")
+    @PluginProperty(group = "processing")
     protected Property<FetchType> fetchType = Property.ofValue(FetchType.STORE);
 
     @Override
     public Output run(RunContext context) throws Exception {
-        int pageSize = context.render(top).as(Integer.class).orElse(100);
-        if (pageSize < 1 || pageSize > 1000) {
-            throw new IllegalArgumentException("top must be between 1 and 1000");
-        }
         FetchType mode = context.render(fetchType).as(FetchType.class).orElse(FetchType.STORE);
         if (mode != FetchType.FETCH && mode != FetchType.FETCH_ONE && mode != FetchType.STORE) {
             throw new IllegalArgumentException("fetchType must be FETCH, FETCH_ONE or STORE");
         }
-        String predicate = filters(
-            context.render(filter).as(String.class).orElse(null),
-            context.render(severities).asList(String.class), context.render(statuses).asList(String.class)
-        );
-        Map<String, String> query = new LinkedHashMap<>();
-        query.put("$orderby", "properties/lastModifiedTimeUtc desc");
-        query.put("$top", Integer.toString(pageSize));
-        if (!predicate.isBlank()) {
-            query.put("$filter", predicate);
-        }
-        URI uri = incidentsUri(context, "", query);
+        String rawFilter = context.render(filter).as(String.class).orElse(null);
         List<Map<String, Object>> incidents = new ArrayList<>();
         long[] count = { 0 };
         if (mode == FetchType.STORE) {
             File file = context.workingDir().createTempFile(".ion").toFile();
             try (var stream = new BufferedOutputStream(new FileOutputStream(file))) {
-                pages(context, uri, page ->
+                incidentPages(context, rawFilter, "properties/lastModifiedTimeUtc desc", page ->
                 {
                     for (Map<String, Object> incident : page) {
                         FileSerde.write(stream, incident);
@@ -92,7 +83,7 @@ public class ListIncidents extends AbstractSentinel implements RunnableTask<List
             }
             return Output.builder().uri(context.storage().putFile(file)).count(count[0]).build();
         }
-        pages(context, uri, page ->
+        incidentPages(context, rawFilter, "properties/lastModifiedTimeUtc desc", page ->
         {
             if (mode == FetchType.FETCH_ONE) {
                 if (!page.isEmpty()) {
@@ -107,6 +98,21 @@ public class ListIncidents extends AbstractSentinel implements RunnableTask<List
         return mode == FetchType.FETCH_ONE
             ? Output.builder().incident(incidents.isEmpty() ? null : incidents.getFirst()).count((long) incidents.size()).build()
             : Output.builder().incidents(incidents).count((long) incidents.size()).build();
+    }
+
+    void incidentPages(RunContext context, String rawFilter, String order, PageConsumer consumer) throws Exception {
+        int pageSize = context.render(top).as(Integer.class).orElse(100);
+        if (pageSize < 1 || pageSize > 1000) {
+            throw new IllegalArgumentException("top must be between 1 and 1000");
+        }
+        String predicate = filters(rawFilter, context.render(severities).asList(String.class), context.render(statuses).asList(String.class));
+        Map<String, String> query = new LinkedHashMap<>();
+        query.put("$orderby", order);
+        query.put("$top", Integer.toString(pageSize));
+        if (!predicate.isBlank()) {
+            query.put("$filter", predicate);
+        }
+        pages(context, incidentsUri(context, "", query), consumer);
     }
 
     static String filters(String raw, List<String> severities, List<String> statuses) {

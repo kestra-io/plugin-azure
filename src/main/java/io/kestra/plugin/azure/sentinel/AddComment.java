@@ -41,10 +41,12 @@ import lombok.experimental.SuperBuilder;
 public class AddComment extends AbstractSentinel implements RunnableTask<AddComment.Output> {
     @NotNull
     @Schema(title = "Incident ID")
+    @PluginProperty(group = "main")
     protected Property<String> incidentId;
 
     @NotNull
     @Schema(title = "Comment message")
+    @PluginProperty(group = "main")
     protected Property<String> message;
 
     @Override

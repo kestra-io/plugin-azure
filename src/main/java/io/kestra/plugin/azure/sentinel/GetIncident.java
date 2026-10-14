@@ -40,10 +40,12 @@ import lombok.experimental.SuperBuilder;
 public class GetIncident extends AbstractSentinel implements RunnableTask<GetIncident.Output> {
     @NotNull
     @Schema(title = "Incident ID")
+    @PluginProperty(group = "main")
     protected Property<String> incidentId;
 
     @Builder.Default
     @Schema(title = "Include incident alerts", description = "Fetch the associated alerts with an additional request. Defaults to false.")
+    @PluginProperty(group = "processing")
     protected Property<Boolean> includeAlerts = Property.ofValue(false);
 
     @Override

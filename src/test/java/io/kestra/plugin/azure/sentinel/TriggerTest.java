@@ -1,5 +1,6 @@
 package io.kestra.plugin.azure.sentinel;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
@@ -34,7 +35,7 @@ class TriggerTest {
     RunContextFactory runContextFactory;
 
     private Trigger trigger(String id) {
-        return spy(
+        Trigger trigger = spy(
             Trigger.builder().id(id).type(Trigger.class.getName())
                 .subscriptionId(Property.ofValue("subscription"))
                 .resourceGroup(Property.ofValue("security"))
@@ -42,6 +43,17 @@ class TriggerTest {
                 .filter(Property.ofExpression("{{ 'properties/status eq false' }}"))
                 .build()
         );
+        doReturn(Instant.parse(TIME)).when(trigger).now();
+        return trigger;
+    }
+
+    private void incidents(Trigger trigger, List<Map<String, Object>> rows) throws Exception {
+        doAnswer(invocation ->
+        {
+            AbstractSentinel.PageConsumer consumer = invocation.getArgument(2);
+            consumer.accept(rows);
+            return null;
+        }).when(trigger).pollIncidents(any(), any(), any());
     }
 
     private Map<String, Object> incident(String id, String time, String etag) {
@@ -49,17 +61,17 @@ class TriggerTest {
     }
 
     @Test
-    void firstPollEmitsAllAndRestartReadsBoundaryFromNamespaceStorage() throws Exception {
+    void firstPollUsesLookbackAndRestartReadsBoundaryFromNamespaceStorage() throws Exception {
         Trigger first = trigger(UUID.randomUUID().toString());
         var context = TestsUtils.mockTrigger(runContextFactory, first);
         var runContext = context.getKey().getRunContext();
         var triggerContext = context.getValue().context();
         var rows = List.of(incident("first", TIME, "1"), incident("second", TIME, "1"));
-        doReturn(rows).when(first).pollIncidents(any(), any());
+        incidents(first, rows);
         var execution = first.evaluate(context.getKey(), triggerContext).orElseThrow();
         assertEquals(2, execution.getTrigger().getVariables().get("count"));
         assertEquals(rows, execution.getTrigger().getVariables().get("incidents"));
-        verify(first).pollIncidents(any(), eq("properties/status eq false"));
+        verify(first).pollIncidents(any(), eq("(properties/status eq false) and (properties/lastModifiedTimeUtc ge 2025-12-31T00:00:00Z)"), any());
 
         String key = Trigger.stateKey(triggerContext.getFlowId(), first.getId());
         var stored = runContext.namespaceKv(triggerContext.getNamespace()).getValue(key).orElseThrow();
@@ -68,25 +80,64 @@ class TriggerTest {
         assertEquals(2, watermark.boundary().size());
 
         Trigger restarted = trigger(first.getId());
-        doReturn(rows).when(restarted).pollIncidents(any(), any());
+        incidents(restarted, rows);
         assertTrue(restarted.evaluate(context.getKey(), triggerContext).isEmpty());
-        verify(restarted).pollIncidents(any(), eq("(properties/status eq false) and (properties/lastModifiedTimeUtc ge " + TIME + ")"));
+        verify(restarted).pollIncidents(any(), eq("(properties/status eq false) and (properties/lastModifiedTimeUtc ge " + TIME + ")"), any());
+    }
+
+    @Test
+    void rendersLookbackAndLimitAndExcludesOlderIncidents() throws Exception {
+        Trigger trigger = trigger(UUID.randomUUID().toString());
+        trigger.initialLookback = Property.ofExpression("{{ 'PT1H' }}");
+        trigger.maxIncidents = Property.ofExpression("{{ 1 }}");
+        var context = TestsUtils.mockTrigger(runContextFactory, trigger);
+        incidents(
+            trigger, List.of(
+                incident("old", "2025-12-31T22:59:59Z", "1"),
+                incident("boundary", "2025-12-31T23:00:00Z", "1"),
+                incident("later", TIME, "1")
+            )
+        );
+        var execution = trigger.evaluate(context.getKey(), context.getValue().context()).orElseThrow();
+        assertEquals(1, execution.getTrigger().getVariables().get("count"));
+        assertEquals(List.of(incident("boundary", "2025-12-31T23:00:00Z", "1")), execution.getTrigger().getVariables().get("incidents"));
+        verify(trigger).pollIncidents(any(), eq("(properties/status eq false) and (properties/lastModifiedTimeUtc ge 2025-12-31T23:00:00Z)"), any());
+        // The initial window is no longer applied once a watermark exists.
+        doReturn(Instant.parse(LATER).plus(Duration.ofDays(2))).when(trigger).now();
+        assertEquals(1, trigger.evaluate(context.getKey(), context.getValue().context()).orElseThrow().getTrigger().getVariables().get("count"));
+        verify(trigger, times(2)).pollIncidents(any(), eq("(properties/status eq false) and (properties/lastModifiedTimeUtc ge 2025-12-31T23:00:00Z)"), any());
+    }
+
+    @Test
+    void rejectsInvalidBoundsBeforePolling() throws Exception {
+        for (Duration invalid : List.of(Duration.ZERO, Duration.ofSeconds(-1))) {
+            Trigger trigger = trigger(UUID.randomUUID().toString());
+            trigger.initialLookback = Property.ofValue(invalid);
+            var context = TestsUtils.mockTrigger(runContextFactory, trigger);
+            assertThrows(IllegalArgumentException.class, () -> trigger.evaluate(context.getKey(), context.getValue().context()));
+            verify(trigger, never()).pollIncidents(any(), any(), any());
+        }
+        for (int invalid : List.of(0, -1)) {
+            Trigger trigger = trigger(UUID.randomUUID().toString());
+            trigger.maxIncidents = Property.ofValue(invalid);
+            var context = TestsUtils.mockTrigger(runContextFactory, trigger);
+            assertThrows(IllegalArgumentException.class, () -> trigger.evaluate(context.getKey(), context.getValue().context()));
+            verify(trigger, never()).pollIncidents(any(), any(), any());
+        }
     }
 
     @Test
     void equalTimestampsAndChangedEtagsAreDeliveredOnceAndMaximumIsOrderIndependent() throws Exception {
         Trigger trigger = trigger(UUID.randomUUID().toString());
         var context = TestsUtils.mockTrigger(runContextFactory, trigger);
-        doReturn(List.of(incident("first", TIME, "1"))).when(trigger).pollIncidents(any(), any());
+        incidents(trigger, List.of(incident("first", TIME, "1")));
         trigger.evaluate(context.getKey(), context.getValue().context()).orElseThrow();
         // Equivalent to a complete multi-page result; the API helper separately tests pagination.
-        doReturn(List.of(incident("first", TIME, "2"), incident("second", TIME, "1"), incident("second", TIME, "1")))
-            .when(trigger).pollIncidents(any(), any());
+        incidents(trigger, List.of(incident("first", TIME, "2"), incident("second", TIME, "1"), incident("second", TIME, "1")));
         assertEquals(2, trigger.evaluate(context.getKey(), context.getValue().context()).orElseThrow().getTrigger().getVariables().get("count"));
         assertTrue(trigger.evaluate(context.getKey(), context.getValue().context()).isEmpty());
 
-        doReturn(List.of(incident("newer", LATER, "1"), incident("older", TIME, "1")))
-            .when(trigger).pollIncidents(any(), any());
+        incidents(trigger, List.of(incident("newer", LATER, "1"), incident("older", TIME, "1")));
         assertEquals(2, trigger.evaluate(context.getKey(), context.getValue().context()).orElseThrow().getTrigger().getVariables().get("count"));
         assertTrue(trigger.evaluate(context.getKey(), context.getValue().context()).isEmpty());
     }
@@ -97,19 +148,19 @@ class TriggerTest {
         var context = TestsUtils.mockTrigger(runContextFactory, trigger);
         var kv = context.getKey().getRunContext().namespaceKv(context.getValue().context().getNamespace());
         String key = Trigger.stateKey(context.getValue().context().getFlowId(), trigger.getId());
-        doReturn(List.of()).when(trigger).pollIncidents(any(), any());
+        incidents(trigger, List.of());
         assertTrue(trigger.evaluate(context.getKey(), context.getValue().context()).isEmpty());
         assertTrue(kv.getValue(key).isEmpty());
-        doReturn(List.of(incident("first", TIME, "1"))).when(trigger).pollIncidents(any(), any());
+        incidents(trigger, List.of(incident("first", TIME, "1")));
         trigger.evaluate(context.getKey(), context.getValue().context());
         byte[] before = (byte[]) kv.getValue(key).orElseThrow().value();
-        doReturn(List.of()).when(trigger).pollIncidents(any(), any());
+        incidents(trigger, List.of());
         assertTrue(trigger.evaluate(context.getKey(), context.getValue().context()).isEmpty());
         assertArrayEquals(before, (byte[]) kv.getValue(key).orElseThrow().value());
-        doThrow(new IllegalStateException("failed page")).when(trigger).pollIncidents(any(), any());
+        doThrow(new IllegalStateException("failed page")).when(trigger).pollIncidents(any(), any(), any());
         assertThrows(IllegalStateException.class, () -> trigger.evaluate(context.getKey(), context.getValue().context()));
         assertArrayEquals(before, (byte[]) kv.getValue(key).orElseThrow().value());
-        doReturn(List.of(incident("valid", LATER, "1"), Map.of("id", "invalid"))).when(trigger).pollIncidents(any(), any());
+        incidents(trigger, List.of(incident("valid", LATER, "1"), Map.of("id", "invalid")));
         assertThrows(IllegalArgumentException.class, () -> trigger.evaluate(context.getKey(), context.getValue().context()));
         assertArrayEquals(before, (byte[]) kv.getValue(key).orElseThrow().value());
     }
@@ -119,7 +170,7 @@ class TriggerTest {
         Trigger trigger = trigger(UUID.randomUUID().toString());
         var context = TestsUtils.mockTrigger(runContextFactory, trigger);
         var original = context.getValue().context();
-        doReturn(List.of(incident("first", TIME, "1"))).when(trigger).pollIncidents(any(), any());
+        incidents(trigger, List.of(incident("first", TIME, "1")));
         assertTrue(trigger.evaluate(context.getKey(), original).isPresent());
         assertTrue(trigger.evaluate(context.getKey(), original).isEmpty());
         var otherNamespaceContext = original.toBuilder().namespace(original.getNamespace() + ".other").build();
@@ -132,7 +183,7 @@ class TriggerTest {
         assertTrue(trigger.evaluate(otherNamespaceCondition, otherNamespaceContext).isEmpty());
         assertTrue(trigger.evaluate(context.getKey(), original.toBuilder().flowId(original.getFlowId() + "_other").build()).isPresent());
         Trigger other = trigger(trigger.getId() + "_other");
-        doReturn(List.of(incident("first", TIME, "1"))).when(other).pollIncidents(any(), any());
+        incidents(other, List.of(incident("first", TIME, "1")));
         assertTrue(other.evaluate(context.getKey(), original.toBuilder().triggerId(other.getId()).build()).isPresent());
         assertNotEquals(Trigger.stateKey("a_b", "c"), Trigger.stateKey("a", "b_c"));
     }
@@ -143,7 +194,7 @@ class TriggerTest {
         var context = TestsUtils.mockTrigger(runContextFactory, trigger);
         var kv = context.getKey().getRunContext().namespaceKv(context.getValue().context().getNamespace());
         String key = Trigger.stateKey(context.getValue().context().getFlowId(), trigger.getId());
-        doReturn(List.of(incident("first", TIME, "1"))).when(trigger).pollIncidents(any(), any());
+        incidents(trigger, List.of(incident("first", TIME, "1")));
         try (var service = mockStatic(TriggerService.class)) {
             service.when(() -> TriggerService.generateExecution(eq(trigger), any(), any(), any(Trigger.Output.class)))
                 .thenThrow(new IllegalStateException("cannot construct execution"));
@@ -153,6 +204,6 @@ class TriggerTest {
         kv.put(key, new KVValueAndMetadata(new KVMetadata("corrupt test state", (java.time.Duration) null), "invalid json".getBytes(java.nio.charset.StandardCharsets.UTF_8)));
         clearInvocations(trigger);
         assertThrows(Exception.class, () -> trigger.evaluate(context.getKey(), context.getValue().context()));
-        verify(trigger, never()).pollIncidents(any(), any());
+        verify(trigger, never()).pollIncidents(any(), any(), any());
     }
 }

@@ -1,6 +1,7 @@
 package io.kestra.plugin.azure.sentinel;
 
 import java.net.URI;
+import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicReference;
@@ -18,6 +19,7 @@ import io.kestra.core.runners.RunContext;
 import io.kestra.core.runners.RunContextFactory;
 import io.kestra.core.serializers.FileSerde;
 import io.kestra.core.serializers.JacksonMapper;
+import io.kestra.core.utils.TestsUtils;
 
 import jakarta.inject.Inject;
 import reactor.core.publisher.Mono;
@@ -170,7 +172,7 @@ class IncidentTasksTest {
         return Map.of(
             "etag", "original", "id", "resource-id", "properties", Map.of(
                 "title", "Attack", "severity", "High", "status", "New", "description", "Keep",
-                "owner", Map.of("email", "old@example.com", "objectId", "owner-id"),
+                "owner", Map.of("email", "old@example.com", "objectId", "owner-id", "userPrincipalName", "old@example.com", "assignedTo", "Old Owner"),
                 "labels", List.of(Map.of("labelName", "system", "labelType", "System"), Map.of("labelName", "old", "labelType", "User")),
                 "createdTimeUtc", "2026-10-04T00:00:00Z", "incidentNumber", 123
             )
@@ -178,7 +180,7 @@ class IncidentTasksTest {
     }
 
     @Test
-    void updatePreservesWritableFieldsAndEtagAndMergesOwnerAndLabels() throws Exception {
+    void updatePreservesWritableFieldsAndEtagAndReplacesOwnerAndUserLabels() throws Exception {
         server.stubFor(get(urlPathEqualTo(PATH + "/i")).willReturn(okJson(JacksonMapper.ofJson().writeValueAsString(existing()))));
         server.stubFor(put(urlPathEqualTo(PATH + "/i")).willReturn(okJson("{\"name\":\"i\"}")));
         var task = connect(
@@ -194,7 +196,10 @@ class IncidentTasksTest {
         assertEquals("High", properties.path("severity").asText());
         assertEquals("Keep", properties.path("description").asText());
         assertEquals("Active", properties.path("status").asText());
-        assertEquals("owner-id", properties.path("owner").path("objectId").asText());
+        assertEquals(1, properties.path("owner").size());
+        assertFalse(properties.path("owner").has("objectId"));
+        assertFalse(properties.path("owner").has("userPrincipalName"));
+        assertFalse(properties.path("owner").has("assignedTo"));
         assertEquals("new@example.com", properties.path("owner").path("email").asText());
         assertFalse(properties.has("createdTimeUtc"));
         assertFalse(properties.has("incidentNumber"));
@@ -206,6 +211,7 @@ class IncidentTasksTest {
     void omittedAndEmptyLabelsDifferAndDescriptionIsNotTaskDescription() throws Exception {
         var omitted = UpdateIncident.merge(existing(), Map.of(), Map.of(), null);
         assertEquals(((Map<?, ?>) existing().get("properties")).get("labels"), ((Map<?, ?>) omitted.get("properties")).get("labels"));
+        assertEquals(((Map<?, ?>) existing().get("properties")).get("owner"), ((Map<?, ?>) omitted.get("properties")).get("owner"));
         var cleared = (Map<?, ?>) UpdateIncident.merge(existing(), Map.of("description", "Changed"), Map.of(), List.of()).get("properties");
         assertEquals(List.of(Map.of("labelName", "system", "labelType", "System")), cleared.get("labels"));
         assertEquals("Changed", cleared.get("description"));
@@ -256,7 +262,82 @@ class IncidentTasksTest {
         assertEquals("SuspiciousActivity", properties.path("classificationReason").asText());
         assertEquals("Confirmed", properties.path("classificationComment").asText());
         assertEquals("new-owner", properties.path("owner").path("objectId").asText());
-        assertEquals("old@example.com", properties.path("owner").path("email").asText());
+        assertEquals(1, properties.path("owner").size());
+        assertFalse(properties.path("owner").has("email"));
+    }
+
+    private static Map<String, Object> triggerIncident(String id, String time) {
+        return Map.of("id", id, "etag", "1", "properties", Map.of("lastModifiedTimeUtc", time));
+    }
+
+    private void triggerPage(String path, List<Map<String, Object>> rows, String next) throws Exception {
+        Map<String, Object> response = new LinkedHashMap<>();
+        response.put("value", rows);
+        if (next != null) {
+            response.put("nextLink", next);
+        }
+        server.stubFor(get(urlPathEqualTo(path)).willReturn(okJson(JacksonMapper.ofJson().writeValueAsString(response))));
+    }
+
+    private Trigger pollingTrigger(String id) throws Exception {
+        Trigger trigger = spy(
+            Trigger.builder().id(id).type(Trigger.class.getName())
+                .subscriptionId(Property.ofValue("sub")).resourceGroup(Property.ofValue("rg")).workspaceName(Property.ofValue("law"))
+                .maxIncidents(Property.ofValue(2)).build()
+        );
+        doReturn(Instant.parse("2026-01-01T00:00:00Z")).when(trigger).now();
+        doReturn(
+            connect(
+                ListIncidents.builder().top(Property.ofValue(2))
+                    .severities(Property.ofValue(List.of("High"))).build()
+            )
+        ).when(trigger).incidentTask();
+        return trigger;
+    }
+
+    @Test
+    void triggerCapsPagesAndDrainsEqualTimestampBacklogAcrossRestarts() throws Exception {
+        String time = "2026-01-01T00:00:00Z";
+        String later = "2026-01-01T00:01:00Z";
+        var firstPage = List.of(triggerIncident("a", time), triggerIncident("b", time));
+        var secondPage = List.of(triggerIncident("c", time), triggerIncident("d", later));
+        triggerPage(PATH, firstPage, "/trigger-page2");
+        triggerPage("/trigger-page2", secondPage, "/unexpected");
+        Trigger trigger = pollingTrigger(UUID.randomUUID().toString());
+        var context = TestsUtils.mockTrigger(factory, trigger);
+        var triggerContext = context.getValue().context();
+        assertEquals(firstPage, trigger.evaluate(context.getKey(), triggerContext).orElseThrow().getTrigger().getVariables().get("incidents"));
+        server.verify(0, getRequestedFor(urlEqualTo("/trigger-page2")));
+        server.verify(
+            getRequestedFor(urlPathEqualTo(PATH))
+                .withQueryParam("$orderby", equalTo("properties/lastModifiedTimeUtc asc"))
+                .withQueryParam("$top", equalTo("2"))
+                .withQueryParam("$filter", equalTo("(properties/lastModifiedTimeUtc ge 2025-12-31T00:00:00Z) and (properties/severity eq 'High')"))
+        );
+
+        Trigger restarted = pollingTrigger(trigger.getId());
+        assertEquals(secondPage, restarted.evaluate(context.getKey(), triggerContext).orElseThrow().getTrigger().getVariables().get("incidents"));
+        server.verify(1, getRequestedFor(urlEqualTo("/trigger-page2")));
+        server.verify(0, getRequestedFor(urlEqualTo("/unexpected")));
+        String key = Trigger.stateKey(triggerContext.getFlowId(), trigger.getId());
+        var stored = context.getKey().getRunContext().namespaceKv(triggerContext.getNamespace()).getValue(key).orElseThrow();
+        var watermark = JacksonMapper.ofJson().readValue((byte[]) stored.value(), Trigger.Watermark.class);
+        assertEquals(Instant.parse(later), watermark.timestamp());
+        assertEquals(Set.of(new Trigger.Version("d", Instant.parse(later), "1")), watermark.boundary());
+        triggerPage(PATH, List.of(triggerIncident("d", later)), null);
+        assertTrue(restarted.evaluate(context.getKey(), triggerContext).isEmpty());
+    }
+
+    @Test
+    void failedTriggerPageDoesNotAdvancePastBufferedIncidents() throws Exception {
+        Trigger trigger = pollingTrigger(UUID.randomUUID().toString());
+        var context = TestsUtils.mockTrigger(factory, trigger);
+        var triggerContext = context.getValue().context();
+        triggerPage(PATH, List.of(triggerIncident("a", "2026-01-01T00:00:00Z")), "/failed-page");
+        server.stubFor(get(urlEqualTo("/failed-page")).willReturn(aResponse().withStatus(500)));
+        assertThrows(IllegalStateException.class, () -> trigger.evaluate(context.getKey(), triggerContext));
+        String key = Trigger.stateKey(triggerContext.getFlowId(), trigger.getId());
+        assertTrue(context.getKey().getRunContext().namespaceKv(triggerContext.getNamespace()).getValue(key).isEmpty());
     }
 
     @Test

@@ -55,7 +55,7 @@ import lombok.experimental.SuperBuilder;
         workspaceId: "{{ secret('AZURE_LOG_ANALYTICS_WORKSPACE_ID') }}"
         query: SecurityAlert | take 100
         timespan: P1D
-        timeout: PT3M
+        serverTimeout: PT3M
         fetchType: STORE
     """))
 public class Query extends AbstractAzureIdentityConnection implements RunnableTask<Query.Output> {
@@ -77,12 +77,12 @@ public class Query extends AbstractAzureIdentityConnection implements RunnableTa
     @Builder.Default
     @Schema(title = "Server timeout", description = "Positive ISO-8601 duration, at most PT10M. Defaults to PT3M.")
     @PluginProperty(group = "advanced")
-    private Property<Duration> timeout = Property.ofValue(Duration.ofMinutes(3));
+    private Property<Duration> serverTimeout = Property.ofValue(Duration.ofMinutes(3));
 
     @Builder.Default
     @NotNull
     @Schema(title = "Result fetching mode", description = "STORE writes ION to internal storage, FETCH returns all rows, and FETCH_ONE returns the first row. Other modes are unsupported.")
-    @PluginProperty(group = "main")
+    @PluginProperty(group = "processing")
     private Property<FetchType> fetchType = Property.ofValue(FetchType.STORE);
 
     protected LogsQueryClient queryClient(RunContext runContext) throws Exception {
@@ -129,13 +129,13 @@ public class Query extends AbstractAzureIdentityConnection implements RunnableTa
         String kql = runContext.render(query).as(String.class).filter(s -> !s.isBlank())
             .orElseThrow(() -> new IllegalArgumentException("query is required"));
         Duration span = runContext.render(timespan).as(Duration.class).orElse(Duration.ofDays(1));
-        Duration serverTimeout = runContext.render(timeout).as(Duration.class).orElse(Duration.ofMinutes(3));
+        Duration renderedServerTimeout = runContext.render(serverTimeout).as(Duration.class).orElse(Duration.ofMinutes(3));
         FetchType mode = runContext.render(fetchType).as(FetchType.class).orElse(FetchType.STORE);
         if (span.isZero() || span.isNegative()) {
             throw new IllegalArgumentException("timespan must be positive");
         }
-        if (serverTimeout.isZero() || serverTimeout.isNegative() || serverTimeout.compareTo(Duration.ofMinutes(10)) > 0) {
-            throw new IllegalArgumentException("timeout must be positive and at most PT10M");
+        if (renderedServerTimeout.isZero() || renderedServerTimeout.isNegative() || renderedServerTimeout.compareTo(Duration.ofMinutes(10)) > 0) {
+            throw new IllegalArgumentException("serverTimeout must be positive and at most PT10M");
         }
         if (mode != FetchType.FETCH && mode != FetchType.FETCH_ONE && mode != FetchType.STORE) {
             throw new IllegalArgumentException("fetchType must be FETCH, FETCH_ONE or STORE");
@@ -144,7 +144,7 @@ public class Query extends AbstractAzureIdentityConnection implements RunnableTa
         AtomicReference<List<Column>> metadata = new AtomicReference<>();
         LogsQueryResult result = queryClient(runContext).queryWorkspaceWithResponse(
             workspace, kql, new LogsQueryTimeInterval(span),
-            new LogsQueryOptions().setServerTimeout(serverTimeout), new Context(COLUMN_METADATA, metadata)
+            new LogsQueryOptions().setServerTimeout(renderedServerTimeout), new Context(COLUMN_METADATA, metadata)
         ).getValue();
         if (result.getError() != null || result.getQueryResultStatus() != LogsQueryResultStatus.SUCCESS) {
             throw new IllegalStateException(

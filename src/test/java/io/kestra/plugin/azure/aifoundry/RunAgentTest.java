@@ -44,8 +44,8 @@ import static org.hamcrest.Matchers.notNullValue;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
-import static org.mockito.Mockito.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.timeout;
 import static org.mockito.Mockito.times;
@@ -352,6 +352,97 @@ class RunAgentTest {
 
             verify(runsClient, timeout(2_000))
                 .cancelRun("thread-123", "run-456");
+        }
+    }
+
+    @Test
+    void kill_afterPollingIsInterrupted_requestsAzureCancellation() throws Exception {
+        RunAgent task = RunAgent.builder()
+            .id("run-agent")
+            .type(RunAgent.class.getName())
+            .endpoint(Property.ofValue("https://test.api.azureml.ms/"))
+            .agentId(Property.ofValue("agent-123"))
+            .prompt(Property.ofValue("Hello agent"))
+            .pollInterval(Property.ofValue(Duration.ofMillis(100)))
+            .timeout(Property.ofValue(Duration.ofMinutes(5)))
+            .build();
+
+        RunContext runContext =
+            TestsUtils.mockRunContext(runContextFactory, task, Map.of());
+
+        PersistentAgentThread mockThread = mock(PersistentAgentThread.class);
+        when(mockThread.getId()).thenReturn("thread-123");
+
+        ThreadsClient threadsClient = mock(ThreadsClient.class);
+        when(threadsClient.createThread()).thenReturn(mockThread);
+
+        MessagesClient messagesClient = mock(MessagesClient.class);
+
+        CountDownLatch initialStatusRead = new CountDownLatch(1);
+
+        ThreadRun createdRun = mock(ThreadRun.class);
+        when(createdRun.getId()).thenReturn("run-456");
+        when(createdRun.getStatus()).thenAnswer(invocation -> {
+            initialStatusRead.countDown();
+            return RunStatus.IN_PROGRESS;
+        });
+
+        RunsClient runsClient = mock(RunsClient.class);
+        when(runsClient.createRun(any(CreateRunOptions.class)))
+            .thenReturn(createdRun);
+
+        when(runsClient.getRun("thread-123", "run-456"))
+            .thenReturn(createdRun);
+
+        PersistentAgentsClient agentsClient = mock(PersistentAgentsClient.class);
+        when(agentsClient.getThreadsClient()).thenReturn(threadsClient);
+        when(agentsClient.getMessagesClient()).thenReturn(messagesClient);
+        when(agentsClient.getRunsClient()).thenReturn(runsClient);
+
+        AtomicBoolean interrupted = new AtomicBoolean(false);
+
+        Thread runner = new Thread(() -> {
+            try (MockedConstruction<AIProjectClientBuilder> ignored =
+                     Mockito.mockConstruction(
+                         AIProjectClientBuilder.class,
+                         (builder, context) -> {
+                             when(builder.endpoint(anyString())).thenReturn(builder);
+                             when(builder.credential(any())).thenReturn(builder);
+                             when(builder.buildPersistentAgentsClient())
+                                 .thenReturn(agentsClient);
+                         }
+                     )) {
+                try {
+                    task.run(runContext);
+                } catch (InterruptedException e) {
+                    interrupted.set(true);
+                    Thread.currentThread().interrupt();
+                } catch (Exception e) {
+                    throw new RuntimeException(e);
+                }
+            }
+        });
+
+        runner.start();
+
+        try {
+            assertThat(initialStatusRead.await(5, TimeUnit.SECONDS), is(true));
+
+            runner.interrupt();
+            runner.join(2_000);
+
+            assertThat(runner.isAlive(), is(false));
+            assertThat(interrupted.get(), is(true));
+
+            task.kill();
+
+            verify(runsClient, timeout(2_000))
+                .cancelRun("thread-123", "run-456");
+        } finally {
+            if (runner.isAlive()) {
+                runner.interrupt();
+                runner.join(2_000);
+            }
         }
     }
 

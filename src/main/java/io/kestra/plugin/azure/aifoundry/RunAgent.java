@@ -195,69 +195,66 @@ public class RunAgent extends AbstractAiFoundryTask implements RunnableTask<RunA
             }
         });
 
-        try {
-            // 4. Poll until terminal
-            long deadline = System.currentTimeMillis() + timeoutMs;
-            RunStatus status = threadRun.getStatus();
+        // 4. Poll until terminal
+        long deadline = System.currentTimeMillis() + timeoutMs;
+        RunStatus status = threadRun.getStatus();
 
-            while (status == null || !TERMINAL_STATUSES.contains(status)) {
-                if (System.currentTimeMillis() > deadline) {
-                    // Stop the remote run before reporting the timeout.
-                    this.lifecycle.kill();
-
-                    throw new IllegalStateException(
-                        "Run " + runId + " did not complete within the configured timeout (" +
-                            Duration.ofMillis(timeoutMs) + "). Last status: " + status + "."
-                    );
-                }
-
-                Thread.sleep(pollMs);
-
-                threadRun = runsClient.getRun(threadId, runId);
-                status = threadRun.getStatus();
-
-                runContext.logger().debug("Run {} status: {}", runId, status);
-            }
-
-            if (!RunStatus.COMPLETED.equals(status)) {
-                String errorMsg = threadRun.getLastError() != null
-                    ? threadRun.getLastError().getMessage()
-                    : "no error details available";
+        while (status == null || !TERMINAL_STATUSES.contains(status)) {
+            if (System.currentTimeMillis() > deadline) {
+                // Stop the remote run before reporting the timeout.
+                this.lifecycle.kill();
 
                 throw new IllegalStateException(
-                    "Run " + runId + " finished with non-completed status " + status +
-                        ". Error: " + errorMsg
+                   "Run " + runId + " did not complete within the configured timeout (" +
+                       Duration.ofMillis(timeoutMs) + "). Last status: "
                 );
             }
 
-            // 5. Retrieve last assistant message
-            List<ThreadMessage> messages = messagesClient
-                .listMessages(threadId, null, null, ListSortOrder.DESCENDING, null, null)
-                .stream()
-                .toList();
+            Thread.sleep(pollMs);
 
-            String assistantReply = messages.stream()
-                .filter(m -> MessageRole.AGENT.equals(m.getRole()))
-                .findFirst()
-                .map(m -> extractText(m.getContent()))
-                .orElseThrow(
-                    () -> new IllegalStateException(
-                        "Run " + runId +
-                            " completed but no assistant message was found in thread " + threadId + "."
-                    )
-                );
+            threadRun = runsClient.getRun(threadId, runId);
+            status = threadRun.getStatus();
 
-            runContext.logger().info("Run {} completed successfully.", runId);
-
-            return Output.builder()
-                .result(assistantReply)
-                .threadId(threadId)
-                .runId(runId)
-                .build();
-        } finally {
-            // Prevent a later kill signal from cancelling a completed run.
-            this.lifecycle.disarm();
+            runContext.logger().debug("Run {} status: {}", runId, status);
         }
+
+        // The remote run reached a terminal status; it no longer needs cancellation.
+        this.lifecycle.disarm();
+        if (!RunStatus.COMPLETED.equals(status)) {
+            String errorMsg = threadRun.getLastError() != null
+                ? threadRun.getLastError().getMessage()
+                : "no error details available";
+
+            throw new IllegalStateException(
+                "Run " + runId + " finished with non-completed status " + status +
+                    ". Error: " + errorMsg
+            );
+        }
+
+        // 5. Retrieve last assistant message
+        List<ThreadMessage> messages = messagesClient
+            .listMessages(threadId, null, null, ListSortOrder.DESCENDING, null, null)
+            .stream()
+            .toList();
+
+        String assistantReply = messages.stream()
+            .filter(m -> MessageRole.AGENT.equals(m.getRole()))
+            .findFirst()
+            .map(m -> extractText(m.getContent()))
+            .orElseThrow(
+                () -> new IllegalStateException(
+                    "Run " + runId +
+                        " completed but no assistant message was found in thread " + threadId + "."
+                )
+            );
+
+        runContext.logger().info("Run {} completed successfully.", runId);
+
+        return Output.builder()
+            .result(assistantReply)
+            .threadId(threadId)
+            .runId(runId)
+            .build();
     }
 
     private String extractText(List<MessageContent> contents) {

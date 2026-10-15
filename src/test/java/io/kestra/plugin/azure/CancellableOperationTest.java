@@ -1,5 +1,4 @@
-
-package io.kestra.plugin.azure.aifoundry;
+package io.kestra.plugin.azure;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -11,11 +10,11 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import org.junit.jupiter.api.Test;
 
-class CancellableAgentRunTest {
+class CancellableOperationTest {
 
     @Test
     void killBeforeArm_cancelsWhenActionBecomesAvailable() throws InterruptedException {
-        CancellableAgentRun lifecycle = new CancellableAgentRun();
+        CancellableOperation lifecycle = new CancellableOperation("operation");
         CountDownLatch cancelled = new CountDownLatch(1);
 
         lifecycle.kill();
@@ -26,7 +25,7 @@ class CancellableAgentRunTest {
 
     @Test
     void killAfterArm_invokesCancellation() throws InterruptedException {
-        CancellableAgentRun lifecycle = new CancellableAgentRun();
+        CancellableOperation lifecycle = new CancellableOperation("operation");
         CountDownLatch cancelled = new CountDownLatch(1);
 
         lifecycle.arm(cancelled::countDown);
@@ -37,7 +36,7 @@ class CancellableAgentRunTest {
 
     @Test
     void repeatedKill_invokesCancellationOnlyOnce() throws InterruptedException {
-        CancellableAgentRun lifecycle = new CancellableAgentRun();
+        CancellableOperation lifecycle = new CancellableOperation("operation");
         CountDownLatch cancelled = new CountDownLatch(1);
         AtomicInteger invocationCount = new AtomicInteger();
 
@@ -51,8 +50,6 @@ class CancellableAgentRunTest {
 
         lifecycle.kill();
         lifecycle.kill();
-
-        // Allow any incorrectly scheduled duplicate callback to execute.
         Thread.sleep(200);
 
         assertEquals(1, invocationCount.get());
@@ -60,7 +57,7 @@ class CancellableAgentRunTest {
 
     @Test
     void disarmBeforeKill_doesNotInvokeCancellation() throws InterruptedException {
-        CancellableAgentRun lifecycle = new CancellableAgentRun();
+        CancellableOperation lifecycle = new CancellableOperation("operation");
         CountDownLatch cancelled = new CountDownLatch(1);
 
         lifecycle.arm(cancelled::countDown);
@@ -71,10 +68,8 @@ class CancellableAgentRunTest {
     }
 
     @Test
-    void concurrentArmAndKill_doesNotLoseCancellation()
-        throws InterruptedException {
-
-        CancellableAgentRun lifecycle = new CancellableAgentRun();
+    void concurrentArmAndKill_doesNotLoseCancellation() throws InterruptedException {
+        CancellableOperation lifecycle = new CancellableOperation("operation");
         CountDownLatch start = new CountDownLatch(1);
         CountDownLatch cancelled = new CountDownLatch(1);
 
@@ -86,7 +81,6 @@ class CancellableAgentRunTest {
                 Thread.currentThread().interrupt();
             }
         });
-
         Thread killThread = new Thread(() -> {
             try {
                 start.await();
@@ -99,7 +93,6 @@ class CancellableAgentRunTest {
         armThread.start();
         killThread.start();
         start.countDown();
-
         armThread.join(2_000);
         killThread.join(2_000);
 

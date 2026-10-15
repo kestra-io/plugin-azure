@@ -46,6 +46,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
+import static org.mockito.Mockito.after;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.timeout;
 import static org.mockito.Mockito.times;
@@ -262,6 +263,92 @@ class RunAgentTest {
             // The cancellation call runs asynchronously.
             verify(runsClient, timeout(2_000))
                 .cancelRun("thread-123", "run-456");
+        }
+    }
+
+    @Test
+    void kill_duringCreateRun_cancelsWhenRunIdBecomesAvailable() throws Exception {
+        RunAgent task = RunAgent.builder()
+            .id("run-agent")
+            .type(RunAgent.class.getName())
+            .endpoint(Property.ofValue("https://test.api.azureml.ms/"))
+            .agentId(Property.ofValue("agent-123"))
+            .prompt(Property.ofValue("Hello agent"))
+            .pollInterval(Property.ofValue(Duration.ofMillis(10)))
+            .timeout(Property.ofValue(Duration.ofSeconds(5)))
+            .build();
+
+        RunContext runContext = TestsUtils.mockRunContext(runContextFactory, task, Map.of());
+
+        PersistentAgentThread mockThread = mock(PersistentAgentThread.class);
+        when(mockThread.getId()).thenReturn("thread-123");
+
+        ThreadsClient threadsClient = mock(ThreadsClient.class);
+        when(threadsClient.createThread()).thenReturn(mockThread);
+
+        MessagesClient messagesClient = mock(MessagesClient.class);
+        ThreadRun createdRun = mock(ThreadRun.class);
+        when(createdRun.getId()).thenReturn("run-456");
+        when(createdRun.getStatus()).thenReturn(RunStatus.IN_PROGRESS);
+
+        CountDownLatch createRunStarted = new CountDownLatch(1);
+        CountDownLatch allowCreateRunToReturn = new CountDownLatch(1);
+        CountDownLatch cancellationRequested = new CountDownLatch(1);
+        RunsClient runsClient = mock(RunsClient.class);
+        Mockito.doAnswer(invocation -> {
+            createRunStarted.countDown();
+            allowCreateRunToReturn.await();
+            return createdRun;
+        }).when(runsClient).createRun(any(CreateRunOptions.class));
+        Mockito.doAnswer(invocation -> {
+            cancellationRequested.countDown();
+            return null;
+        }).when(runsClient).cancelRun("thread-123", "run-456");
+
+        PersistentAgentsClient agentsClient = mock(PersistentAgentsClient.class);
+        when(agentsClient.getThreadsClient()).thenReturn(threadsClient);
+        when(agentsClient.getMessagesClient()).thenReturn(messagesClient);
+        when(agentsClient.getRunsClient()).thenReturn(runsClient);
+
+        CountDownLatch taskInterrupted = new CountDownLatch(1);
+        Thread runner = new Thread(() -> {
+            try (MockedConstruction<AIProjectClientBuilder> ignored =
+                     Mockito.mockConstruction(
+                         AIProjectClientBuilder.class,
+                         (builder, context) -> {
+                             when(builder.endpoint(anyString())).thenReturn(builder);
+                             when(builder.credential(any())).thenReturn(builder);
+                             when(builder.buildPersistentAgentsClient()).thenReturn(agentsClient);
+                         }
+                     )) {
+                task.run(runContext);
+            } catch (InterruptedException e) {
+                taskInterrupted.countDown();
+                Thread.currentThread().interrupt();
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        });
+
+        runner.start();
+        try {
+            assertThat(createRunStarted.await(5, TimeUnit.SECONDS), is(true));
+
+            // The kill arrives while createRun is in flight. When the call later returns its ID, arming
+            // the lifecycle must dispatch the already-recorded cancellation request.
+            task.kill();
+            allowCreateRunToReturn.countDown();
+
+            assertThat(cancellationRequested.await(5, TimeUnit.SECONDS), is(true));
+            runner.interrupt();
+            assertThat(taskInterrupted.await(5, TimeUnit.SECONDS), is(true));
+            verify(runsClient, timeout(2_000).times(1)).cancelRun("thread-123", "run-456");
+        } finally {
+            allowCreateRunToReturn.countDown();
+            if (runner.isAlive()) {
+                runner.interrupt();
+                runner.join(2_000);
+            }
         }
     }
 
@@ -533,7 +620,7 @@ class RunAgentTest {
 
             task.kill();
 
-            verify(runsClient, timeout(500).times(0))
+            verify(runsClient, after(500).never())
                 .cancelRun("thread-123", "run-456");
         }
     }
@@ -590,10 +677,12 @@ class RunAgentTest {
                      }
                  )) {
 
-            assertThrows(
+            IllegalStateException exception = assertThrows(
                 IllegalStateException.class,
                 () -> task.run(runContext)
             );
+
+            assertThat(exception.getMessage(), containsString("Last status: in_progress."));
 
             verify(runsClient, timeout(2_000))
                 .cancelRun("thread-123", "run-456");

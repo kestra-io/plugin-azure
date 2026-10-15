@@ -1,4 +1,3 @@
-
 package io.kestra.plugin.azure.aifoundry;
 
 import java.time.Duration;
@@ -27,6 +26,7 @@ import io.kestra.core.models.annotations.PluginProperty;
 import io.kestra.core.models.property.Property;
 import io.kestra.core.models.tasks.RunnableTask;
 import io.kestra.core.runners.RunContext;
+import io.kestra.plugin.azure.CancellableOperation;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotNull;
@@ -110,12 +110,11 @@ public class RunAgent extends AbstractAiFoundryTask implements RunnableTask<RunA
     @Builder.Default
     private Property<Duration> timeout = Property.ofValue(Duration.ofMinutes(5));
 
-    // Handles cancellation requests from Kestra.
     @Getter(AccessLevel.NONE)
     @EqualsAndHashCode.Exclude
     @ToString.Exclude
     @Builder.Default
-    private final CancellableAgentRun lifecycle = new CancellableAgentRun();
+    private final CancellableOperation lifecycle = new CancellableOperation("Azure AI Foundry agent run");
 
     @Override
     public void kill() {
@@ -205,8 +204,8 @@ public class RunAgent extends AbstractAiFoundryTask implements RunnableTask<RunA
                 this.lifecycle.kill();
 
                 throw new IllegalStateException(
-                   "Run " + runId + " did not complete within the configured timeout (" +
-                       Duration.ofMillis(timeoutMs) + "). Last status: "
+                    "Run " + runId + " did not complete within the configured timeout (" +
+                        Duration.ofMillis(timeoutMs) + "). Last status: " + status + "."
                 );
             }
 

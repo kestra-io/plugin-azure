@@ -1,0 +1,8 @@
+group: io.kestra.plugin.azure.billing
+name: "billing"
+title: "Azure Billing"
+description: "Tasks to query Azure Cost Management cost and usage and cost forecasts, and to read Azure Consumption budgets, so FinOps checks can run in a Kestra flow."
+body: "Authenticate using an Azure AD service principal (tenantId, clientId, clientSecret, optionally pemCertificate) that has the Cost Management Reader role on the scope. Set scope to a subscription, resource group, management group or billing account path. Query and ListBudgets support fetchType and maxPages; Forecast only supports an explicit daily period."
+videos: []
+createdBy: "Kestra Core Team"
+managedBy: "Kestra Core Team"

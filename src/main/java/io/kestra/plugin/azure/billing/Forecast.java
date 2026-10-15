@@ -1,0 +1,149 @@
+package io.kestra.plugin.azure.billing;
+
+import java.math.BigDecimal;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+
+import io.kestra.core.models.annotations.Example;
+import io.kestra.core.models.annotations.Plugin;
+import io.kestra.core.models.annotations.PluginProperty;
+import io.kestra.core.models.property.Property;
+import io.kestra.core.models.tasks.RunnableTask;
+import io.kestra.core.runners.RunContext;
+
+import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.NotNull;
+import lombok.*;
+import lombok.experimental.SuperBuilder;
+
+@SuperBuilder
+@ToString
+@EqualsAndHashCode
+@Getter
+@NoArgsConstructor
+@Schema(
+    title = "Forecast Azure spend with Cost Management",
+    description = """
+        Calls the Cost Management `Forecast - Usage` API on a scope for an explicit period and returns the daily
+        forecast and its total. Forecast only supports a custom period with daily granularity, so there is no
+        timeframe or granularity to choose."""
+)
+@Plugin(
+    examples = {
+        @Example(
+            title = "Forecast the actual cost of the next 30 days and log it.",
+            full = true,
+            code = """
+                id: azure_cost_forecast
+                namespace: company.finops
+
+                tasks:
+                  - id: forecast
+                    type: io.kestra.plugin.azure.billing.Forecast
+                    scope: "/subscriptions/{{ secret('AZURE_SUBSCRIPTION_ID') }}"
+                    costType: ActualCost
+                    startDate: "{{ now() | date('yyyy-MM-dd') }}"
+                    endDate: "{{ now() | dateAdd(30, 'DAYS') | date('yyyy-MM-dd') }}"
+                    aggregation: Cost
+
+                  - id: log_forecast
+                    type: io.kestra.plugin.core.log.Log
+                    message: "Forecast for the next 30 days: {{ outputs.forecast.totalAmount }} {{ outputs.forecast.unit }}"
+
+                pluginDefaults:
+                  - type: io.kestra.plugin.azure
+                    values:
+                      tenantId: "{{ secret('AZURE_TENANT_ID') }}"
+                      clientId: "{{ secret('AZURE_CLIENT_ID') }}"
+                      clientSecret: "{{ secret('AZURE_CLIENT_SECRET') }}"
+                """
+        )
+    }
+)
+public class Forecast extends AbstractBilling implements RunnableTask<Forecast.Output> {
+    @Schema(title = "Cost type", description = "`ActualCost`, `AmortizedCost` or `Usage`.")
+    @NotNull
+    @PluginProperty(group = "main")
+    private Property<CostQueries.CostType> costType;
+
+    @Schema(title = "Start date", description = "First day of the forecast period, inclusive, as `yyyy-MM-dd`.")
+    @NotNull
+    @PluginProperty(group = "main")
+    private Property<String> startDate;
+
+    @Schema(title = "End date", description = "Last day of the forecast period, **inclusive** like in the Cost Management API, as `yyyy-MM-dd`.")
+    @NotNull
+    @PluginProperty(group = "main")
+    private Property<String> endDate;
+
+    @Schema(title = "Aggregation column", description = "Cost column to forecast, for example `Cost` or `PreTaxCost`.")
+    @NotNull
+    @PluginProperty(group = "main")
+    private Property<String> aggregation;
+
+    @Schema(
+        title = "Include actual cost",
+        description = "Also return the actual cost of the days of the period that are already over."
+    )
+    @NotNull
+    @Builder.Default
+    @PluginProperty(group = "advanced")
+    private Property<Boolean> includeActualCost = Property.ofValue(false);
+
+    @Override
+    public Output run(RunContext runContext) throws Exception {
+        var rScope = renderScope(runContext);
+        var rAggregation = runContext.render(aggregation).as(String.class).orElseThrow();
+
+        var dataset = new LinkedHashMap<String, Object>();
+        dataset.put("granularity", "Daily");
+        dataset.put("aggregation", CostQueries.aggregation(List.of(rAggregation)));
+
+        var body = new LinkedHashMap<String, Object>();
+        body.put("type", runContext.render(costType).as(CostQueries.CostType.class).orElseThrow().name());
+        body.put("timeframe", "Custom");
+        body.put("timePeriod", CostQueries.timePeriod(
+            parseDate("startDate", runContext.render(startDate).as(String.class).orElseThrow()),
+            parseDate("endDate", runContext.render(endDate).as(String.class).orElseThrow())
+        ));
+        body.put("dataset", dataset);
+        body.put("includeActualCost", runContext.render(includeActualCost).as(Boolean.class).orElseThrow());
+        body.put("includeFreshPartialCost", false);
+
+        var url = MANAGEMENT_ENDPOINT + rScope + "/providers/Microsoft.CostManagement/forecast?api-version=" + CostQueries.API_VERSION;
+        var forecast = CostQueries.rows(send(runContext, "POST", url, body));
+
+        var total = BigDecimal.ZERO;
+        String unit = null;
+        for (var row : forecast) {
+            if (!"Actual".equals(row.get("CostStatus")) && row.get(rAggregation) != null) {
+                total = total.add(CostQueries.decimal(row.get(rAggregation)));
+            }
+            if (unit == null && row.get("Currency") != null) {
+                unit = row.get("Currency").toString();
+            }
+        }
+
+        return Output.builder().forecast(forecast).totalAmount(total).unit(unit).build();
+    }
+
+    @Builder
+    @Getter
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public static class Output implements io.kestra.core.models.tasks.Output {
+        @Schema(
+            title = "Forecast by day",
+            description = "One entry per day, keyed by the column names returned by Azure, e.g. `Cost`, `UsageDate`, `CostStatus` (`Forecast` or `Actual`), `Currency`."
+        )
+        private List<Map<String, Object>> forecast;
+
+        @Schema(title = "Forecasted total", description = "Sum of the forecasted (non-`Actual`) entries of the aggregation column.")
+        private BigDecimal totalAmount;
+
+        @Schema(title = "Currency", description = "Currency of the forecast, e.g. `USD` or `EUR`.")
+        private String unit;
+    }
+}

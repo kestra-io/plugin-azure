@@ -105,10 +105,12 @@ public class Forecast extends AbstractBilling implements RunnableTask<Forecast.O
         var body = new LinkedHashMap<String, Object>();
         body.put("type", runContext.render(costType).as(CostQueries.CostType.class).orElseThrow().name());
         body.put("timeframe", "Custom");
-        body.put("timePeriod", CostQueries.timePeriod(
-            parseDate("startDate", runContext.render(startDate).as(String.class).orElseThrow()),
-            parseDate("endDate", runContext.render(endDate).as(String.class).orElseThrow())
-        ));
+        body.put(
+            "timePeriod", CostQueries.timePeriod(
+                parseDate("startDate", runContext.render(startDate).as(String.class).orElseThrow()),
+                parseDate("endDate", runContext.render(endDate).as(String.class).orElseThrow())
+            )
+        );
         body.put("dataset", dataset);
         body.put("includeActualCost", runContext.render(includeActualCost).as(Boolean.class).orElseThrow());
         body.put("includeFreshPartialCost", false);

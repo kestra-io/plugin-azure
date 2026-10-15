@@ -55,9 +55,11 @@ final class CostQueries {
         for (var entry : filters.entrySet()) {
             var values = entry.getValue().stream().map(String::valueOf).toList();
             var key = entry.getKey();
-            expressions.add(key.startsWith("TAG:")
-                ? Map.of("tags", Map.of("name", key.substring(4), "operator", "In", "values", values))
-                : Map.of("dimensions", Map.of("name", key, "operator", "In", "values", values)));
+            expressions.add(
+                key.startsWith("TAG:")
+                    ? Map.of("tags", Map.of("name", key.substring(4), "operator", "In", "values", values))
+                    : Map.of("dimensions", Map.of("name", key, "operator", "In", "values", values))
+            );
         }
         return expressions.size() == 1 ? expressions.getFirst() : Map.of("and", expressions);
     }

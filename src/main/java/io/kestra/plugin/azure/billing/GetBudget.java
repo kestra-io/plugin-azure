@@ -64,7 +64,11 @@ public class GetBudget extends AbstractBilling implements RunnableTask<GetBudget
     @Override
     public Output run(RunContext runContext) throws Exception {
         var rBudgetName = runContext.render(budgetName).as(String.class).orElseThrow();
-        var response = send(runContext, "GET", Budgets.url(renderScope(runContext), rBudgetName), null);
+        var url = Budgets.url(renderScope(runContext), rBudgetName);
+        Map<String, Object> response;
+        try (var api = api(runContext)) {
+            response = api.send("GET", url, null);
+        }
         return Output.builder().budget(Budgets.toMap(response)).build();
     }
 

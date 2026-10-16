@@ -1,19 +1,14 @@
 package io.kestra.plugin.azure.billing;
 
-import java.net.URI;
+import java.time.Duration;
 import java.time.LocalDate;
 import java.time.format.DateTimeParseException;
-import java.util.Map;
 
 import com.azure.core.credential.AccessToken;
 import com.azure.core.credential.TokenRequestContext;
 import com.google.common.annotations.VisibleForTesting;
 
 import io.kestra.core.exceptions.IllegalVariableEvaluationException;
-import io.kestra.core.http.HttpRequest;
-import io.kestra.core.http.client.HttpClient;
-import io.kestra.core.http.client.HttpClientResponseException;
-import io.kestra.core.http.client.configurations.HttpConfiguration;
 import io.kestra.core.models.annotations.PluginProperty;
 import io.kestra.core.models.property.Property;
 import io.kestra.core.runners.RunContext;
@@ -36,6 +31,7 @@ import lombok.experimental.SuperBuilder;
 public abstract class AbstractBilling extends AbstractAzureIdentityConnection {
     static final String MANAGEMENT_ENDPOINT = "https://management.azure.com";
     private static final String MANAGEMENT_SCOPE = MANAGEMENT_ENDPOINT + "/.default";
+    private static final Duration TOKEN_TIMEOUT = Duration.ofSeconds(60);
 
     @Schema(
         title = "Scope",
@@ -73,32 +69,13 @@ public abstract class AbstractBilling extends AbstractAzureIdentityConnection {
         return value;
     }
 
-    /**
-     * Sends one request to Azure Resource Manager and returns the JSON body. {@code body} is null for a GET.
-     */
+    /** Opens the Azure Resource Manager client of one task run; the access token is fetched once here. */
     @VisibleForTesting
-    @SuppressWarnings("unchecked")
-    Map<String, Object> send(RunContext runContext, String method, String url, Map<String, Object> body) throws Exception {
-        AccessToken token = credentials(runContext).getToken(new TokenRequestContext().addScopes(MANAGEMENT_SCOPE)).block();
+    BillingApi api(RunContext runContext) throws Exception {
+        AccessToken token = credentials(runContext).getToken(new TokenRequestContext().addScopes(MANAGEMENT_SCOPE)).block(TOKEN_TIMEOUT);
         if (token == null) {
             throw new IllegalStateException("Failed to acquire an Azure access token for " + MANAGEMENT_SCOPE);
         }
-
-        var request = HttpRequest.builder()
-            .uri(URI.create(url))
-            .method(method)
-            .addHeader("Authorization", "Bearer " + token.getToken())
-            .addHeader("Content-Type", "application/json");
-        if (body != null) {
-            request.body(HttpRequest.JsonRequestBody.builder().content(body).build());
-        }
-
-        try (var client = HttpClient.builder().runContext(runContext).configuration(HttpConfiguration.builder().build()).build()) {
-            Map<String, Object> response = client.request(request.build(), Map.class).getBody();
-            return response == null ? Map.of() : response;
-        } catch (HttpClientResponseException e) {
-            var status = e.getResponse() == null ? "unknown" : String.valueOf(e.getResponse().getStatus().getCode());
-            throw new IllegalStateException("Azure request " + method + " " + url + " failed with HTTP " + status + ": " + e.getMessage(), e);
-        }
+        return new BillingApi(runContext, token.getToken());
     }
 }

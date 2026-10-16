@@ -85,14 +85,16 @@ public class ListBudgets extends AbstractBilling implements RunnableTask<ListBud
         var rows = new ArrayList<Map<String, Object>>();
         int pages = 0;
 
-        while (url != null && pages < rMaxPages) {
-            var response = send(runContext, "GET", url, null);
-            pages++;
-            for (var budget : (List<Map<String, Object>>) response.getOrDefault("value", List.of())) {
-                rows.add(Budgets.toMap(budget));
+        try (var api = api(runContext)) {
+            while (url != null && pages < rMaxPages) {
+                var response = api.send("GET", url, null);
+                pages++;
+                for (var budget : (List<Map<String, Object>>) response.getOrDefault("value", List.of())) {
+                    rows.add(Budgets.toMap(budget));
+                }
+                var nextLink = response.get("nextLink");
+                url = nextLink == null || nextLink.toString().isBlank() ? null : nextLink.toString();
             }
-            var nextLink = response.get("nextLink");
-            url = nextLink == null || nextLink.toString().isBlank() ? null : nextLink.toString();
         }
 
         if (url != null) {

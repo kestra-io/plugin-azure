@@ -227,21 +227,23 @@ public class Query extends AbstractBilling implements RunnableTask<Query.Output>
         String url = MANAGEMENT_ENDPOINT + rScope + "/providers/Microsoft.CostManagement/query?api-version=" + CostQueries.API_VERSION;
         int pages = 0;
 
-        while (url != null && pages < rMaxPages) {
-            var response = send(runContext, "POST", url, body);
-            pages++;
-            for (var row : CostQueries.rows(response)) {
-                for (var column : rAggregations) {
-                    if (row.get(column) != null) {
-                        totals.merge(column, CostQueries.decimal(row.get(column)), BigDecimal::add);
+        try (var api = api(runContext)) {
+            while (url != null && pages < rMaxPages) {
+                var response = api.send("POST", url, body);
+                pages++;
+                for (var row : CostQueries.rows(response)) {
+                    for (var column : rAggregations) {
+                        if (row.get(column) != null) {
+                            totals.merge(column, CostQueries.decimal(row.get(column)), BigDecimal::add);
+                        }
                     }
+                    if (unit == null && row.get("Currency") != null) {
+                        unit = row.get("Currency").toString();
+                    }
+                    rows.add(row);
                 }
-                if (unit == null && row.get("Currency") != null) {
-                    unit = row.get("Currency").toString();
-                }
-                rows.add(row);
+                url = CostQueries.nextLink(response);
             }
-            url = CostQueries.nextLink(response);
         }
 
         runContext.metric(Counter.of("requests", pages));

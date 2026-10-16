@@ -116,7 +116,11 @@ public class Forecast extends AbstractBilling implements RunnableTask<Forecast.O
         body.put("includeFreshPartialCost", false);
 
         var url = MANAGEMENT_ENDPOINT + rScope + "/providers/Microsoft.CostManagement/forecast?api-version=" + CostQueries.API_VERSION;
-        var forecast = CostQueries.rows(send(runContext, "POST", url, body));
+        Map<String, Object> response;
+        try (var api = api(runContext)) {
+            response = api.send("POST", url, body);
+        }
+        var forecast = CostQueries.rows(response);
 
         var total = BigDecimal.ZERO;
         String unit = null;

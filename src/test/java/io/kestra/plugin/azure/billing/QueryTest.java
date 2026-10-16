@@ -70,9 +70,10 @@ class QueryTest {
                 .fetchType(Property.ofValue(FetchType.FETCH))
                 .build()
         );
+        var api = stubApi(spy);
         doReturn(page("https://management.azure.com/next-page", List.of(List.of(12.5, "rg-data", "USD"))))
             .doReturn(page(null, List.of(List.of(0.75, "rg-web", "USD"))))
-            .when(spy).send(any(RunContext.class), eq("POST"), anyString(), any());
+            .when(api).send(eq("POST"), anyString(), any());
 
         var output = spy.run(runContextFactory.of());
 
@@ -84,7 +85,7 @@ class QueryTest {
 
         var urls = ArgumentCaptor.forClass(String.class);
         var bodies = ArgumentCaptor.forClass(Map.class);
-        verify(spy, times(2)).send(any(RunContext.class), eq("POST"), urls.capture(), bodies.capture());
+        verify(api, times(2)).send(eq("POST"), urls.capture(), bodies.capture());
         assertThat(urls.getAllValues().get(0), is("https://management.azure.com" + SCOPE + "/providers/Microsoft.CostManagement/query?api-version=2023-11-01"));
         assertThat(urls.getAllValues().get(1), is("https://management.azure.com/next-page"));
 
@@ -109,12 +110,13 @@ class QueryTest {
     @Test
     void givenMorePagesThanMaxPages_whenRun_thenStopsAndFlagsTruncated() throws Exception {
         var spy = spy(task().maxPages(Property.ofValue(2)).fetchType(Property.ofValue(FetchType.NONE)).build());
+        var api = stubApi(spy);
         doReturn(page("https://management.azure.com/more", List.of(List.of(1, "rg", "EUR"))))
-            .when(spy).send(any(RunContext.class), eq("POST"), anyString(), any());
+            .when(api).send(eq("POST"), anyString(), any());
 
         var output = spy.run(runContextFactory.of());
 
-        verify(spy, times(2)).send(any(RunContext.class), eq("POST"), anyString(), any());
+        verify(api, times(2)).send(eq("POST"), anyString(), any());
         assertThat(output.getTruncated(), is(true));
         assertThat(output.getSize(), is(2L));
         assertThat(output.getRows(), nullValue());
@@ -124,8 +126,9 @@ class QueryTest {
     @Test
     void givenStore_whenRun_thenWritesFileToStorage() throws Exception {
         var spy = spy(task().timeframe(Property.ofValue(Query.Timeframe.MonthToDate)).startDate(null).endDate(null).build());
+        var api = stubApi(spy);
         doReturn(page(null, List.of(List.of(1, "a", "USD"), List.of(2, "b", "USD"))))
-            .when(spy).send(any(RunContext.class), eq("POST"), anyString(), any());
+            .when(api).send(eq("POST"), anyString(), any());
 
         var output = spy.run(runContextFactory.of());
 
@@ -147,7 +150,13 @@ class QueryTest {
         for (var task : cases) {
             var spy = spy(task);
             assertThrows(IllegalArgumentException.class, () -> spy.run(runContextFactory.of()));
-            verify(spy, never()).send(any(), any(), any(), any());
+            verify(spy, never()).api(any());
         }
+    }
+
+    static BillingApi stubApi(AbstractBilling spy) throws Exception {
+        var api = mock(BillingApi.class);
+        doReturn(api).when(spy).api(any(RunContext.class));
+        return api;
     }
 }

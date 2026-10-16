@@ -9,7 +9,6 @@ import org.mockito.ArgumentCaptor;
 
 import io.kestra.core.junit.annotations.KestraTest;
 import io.kestra.core.models.property.Property;
-import io.kestra.core.runners.RunContext;
 import io.kestra.core.runners.RunContextFactory;
 
 import jakarta.inject.Inject;
@@ -41,6 +40,7 @@ class ForecastTest {
                 .includeActualCost(Property.ofValue(true))
                 .build()
         );
+        var api = QueryTest.stubApi(spy);
         doReturn(
             Map.of(
                 "properties", Map.of(
@@ -52,7 +52,7 @@ class ForecastTest {
                     )
                 )
             )
-        ).when(spy).send(any(RunContext.class), eq("POST"), anyString(), any());
+        ).when(api).send(eq("POST"), anyString(), any());
 
         var output = spy.run(runContextFactory.of());
 
@@ -62,7 +62,7 @@ class ForecastTest {
 
         var url = ArgumentCaptor.forClass(String.class);
         var body = ArgumentCaptor.forClass(Map.class);
-        verify(spy).send(any(RunContext.class), eq("POST"), url.capture(), body.capture());
+        verify(api).send(eq("POST"), url.capture(), body.capture());
         assertThat(url.getValue(), org.hamcrest.Matchers.endsWith("/subscriptions/sub/providers/Microsoft.CostManagement/forecast?api-version=2023-11-01"));
         Map<String, Object> sent = body.getValue();
         assertThat(sent.get("timeframe"), is("Custom"));

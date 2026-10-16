@@ -2,7 +2,6 @@ package io.kestra.plugin.azure.billing;
 
 import java.math.BigDecimal;
 import java.net.URI;
-import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -222,14 +221,15 @@ public class Query extends AbstractBilling implements RunnableTask<Query.Output>
         }
         body.put("dataset", dataset);
 
-        var rows = new ArrayList<Map<String, Object>>();
         var totals = new LinkedHashMap<String, BigDecimal>();
         rAggregations.forEach(column -> totals.put(column, BigDecimal.ZERO));
         var totalsByCurrency = new LinkedHashMap<String, Map<String, BigDecimal>>();
         String url = MANAGEMENT_ENDPOINT + rScope + "/providers/Microsoft.CostManagement/query?api-version=" + CostQueries.API_VERSION;
         int pages = 0;
 
-        try (var api = api(runContext)) {
+        var rFetchType = runContext.render(fetchType).as(FetchType.class).orElse(FetchType.STORE);
+        BillingFetch.Result fetched;
+        try (var api = api(runContext); var fetch = BillingFetch.open(runContext, rFetchType)) {
             while (url != null && pages < rMaxPages) {
                 var response = api.send("POST", url, body);
                 pages++;
@@ -244,10 +244,11 @@ public class Query extends AbstractBilling implements RunnableTask<Query.Output>
                             }
                         }
                     }
-                    rows.add(row);
+                    fetch.add(row);
                 }
                 url = CostQueries.nextLink(response);
             }
+            fetched = fetch.finish();
         }
 
         runContext.metric(Counter.of("requests", pages));
@@ -255,7 +256,6 @@ public class Query extends AbstractBilling implements RunnableTask<Query.Output>
             runContext.logger().warn("Stopped after maxPages={} Cost Management requests, more rows are available. Increase maxPages or narrow the query.", rMaxPages);
         }
 
-        var fetched = BillingFetch.apply(runContext, runContext.render(fetchType).as(FetchType.class).orElse(FetchType.STORE), rows);
         return Output.builder()
             .rows(fetched.rows())
             .row(fetched.row())

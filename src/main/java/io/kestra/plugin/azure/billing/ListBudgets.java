@@ -1,7 +1,6 @@
 package io.kestra.plugin.azure.billing;
 
 import java.net.URI;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -88,26 +87,27 @@ public class ListBudgets extends AbstractBilling implements RunnableTask<ListBud
     public Output run(RunContext runContext) throws Exception {
         int rMaxPages = runContext.render(maxPages).as(Integer.class).orElse(DEFAULT_MAX_PAGES);
         String url = Budgets.url(renderScope(runContext), null);
-        var rows = new ArrayList<Map<String, Object>>();
         int pages = 0;
 
-        try (var api = api(runContext)) {
+        var rFetchType = runContext.render(fetchType).as(FetchType.class).orElse(FetchType.STORE);
+        BillingFetch.Result fetched;
+        try (var api = api(runContext); var fetch = BillingFetch.open(runContext, rFetchType)) {
             while (url != null && pages < rMaxPages) {
                 var response = api.send("GET", url, null);
                 pages++;
                 for (var budget : Budgets.list(response.get("value"), "value")) {
-                    rows.add(Budgets.toMap(budget));
+                    fetch.add(Budgets.toMap(budget));
                 }
                 var nextLink = response.get("nextLink");
                 url = nextLink == null || nextLink.toString().isBlank() ? null : requireManagementUrl(nextLink.toString());
             }
+            fetched = fetch.finish();
         }
 
         if (url != null) {
             runContext.logger().warn("Stopped after maxPages={} requests, more budgets are available. Increase maxPages to read them.", rMaxPages);
         }
 
-        var fetched = BillingFetch.apply(runContext, runContext.render(fetchType).as(FetchType.class).orElse(FetchType.STORE), rows);
         return Output.builder()
             .rows(fetched.rows())
             .row(fetched.row())

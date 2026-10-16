@@ -16,6 +16,7 @@ import io.kestra.core.models.tasks.common.FetchType;
 import io.kestra.core.runners.RunContext;
 
 import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
@@ -63,10 +64,11 @@ public class ListBudgets extends AbstractBilling implements RunnableTask<ListBud
         title = "Maximum number of pages",
         description = "Stops after this many requests (following `nextLink`) and logs a warning if more budgets were available."
     )
+    @Min(1)
     @NotNull
     @Builder.Default
     @PluginProperty(group = "advanced")
-    private Property<Integer> maxPages = Property.ofValue(10);
+    private Property<Integer> maxPages = Property.ofValue(DEFAULT_MAX_PAGES);
 
     @Schema(
         title = "Fetch strategy",
@@ -80,7 +82,7 @@ public class ListBudgets extends AbstractBilling implements RunnableTask<ListBud
     @Override
     @SuppressWarnings("unchecked")
     public Output run(RunContext runContext) throws Exception {
-        int rMaxPages = maxPages(runContext, maxPages);
+        int rMaxPages = runContext.render(maxPages).as(Integer.class).orElse(DEFAULT_MAX_PAGES);
         String url = Budgets.url(renderScope(runContext), null);
         var rows = new ArrayList<Map<String, Object>>();
         int pages = 0;
@@ -101,7 +103,7 @@ public class ListBudgets extends AbstractBilling implements RunnableTask<ListBud
             runContext.logger().warn("Stopped after maxPages={} requests, more budgets are available. Increase maxPages to read them.", rMaxPages);
         }
 
-        var fetched = BillingFetch.apply(runContext, runContext.render(fetchType).as(FetchType.class).orElseThrow(), rows);
+        var fetched = BillingFetch.apply(runContext, runContext.render(fetchType).as(FetchType.class).orElse(FetchType.STORE), rows);
         return Output.builder()
             .rows(fetched.rows())
             .row(fetched.row())

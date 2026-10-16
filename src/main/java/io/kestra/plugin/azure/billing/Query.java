@@ -20,6 +20,7 @@ import io.kestra.core.models.tasks.common.FetchType;
 import io.kestra.core.runners.RunContext;
 
 import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
@@ -169,10 +170,11 @@ public class Query extends AbstractBilling implements RunnableTask<Query.Output>
         title = "Maximum number of pages",
         description = "Stops after this many requests (following `nextLink`) and logs a warning if more rows were available."
     )
+    @Min(1)
     @NotNull
     @Builder.Default
     @PluginProperty(group = "advanced")
-    private Property<Integer> maxPages = Property.ofValue(10);
+    private Property<Integer> maxPages = Property.ofValue(DEFAULT_MAX_PAGES);
 
     @Schema(
         title = "Fetch strategy",
@@ -191,13 +193,13 @@ public class Query extends AbstractBilling implements RunnableTask<Query.Output>
         if (rGroupBy.size() > MAX_GROUP_BY) {
             throw new IllegalArgumentException("Cost Management supports at most " + MAX_GROUP_BY + " groupBy entries, got " + rGroupBy.size());
         }
-        var rTimeframe = runContext.render(timeframe).as(Timeframe.class).orElseThrow();
+        var rTimeframe = runContext.render(timeframe).as(Timeframe.class).orElseThrow(() -> new IllegalArgumentException("timeframe is required"));
         var rStart = runContext.render(startDate).as(String.class);
         var rEnd = runContext.render(endDate).as(String.class);
-        int rMaxPages = maxPages(runContext, maxPages);
+        int rMaxPages = runContext.render(maxPages).as(Integer.class).orElse(DEFAULT_MAX_PAGES);
 
         var dataset = new LinkedHashMap<String, Object>();
-        dataset.put("granularity", runContext.render(granularity).as(Granularity.class).orElseThrow().name());
+        dataset.put("granularity", runContext.render(granularity).as(Granularity.class).orElseThrow(() -> new IllegalArgumentException("granularity is required")).name());
         dataset.put("aggregation", CostQueries.aggregation(rAggregations));
         if (!rGroupBy.isEmpty()) {
             dataset.put("grouping", rGroupBy.stream().map(CostQueries::grouping).toList());
@@ -208,7 +210,7 @@ public class Query extends AbstractBilling implements RunnableTask<Query.Output>
         }
 
         var body = new LinkedHashMap<String, Object>();
-        body.put("type", runContext.render(costType).as(CostQueries.CostType.class).orElseThrow().name());
+        body.put("type", runContext.render(costType).as(CostQueries.CostType.class).orElseThrow(() -> new IllegalArgumentException("costType is required")).name());
         body.put("timeframe", rTimeframe.name());
         if (rTimeframe == Timeframe.Custom) {
             if (rStart.isEmpty() || rEnd.isEmpty()) {
@@ -251,7 +253,7 @@ public class Query extends AbstractBilling implements RunnableTask<Query.Output>
             runContext.logger().warn("Stopped after maxPages={} Cost Management requests, more rows are available. Increase maxPages or narrow the query.", rMaxPages);
         }
 
-        var fetched = BillingFetch.apply(runContext, runContext.render(fetchType).as(FetchType.class).orElseThrow(), rows);
+        var fetched = BillingFetch.apply(runContext, runContext.render(fetchType).as(FetchType.class).orElse(FetchType.STORE), rows);
         return Output.builder()
             .rows(fetched.rows())
             .row(fetched.row())

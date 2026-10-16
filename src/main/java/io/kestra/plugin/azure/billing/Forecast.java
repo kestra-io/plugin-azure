@@ -96,23 +96,23 @@ public class Forecast extends AbstractBilling implements RunnableTask<Forecast.O
     @Override
     public Output run(RunContext runContext) throws Exception {
         var rScope = renderScope(runContext);
-        var rAggregation = runContext.render(aggregation).as(String.class).orElseThrow();
+        var rAggregation = runContext.render(aggregation).as(String.class).orElseThrow(() -> new IllegalArgumentException("aggregation is required"));
 
         var dataset = new LinkedHashMap<String, Object>();
         dataset.put("granularity", "Daily");
         dataset.put("aggregation", CostQueries.aggregation(List.of(rAggregation)));
 
         var body = new LinkedHashMap<String, Object>();
-        body.put("type", runContext.render(costType).as(CostQueries.CostType.class).orElseThrow().name());
+        body.put("type", runContext.render(costType).as(CostQueries.CostType.class).orElseThrow(() -> new IllegalArgumentException("costType is required")).name());
         body.put("timeframe", "Custom");
         body.put(
             "timePeriod", CostQueries.timePeriod(
-                parseDate("startDate", runContext.render(startDate).as(String.class).orElseThrow()),
-                parseDate("endDate", runContext.render(endDate).as(String.class).orElseThrow())
+                parseDate("startDate", runContext.render(startDate).as(String.class).orElseThrow(() -> new IllegalArgumentException("startDate is required"))),
+                parseDate("endDate", runContext.render(endDate).as(String.class).orElseThrow(() -> new IllegalArgumentException("endDate is required")))
             )
         );
         body.put("dataset", dataset);
-        body.put("includeActualCost", runContext.render(includeActualCost).as(Boolean.class).orElseThrow());
+        body.put("includeActualCost", runContext.render(includeActualCost).as(Boolean.class).orElse(false));
         body.put("includeFreshPartialCost", false);
 
         var url = MANAGEMENT_ENDPOINT + rScope + "/providers/Microsoft.CostManagement/forecast?api-version=" + CostQueries.API_VERSION;

@@ -33,6 +33,7 @@ import lombok.experimental.SuperBuilder;
 public abstract class AbstractBilling extends AbstractAzureIdentityConnection {
     static final String MANAGEMENT_ENDPOINT = "https://management.azure.com";
     private static final String MANAGEMENT_SCOPE = MANAGEMENT_ENDPOINT + "/.default";
+    static final int DEFAULT_MAX_PAGES = 10;
     private static final Pattern SCOPE_PATTERN = Pattern.compile("^/(subscriptions|providers)(/[A-Za-z0-9._:()-]+)+$");
     private static final Duration TOKEN_TIMEOUT = Duration.ofSeconds(60);
 
@@ -70,14 +71,6 @@ public abstract class AbstractBilling extends AbstractAzureIdentityConnection {
         } catch (DateTimeParseException e) {
             throw new IllegalArgumentException(name + " must be a date formatted as yyyy-MM-dd, got '" + value + "'", e);
         }
-    }
-
-    static int maxPages(RunContext runContext, Property<Integer> maxPages) throws IllegalVariableEvaluationException {
-        int value = runContext.render(maxPages).as(Integer.class).orElseThrow();
-        if (value < 1) {
-            throw new IllegalArgumentException("maxPages must be at least 1, got " + value);
-        }
-        return value;
     }
 
     /** Opens the Azure Resource Manager client of one task run; the access token is fetched once here. */

@@ -43,7 +43,7 @@ import lombok.experimental.SuperBuilder;
 
                   - id: check
                     type: io.kestra.plugin.core.execution.Fail
-                    condition: "{{ outputs.budget.budget.currentSpendAmount > outputs.budget.budget.amount }}"
+                    condition: "{{ (outputs.budget.budget.currentSpendAmount ?? 0) > outputs.budget.budget.amount }}"
                     errorMessage: "Budget monthly-total exceeded: {{ outputs.budget.budget.currentSpendAmount }} {{ outputs.budget.budget.currentSpendUnit }}"
 
                 pluginDefaults:

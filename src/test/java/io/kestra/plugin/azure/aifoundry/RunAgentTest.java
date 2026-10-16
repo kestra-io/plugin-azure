@@ -1,4 +1,3 @@
-
 package io.kestra.plugin.azure.aifoundry;
 
 import java.time.Duration;

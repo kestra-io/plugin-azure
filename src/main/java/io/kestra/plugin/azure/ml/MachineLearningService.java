@@ -64,13 +64,6 @@ final class MachineLearningService {
     private static final Pattern DATASET_URI = Pattern.compile("^azureml://datasets/([^/]+)$");
     private static final Pattern BLOB_URI = Pattern.compile("^https://(.+?)\\.blob\\.core\\.(.+?)/(.+?)$");
 
-    /**
-     * Backs every bounded/off-thread ARM call in this package (a submit call's create() timeout, ScaleCluster's
-     * autoscale update, CancellableJob's async cancel dispatch) with dedicated daemon threads, instead of each one
-     * separately competing for the JVM-wide {@link java.util.concurrent.ForkJoinPool#commonPool()}, which is also
-     * used by unrelated code throughout the JVM and can be starved by several concurrent, minutes-long blocking
-     * calls.
-     */
     private MachineLearningService() {
     }
 

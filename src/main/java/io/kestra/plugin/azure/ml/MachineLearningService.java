@@ -10,8 +10,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicReference;
@@ -44,6 +42,7 @@ import io.kestra.core.http.HttpRequest;
 import io.kestra.core.http.client.HttpClient;
 import io.kestra.core.runners.RunContext;
 import io.kestra.core.utils.Await;
+import io.kestra.plugin.azure.CancellableOperation;
 
 /**
  * Shared poll-to-terminal-state, status-mapping, and MLflow-metrics logic used by every job-related Azure Machine
@@ -65,20 +64,6 @@ final class MachineLearningService {
     private static final Pattern DATASET_URI = Pattern.compile("^azureml://datasets/([^/]+)$");
     private static final Pattern BLOB_URI = Pattern.compile("^https://(.+?)\\.blob\\.core\\.(.+?)/(.+?)$");
 
-    /**
-     * Backs every bounded/off-thread ARM call in this package (a submit call's create() timeout, ScaleCluster's
-     * autoscale update, CancellableJob's async cancel dispatch) with dedicated daemon threads, instead of each one
-     * separately competing for the JVM-wide {@link java.util.concurrent.ForkJoinPool#commonPool()}, which is also
-     * used by unrelated code throughout the JVM and can be starved by several concurrent, minutes-long blocking
-     * calls.
-     */
-    static final ExecutorService EXECUTOR = Executors.newCachedThreadPool(runnable ->
-    {
-        Thread thread = new Thread(runnable, "azure-ml-async");
-        thread.setDaemon(true);
-        return thread;
-    });
-
     private MachineLearningService() {
     }
 
@@ -89,7 +74,7 @@ final class MachineLearningService {
      * {@code catch (ManagementException e)} keeps working transparently, as if this call were still synchronous.
      */
     static <T> T withTimeout(Supplier<T> action, Duration timeout, Supplier<String> timeoutMessage) {
-        CompletableFuture<T> future = CompletableFuture.supplyAsync(action, EXECUTOR);
+        CompletableFuture<T> future = CancellableOperation.supplyAsync(action);
         try {
             return future.get(timeout.toMillis(), TimeUnit.MILLISECONDS);
         } catch (TimeoutException e) {

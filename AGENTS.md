@@ -72,6 +72,13 @@ Infrastructure dependencies (Docker Compose services):
 - `io.kestra.plugin.azure.monitoring.Push`
 - `io.kestra.plugin.azure.monitoring.Query`
 - `io.kestra.plugin.azure.monitoring.Trigger`
+- `io.kestra.plugin.azure.sentinel.ListIncidents`
+- `io.kestra.plugin.azure.sentinel.GetIncident`
+- `io.kestra.plugin.azure.sentinel.UpdateIncident`
+- `io.kestra.plugin.azure.sentinel.ListComments`
+- `io.kestra.plugin.azure.sentinel.AddComment`
+- `io.kestra.plugin.azure.sentinel.Query`
+- `io.kestra.plugin.azure.sentinel.Trigger`
 - `io.kestra.plugin.azure.servicebus.Consume`
 - `io.kestra.plugin.azure.servicebus.Publish`
 - `io.kestra.plugin.azure.servicebus.RealTimeTrigger`

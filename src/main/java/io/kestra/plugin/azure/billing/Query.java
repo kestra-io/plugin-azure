@@ -111,7 +111,7 @@ import lombok.experimental.SuperBuilder;
 public class Query extends AbstractBilling implements RunnableTask<Query.Output> {
     private static final int MAX_GROUP_BY = 2;
 
-    @Schema(title = "Cost type", description = "`ActualCost`, `AmortizedCost` or `Usage`.")
+    @Schema(title = "Cost type", description = "Required. `ActualCost`, `AmortizedCost` or `Usage`.")
     @NotNull
     @PluginProperty(group = "main")
     private Property<CostQueries.CostType> costType;
@@ -143,7 +143,7 @@ public class Query extends AbstractBilling implements RunnableTask<Query.Output>
 
     @Schema(
         title = "Aggregation columns",
-        description = "Cost columns to sum, for example `Cost`, `PreTaxCost`, `CostUSD` or `UsageQuantity`. At least one is required."
+        description = "Required. Cost columns to sum, for example `Cost`, `PreTaxCost`, `CostUSD` or `UsageQuantity`. At least one column must be given."
     )
     @NotNull
     @PluginProperty(group = "main")
@@ -159,8 +159,8 @@ public class Query extends AbstractBilling implements RunnableTask<Query.Output>
 
     @Schema(
         title = "Filter",
-        description = "Only include costs matching all entries. Keys use the same syntax as `groupBy` (`ServiceName`, `TAG:team`), " +
-            "values are the accepted values for that key."
+        description = "Only include costs matching all entries (entries are ANDed). Keys use the same syntax as `groupBy` (`ServiceName`, `TAG:team`); " +
+            "the values listed for one key are ORed, so a cost matches when its value is any of them."
     )
     @PluginProperty(group = "processing")
     private Property<Map<String, List<String>>> dimensionFilter;

@@ -7,9 +7,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
-/**
- * Helpers shared by ListBudgets and GetBudget to read Consumption budgets.
- */
+/** Helpers shared by ListBudgets and GetBudget. */
 final class Budgets {
     static final String API_VERSION = "2023-05-01";
 

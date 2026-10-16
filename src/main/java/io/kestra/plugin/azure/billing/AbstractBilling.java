@@ -22,10 +22,7 @@ import jakarta.validation.constraints.NotNull;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
 
-/**
- * Base class for the Azure billing tasks. Calls the Azure Resource Manager REST API (Cost Management and Consumption)
- * with a bearer token from the shared Azure identity connection.
- */
+/** Base class for the Azure billing tasks, which call the Azure Resource Manager REST API. */
 @SuperBuilder
 @ToString
 @EqualsAndHashCode

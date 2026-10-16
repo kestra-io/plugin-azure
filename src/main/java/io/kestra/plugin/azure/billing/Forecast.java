@@ -64,7 +64,7 @@ import lombok.experimental.SuperBuilder;
     }
 )
 public class Forecast extends AbstractBilling implements RunnableTask<Forecast.Output> {
-    @Schema(title = "Cost type", description = "`ActualCost`, `AmortizedCost` or `Usage`.")
+    @Schema(title = "Cost type", description = "Required. `ActualCost`, `AmortizedCost` or `Usage`.")
     @NotNull
     @PluginProperty(group = "main")
     private Property<CostQueries.CostType> costType;
@@ -79,7 +79,7 @@ public class Forecast extends AbstractBilling implements RunnableTask<Forecast.O
     @PluginProperty(group = "main")
     private Property<String> endDate;
 
-    @Schema(title = "Aggregation column", description = "Cost column to forecast, for example `Cost` or `PreTaxCost`.")
+    @Schema(title = "Aggregation column", description = "Required. Cost column to forecast, for example `Cost` or `PreTaxCost`.")
     @NotNull
     @PluginProperty(group = "main")
     private Property<String> aggregation;

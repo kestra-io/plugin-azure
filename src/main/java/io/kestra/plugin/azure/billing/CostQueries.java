@@ -7,9 +7,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-/**
- * Helpers shared by Query and Forecast to build Cost Management request bodies and read their tabular responses.
- */
+/** Helpers shared by Query and Forecast. */
 final class CostQueries {
     static final String API_VERSION = "2023-11-01";
 

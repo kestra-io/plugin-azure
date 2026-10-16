@@ -85,7 +85,7 @@ final class CostQueries {
     static String nextLink(Map<String, Object> response) {
         var properties = (Map<String, Object>) response.getOrDefault("properties", Map.of());
         var nextLink = properties.get("nextLink");
-        return nextLink == null || nextLink.toString().isBlank() ? null : nextLink.toString();
+        return nextLink == null || nextLink.toString().isBlank() ? null : AbstractBilling.requireManagementUrl(nextLink.toString());
     }
 
     static BigDecimal decimal(Object value) {

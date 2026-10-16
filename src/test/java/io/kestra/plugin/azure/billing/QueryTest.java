@@ -180,4 +180,23 @@ class QueryTest {
             is("/providers/Microsoft.Billing/billingAccounts/1234:5678_2019-05-31")
         );
     }
+
+    @Test
+    void givenNextLinkOutsideManagementHost_whenRun_thenFailsWithoutFollowingIt() throws Exception {
+        for (var link : List.of(
+            "http://management.azure.com/next",
+            "https://evil.example.com/next",
+            "https://management.azure.com.evil.example.com/next",
+            "https://user@management.azure.com/next",
+            "https://management.azure.com:8443/next"
+        )) {
+            var spy = spy(task().fetchType(Property.ofValue(FetchType.NONE)).build());
+            var api = stubApi(spy);
+            doReturn(page(link, List.of(List.of(1, "rg", "USD")))).when(api).send(eq("POST"), anyString(), any());
+
+            var e = assertThrows(IllegalStateException.class, () -> spy.run(runContextFactory.of()), link);
+            assertThat(e.getMessage(), containsString("Refusing to follow nextLink"));
+            verify(api, times(1)).send(eq("POST"), anyString(), any());
+        }
+    }
 }

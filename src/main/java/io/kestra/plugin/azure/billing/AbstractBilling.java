@@ -1,5 +1,6 @@
 package io.kestra.plugin.azure.billing;
 
+import java.net.URI;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.time.format.DateTimeParseException;
@@ -31,7 +32,8 @@ import lombok.experimental.SuperBuilder;
 @Getter
 @NoArgsConstructor
 public abstract class AbstractBilling extends AbstractAzureIdentityConnection {
-    static final String MANAGEMENT_ENDPOINT = "https://management.azure.com";
+    static final String MANAGEMENT_HOST = "management.azure.com";
+    static final String MANAGEMENT_ENDPOINT = "https://" + MANAGEMENT_HOST;
     private static final String MANAGEMENT_SCOPE = MANAGEMENT_ENDPOINT + "/.default";
     static final int DEFAULT_MAX_PAGES = 10;
     private static final Pattern SCOPE_PATTERN = Pattern.compile("^/(subscriptions|providers)(/[A-Za-z0-9._:()-]+)+$");
@@ -63,6 +65,20 @@ public abstract class AbstractBilling extends AbstractAzureIdentityConnection {
             );
         }
         return rScope;
+    }
+
+    /** Only follow a {@code nextLink} to Azure Resource Manager over https, so the bearer token is never sent elsewhere. */
+    static String requireManagementUrl(String link) {
+        URI uri;
+        try {
+            uri = URI.create(link);
+        } catch (IllegalArgumentException e) {
+            throw new IllegalStateException("Azure returned an invalid nextLink: '" + link + "'", e);
+        }
+        if (!"https".equalsIgnoreCase(uri.getScheme()) || !MANAGEMENT_HOST.equalsIgnoreCase(uri.getHost()) || uri.getPort() != -1 || uri.getUserInfo() != null) {
+            throw new IllegalStateException("Refusing to follow nextLink outside https://" + MANAGEMENT_HOST + ": '" + link + "'");
+        }
+        return link;
     }
 
     static LocalDate parseDate(String name, String value) {

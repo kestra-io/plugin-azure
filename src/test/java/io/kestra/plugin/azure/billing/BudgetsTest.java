@@ -16,6 +16,7 @@ import jakarta.inject.Inject;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.*;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
@@ -118,5 +119,16 @@ class BudgetsTest {
             eq("GET"),
             eq("https://management.azure.com" + SCOPE + "/providers/Microsoft.Consumption/budgets/monthly-total?api-version=2023-05-01"), isNull()
         );
+    }
+
+    @Test
+    void givenNextLinkOutsideManagementHost_whenListBudgets_thenFails() throws Exception {
+        var spy = spy(ListBudgets.builder().id("budgets").type(ListBudgets.class.getName()).scope(Property.ofValue(SCOPE)).build());
+        var api = QueryTest.stubApi(spy);
+        doReturn(Map.of("value", List.of(budget("a", 1, 1)), "nextLink", "https://attacker.example.com/budgets"))
+            .when(api).send(eq("GET"), anyString(), isNull());
+
+        assertThrows(IllegalStateException.class, () -> spy.run(runContextFactory.of()));
+        verify(api, times(1)).send(eq("GET"), anyString(), isNull());
     }
 }

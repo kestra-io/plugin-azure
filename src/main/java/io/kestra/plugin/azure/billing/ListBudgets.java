@@ -95,7 +95,7 @@ public class ListBudgets extends AbstractBilling implements RunnableTask<ListBud
                     rows.add(Budgets.toMap(budget));
                 }
                 var nextLink = response.get("nextLink");
-                url = nextLink == null || nextLink.toString().isBlank() ? null : nextLink.toString();
+                url = nextLink == null || nextLink.toString().isBlank() ? null : requireManagementUrl(nextLink.toString());
             }
         }
 

@@ -40,7 +40,7 @@ final class Budgets {
         var notificationList = new ArrayList<Map<String, Object>>();
         if (notifications != null) {
             for (var entry : notifications.entrySet()) {
-                var notification = Objects.requireNonNullElse(object(entry.getValue(), "properties.notifications." + entry.getKey()), Map.<String, Object>of());
+                var notification = Objects.requireNonNullElse(object(entry.getValue(), "properties.notifications." + entry.getKey()), Map.<String, Object> of());
                 var item = new LinkedHashMap<String, Object>();
                 item.put("name", entry.getKey());
                 item.put("enabled", notification.get("enabled"));

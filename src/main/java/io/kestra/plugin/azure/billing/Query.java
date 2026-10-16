@@ -225,7 +225,7 @@ public class Query extends AbstractBilling implements RunnableTask<Query.Output>
         var rows = new ArrayList<Map<String, Object>>();
         var totals = new LinkedHashMap<String, BigDecimal>();
         rAggregations.forEach(column -> totals.put(column, BigDecimal.ZERO));
-        String unit = null;
+        var totalsByCurrency = new LinkedHashMap<String, Map<String, BigDecimal>>();
         String url = MANAGEMENT_ENDPOINT + rScope + "/providers/Microsoft.CostManagement/query?api-version=" + CostQueries.API_VERSION;
         int pages = 0;
 
@@ -234,13 +234,15 @@ public class Query extends AbstractBilling implements RunnableTask<Query.Output>
                 var response = api.send("POST", url, body);
                 pages++;
                 for (var row : CostQueries.rows(response)) {
+                    var currency = row.get("Currency") == null ? null : row.get("Currency").toString();
                     for (var column : rAggregations) {
                         if (row.get(column) != null) {
-                            totals.merge(column, CostQueries.decimal(row.get(column)), BigDecimal::add);
+                            var amount = CostQueries.decimal(row.get(column));
+                            totals.merge(column, amount, BigDecimal::add);
+                            if (currency != null) {
+                                totalsByCurrency.computeIfAbsent(currency, c -> new LinkedHashMap<>()).merge(column, amount, BigDecimal::add);
+                            }
                         }
-                    }
-                    if (unit == null && row.get("Currency") != null) {
-                        unit = row.get("Currency").toString();
                     }
                     rows.add(row);
                 }
@@ -259,8 +261,9 @@ public class Query extends AbstractBilling implements RunnableTask<Query.Output>
             .row(fetched.row())
             .uri(fetched.uri())
             .size(fetched.size())
-            .costTotals(totals)
-            .unit(unit)
+            .costTotals(totalsByCurrency.size() > 1 ? null : totals)
+            .costTotalsByCurrency(totalsByCurrency)
+            .unit(totalsByCurrency.size() == 1 ? totalsByCurrency.keySet().iterator().next() : null)
             .truncated(url != null)
             .build();
     }
@@ -302,11 +305,22 @@ public class Query extends AbstractBilling implements RunnableTask<Query.Output>
 
         @Schema(
             title = "Cost totals",
-            description = "Sum of each aggregation column over all returned rows, keyed by column name (e.g. `costTotals.Cost`)."
+            description = "Sum of each aggregation column over all returned rows, keyed by column name (e.g. `costTotals.Cost`). " +
+                "Null when the rows are in more than one currency (possible at EA, MCA or CSP billing scopes): use `costTotalsByCurrency` then."
         )
         private Map<String, BigDecimal> costTotals;
 
-        @Schema(title = "Currency", description = "Currency of the costs, from the `Currency` column, e.g. `USD` or `EUR`.")
+        @Schema(
+            title = "Cost totals by currency",
+            description = "Sum of each aggregation column per value of the `Currency` column, e.g. `costTotalsByCurrency.EUR.Cost`. " +
+                "Empty when the response has no `Currency` column."
+        )
+        private Map<String, Map<String, BigDecimal>> costTotalsByCurrency;
+
+        @Schema(
+            title = "Currency",
+            description = "Currency of the costs, from the `Currency` column, e.g. `USD` or `EUR`. Null when the rows are in more than one currency."
+        )
         private String unit;
 
         @Schema(title = "Truncated", description = "True when `maxPages` was reached before all rows were read.")

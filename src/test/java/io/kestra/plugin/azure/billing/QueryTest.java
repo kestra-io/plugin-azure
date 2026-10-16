@@ -199,4 +199,19 @@ class QueryTest {
             verify(api, times(1)).send(eq("POST"), anyString(), any());
         }
     }
+
+    @Test
+    void givenRowsInSeveralCurrencies_whenRun_thenTotalsPerCurrency() throws Exception {
+        var spy = spy(task().fetchType(Property.ofValue(FetchType.NONE)).build());
+        var api = stubApi(spy);
+        doReturn(page(null, List.of(List.of(10, "rg-a", "USD"), List.of(5, "rg-b", "EUR"), List.of(2.5, "rg-c", "USD"))))
+            .when(api).send(eq("POST"), anyString(), any());
+
+        var output = spy.run(runContextFactory.of());
+
+        assertThat(output.getUnit(), nullValue());
+        assertThat(output.getCostTotals(), nullValue());
+        assertThat(output.getCostTotalsByCurrency().get("USD").get("Cost"), comparesEqualTo(new BigDecimal("12.5")));
+        assertThat(output.getCostTotalsByCurrency().get("EUR").get("Cost"), comparesEqualTo(new BigDecimal("5")));
+    }
 }

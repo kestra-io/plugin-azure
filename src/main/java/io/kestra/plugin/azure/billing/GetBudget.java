@@ -85,7 +85,8 @@ public class GetBudget extends AbstractBilling implements RunnableTask<GetBudget
         @Schema(
             title = "Budget",
             description = "The budget with `name`, `id`, `category`, `amount`, `timeGrain`, `startDate`/`endDate`, " +
-                "`currentSpendAmount`/`currentSpendUnit`, `forecastSpendAmount`/`forecastSpendUnit` and the `notifications` names."
+                "`currentSpendAmount`/`currentSpendUnit`, `forecastSpendAmount`/`forecastSpendUnit`, and `notifications`, " +
+                "each with `name`, `enabled`, `operator`, `threshold`, `thresholdType`, `contactEmails`, `contactRoles` and `contactGroups`."
         )
         private Map<String, Object> budget;
     }

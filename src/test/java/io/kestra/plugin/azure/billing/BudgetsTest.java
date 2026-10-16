@@ -40,7 +40,10 @@ class BudgetsTest {
                 "timePeriod", Map.of("startDate", "2026-10-01T00:00:00Z"),
                 "currentSpend", Map.of("amount", current, "unit", "USD"),
                 "forecastSpend", Map.of("amount", 900, "unit", "USD"),
-                "notifications", Map.of("Actual_GreaterThan_80_Percent", Map.of("enabled", true))
+                "notifications", Map.of(
+                    "Actual_GreaterThan_80_Percent",
+                    Map.of("enabled", true, "operator", "GreaterThan", "threshold", 80, "thresholdType", "Actual", "contactEmails", List.of("finops@example.com"))
+                )
             )
         );
     }
@@ -68,7 +71,13 @@ class BudgetsTest {
         assertThat(first.get("name"), is("monthly-total"));
         assertThat(first.get("amount"), is(new BigDecimal("1000")));
         assertThat(first.get("currentSpendAmount"), is(new BigDecimal("512.3")));
-        assertThat(first.get("notifications"), is(List.of("Actual_GreaterThan_80_Percent")));
+        @SuppressWarnings("unchecked")
+        var notification = ((List<Map<String, Object>>) first.get("notifications")).getFirst();
+        assertThat(notification.get("name"), is("Actual_GreaterThan_80_Percent"));
+        assertThat(notification.get("enabled"), is(true));
+        assertThat(notification.get("operator"), is("GreaterThan"));
+        assertThat(notification.get("threshold"), is(new BigDecimal("80")));
+        assertThat(notification.get("contactEmails"), is(List.of("finops@example.com")));
 
         var urls = ArgumentCaptor.forClass(String.class);
         verify(api, times(2)).send(eq("GET"), urls.capture(), isNull());

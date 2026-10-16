@@ -124,7 +124,8 @@ public class ListBudgets extends AbstractBilling implements RunnableTask<ListBud
         @Schema(
             title = "Budgets",
             description = "All budgets when fetchType is FETCH, each with `name`, `id`, `category`, `amount`, `timeGrain`, `startDate`/`endDate`, " +
-                "`currentSpendAmount`/`currentSpendUnit`, `forecastSpendAmount`/`forecastSpendUnit` and the `notifications` names."
+                "`currentSpendAmount`/`currentSpendUnit`, `forecastSpendAmount`/`forecastSpendUnit`, and `notifications`, " +
+                "each with `name`, `enabled`, `operator`, `threshold`, `thresholdType`, `contactEmails`, `contactRoles` and `contactGroups`."
         )
         private List<Map<String, Object>> rows;
 

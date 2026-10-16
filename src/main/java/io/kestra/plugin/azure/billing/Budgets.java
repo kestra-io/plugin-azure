@@ -3,9 +3,9 @@ package io.kestra.plugin.azure.billing;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
-import java.util.Objects;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 /**
  * Helpers shared by ListBudgets and GetBudget to read Consumption budgets.
@@ -22,7 +22,7 @@ final class Budgets {
     }
 
     static Map<String, Object> toMap(Map<String, Object> budget) {
-        var properties = Objects.requireNonNullElse(object(budget.get("properties"), "properties"), Map.<String, Object>of());
+        var properties = Objects.requireNonNullElse(object(budget.get("properties"), "properties"), Map.<String, Object> of());
         var map = new LinkedHashMap<String, Object>();
         map.put("name", budget.get("name"));
         map.put("id", budget.get("id"));
@@ -37,7 +37,23 @@ final class Budgets {
         putSpend(map, "currentSpend", object(properties.get("currentSpend"), "properties.currentSpend"));
         putSpend(map, "forecastSpend", object(properties.get("forecastSpend"), "properties.forecastSpend"));
         var notifications = object(properties.get("notifications"), "properties.notifications");
-        map.put("notifications", notifications == null ? List.of() : List.copyOf(notifications.keySet()));
+        var notificationList = new ArrayList<Map<String, Object>>();
+        if (notifications != null) {
+            for (var entry : notifications.entrySet()) {
+                var notification = Objects.requireNonNullElse(object(entry.getValue(), "properties.notifications." + entry.getKey()), Map.<String, Object>of());
+                var item = new LinkedHashMap<String, Object>();
+                item.put("name", entry.getKey());
+                item.put("enabled", notification.get("enabled"));
+                item.put("operator", notification.get("operator"));
+                item.put("threshold", decimalOrNull(notification.get("threshold")));
+                item.put("thresholdType", notification.get("thresholdType"));
+                item.put("contactEmails", notification.getOrDefault("contactEmails", List.of()));
+                item.put("contactRoles", notification.getOrDefault("contactRoles", List.of()));
+                item.put("contactGroups", notification.getOrDefault("contactGroups", List.of()));
+                notificationList.add(item);
+            }
+        }
+        map.put("notifications", notificationList);
         return map;
     }
 

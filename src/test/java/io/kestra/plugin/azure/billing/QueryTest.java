@@ -159,4 +159,25 @@ class QueryTest {
         doReturn(api).when(spy).api(any(RunContext.class));
         return api;
     }
+
+    @Test
+    void givenUnsafeScope_whenValidate_thenRejected() {
+        for (var scope : List.of(
+            "/subscriptions/../providers/x",
+            "/subscriptions/sub/../../other",
+            "/subscriptions/sub?api-version=2020-01-01",
+            "/subscriptions/sub#frag",
+            "/subscriptions/sub/resourceGroups/rg name",
+            "/subscriptions",
+            "https://evil.example.com/subscriptions/sub",
+            "/other/sub"
+        )) {
+            assertThrows(IllegalArgumentException.class, () -> AbstractBilling.validateScope(scope), scope);
+        }
+        assertThat(AbstractBilling.validateScope("/subscriptions/sub/resourceGroups/rg-data_1(x)/"), is("/subscriptions/sub/resourceGroups/rg-data_1(x)"));
+        assertThat(
+            AbstractBilling.validateScope("/providers/Microsoft.Billing/billingAccounts/1234:5678_2019-05-31"),
+            is("/providers/Microsoft.Billing/billingAccounts/1234:5678_2019-05-31")
+        );
+    }
 }

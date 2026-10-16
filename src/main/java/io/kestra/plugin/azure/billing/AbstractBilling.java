@@ -3,6 +3,8 @@ package io.kestra.plugin.azure.billing;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.time.format.DateTimeParseException;
+import java.util.Arrays;
+import java.util.regex.Pattern;
 
 import com.azure.core.credential.AccessToken;
 import com.azure.core.credential.TokenRequestContext;
@@ -31,6 +33,7 @@ import lombok.experimental.SuperBuilder;
 public abstract class AbstractBilling extends AbstractAzureIdentityConnection {
     static final String MANAGEMENT_ENDPOINT = "https://management.azure.com";
     private static final String MANAGEMENT_SCOPE = MANAGEMENT_ENDPOINT + "/.default";
+    private static final Pattern SCOPE_PATTERN = Pattern.compile("^/(subscriptions|providers)(/[A-Za-z0-9._:()-]+)+$");
     private static final Duration TOKEN_TIMEOUT = Duration.ofSeconds(60);
 
     @Schema(
@@ -46,11 +49,19 @@ public abstract class AbstractBilling extends AbstractAzureIdentityConnection {
     protected Property<String> scope;
 
     protected String renderScope(RunContext runContext) throws IllegalVariableEvaluationException {
-        var rScope = runContext.render(scope).as(String.class).orElseThrow().trim();
-        if (!rScope.startsWith("/subscriptions/") && !rScope.startsWith("/providers/")) {
-            throw new IllegalArgumentException("scope must start with /subscriptions/ or /providers/, got '" + rScope + "'");
+        var rScope = runContext.render(scope).as(String.class).orElseThrow(() -> new IllegalArgumentException("scope is required")).trim();
+        return validateScope(rScope);
+    }
+
+    static String validateScope(String value) {
+        var rScope = value.endsWith("/") ? value.substring(0, value.length() - 1) : value;
+        boolean dotSegment = Arrays.stream(rScope.split("/")).anyMatch(segment -> segment.equals(".") || segment.equals(".."));
+        if (!SCOPE_PATTERN.matcher(rScope).matches() || dotSegment) {
+            throw new IllegalArgumentException(
+                "scope must start with /subscriptions/ or /providers/ and contain only path segments made of letters, digits and . _ : ( ) -, got '" + value + "'"
+            );
         }
-        return rScope.endsWith("/") ? rScope.substring(0, rScope.length() - 1) : rScope;
+        return rScope;
     }
 
     static LocalDate parseDate(String name, String value) {

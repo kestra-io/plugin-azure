@@ -131,4 +131,14 @@ class BudgetsTest {
         assertThrows(IllegalStateException.class, () -> spy.run(runContextFactory.of()));
         verify(api, times(1)).send(eq("GET"), anyString(), isNull());
     }
+
+    @Test
+    void givenMalformedResponse_whenListBudgets_thenFailsWithClearMessage() throws Exception {
+        var spy = spy(ListBudgets.builder().id("budgets").type(ListBudgets.class.getName()).scope(Property.ofValue(SCOPE)).build());
+        var api = QueryTest.stubApi(spy);
+        doReturn(Map.of("value", "not-a-list")).when(api).send(eq("GET"), anyString(), isNull());
+
+        var e = assertThrows(IllegalStateException.class, () -> spy.run(runContextFactory.of()));
+        assertThat(e.getMessage(), containsString("'value' should be an array"));
+    }
 }

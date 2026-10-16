@@ -1,7 +1,9 @@
 package io.kestra.plugin.azure.billing;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.Objects;
 import java.util.List;
 import java.util.Map;
 
@@ -19,25 +21,51 @@ final class Budgets {
             (budgetName == null ? "" : "/" + budgetName) + "?api-version=" + API_VERSION;
     }
 
-    @SuppressWarnings("unchecked")
     static Map<String, Object> toMap(Map<String, Object> budget) {
-        var properties = (Map<String, Object>) budget.getOrDefault("properties", Map.of());
+        var properties = Objects.requireNonNullElse(object(budget.get("properties"), "properties"), Map.<String, Object>of());
         var map = new LinkedHashMap<String, Object>();
         map.put("name", budget.get("name"));
         map.put("id", budget.get("id"));
         map.put("category", properties.get("category"));
         map.put("amount", decimalOrNull(properties.get("amount")));
         map.put("timeGrain", properties.get("timeGrain"));
-        var timePeriod = (Map<String, Object>) properties.get("timePeriod");
+        var timePeriod = object(properties.get("timePeriod"), "properties.timePeriod");
         if (timePeriod != null) {
             map.put("startDate", timePeriod.get("startDate"));
             map.put("endDate", timePeriod.get("endDate"));
         }
-        putSpend(map, "currentSpend", (Map<String, Object>) properties.get("currentSpend"));
-        putSpend(map, "forecastSpend", (Map<String, Object>) properties.get("forecastSpend"));
-        var notifications = (Map<String, Object>) properties.get("notifications");
+        putSpend(map, "currentSpend", object(properties.get("currentSpend"), "properties.currentSpend"));
+        putSpend(map, "forecastSpend", object(properties.get("forecastSpend"), "properties.forecastSpend"));
+        var notifications = object(properties.get("notifications"), "properties.notifications");
         map.put("notifications", notifications == null ? List.of() : List.copyOf(notifications.keySet()));
         return map;
+    }
+
+    /** Casts a JSON value to an object, failing with a clear message when Azure returned something else. */
+    @SuppressWarnings("unchecked")
+    static Map<String, Object> object(Object value, String field) {
+        if (value == null) {
+            return null;
+        }
+        if (!(value instanceof Map<?, ?>)) {
+            throw new IllegalStateException("Malformed Azure budget response: '" + field + "' should be an object, got " + value.getClass().getSimpleName());
+        }
+        return (Map<String, Object>) value;
+    }
+
+    /** Casts a JSON value to a list of objects, failing with a clear message when Azure returned something else. */
+    static List<Map<String, Object>> list(Object value, String field) {
+        if (value == null) {
+            return List.of();
+        }
+        if (!(value instanceof List<?> items)) {
+            throw new IllegalStateException("Malformed Azure budget response: '" + field + "' should be an array, got " + value.getClass().getSimpleName());
+        }
+        var result = new ArrayList<Map<String, Object>>(items.size());
+        for (var item : items) {
+            result.add(object(item, field + "[]"));
+        }
+        return result;
     }
 
     private static void putSpend(Map<String, Object> map, String prefix, Map<String, Object> spend) {

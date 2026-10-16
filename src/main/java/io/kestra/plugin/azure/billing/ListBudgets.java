@@ -8,8 +8,10 @@ import java.util.Map;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 import io.kestra.core.models.annotations.Example;
+import io.kestra.core.models.annotations.Metric;
 import io.kestra.core.models.annotations.Plugin;
 import io.kestra.core.models.annotations.PluginProperty;
+import io.kestra.core.models.executions.metrics.Counter;
 import io.kestra.core.models.property.Property;
 import io.kestra.core.models.tasks.RunnableTask;
 import io.kestra.core.models.tasks.common.FetchType;
@@ -57,6 +59,9 @@ import lombok.experimental.SuperBuilder;
                       clientSecret: "{{ secret('AZURE_CLIENT_SECRET') }}"
                 """
         )
+    },
+    metrics = {
+        @Metric(name = "fetch.rows", type = Counter.TYPE, unit = "rows", description = "Number of budgets fetched or stored.")
     }
 )
 public class ListBudgets extends AbstractBilling implements RunnableTask<ListBudgets.Output> {
@@ -80,7 +85,6 @@ public class ListBudgets extends AbstractBilling implements RunnableTask<ListBud
     private Property<FetchType> fetchType = Property.ofValue(FetchType.STORE);
 
     @Override
-    @SuppressWarnings("unchecked")
     public Output run(RunContext runContext) throws Exception {
         int rMaxPages = runContext.render(maxPages).as(Integer.class).orElse(DEFAULT_MAX_PAGES);
         String url = Budgets.url(renderScope(runContext), null);
@@ -91,7 +95,7 @@ public class ListBudgets extends AbstractBilling implements RunnableTask<ListBud
             while (url != null && pages < rMaxPages) {
                 var response = api.send("GET", url, null);
                 pages++;
-                for (var budget : (List<Map<String, Object>>) response.getOrDefault("value", List.of())) {
+                for (var budget : Budgets.list(response.get("value"), "value")) {
                     rows.add(Budgets.toMap(budget));
                 }
                 var nextLink = response.get("nextLink");

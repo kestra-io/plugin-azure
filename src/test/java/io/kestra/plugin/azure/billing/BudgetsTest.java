@@ -159,4 +159,18 @@ class BudgetsTest {
             verify(spy, never()).api(any());
         }
     }
+
+    @Test
+    void givenNewBudgetWithoutCurrentSpend_whenGetBudget_thenSpendIsAbsent() throws Exception {
+        var spy = spy(GetBudget.builder().id("budget").type(GetBudget.class.getName()).scope(Property.ofValue(SCOPE)).budgetName(Property.ofValue("new-budget")).build());
+        var api = QueryTest.stubApi(spy);
+        doReturn(Map.of("name", "new-budget", "properties", Map.of("category", "Cost", "amount", 500, "timeGrain", "Monthly")))
+            .when(api).send(eq("GET"), anyString(), isNull());
+
+        var budget = spy.run(runContextFactory.of()).getBudget();
+
+        assertThat(budget.get("amount"), is(new BigDecimal("500")));
+        assertThat(budget, not(hasKey("currentSpendAmount")));
+        assertThat(budget.get("notifications"), is(List.of()));
+    }
 }

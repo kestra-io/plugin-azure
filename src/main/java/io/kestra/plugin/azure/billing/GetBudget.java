@@ -1,6 +1,7 @@
 package io.kestra.plugin.azure.billing;
 
 import java.util.Map;
+import java.util.regex.Pattern;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
@@ -56,7 +57,9 @@ import lombok.experimental.SuperBuilder;
     }
 )
 public class GetBudget extends AbstractBilling implements RunnableTask<GetBudget.Output> {
-    @Schema(title = "Budget name", description = "Name of the budget to get.")
+    private static final Pattern BUDGET_NAME = Pattern.compile("[A-Za-z0-9._-]+");
+
+    @Schema(title = "Budget name", description = "Name of the budget to get. Letters, digits, `.`, `_` and `-` only.")
     @NotNull
     @PluginProperty(group = "main")
     private Property<String> budgetName;
@@ -64,6 +67,9 @@ public class GetBudget extends AbstractBilling implements RunnableTask<GetBudget
     @Override
     public Output run(RunContext runContext) throws Exception {
         var rBudgetName = runContext.render(budgetName).as(String.class).orElseThrow(() -> new IllegalArgumentException("budgetName is required"));
+        if (!BUDGET_NAME.matcher(rBudgetName).matches()) {
+            throw new IllegalArgumentException("budgetName may only contain letters, digits, '.', '_' and '-', got '" + rBudgetName + "'");
+        }
         var url = Budgets.url(renderScope(runContext), rBudgetName);
         Map<String, Object> response;
         try (var api = api(runContext)) {

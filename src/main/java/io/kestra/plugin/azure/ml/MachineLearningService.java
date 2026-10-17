@@ -65,20 +65,6 @@ final class MachineLearningService {
     private static final Pattern DATASET_URI = Pattern.compile("^azureml://datasets/([^/]+)$");
     private static final Pattern BLOB_URI = Pattern.compile("^https://(.+?)\\.blob\\.core\\.(.+?)/(.+?)$");
 
-    /**
-     * Backs every bounded/off-thread ARM call in this package (a submit call's create() timeout, ScaleCluster's
-     * autoscale update, CancellableJob's async cancel dispatch) with dedicated daemon threads, instead of each one
-     * separately competing for the JVM-wide {@link java.util.concurrent.ForkJoinPool#commonPool()}, which is also
-     * used by unrelated code throughout the JVM and can be starved by several concurrent, minutes-long blocking
-     * calls.
-     */
-    static final ExecutorService EXECUTOR = Executors.newCachedThreadPool(runnable ->
-    {
-        Thread thread = new Thread(runnable, "azure-ml-async");
-        thread.setDaemon(true);
-        return thread;
-    });
-
     private MachineLearningService() {
     }
 
@@ -89,22 +75,33 @@ final class MachineLearningService {
      * {@code catch (ManagementException e)} keeps working transparently, as if this call were still synchronous.
      */
     static <T> T withTimeout(Supplier<T> action, Duration timeout, Supplier<String> timeoutMessage) {
-        CompletableFuture<T> future = CompletableFuture.supplyAsync(action, EXECUTOR);
+        ExecutorService executor = Executors.newSingleThreadExecutor(runnable ->
+        {
+            Thread thread = new Thread(runnable, "azure-ml-async");
+            thread.setDaemon(true);
+            return thread;
+        });
+
         try {
-            return future.get(timeout.toMillis(), TimeUnit.MILLISECONDS);
-        } catch (TimeoutException e) {
-            // Cannot actually stop a synchronous, non-interruptible SDK call underneath — this is best-effort.
-            future.cancel(true);
-            throw new IllegalStateException(timeoutMessage.get(), e);
-        } catch (ExecutionException e) {
-            Throwable cause = e.getCause();
-            if (cause instanceof RuntimeException re) {
-                throw re;
+            CompletableFuture<T> future = CompletableFuture.supplyAsync(action, executor);
+            try {
+                return future.get(timeout.toMillis(), TimeUnit.MILLISECONDS);
+            } catch (TimeoutException e) {
+                // Cannot actually stop a synchronous, non-interruptible SDK call underneath — this is best-effort.
+                future.cancel(true);
+                throw new IllegalStateException(timeoutMessage.get(), e);
+            } catch (ExecutionException e) {
+                Throwable cause = e.getCause();
+                if (cause instanceof RuntimeException re) {
+                    throw re;
+                }
+                throw new IllegalStateException(cause.getMessage(), cause);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                throw new IllegalStateException("Interrupted", e);
             }
-            throw new IllegalStateException(cause.getMessage(), cause);
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            throw new IllegalStateException("Interrupted", e);
+        } finally {
+            executor.shutdownNow();
         }
     }
 

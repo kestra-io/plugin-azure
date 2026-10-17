@@ -1,6 +1,7 @@
 package io.kestra.plugin.azure.ml;
 
-import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.slf4j.Logger;
@@ -48,15 +49,34 @@ final class CancellableJob {
 
     private void fire() {
         Runnable current = action;
+
         if (current != null && fired.compareAndSet(false, true)) {
-            // The cancel action (cancelQuietly) already contains its own error handling; this only guards against
-            // a genuinely unexpected failure inside it, which would otherwise vanish silently into an unobserved
-            // future instead of at least being logged.
-            CompletableFuture.runAsync(current, MachineLearningService.EXECUTOR)
-                .exceptionally(e -> {
-                    LOG.warn("Unexpected error while cancelling an Azure Machine Learning job", e);
-                    return null;
+            ExecutorService executor = Executors.newSingleThreadExecutor(runnable -> {
+                Thread thread = new Thread(runnable, "azure-ml-cancel");
+                thread.setDaemon(true);
+                return thread;
+            });
+
+            try {
+                executor.execute(() -> {
+                    try {
+                        current.run();
+                    } catch (Throwable e) {
+                        LOG.warn(
+                            "Unexpected error while cancelling an Azure Machine Learning job",
+                            e
+                        );
+                    } finally {
+                        executor.shutdown();
+                    }
                 });
+            } catch (RuntimeException e) {
+                executor.shutdownNow();
+                LOG.warn(
+                    "Unable to dispatch cancellation for an Azure Machine Learning job",
+                    e
+                );
+            }
         }
     }
 }

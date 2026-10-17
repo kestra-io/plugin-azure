@@ -148,4 +148,46 @@ class MachineLearningServiceTest {
         assertThat(exception.getMessage(), containsString("test-job"));
         assertThat(exception.getMessage(), containsString("unrecognized/malformed status"));
     }
+
+    @Test
+    void withTimeoutReturnsResult() {
+        String result = MachineLearningService.withTimeout(() -> "ok", Duration.ofSeconds(1), () -> "timed out");
+
+        assertThat(result, is("ok"));
+    }
+
+    @Test
+    void withTimeoutRethrowsRuntimeExceptionAsIs() {
+        var exception = assertThrows(
+            IllegalArgumentException.class,
+            () -> MachineLearningService.withTimeout(
+                () -> { throw new IllegalArgumentException("Operation failed"); },
+                Duration.ofSeconds(1),
+                () -> "timed out"
+            )
+        );
+
+        assertThat(exception.getMessage(), is("Operation failed"));
+    }
+
+    @Test
+    void withTimeoutThrowsOnTimeout() {
+        var exception = assertThrows(
+            IllegalStateException.class,
+            () -> MachineLearningService.withTimeout(
+                () -> {
+                    try {
+                        Thread.sleep(5_000);
+                    } catch (InterruptedException e) {
+                        Thread.currentThread().interrupt();
+                    }
+                    return "Operation timed out";
+                },
+                Duration.ofMillis(50),
+                () -> "timed out"
+            )
+        );
+
+        assertThat(exception.getMessage(), is("timed out"));
+    }
 }

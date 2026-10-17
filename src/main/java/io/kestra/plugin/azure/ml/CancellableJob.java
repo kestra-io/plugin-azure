@@ -1,11 +1,6 @@
 package io.kestra.plugin.azure.ml;
 
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.atomic.AtomicBoolean;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import io.kestra.plugin.azure.CancellableOperation;
 
 /**
  * Backs the {@code kill()} lifecycle hook shared by {@link SubmitCommandJob} and {@link SubmitPipelineJob}: once the
@@ -19,18 +14,7 @@ import org.slf4j.LoggerFactory;
  * lifecycle callback, on a thread shared with other jobs' kill signals and dispatch, and must return promptly.</p>
  */
 final class CancellableJob {
-    private static final Logger LOG = LoggerFactory.getLogger(CancellableJob.class);
-
-    private final AtomicBoolean killed = new AtomicBoolean(false);
-    private final AtomicBoolean fired = new AtomicBoolean(false);
-    private volatile Runnable action;
-
-    synchronized void arm(Runnable cancelAction) {
-        this.action = cancelAction;
-        if (killed.get()) {
-            fire();
-        }
-    }
+    private final CancellableOperation operation = new CancellableOperation("Azure Machine Learning job");
 
     /**
      * Clears a previously armed action, e.g. after job submission itself failed — there is then nothing of this
@@ -39,44 +23,14 @@ final class CancellableJob {
      * action has already fired, since that cancellation attempt already happened and cannot be undone.
      */
     synchronized void disarm() {
-        this.action = null;
+        this.operation.disarm();
     }
 
     synchronized void kill() {
-        killed.set(true);
-        fire();
+        this.operation.kill();
     }
 
-    private void fire() {
-        Runnable current = action;
-
-        if (current != null && fired.compareAndSet(false, true)) {
-            ExecutorService executor = Executors.newSingleThreadExecutor(runnable -> {
-                Thread thread = new Thread(runnable, "azure-ml-cancel");
-                thread.setDaemon(true);
-                return thread;
-            });
-
-            try {
-                executor.execute(() -> {
-                    try {
-                        current.run();
-                    } catch (Throwable e) {
-                        LOG.warn(
-                            "Unexpected error while cancelling an Azure Machine Learning job",
-                            e
-                        );
-                    } finally {
-                        executor.shutdown();
-                    }
-                });
-            } catch (RuntimeException e) {
-                executor.shutdownNow();
-                LOG.warn(
-                    "Unable to dispatch cancellation for an Azure Machine Learning job",
-                    e
-                );
-            }
-        }
+    synchronized void arm(Runnable cancelAction) {
+        this.operation.arm(cancelAction);
     }
 }

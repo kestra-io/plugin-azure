@@ -84,12 +84,15 @@ public final class CancellableOperation {
 
     private void fire() {
         Runnable current = action;
-
         if (current != null && fired.compareAndSet(false, true)) {
-            runAsync(current)
-                .exceptionally(e -> {
-                    LOG.warn("Unexpected error while cancelling an {}", resourceType, e);
-                    return null;
+            Thread.ofVirtual()
+                .name("azure-cancellation")
+                .start(() -> {
+                    try {
+                        current.run();
+                    } catch (Throwable e) {
+                        LOG.warn("Failed to cancel {}.", resourceType, e);
+                    }
                 });
         }
     }

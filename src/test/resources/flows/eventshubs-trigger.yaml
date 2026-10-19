@@ -6,6 +6,7 @@ triggers:
     type: io.kestra.plugin.azure.eventhubs.Trigger
     interval: PT10S
     eventHubName: "{{ globals.azure.eventhubs['eventhub-name'] }}"
+    namespace: "{{ globals.azure.eventhubs.namespace }}"
     connectionString: "{{ globals.azure.eventhubs['connection-string'] }}"
     bodyDeserializer: STRING
     consumerGroup: "$Default"

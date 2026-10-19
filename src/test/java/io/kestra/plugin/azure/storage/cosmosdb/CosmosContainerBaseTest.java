@@ -10,13 +10,15 @@ import java.util.concurrent.TimeoutException;
 
 import org.assertj.core.api.AbstractThrowableAssert;
 import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.Assumptions;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.azure.cosmos.CosmosClient;
+import com.azure.cosmos.CosmosClientBuilder;
 import com.azure.cosmos.models.PartitionKeyDefinitionVersion;
 import com.azure.cosmos.models.PartitionKind;
 
@@ -26,6 +28,7 @@ import io.kestra.core.models.property.Property;
 import io.kestra.core.runners.RunContext;
 import io.kestra.core.runners.RunContextFactory;
 import io.kestra.core.utils.IdUtils;
+import io.kestra.plugin.azure.AbstractFlociTest;
 
 import io.micronaut.context.annotation.Value;
 import jakarta.inject.Inject;
@@ -35,16 +38,32 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @KestraTest(startRunner = true, environments = "sp")
-public abstract class CosmosContainerBaseTest<T extends AbstractCosmosContainerTask.AbstractCosmosContainerTaskBuilder<?, ?, ?>> {
+public abstract class CosmosContainerBaseTest<T extends AbstractCosmosContainerTask.AbstractCosmosContainerTaskBuilder<?, ?, ?>> extends AbstractFlociTest {
     @Value("${kestra.variables.globals.azure.cosmos.connection-string}")
     protected String connectionString;
 
+    @BeforeAll
+    void ensureCosmosResources() {
+        useFlociCosmos();
+        try (
+            CosmosClient client = new CosmosClientBuilder()
+                .endpoint(endpoint)
+                .key(COSMOS_KEY)
+                .gatewayMode()
+                .endpointDiscoveryEnabled(false)
+                .buildClient()
+        ) {
+            client.createDatabaseIfNotExists(databaseId);
+            client.getDatabase(databaseId).createContainerIfNotExists(containerId, "/pk");
+        }
+    }
+
     @BeforeEach
-    void requireAzureCredentials() {
-        Assumptions.assumeTrue(
-            connectionString != null && !connectionString.isBlank(),
-            "Azure credentials not configured, skipping integration test"
-        );
+    void useFlociCosmos() {
+        this.endpoint = cosmosEndpoint();
+        this.connectionString = cosmosConnectionString();
+        this.databaseId = COSMOS_DATABASE;
+        this.containerId = COSMOS_CONTAINER;
     }
 
     @Value("${kestra.variables.globals.azure.cosmos.endpoint}")

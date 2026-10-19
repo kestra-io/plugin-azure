@@ -1,5 +1,7 @@
 package io.kestra.plugin.azure.storage.cosmosdb;
 
+import java.net.URI;
+import java.util.Locale;
 import java.util.Optional;
 
 import org.apache.commons.lang3.StringUtils;
@@ -7,6 +9,7 @@ import org.apache.commons.lang3.StringUtils;
 import com.azure.cosmos.*;
 
 import io.kestra.core.exceptions.IllegalVariableEvaluationException;
+import io.kestra.core.models.annotations.PluginProperty;
 import io.kestra.core.models.property.Property;
 import io.kestra.core.models.tasks.Output;
 import io.kestra.core.runners.RunContext;
@@ -16,7 +19,6 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotNull;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
-import io.kestra.core.models.annotations.PluginProperty;
 
 @SuperBuilder
 @ToString
@@ -93,16 +95,47 @@ public abstract class AbstractCosmosDatabaseTask<T extends Output> extends Abstr
             .contentResponseOnWriteEnabled(rContentResponseOnWriteEnabled);
 
         if (rConnectionString.isPresent()) {
+            String endpoint = StringUtils.substringBetween(rConnectionString.get(), "AccountEndpoint=", ";");
             cosmosClientBuilder
-                .endpoint(StringUtils.substringBetween(rConnectionString.get(), "AccountEndpoint=", ";"))
+                .endpoint(endpoint)
                 .key(StringUtils.substringBetween(rConnectionString.get(), "AccountKey=", ";"));
+            useGatewayModeForEmulator(cosmosClientBuilder, endpoint);
         } else {
             String rEndPoint = runContext.render(this.endpoint).as(String.class)
                 .orElseThrow(() -> new Exception("Endpoint or ConnectionString needed"));
             cosmosClientBuilder.endpoint(rEndPoint);
             cosmosClientBuilder.credential(credentials(runContext));
+            useGatewayModeForEmulator(cosmosClientBuilder, rEndPoint);
         }
 
         return cosmosClientBuilder.buildAsyncClient();
+    }
+
+    /**
+     * The Cosmos Java SDK only speaks HTTPS to emulators, and only in gateway mode. Direct mode
+     * dials the TCP replica ports of a real account, which Floci (and the Microsoft Cosmos emulator)
+     * do not expose. Azure cloud hosts keep the default direct mode.
+     */
+    private static void useGatewayModeForEmulator(CosmosClientBuilder builder, String endpoint) {
+        if (endpoint == null || endpoint.isBlank()) {
+            return;
+        }
+        String host;
+        try {
+            host = URI.create(endpoint).getHost();
+        } catch (IllegalArgumentException e) {
+            return;
+        }
+        if (host == null) {
+            return;
+        }
+        String normalized = host.toLowerCase(Locale.ROOT);
+        boolean azureCloud = normalized.endsWith(".documents.azure.com")
+            || normalized.endsWith(".documents.azure.us")
+            || normalized.endsWith(".documents.azure.cn")
+            || normalized.endsWith(".documents.microsoftazure.de");
+        if (!azureCloud) {
+            builder.gatewayMode().endpointDiscoveryEnabled(false);
+        }
     }
 }

@@ -1,5 +1,6 @@
 package io.kestra.plugin.azure.storage.blob;
 
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import io.kestra.core.models.property.Property;
@@ -40,6 +41,7 @@ class DownloadsTest extends AbstractTest {
     }
 
     @Test
+    @Disabled("Floci Azure emulator returns HTTP 501 for blob copyFromUrl, which move uses")
     void move() throws Exception {
         String prefix = IdUtils.create();
 

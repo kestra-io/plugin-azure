@@ -39,7 +39,8 @@ final class MachineLearningComputeService {
             if (!usable) {
                 String stateLabel = state != null ? state.toString() : "in an unknown state";
                 throw new IllegalStateException(
-                    "Compute instance '%s' is not ready to accept work (%s) — if it is stopped, start it first with the StartComputeInstance task, otherwise wait for it to finish transitioning".formatted(computeName, stateLabel)
+                    "Compute instance '%s' is not ready to accept work (%s) — if it is stopped, start it first with the StartComputeInstance task, otherwise wait for it to finish transitioning"
+                        .formatted(computeName, stateLabel)
                 );
             }
         }

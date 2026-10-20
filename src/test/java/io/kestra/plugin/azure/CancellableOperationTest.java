@@ -1,14 +1,14 @@
 package io.kestra.plugin.azure;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class CancellableOperationTest {
 
@@ -40,7 +40,8 @@ class CancellableOperationTest {
         CountDownLatch cancelled = new CountDownLatch(1);
         AtomicInteger invocationCount = new AtomicInteger();
 
-        lifecycle.arm(() -> {
+        lifecycle.arm(() ->
+        {
             invocationCount.incrementAndGet();
             cancelled.countDown();
         });
@@ -73,7 +74,8 @@ class CancellableOperationTest {
         CountDownLatch start = new CountDownLatch(1);
         CountDownLatch cancelled = new CountDownLatch(1);
 
-        Thread armThread = new Thread(() -> {
+        Thread armThread = new Thread(() ->
+        {
             try {
                 start.await();
                 lifecycle.arm(cancelled::countDown);
@@ -81,7 +83,8 @@ class CancellableOperationTest {
                 Thread.currentThread().interrupt();
             }
         });
-        Thread killThread = new Thread(() -> {
+        Thread killThread = new Thread(() ->
+        {
             try {
                 start.await();
                 lifecycle.kill();

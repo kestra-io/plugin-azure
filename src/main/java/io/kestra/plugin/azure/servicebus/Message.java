@@ -4,7 +4,6 @@ import java.time.Duration;
 import java.util.Map;
 
 import io.swagger.v3.oas.annotations.media.Schema;
-
 import lombok.Builder;
 import lombok.Getter;
 import lombok.extern.jackson.Jacksonized;

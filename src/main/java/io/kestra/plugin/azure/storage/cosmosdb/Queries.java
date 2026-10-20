@@ -14,6 +14,7 @@ import com.azure.cosmos.models.PartitionKey;
 import io.kestra.core.exceptions.IllegalVariableEvaluationException;
 import io.kestra.core.models.annotations.Example;
 import io.kestra.core.models.annotations.Plugin;
+import io.kestra.core.models.annotations.PluginProperty;
 import io.kestra.core.models.property.Property;
 import io.kestra.core.models.tasks.RunnableTask;
 import io.kestra.core.runners.RunContext;
@@ -24,7 +25,6 @@ import lombok.*;
 import lombok.experimental.SuperBuilder;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
-import io.kestra.core.models.annotations.PluginProperty;
 
 @SuperBuilder
 @ToString
@@ -190,7 +190,6 @@ public class Queries extends AbstractCosmosContainerTask<Queries.Output> impleme
     }
 
     public record Output(
-        @Schema(title = "Results")
-        Map<String, List<Map>> results) implements io.kestra.core.models.tasks.Output {
+        @Schema(title = "Results") Map<String, List<Map>> results) implements io.kestra.core.models.tasks.Output {
     }
 }

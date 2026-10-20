@@ -2,6 +2,7 @@ package io.kestra.plugin.azure.storage.services;
 
 import io.kestra.core.models.annotations.PluginProperty;
 import io.kestra.core.models.property.Property;
+
 import io.swagger.v3.oas.annotations.media.Schema;
 
 public interface ChecksumValidatedInterface {

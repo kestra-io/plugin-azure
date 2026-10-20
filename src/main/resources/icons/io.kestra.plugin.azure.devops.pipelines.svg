@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <defs>
+    <linearGradient id="pipelineGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0078D4"/>
+      <stop offset="100%" stop-color="#2899F5"/>
+    </linearGradient>
+    <linearGradient id="rocketGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#50E6FF"/>
+      <stop offset="100%" stop-color="#0078D4"/>
+    </linearGradient>
+  </defs>
+  <path d="M52 20a10 10 0 0 0-9.8 8H36V18a10 10 0 1 0-8 9.8V42a10 10 0 1 0 8-9.8V28h6.2A10 10 0 1 0 52 20z" fill="url(#pipelineGrad)"/>
+  <circle cx="28" cy="18" r="4" fill="#50E6FF"/>
+  <circle cx="28" cy="46" r="4" fill="#50E6FF"/>
+  <circle cx="52" cy="24" r="4" fill="#ffffff"/>
+  <path d="M14 34c-1.1 0-2 .9-2 2v6c0 1.1.9 2 2 2s2-.9 2-2v-6c0-1.1-.9-2-2-2z" fill="#0078D4"/>
+</svg>

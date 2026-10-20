@@ -17,3 +17,4 @@ src/test/resources/application-test.yml
 src/test/resources/application-sp.yml
 .factorypath
 bin/
+allure-results/

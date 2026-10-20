@@ -18,6 +18,7 @@ import io.kestra.core.repositories.LocalFlowRepositoryLoader;
 import io.kestra.core.runners.RunContextFactory;
 import io.kestra.core.utils.TestsUtils;
 import io.kestra.plugin.azure.eventhubs.serdes.Serdes;
+
 import io.micronaut.context.annotation.Value;
 import jakarta.inject.Inject;
 

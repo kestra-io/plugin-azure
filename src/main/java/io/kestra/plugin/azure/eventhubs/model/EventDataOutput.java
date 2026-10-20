@@ -3,8 +3,8 @@ package io.kestra.plugin.azure.eventhubs.model;
 import java.util.Map;
 
 import io.kestra.core.models.tasks.Output;
-import io.swagger.v3.oas.annotations.media.Schema;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Builder;
 import lombok.Getter;
 

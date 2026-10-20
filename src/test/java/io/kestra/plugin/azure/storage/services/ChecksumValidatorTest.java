@@ -1,11 +1,5 @@
 package io.kestra.plugin.azure.storage.services;
 
-import io.kestra.core.junit.annotations.KestraTest;
-import io.kestra.core.runners.RunContext;
-import io.kestra.core.runners.RunContextFactory;
-import jakarta.inject.Inject;
-import org.junit.jupiter.api.Test;
-
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -14,6 +8,14 @@ import java.security.MessageDigest;
 import java.util.Base64;
 import java.util.Collections;
 import java.util.HexFormat;
+
+import org.junit.jupiter.api.Test;
+
+import io.kestra.core.junit.annotations.KestraTest;
+import io.kestra.core.runners.RunContext;
+import io.kestra.core.runners.RunContextFactory;
+
+import jakarta.inject.Inject;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
@@ -52,7 +54,7 @@ class ChecksumValidatorTest {
             .validateAgainstServer(false)
             .algorithm(ChecksumValidator.Algorithm.MD5)
             .build();
-        assertDoesNotThrow(() -> ChecksumValidator.verify(ctx(), file, new byte[]{1, 2, 3}, opts, "test"));
+        assertDoesNotThrow(() -> ChecksumValidator.verify(ctx(), file, new byte[] { 1, 2, 3 }, opts, "test"));
     }
 
     @Test
@@ -75,8 +77,10 @@ class ChecksumValidatorTest {
             .validateAgainstServer(true)
             .algorithm(ChecksumValidator.Algorithm.MD5)
             .build();
-        IOException e = assertThrows(IOException.class,
-            () -> ChecksumValidator.verify(ctx(), file, wrong, opts, "test"));
+        IOException e = assertThrows(
+            IOException.class,
+            () -> ChecksumValidator.verify(ctx(), file, wrong, opts, "test")
+        );
         assertThat(e.getMessage(), containsString("mismatch"));
     }
 
@@ -99,8 +103,10 @@ class ChecksumValidatorTest {
             .failOnMissingServerChecksum(true)
             .algorithm(ChecksumValidator.Algorithm.MD5)
             .build();
-        IOException e = assertThrows(IOException.class,
-            () -> ChecksumValidator.verify(ctx(), file, null, opts, "myblob"));
+        IOException e = assertThrows(
+            IOException.class,
+            () -> ChecksumValidator.verify(ctx(), file, null, opts, "myblob")
+        );
         assertThat(e.getMessage(), containsString("myblob"));
     }
 
@@ -161,8 +167,10 @@ class ChecksumValidatorTest {
             .validateAgainstServer(true)
             .algorithm(ChecksumValidator.Algorithm.SHA_256)
             .build();
-        assertThrows(IllegalArgumentException.class,
-            () -> ChecksumValidator.verify(ctx(), file, new byte[]{1}, opts, "test"));
+        assertThrows(
+            IllegalArgumentException.class,
+            () -> ChecksumValidator.verify(ctx(), file, new byte[] { 1 }, opts, "test")
+        );
     }
 
     @Test
@@ -172,7 +180,9 @@ class ChecksumValidatorTest {
             .expected("not-a-hash")
             .algorithm(ChecksumValidator.Algorithm.MD5)
             .build();
-        assertThrows(IllegalArgumentException.class,
-            () -> ChecksumValidator.verify(ctx(), file, null, opts, "test"));
+        assertThrows(
+            IllegalArgumentException.class,
+            () -> ChecksumValidator.verify(ctx(), file, null, opts, "test")
+        );
     }
 }

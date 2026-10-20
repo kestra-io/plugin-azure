@@ -69,8 +69,7 @@ class RunAgentTest {
             .prompt(Property.ofValue("Hello agent"))
             .build();
 
-        RunContext runContext =
-            TestsUtils.mockRunContext(runContextFactory, task, Map.of());
+        RunContext runContext = TestsUtils.mockRunContext(runContextFactory, task, Map.of());
 
         IllegalArgumentException ex = assertThrows(
             IllegalArgumentException.class,
@@ -91,8 +90,7 @@ class RunAgentTest {
             .pollInterval(Property.ofValue(Duration.ofMillis(1)))
             .build();
 
-        RunContext runContext =
-            TestsUtils.mockRunContext(runContextFactory, task, Map.of());
+        RunContext runContext = TestsUtils.mockRunContext(runContextFactory, task, Map.of());
 
         PersistentAgentThread mockThread = mock(PersistentAgentThread.class);
         when(mockThread.getId()).thenReturn("thread-123");
@@ -103,11 +101,13 @@ class RunAgentTest {
         MessagesClient messagesClient = mock(MessagesClient.class);
         ThreadMessage mockCreatedMessage = mock(ThreadMessage.class);
 
-        when(messagesClient.createMessage(
-            eq("thread-123"),
-            eq(MessageRole.USER),
-            eq("Hello agent")
-        )).thenReturn(mockCreatedMessage);
+        when(
+            messagesClient.createMessage(
+                eq("thread-123"),
+                eq(MessageRole.USER),
+                eq("Hello agent")
+            )
+        ).thenReturn(mockCreatedMessage);
 
         ThreadRun mockRunCreated = mock(ThreadRun.class);
         when(mockRunCreated.getId()).thenReturn("run-456");
@@ -143,30 +143,34 @@ class RunAgentTest {
         when(pagedIterable.stream())
             .thenReturn(java.util.stream.Stream.of(mockAssistantMessage));
 
-        when(messagesClient.listMessages(
-            eq("thread-123"),
-            isNull(),
-            isNull(),
-            eq(ListSortOrder.DESCENDING),
-            isNull(),
-            isNull()
-        )).thenReturn(pagedIterable);
+        when(
+            messagesClient.listMessages(
+                eq("thread-123"),
+                isNull(),
+                isNull(),
+                eq(ListSortOrder.DESCENDING),
+                isNull(),
+                isNull()
+            )
+        ).thenReturn(pagedIterable);
 
         PersistentAgentsClient agentsClient = mock(PersistentAgentsClient.class);
         when(agentsClient.getThreadsClient()).thenReturn(threadsClient);
         when(agentsClient.getMessagesClient()).thenReturn(messagesClient);
         when(agentsClient.getRunsClient()).thenReturn(runsClient);
 
-        try (MockedConstruction<AIProjectClientBuilder> ignored =
-                 Mockito.mockConstruction(
-                     AIProjectClientBuilder.class,
-                     (builder, context) -> {
-                         when(builder.endpoint(anyString())).thenReturn(builder);
-                         when(builder.credential(any())).thenReturn(builder);
-                         when(builder.buildPersistentAgentsClient())
-                             .thenReturn(agentsClient);
-                     }
-                 )) {
+        try (
+            MockedConstruction<AIProjectClientBuilder> ignored = Mockito.mockConstruction(
+                AIProjectClientBuilder.class,
+                (builder, context) ->
+                {
+                    when(builder.endpoint(anyString())).thenReturn(builder);
+                    when(builder.credential(any())).thenReturn(builder);
+                    when(builder.buildPersistentAgentsClient())
+                        .thenReturn(agentsClient);
+                }
+            )
+        ) {
 
             RunAgent.Output output = task.run(runContext);
 
@@ -181,8 +185,7 @@ class RunAgentTest {
                 "Hello agent"
             );
 
-            ArgumentCaptor<CreateRunOptions> runOptionsCaptor =
-                ArgumentCaptor.forClass(CreateRunOptions.class);
+            ArgumentCaptor<CreateRunOptions> runOptionsCaptor = ArgumentCaptor.forClass(CreateRunOptions.class);
 
             verify(runsClient).createRun(runOptionsCaptor.capture());
 
@@ -211,8 +214,7 @@ class RunAgentTest {
             .pollInterval(Property.ofValue(Duration.ofMillis(1)))
             .build();
 
-        RunContext runContext =
-            TestsUtils.mockRunContext(runContextFactory, task, Map.of());
+        RunContext runContext = TestsUtils.mockRunContext(runContextFactory, task, Map.of());
 
         // Request cancellation before the Azure run ID exists.
         task.kill();
@@ -243,16 +245,18 @@ class RunAgentTest {
         when(agentsClient.getMessagesClient()).thenReturn(messagesClient);
         when(agentsClient.getRunsClient()).thenReturn(runsClient);
 
-        try (MockedConstruction<AIProjectClientBuilder> ignored =
-                 Mockito.mockConstruction(
-                     AIProjectClientBuilder.class,
-                     (builder, context) -> {
-                         when(builder.endpoint(anyString())).thenReturn(builder);
-                         when(builder.credential(any())).thenReturn(builder);
-                         when(builder.buildPersistentAgentsClient())
-                             .thenReturn(agentsClient);
-                     }
-                 )) {
+        try (
+            MockedConstruction<AIProjectClientBuilder> ignored = Mockito.mockConstruction(
+                AIProjectClientBuilder.class,
+                (builder, context) ->
+                {
+                    when(builder.endpoint(anyString())).thenReturn(builder);
+                    when(builder.credential(any())).thenReturn(builder);
+                    when(builder.buildPersistentAgentsClient())
+                        .thenReturn(agentsClient);
+                }
+            )
+        ) {
 
             assertThrows(
                 IllegalStateException.class,
@@ -294,12 +298,14 @@ class RunAgentTest {
         CountDownLatch allowCreateRunToReturn = new CountDownLatch(1);
         CountDownLatch cancellationRequested = new CountDownLatch(1);
         RunsClient runsClient = mock(RunsClient.class);
-        Mockito.doAnswer(invocation -> {
+        Mockito.doAnswer(invocation ->
+        {
             createRunStarted.countDown();
             allowCreateRunToReturn.await();
             return createdRun;
         }).when(runsClient).createRun(any(CreateRunOptions.class));
-        Mockito.doAnswer(invocation -> {
+        Mockito.doAnswer(invocation ->
+        {
             cancellationRequested.countDown();
             return null;
         }).when(runsClient).cancelRun("thread-123", "run-456");
@@ -310,16 +316,19 @@ class RunAgentTest {
         when(agentsClient.getRunsClient()).thenReturn(runsClient);
 
         CountDownLatch taskInterrupted = new CountDownLatch(1);
-        Thread runner = new Thread(() -> {
-            try (MockedConstruction<AIProjectClientBuilder> ignored =
-                     Mockito.mockConstruction(
-                         AIProjectClientBuilder.class,
-                         (builder, context) -> {
-                             when(builder.endpoint(anyString())).thenReturn(builder);
-                             when(builder.credential(any())).thenReturn(builder);
-                             when(builder.buildPersistentAgentsClient()).thenReturn(agentsClient);
-                         }
-                     )) {
+        Thread runner = new Thread(() ->
+        {
+            try (
+                MockedConstruction<AIProjectClientBuilder> ignored = Mockito.mockConstruction(
+                    AIProjectClientBuilder.class,
+                    (builder, context) ->
+                    {
+                        when(builder.endpoint(anyString())).thenReturn(builder);
+                        when(builder.credential(any())).thenReturn(builder);
+                        when(builder.buildPersistentAgentsClient()).thenReturn(agentsClient);
+                    }
+                )
+            ) {
                 task.run(runContext);
             } catch (InterruptedException e) {
                 taskInterrupted.countDown();
@@ -363,8 +372,7 @@ class RunAgentTest {
             .timeout(Property.ofValue(Duration.ofSeconds(5)))
             .build();
 
-        RunContext runContext =
-            TestsUtils.mockRunContext(runContextFactory, task, Map.of());
+        RunContext runContext = TestsUtils.mockRunContext(runContextFactory, task, Map.of());
 
         PersistentAgentThread mockThread = mock(PersistentAgentThread.class);
         when(mockThread.getId()).thenReturn("thread-123");
@@ -382,8 +390,8 @@ class RunAgentTest {
         AtomicBoolean cancelled = new AtomicBoolean(false);
         CountDownLatch pollingStarted = new CountDownLatch(1);
 
-        when(pollingRun.getStatus()).thenAnswer(invocation ->
-            cancelled.get() ? RunStatus.CANCELLED : RunStatus.IN_PROGRESS
+        when(pollingRun.getStatus()).thenAnswer(
+            invocation -> cancelled.get() ? RunStatus.CANCELLED : RunStatus.IN_PROGRESS
         );
 
         RunsClient runsClient = mock(RunsClient.class);
@@ -391,12 +399,14 @@ class RunAgentTest {
             .thenReturn(createdRun);
 
         when(runsClient.getRun("thread-123", "run-456"))
-            .thenAnswer(invocation -> {
+            .thenAnswer(invocation ->
+            {
                 pollingStarted.countDown();
                 return pollingRun;
             });
 
-        Mockito.doAnswer(invocation -> {
+        Mockito.doAnswer(invocation ->
+        {
             cancelled.set(true);
             return pollingRun;
         }).when(runsClient).cancelRun("thread-123", "run-456");
@@ -406,18 +416,21 @@ class RunAgentTest {
         when(agentsClient.getMessagesClient()).thenReturn(messagesClient);
         when(agentsClient.getRunsClient()).thenReturn(runsClient);
 
-        try (MockedConstruction<AIProjectClientBuilder> ignored =
-                 Mockito.mockConstruction(
-                     AIProjectClientBuilder.class,
-                     (builder, context) -> {
-                         when(builder.endpoint(anyString())).thenReturn(builder);
-                         when(builder.credential(any())).thenReturn(builder);
-                         when(builder.buildPersistentAgentsClient())
-                             .thenReturn(agentsClient);
-                     }
-                 )) {
+        try (
+            MockedConstruction<AIProjectClientBuilder> ignored = Mockito.mockConstruction(
+                AIProjectClientBuilder.class,
+                (builder, context) ->
+                {
+                    when(builder.endpoint(anyString())).thenReturn(builder);
+                    when(builder.credential(any())).thenReturn(builder);
+                    when(builder.buildPersistentAgentsClient())
+                        .thenReturn(agentsClient);
+                }
+            )
+        ) {
 
-            Thread killer = new Thread(() -> {
+            Thread killer = new Thread(() ->
+            {
                 try {
                     if (pollingStarted.await(2, TimeUnit.SECONDS)) {
                         task.kill();
@@ -453,8 +466,7 @@ class RunAgentTest {
             .timeout(Property.ofValue(Duration.ofMinutes(5)))
             .build();
 
-        RunContext runContext =
-            TestsUtils.mockRunContext(runContextFactory, task, Map.of());
+        RunContext runContext = TestsUtils.mockRunContext(runContextFactory, task, Map.of());
 
         PersistentAgentThread mockThread = mock(PersistentAgentThread.class);
         when(mockThread.getId()).thenReturn("thread-123");
@@ -468,7 +480,8 @@ class RunAgentTest {
 
         ThreadRun createdRun = mock(ThreadRun.class);
         when(createdRun.getId()).thenReturn("run-456");
-        when(createdRun.getStatus()).thenAnswer(invocation -> {
+        when(createdRun.getStatus()).thenAnswer(invocation ->
+        {
             initialStatusRead.countDown();
             return RunStatus.IN_PROGRESS;
         });
@@ -487,17 +500,20 @@ class RunAgentTest {
 
         AtomicBoolean interrupted = new AtomicBoolean(false);
 
-        Thread runner = new Thread(() -> {
-            try (MockedConstruction<AIProjectClientBuilder> ignored =
-                     Mockito.mockConstruction(
-                         AIProjectClientBuilder.class,
-                         (builder, context) -> {
-                             when(builder.endpoint(anyString())).thenReturn(builder);
-                             when(builder.credential(any())).thenReturn(builder);
-                             when(builder.buildPersistentAgentsClient())
-                                 .thenReturn(agentsClient);
-                         }
-                     )) {
+        Thread runner = new Thread(() ->
+        {
+            try (
+                MockedConstruction<AIProjectClientBuilder> ignored = Mockito.mockConstruction(
+                    AIProjectClientBuilder.class,
+                    (builder, context) ->
+                    {
+                        when(builder.endpoint(anyString())).thenReturn(builder);
+                        when(builder.credential(any())).thenReturn(builder);
+                        when(builder.buildPersistentAgentsClient())
+                            .thenReturn(agentsClient);
+                    }
+                )
+            ) {
                 try {
                     task.run(runContext);
                 } catch (InterruptedException e) {
@@ -543,8 +559,7 @@ class RunAgentTest {
             .pollInterval(Property.ofValue(Duration.ofMillis(1)))
             .build();
 
-        RunContext runContext =
-            TestsUtils.mockRunContext(runContextFactory, task, Map.of());
+        RunContext runContext = TestsUtils.mockRunContext(runContextFactory, task, Map.of());
 
         PersistentAgentThread mockThread = mock(PersistentAgentThread.class);
         when(mockThread.getId()).thenReturn("thread-123");
@@ -555,11 +570,13 @@ class RunAgentTest {
         MessagesClient messagesClient = mock(MessagesClient.class);
         ThreadMessage mockCreatedMessage = mock(ThreadMessage.class);
 
-        when(messagesClient.createMessage(
-            eq("thread-123"),
-            eq(MessageRole.USER),
-            eq("Hello agent")
-        )).thenReturn(mockCreatedMessage);
+        when(
+            messagesClient.createMessage(
+                eq("thread-123"),
+                eq(MessageRole.USER),
+                eq("Hello agent")
+            )
+        ).thenReturn(mockCreatedMessage);
 
         ThreadRun createdRun = mock(ThreadRun.class);
         when(createdRun.getId()).thenReturn("run-456");
@@ -590,30 +607,34 @@ class RunAgentTest {
         when(pagedIterable.stream())
             .thenReturn(java.util.stream.Stream.of(assistantMessage));
 
-        when(messagesClient.listMessages(
-            eq("thread-123"),
-            isNull(),
-            isNull(),
-            eq(ListSortOrder.DESCENDING),
-            isNull(),
-            isNull()
-        )).thenReturn(pagedIterable);
+        when(
+            messagesClient.listMessages(
+                eq("thread-123"),
+                isNull(),
+                isNull(),
+                eq(ListSortOrder.DESCENDING),
+                isNull(),
+                isNull()
+            )
+        ).thenReturn(pagedIterable);
 
         PersistentAgentsClient agentsClient = mock(PersistentAgentsClient.class);
         when(agentsClient.getThreadsClient()).thenReturn(threadsClient);
         when(agentsClient.getMessagesClient()).thenReturn(messagesClient);
         when(agentsClient.getRunsClient()).thenReturn(runsClient);
 
-        try (MockedConstruction<AIProjectClientBuilder> ignored =
-                 Mockito.mockConstruction(
-                     AIProjectClientBuilder.class,
-                     (builder, context) -> {
-                         when(builder.endpoint(anyString())).thenReturn(builder);
-                         when(builder.credential(any())).thenReturn(builder);
-                         when(builder.buildPersistentAgentsClient())
-                             .thenReturn(agentsClient);
-                     }
-                 )) {
+        try (
+            MockedConstruction<AIProjectClientBuilder> ignored = Mockito.mockConstruction(
+                AIProjectClientBuilder.class,
+                (builder, context) ->
+                {
+                    when(builder.endpoint(anyString())).thenReturn(builder);
+                    when(builder.credential(any())).thenReturn(builder);
+                    when(builder.buildPersistentAgentsClient())
+                        .thenReturn(agentsClient);
+                }
+            )
+        ) {
 
             task.run(runContext);
 
@@ -636,8 +657,7 @@ class RunAgentTest {
             .timeout(Property.ofValue(Duration.ofMillis(20)))
             .build();
 
-        RunContext runContext =
-            TestsUtils.mockRunContext(runContextFactory, task, Map.of());
+        RunContext runContext = TestsUtils.mockRunContext(runContextFactory, task, Map.of());
 
         PersistentAgentThread mockThread = mock(PersistentAgentThread.class);
         when(mockThread.getId()).thenReturn("thread-123");
@@ -665,16 +685,18 @@ class RunAgentTest {
         when(agentsClient.getMessagesClient()).thenReturn(messagesClient);
         when(agentsClient.getRunsClient()).thenReturn(runsClient);
 
-        try (MockedConstruction<AIProjectClientBuilder> ignored =
-                 Mockito.mockConstruction(
-                     AIProjectClientBuilder.class,
-                     (builder, context) -> {
-                         when(builder.endpoint(anyString())).thenReturn(builder);
-                         when(builder.credential(any())).thenReturn(builder);
-                         when(builder.buildPersistentAgentsClient())
-                             .thenReturn(agentsClient);
-                     }
-                 )) {
+        try (
+            MockedConstruction<AIProjectClientBuilder> ignored = Mockito.mockConstruction(
+                AIProjectClientBuilder.class,
+                (builder, context) ->
+                {
+                    when(builder.endpoint(anyString())).thenReturn(builder);
+                    when(builder.credential(any())).thenReturn(builder);
+                    when(builder.buildPersistentAgentsClient())
+                        .thenReturn(agentsClient);
+                }
+            )
+        ) {
 
             IllegalStateException exception = assertThrows(
                 IllegalStateException.class,
@@ -699,8 +721,7 @@ class RunAgentTest {
             .pollInterval(Property.ofValue(Duration.ofMillis(1)))
             .build();
 
-        RunContext runContext =
-            TestsUtils.mockRunContext(runContextFactory, task, Map.of());
+        RunContext runContext = TestsUtils.mockRunContext(runContextFactory, task, Map.of());
 
         PersistentAgentThread mockThread = mock(PersistentAgentThread.class);
         when(mockThread.getId()).thenReturn("thread-123");
@@ -728,16 +749,18 @@ class RunAgentTest {
         when(agentsClient.getMessagesClient()).thenReturn(messagesClient);
         when(agentsClient.getRunsClient()).thenReturn(runsClient);
 
-        try (MockedConstruction<AIProjectClientBuilder> ignored =
-                 Mockito.mockConstruction(
-                     AIProjectClientBuilder.class,
-                     (builder, context) -> {
-                         when(builder.endpoint(anyString())).thenReturn(builder);
-                         when(builder.credential(any())).thenReturn(builder);
-                         when(builder.buildPersistentAgentsClient())
-                             .thenReturn(agentsClient);
-                     }
-                 )) {
+        try (
+            MockedConstruction<AIProjectClientBuilder> ignored = Mockito.mockConstruction(
+                AIProjectClientBuilder.class,
+                (builder, context) ->
+                {
+                    when(builder.endpoint(anyString())).thenReturn(builder);
+                    when(builder.credential(any())).thenReturn(builder);
+                    when(builder.buildPersistentAgentsClient())
+                        .thenReturn(agentsClient);
+                }
+            )
+        ) {
 
             assertThrows(
                 IllegalStateException.class,

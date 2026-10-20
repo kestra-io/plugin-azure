@@ -176,7 +176,8 @@ public class RunAgent extends AbstractAiFoundryTask implements RunnableTask<RunA
         String runId = threadRun.getId();
         runContext.logger().info("Created run {} on thread {}", runId, threadId);
 
-        this.lifecycle.arm(() -> {
+        this.lifecycle.arm(() ->
+        {
             try {
                 runsClient.cancelRun(threadId, runId);
                 runContext.logger().info(

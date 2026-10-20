@@ -1,15 +1,16 @@
 package io.kestra.plugin.azure.storage.blob;
 
-import io.kestra.core.models.property.Property;
-import io.kestra.core.utils.IdUtils;
-import io.kestra.plugin.azure.BaseTest;
-import io.kestra.plugin.azure.storage.blob.abstracts.ActionInterface;
-import org.junit.jupiter.api.Test;
-
 import java.io.IOException;
 import java.nio.file.Files;
 import java.security.MessageDigest;
 import java.util.HexFormat;
+
+import org.junit.jupiter.api.Test;
+
+import io.kestra.core.models.property.Property;
+import io.kestra.core.utils.IdUtils;
+import io.kestra.plugin.azure.BaseTest;
+import io.kestra.plugin.azure.storage.blob.abstracts.ActionInterface;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
@@ -59,8 +60,10 @@ class ChecksumTest extends AbstractTest {
             .expectedChecksum(Property.ofValue("00000000000000000000000000000000"))
             .build();
 
-        IOException e = assertThrows(IOException.class,
-            () -> download.run(runContext(download)));
+        IOException e = assertThrows(
+            IOException.class,
+            () -> download.run(runContext(download))
+        );
         assertThat(e.getMessage(), containsString("Checksum mismatch"));
     }
 
@@ -100,8 +103,10 @@ class ChecksumTest extends AbstractTest {
             .failOnMissingChecksum(Property.ofValue(true))
             .build();
 
-        IOException e = assertThrows(IOException.class,
-            () -> download.run(runContext(download)));
+        IOException e = assertThrows(
+            IOException.class,
+            () -> download.run(runContext(download))
+        );
         assertThat(e.getMessage(), containsString("No Content-MD5"));
     }
 
@@ -126,7 +131,6 @@ class ChecksumTest extends AbstractTest {
         assertThat(run.getBlobs().size(), is(2));
         assertThat(run.getOutputFiles().size(), is(2));
     }
-
 
     @Test
     void uploadValidateChecksumStoresHashMatchingLocal() throws Exception {

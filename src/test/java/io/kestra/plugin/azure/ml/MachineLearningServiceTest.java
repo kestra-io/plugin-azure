@@ -161,7 +161,10 @@ class MachineLearningServiceTest {
         var exception = assertThrows(
             IllegalArgumentException.class,
             () -> MachineLearningService.withTimeout(
-                () -> { throw new IllegalArgumentException("Operation failed"); },
+                () ->
+                {
+                    throw new IllegalArgumentException("Operation failed");
+                },
                 Duration.ofSeconds(1),
                 () -> "timed out"
             )
@@ -175,7 +178,8 @@ class MachineLearningServiceTest {
         var exception = assertThrows(
             IllegalStateException.class,
             () -> MachineLearningService.withTimeout(
-                () -> {
+                () ->
+                {
                     try {
                         Thread.sleep(5_000);
                     } catch (InterruptedException e) {

@@ -20,10 +20,10 @@ import io.kestra.core.models.property.Data;
 import io.kestra.core.models.property.Property;
 import io.kestra.core.models.tasks.RunnableTask;
 import io.kestra.core.runners.RunContext;
+import io.kestra.plugin.azure.shared.storage.blob.abstracts.AbstractBlobStorageWithSasObject;
 import io.kestra.plugin.azure.shared.storage.blob.models.AccessTier;
 import io.kestra.plugin.azure.shared.storage.blob.models.Blob;
 import io.kestra.plugin.azure.shared.storage.blob.models.BlobImmutabilityPolicy;
-import io.kestra.plugin.azure.shared.storage.blob.abstracts.AbstractBlobStorageWithSasObject;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotNull;

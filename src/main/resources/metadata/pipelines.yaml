@@ -1,0 +1,8 @@
+group: io.kestra.plugin.azure.devops.pipelines
+name: "pipelines"
+title: "Azure DevOps Pipelines"
+description: "Tasks and triggers for creating, managing, executing, and reacting to Azure DevOps pipelines and runs."
+body: "Manage Azure DevOps pipeline definitions and trigger runs using Personal Access Token (PAT) or Microsoft Entra ID service principal authentication. Use Create, Get, and List to manage pipeline definitions, Run to trigger a pipeline and optionally wait for its terminal outcome, GetRun and ListRuns to inspect run state and outcome results, Cancel to abort an active run, and Trigger to fire flows on completed pipeline runs with exactly-once KV store watermark deduplication."
+videos: []
+createdBy: "Kestra Core Team"
+managedBy: "Kestra Core Team"

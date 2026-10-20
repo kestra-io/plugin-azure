@@ -83,7 +83,7 @@ class BillingApi implements AutoCloseable {
             var retryAfter = response.getHeaders().firstValue("Retry-After");
             if (retryAfter.isPresent()) {
                 try {
-                    var seconds = Duration.ofSeconds(Long.parseLong(retryAfter.get().trim()));
+                    var seconds = Duration.ofSeconds(Math.max(0, Long.parseLong(retryAfter.get().trim())));
                     return seconds.compareTo(MAX_RETRY_DELAY) > 0 ? MAX_RETRY_DELAY : seconds;
                 } catch (NumberFormatException ignored) {
                     // HTTP-date form: fall back to the exponential backoff

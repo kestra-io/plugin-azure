@@ -1,5 +1,6 @@
 package io.kestra.plugin.azure.billing;
 
+import java.net.http.HttpHeaders;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
@@ -12,6 +13,7 @@ import org.junit.jupiter.api.Test;
 import com.github.tomakehurst.wiremock.WireMockServer;
 import com.github.tomakehurst.wiremock.stubbing.Scenario;
 
+import io.kestra.core.http.HttpResponse;
 import io.kestra.core.junit.annotations.KestraTest;
 import io.kestra.core.runners.RunContextFactory;
 
@@ -111,5 +113,15 @@ class BillingApiTest {
 
         server.verify(BillingApi.MAX_ATTEMPTS, getRequestedFor(urlEqualTo("/budgets")));
         assertThat(sleeps, contains(Duration.ofSeconds(2), Duration.ofSeconds(4), Duration.ofSeconds(8)));
+    }
+
+    @Test
+    void givenNegativeRetryAfter_whenRetryDelay_thenZero() {
+        var response = HttpResponse.builder()
+            .status(HttpResponse.Status.builder().code(429).build())
+            .headers(HttpHeaders.of(Map.of("Retry-After", List.of("-5")), (k, v) -> true))
+            .build();
+
+        assertThat(BillingApi.retryDelay(response, 1), is(Duration.ZERO));
     }
 }

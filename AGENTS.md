@@ -34,6 +34,10 @@ Infrastructure dependencies (Docker Compose services):
 - `io.kestra.plugin.azure.auth.OauthAccessToken`
 - `io.kestra.plugin.azure.batch.job.Create`
 - `io.kestra.plugin.azure.batch.pool.Resize`
+- `io.kestra.plugin.azure.billing.Forecast`
+- `io.kestra.plugin.azure.billing.GetBudget`
+- `io.kestra.plugin.azure.billing.ListBudgets`
+- `io.kestra.plugin.azure.billing.Query`
 - `io.kestra.plugin.azure.cli.AzCLI`
 - `io.kestra.plugin.azure.datafactory.CreateRun`
 - `io.kestra.plugin.azure.eventhubs.Consume`

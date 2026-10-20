@@ -8,8 +8,10 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicReference;
@@ -42,7 +44,6 @@ import io.kestra.core.http.HttpRequest;
 import io.kestra.core.http.client.HttpClient;
 import io.kestra.core.runners.RunContext;
 import io.kestra.core.utils.Await;
-import io.kestra.plugin.azure.CancellableOperation;
 
 /**
  * Shared poll-to-terminal-state, status-mapping, and MLflow-metrics logic used by every job-related Azure Machine
@@ -68,17 +69,28 @@ final class MachineLearningService {
     }
 
     /**
-     * Bounds a blocking ARM call (the SDK exposes no client-side timeout of its own) so a stalled long-running
-     * operation fails cleanly instead of hanging the task indefinitely. A {@link RuntimeException} thrown by
-     * {@code action} (e.g. {@link ManagementException}) propagates as itself, unwrapped — so a caller's existing
-     * {@code catch (ManagementException e)} keeps working transparently, as if this call were still synchronous.
+     * Bounds a blocking ARM call (the SDK exposes no client-side timeout of its own)
+     * so a stalled long-running operation fails with a timeout instead of hanging
+     * the task indefinitely. On timeout, the running task is interrupted on a
+     * best-effort basis; an SDK call that ignores interruption may continue running.
+     *
+     * A {@link RuntimeException} thrown by {@code action} (e.g.
+     * {@link ManagementException}) propagates as itself, unwrapped, so a caller's
+     * existing {@code catch (ManagementException e)} keeps working transparently,
+     * as if this call were still synchronous.
      */
     static <T> T withTimeout(Supplier<T> action, Duration timeout, Supplier<String> timeoutMessage) {
-        CompletableFuture<T> future = CancellableOperation.supplyAsync(action);
+        ExecutorService executor = Executors.newSingleThreadExecutor(
+            Thread.ofPlatform()
+                .name("azure-ml-timeout")
+                .daemon()
+                .factory()
+        );
+        Future<T> future = executor.submit(action::get);
+
         try {
             return future.get(timeout.toMillis(), TimeUnit.MILLISECONDS);
         } catch (TimeoutException e) {
-            // Cannot actually stop a synchronous, non-interruptible SDK call underneath — this is best-effort.
             future.cancel(true);
             throw new IllegalStateException(timeoutMessage.get(), e);
         } catch (ExecutionException e) {
@@ -88,8 +100,11 @@ final class MachineLearningService {
             }
             throw new IllegalStateException(cause.getMessage(), cause);
         } catch (InterruptedException e) {
+            future.cancel(true);
             Thread.currentThread().interrupt();
             throw new IllegalStateException("Interrupted", e);
+        } finally {
+            executor.shutdownNow();
         }
     }
 

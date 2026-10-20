@@ -123,17 +123,28 @@ public class Forecast extends AbstractBilling implements RunnableTask<Forecast.O
         var forecast = CostQueries.rows(response);
 
         var total = BigDecimal.ZERO;
-        String unit = null;
+        var totalsByCurrency = new LinkedHashMap<String, BigDecimal>();
         for (var row : forecast) {
-            if (!"Actual".equals(row.get("CostStatus")) && row.get(rAggregation) != null) {
-                total = total.add(CostQueries.decimal(row.get(rAggregation)));
+            var currency = row.get("Currency") == null ? null : row.get("Currency").toString();
+            if (currency != null) {
+                totalsByCurrency.putIfAbsent(currency, BigDecimal.ZERO);
             }
-            if (unit == null && row.get("Currency") != null) {
-                unit = row.get("Currency").toString();
+            if (!"Actual".equals(row.get("CostStatus")) && row.get(rAggregation) != null) {
+                var amount = CostQueries.decimal(row.get(rAggregation));
+                total = total.add(amount);
+                if (currency != null) {
+                    totalsByCurrency.merge(currency, amount, BigDecimal::add);
+                }
             }
         }
+        var mixedCurrencies = totalsByCurrency.size() > 1;
 
-        return Output.builder().forecast(forecast).totalAmount(total).unit(unit).build();
+        return Output.builder()
+            .forecast(forecast)
+            .totalAmount(mixedCurrencies ? null : total)
+            .totalAmountByCurrency(totalsByCurrency)
+            .unit(totalsByCurrency.size() == 1 ? totalsByCurrency.keySet().iterator().next() : null)
+            .build();
     }
 
     @Builder
@@ -146,10 +157,22 @@ public class Forecast extends AbstractBilling implements RunnableTask<Forecast.O
         )
         private List<Map<String, Object>> forecast;
 
-        @Schema(title = "Forecasted total", description = "Sum of the forecasted (non-`Actual`) entries of the aggregation column.")
+        @Schema(
+            title = "Forecasted total",
+            description = "Sum of the forecasted (non-`Actual`) entries of the aggregation column. Null when the entries are in more than one currency: use `totalAmountByCurrency` then."
+        )
         private BigDecimal totalAmount;
 
-        @Schema(title = "Currency", description = "Currency of the forecast, e.g. `USD` or `EUR`.")
+        @Schema(
+            title = "Forecasted total by currency",
+            description = "Sum of the forecasted (non-`Actual`) entries per value of the `Currency` column, e.g. `totalAmountByCurrency.EUR`."
+        )
+        private Map<String, BigDecimal> totalAmountByCurrency;
+
+        @Schema(
+            title = "Currency",
+            description = "Currency of the forecast, e.g. `USD` or `EUR`. Null when the entries are in more than one currency (possible at EA, MCA or CSP billing scopes)."
+        )
         private String unit;
     }
 }

@@ -69,4 +69,35 @@ class ForecastTest {
         assertThat(((Map<String, Object>) sent.get("dataset")).get("granularity"), is("Daily"));
         assertThat(sent.get("includeActualCost"), is(true));
     }
+
+    @Test
+    void givenEntriesInSeveralCurrencies_whenRun_thenTotalsPerCurrencyAndNullUnit() throws Exception {
+        var spy = spy(
+            Forecast.builder()
+                .id("forecast")
+                .type(Forecast.class.getName())
+                .scope(Property.ofValue("/providers/Microsoft.Billing/billingAccounts/1234"))
+                .costType(Property.ofValue(CostQueries.CostType.ActualCost))
+                .startDate(Property.ofValue("2026-10-14"))
+                .endDate(Property.ofValue("2026-10-15"))
+                .aggregation(Property.ofValue("Cost"))
+                .build()
+        );
+        var api = QueryTest.stubApi(spy);
+        doReturn(
+            Map.of(
+                "properties", Map.of(
+                    "columns", List.of(Map.of("name", "Cost"), Map.of("name", "UsageDate"), Map.of("name", "CostStatus"), Map.of("name", "Currency")),
+                    "rows", List.of(List.of(10, 20261014, "Forecast", "USD"), List.of(4, 20261014, "Forecast", "EUR"), List.of(2.5, 20261015, "Forecast", "USD"))
+                )
+            )
+        ).when(api).send(eq("POST"), anyString(), any());
+
+        var output = spy.run(runContextFactory.of());
+
+        assertThat(output.getUnit(), nullValue());
+        assertThat(output.getTotalAmount(), nullValue());
+        assertThat(output.getTotalAmountByCurrency().get("USD"), comparesEqualTo(new BigDecimal("12.5")));
+        assertThat(output.getTotalAmountByCurrency().get("EUR"), comparesEqualTo(new BigDecimal("4")));
+    }
 }

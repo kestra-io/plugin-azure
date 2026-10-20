@@ -78,6 +78,14 @@ public abstract class AbstractBilling extends AbstractAzureIdentityConnection {
         return link;
     }
 
+    static int renderMaxPages(RunContext runContext, Property<Integer> maxPages) throws IllegalVariableEvaluationException {
+        var rMaxPages = runContext.render(maxPages).as(Integer.class).orElse(DEFAULT_MAX_PAGES);
+        if (rMaxPages < 1) {
+            throw new IllegalArgumentException("maxPages must be at least 1, got " + rMaxPages);
+        }
+        return rMaxPages;
+    }
+
     static LocalDate parseDate(String name, String value) {
         try {
             return LocalDate.parse(value);

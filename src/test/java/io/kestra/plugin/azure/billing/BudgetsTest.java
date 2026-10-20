@@ -173,4 +173,14 @@ class BudgetsTest {
         assertThat(budget, not(hasKey("currentSpendAmount")));
         assertThat(budget.get("notifications"), is(List.of()));
     }
+
+    @Test
+    void givenTemplatedMaxPagesOfZero_whenListBudgets_thenFails() throws Exception {
+        var spy = spy(
+            ListBudgets.builder().id("budgets").type(ListBudgets.class.getName()).scope(Property.ofValue(SCOPE)).maxPages(Property.ofExpression("{{ 0 }}")).build()
+        );
+
+        assertThrows(IllegalArgumentException.class, () -> spy.run(runContextFactory.of()));
+        verify(spy, never()).api(any());
+    }
 }

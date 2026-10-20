@@ -214,4 +214,13 @@ class QueryTest {
         assertThat(output.getCostTotalsByCurrency().get("USD").get("Cost"), comparesEqualTo(new BigDecimal("12.5")));
         assertThat(output.getCostTotalsByCurrency().get("EUR").get("Cost"), comparesEqualTo(new BigDecimal("5")));
     }
+
+    @Test
+    void givenTemplatedMaxPagesOfZero_whenRun_thenFailsBeforeCallingAzure() throws Exception {
+        var spy = spy(task().maxPages(Property.ofExpression("{{ 0 }}")).build());
+
+        var e = assertThrows(IllegalArgumentException.class, () -> spy.run(runContextFactory.of()));
+        assertThat(e.getMessage(), containsString("maxPages must be at least 1"));
+        verify(spy, never()).api(any());
+    }
 }

@@ -169,11 +169,10 @@ public class Query extends AbstractBilling implements RunnableTask<Query.Output>
         title = "Maximum number of pages",
         description = "Stops after this many requests (following `nextLink`) and logs a warning if more rows were available."
     )
-    @Min(1)
     @NotNull
     @Builder.Default
     @PluginProperty(group = "advanced")
-    private Property<Integer> maxPages = Property.ofValue(DEFAULT_MAX_PAGES);
+    private Property<@Min(1) Integer> maxPages = Property.ofValue(DEFAULT_MAX_PAGES);
 
     @Schema(
         title = "Fetch strategy",
@@ -195,7 +194,7 @@ public class Query extends AbstractBilling implements RunnableTask<Query.Output>
         var rTimeframe = runContext.render(timeframe).as(Timeframe.class).orElseThrow(() -> new IllegalArgumentException("timeframe is required"));
         var rStart = runContext.render(startDate).as(String.class);
         var rEnd = runContext.render(endDate).as(String.class);
-        int rMaxPages = runContext.render(maxPages).as(Integer.class).orElse(DEFAULT_MAX_PAGES);
+        var rMaxPages = renderMaxPages(runContext, maxPages);
 
         var dataset = new LinkedHashMap<String, Object>();
         dataset.put("granularity", runContext.render(granularity).as(Granularity.class).orElseThrow(() -> new IllegalArgumentException("granularity is required")).name());

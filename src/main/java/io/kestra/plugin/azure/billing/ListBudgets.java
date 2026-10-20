@@ -68,11 +68,10 @@ public class ListBudgets extends AbstractBilling implements RunnableTask<ListBud
         title = "Maximum number of pages",
         description = "Stops after this many requests (following `nextLink`) and logs a warning if more budgets were available."
     )
-    @Min(1)
     @NotNull
     @Builder.Default
     @PluginProperty(group = "advanced")
-    private Property<Integer> maxPages = Property.ofValue(DEFAULT_MAX_PAGES);
+    private Property<@Min(1) Integer> maxPages = Property.ofValue(DEFAULT_MAX_PAGES);
 
     @Schema(
         title = "Fetch strategy",
@@ -85,7 +84,7 @@ public class ListBudgets extends AbstractBilling implements RunnableTask<ListBud
 
     @Override
     public Output run(RunContext runContext) throws Exception {
-        int rMaxPages = runContext.render(maxPages).as(Integer.class).orElse(DEFAULT_MAX_PAGES);
+        var rMaxPages = renderMaxPages(runContext, maxPages);
         String url = Budgets.url(renderScope(runContext), null);
         int pages = 0;
 

@@ -13,6 +13,7 @@ import io.kestra.core.http.client.configurations.HttpConfiguration;
 import io.kestra.core.http.client.configurations.TimeoutConfiguration;
 import io.kestra.core.models.property.Property;
 import io.kestra.core.runners.RunContext;
+import io.kestra.core.serializers.JacksonMapper;
 
 /** Azure Resource Manager client for one task run: one access token, one HTTP client, retries on throttling. */
 class BillingApi implements AutoCloseable {
@@ -33,6 +34,7 @@ class BillingApi implements AutoCloseable {
             .runContext(runContext)
             .configuration(
                 HttpConfiguration.builder()
+                    .followRedirects(Property.ofValue(false))
                     .timeout(
                         TimeoutConfiguration.builder()
                             .connectTimeout(Property.ofValue(CONNECT_TIMEOUT))
@@ -57,8 +59,14 @@ class BillingApi implements AutoCloseable {
                 request.body(HttpRequest.JsonRequestBody.builder().content(body).build());
             }
             try {
-                Map<String, Object> response = client.request(request.build(), Map.class).getBody();
-                return response == null ? Map.of() : response;
+                var response = client.request(request.build(), String.class);
+                var status = response.getStatus().getCode();
+                if (status < 200 || status >= 300) {
+                    // with followRedirects off, a 3xx lands here: never resend the bearer token to its Location
+                    throw new IllegalStateException("Azure request " + method + " " + url + " returned HTTP " + status + "; redirects are not followed");
+                }
+                var responseBody = response.getBody();
+                return responseBody == null || responseBody.isBlank() ? Map.of() : JacksonMapper.ofJson().readValue(responseBody, Map.class);
             } catch (HttpClientResponseException e) {
                 int status = e.getResponse() == null ? -1 : e.getResponse().getStatus().getCode();
                 if (!isRetryable(status) || attempt >= MAX_ATTEMPTS) {

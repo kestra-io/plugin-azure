@@ -124,4 +124,16 @@ class BillingApiTest {
 
         assertThat(BillingApi.retryDelay(response, 1), is(Duration.ZERO));
     }
+
+    @Test
+    void givenRedirect_whenSend_thenDoesNotFollowItWithTheToken() throws Exception {
+        server.stubFor(get("/budgets").willReturn(aResponse().withStatus(302).withHeader("Location", server.baseUrl() + "/elsewhere")));
+        server.stubFor(get("/elsewhere").willReturn(okJson("{\"value\":[]}")));
+
+        try (var api = api()) {
+            assertThrows(IllegalStateException.class, () -> api.send("GET", server.baseUrl() + "/budgets", null));
+        }
+
+        server.verify(0, getRequestedFor(urlEqualTo("/elsewhere")));
+    }
 }

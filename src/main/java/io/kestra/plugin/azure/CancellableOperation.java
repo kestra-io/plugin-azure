@@ -1,10 +1,6 @@
 package io.kestra.plugin.azure;
 
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.function.Supplier;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -23,47 +19,6 @@ public final class CancellableOperation {
 
     public CancellableOperation(String resourceType) {
         this.resourceType = resourceType;
-    }
-
-    /**
-     * Creates a dedicated daemon executor for an individual operation.
-     */
-    private static ExecutorService newExecutor() {
-        return Executors.newSingleThreadExecutor(runnable -> {
-            Thread thread = new Thread(runnable, "azure-cancellation");
-            thread.setDaemon(true);
-            return thread;
-        });
-    }
-
-    public static CompletableFuture<Void> runAsync(Runnable action) {
-        ExecutorService executor = newExecutor();
-        CompletableFuture<Void> future = CompletableFuture.runAsync(action, executor);
-
-        future.whenComplete((result, error) -> {
-            if (future.isCancelled()) {
-                executor.shutdownNow();
-            } else {
-                executor.shutdown();
-            }
-        });
-
-        return future;
-    }
-
-    public static <T> CompletableFuture<T> supplyAsync(Supplier<T> action) {
-        ExecutorService executor = newExecutor();
-        CompletableFuture<T> future = CompletableFuture.supplyAsync(action, executor);
-
-        future.whenComplete((result, error) -> {
-            if (future.isCancelled()) {
-                executor.shutdownNow();
-            } else {
-                executor.shutdown();
-            }
-        });
-
-        return future;
     }
 
     public synchronized void arm(Runnable cancelAction) {

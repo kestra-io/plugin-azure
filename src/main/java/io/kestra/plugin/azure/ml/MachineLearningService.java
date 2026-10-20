@@ -80,7 +80,12 @@ final class MachineLearningService {
      * as if this call were still synchronous.
      */
     static <T> T withTimeout(Supplier<T> action, Duration timeout, Supplier<String> timeoutMessage) {
-        ExecutorService executor = Executors.newSingleThreadExecutor();
+        ExecutorService executor = Executors.newSingleThreadExecutor(
+            Thread.ofPlatform()
+                .name("azure-ml-timeout")
+                .daemon()
+                .factory()
+        );
         Future<T> future = executor.submit(action::get);
 
         try {

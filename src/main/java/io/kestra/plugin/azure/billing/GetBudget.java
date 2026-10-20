@@ -67,8 +67,8 @@ public class GetBudget extends AbstractBilling implements RunnableTask<GetBudget
     @Override
     public Output run(RunContext runContext) throws Exception {
         var rBudgetName = runContext.render(budgetName).as(String.class).orElseThrow(() -> new IllegalArgumentException("budgetName is required"));
-        if (!BUDGET_NAME.matcher(rBudgetName).matches()) {
-            throw new IllegalArgumentException("budgetName may only contain letters, digits, '.', '_' and '-', got '" + rBudgetName + "'");
+        if (!BUDGET_NAME.matcher(rBudgetName).matches() || rBudgetName.chars().allMatch(c -> c == '.')) {
+            throw new IllegalArgumentException("budgetName may only contain letters, digits, '.', '_' and '-' and cannot be only dots, got '" + rBudgetName + "'");
         }
         var url = Budgets.url(renderScope(runContext), rBudgetName);
         Map<String, Object> response;

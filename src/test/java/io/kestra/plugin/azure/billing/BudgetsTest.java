@@ -153,7 +153,7 @@ class BudgetsTest {
 
     @Test
     void givenUnsafeBudgetName_whenGetBudget_thenFailsBeforeCallingAzure() throws Exception {
-        for (var name : List.of("../other", "a/b", "a?api-version=1", "a#b", "a b")) {
+        for (var name : List.of("../other", "a/b", "a?api-version=1", "a#b", "a b", ".", "..", "...")) {
             var spy = spy(GetBudget.builder().id("budget").type(GetBudget.class.getName()).scope(Property.ofValue(SCOPE)).budgetName(Property.ofValue(name)).build());
             assertThrows(IllegalArgumentException.class, () -> spy.run(runContextFactory.of()), name);
             verify(spy, never()).api(any());

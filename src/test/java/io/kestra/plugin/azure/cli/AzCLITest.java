@@ -24,11 +24,11 @@ import static org.hamcrest.core.AllOf.allOf;
 
 @KestraTest(environments = "sp")
 public class AzCLITest {
-    @Value("${kestra.variables.globals.azure.sp.username}")
+    @Value("${kestra.variables.globals.azure.sp.username:}")
     protected String username;
-    @Value("${kestra.variables.globals.azure.sp.secret}")
+    @Value("${kestra.variables.globals.azure.sp.secret:}")
     protected String secret;
-    @Value("${kestra.variables.globals.azure.sp.tenant}")
+    @Value("${kestra.variables.globals.azure.sp.tenant:}")
     String tenant;
 
     @BeforeEach

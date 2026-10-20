@@ -36,7 +36,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @KestraTest(startRunner = true, environments = "sp")
 public abstract class CosmosContainerBaseTest<T extends AbstractCosmosContainerTask.AbstractCosmosContainerTaskBuilder<?, ?, ?>> {
-    @Value("${kestra.variables.globals.azure.cosmos.connection-string}")
+    @Value("${kestra.variables.globals.azure.cosmos.connection-string:}")
     protected String connectionString;
 
     @BeforeEach

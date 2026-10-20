@@ -49,9 +49,11 @@ class BillingApi implements AutoCloseable {
     /** Sends one request and returns the JSON body; {@code body} is null for a GET. Retries 408, 429 and 5xx. */
     @SuppressWarnings("unchecked")
     Map<String, Object> send(String method, String url, Map<String, Object> body) throws Exception {
+        // toASCIIString percent-encodes non-ASCII characters (e.g. a Unicode resource group name) as UTF-8
+        var uri = URI.create(URI.create(url).toASCIIString());
         for (int attempt = 1;; attempt++) {
             var request = HttpRequest.builder()
-                .uri(URI.create(url))
+                .uri(uri)
                 .method(method)
                 .addHeader("Authorization", "Bearer " + token)
                 .addHeader("Content-Type", "application/json");

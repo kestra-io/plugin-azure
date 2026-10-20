@@ -70,6 +70,18 @@ class BillingApiTest {
     }
 
     @Test
+    void givenUnicodeScope_whenSend_thenPercentEncodesThePath() throws Exception {
+        var path = "/subscriptions/sub/resourceGroups/rg-donn%C3%A9es-%E6%9D%B1%E4%BA%AC/query";
+        server.stubFor(post(urlPathEqualTo(path)).willReturn(okJson("{\"properties\":{\"rows\":[]}}")));
+
+        try (var api = api()) {
+            api.send("POST", server.baseUrl() + "/subscriptions/sub/resourceGroups/rg-données-東京/query", Map.of());
+        }
+
+        server.verify(postRequestedFor(urlPathEqualTo(path)));
+    }
+
+    @Test
     void givenThrottled_whenSend_thenHonorsRetryAfterAndSucceeds() throws Exception {
         // the underlying HTTP client already retries a 429 once, so throttle three times to reach our own retry
         var states = List.of(Scenario.STARTED, "429-2", "429-3", "ok");

@@ -33,7 +33,7 @@ public abstract class AbstractBilling extends AbstractAzureIdentityConnection {
     static final String MANAGEMENT_ENDPOINT = "https://" + MANAGEMENT_HOST;
     private static final String MANAGEMENT_SCOPE = MANAGEMENT_ENDPOINT + "/.default";
     static final int DEFAULT_MAX_PAGES = 10;
-    private static final Pattern SCOPE_PATTERN = Pattern.compile("^/(subscriptions|providers)(/[A-Za-z0-9._:()-]+)+$");
+    private static final Pattern SCOPE_PATTERN = Pattern.compile("^/(subscriptions|providers)(/[\\p{L}\\p{N}._:()-]+)+$");
     private static final Duration TOKEN_TIMEOUT = Duration.ofSeconds(60);
 
     @Schema(
@@ -58,7 +58,7 @@ public abstract class AbstractBilling extends AbstractAzureIdentityConnection {
         boolean dotSegment = Arrays.stream(rScope.split("/")).anyMatch(segment -> segment.equals(".") || segment.equals(".."));
         if (!SCOPE_PATTERN.matcher(rScope).matches() || dotSegment) {
             throw new IllegalArgumentException(
-                "scope must start with /subscriptions/ or /providers/ and contain only path segments made of letters, digits and . _ : ( ) -, got '" + value + "'"
+                "scope must start with /subscriptions/ or /providers/ and contain only path segments made of (Unicode) letters, digits and . _ : ( ) -, got '" + value + "'"
             );
         }
         return rScope;

@@ -175,6 +175,7 @@ class QueryTest {
             assertThrows(IllegalArgumentException.class, () -> AbstractBilling.validateScope(scope), scope);
         }
         assertThat(AbstractBilling.validateScope("/subscriptions/sub/resourceGroups/rg-data_1(x)/"), is("/subscriptions/sub/resourceGroups/rg-data_1(x)"));
+        assertThat(AbstractBilling.validateScope("/subscriptions/sub/resourceGroups/rg-données-東京"), is("/subscriptions/sub/resourceGroups/rg-données-東京"));
         assertThat(
             AbstractBilling.validateScope("/providers/Microsoft.Billing/billingAccounts/1234:5678_2019-05-31"),
             is("/providers/Microsoft.Billing/billingAccounts/1234:5678_2019-05-31")

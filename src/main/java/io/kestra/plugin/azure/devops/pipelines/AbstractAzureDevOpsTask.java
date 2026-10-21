@@ -3,6 +3,7 @@ package io.kestra.plugin.azure.devops.pipelines;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.net.URI;
+import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 
@@ -21,6 +22,7 @@ import io.kestra.core.http.HttpRequest;
 import io.kestra.core.http.HttpResponse;
 import io.kestra.core.http.client.HttpClient;
 import io.kestra.core.http.client.HttpClientException;
+import io.kestra.core.http.client.HttpClientResponseException;
 import io.kestra.core.models.annotations.PluginProperty;
 import io.kestra.core.models.property.Property;
 import io.kestra.core.models.tasks.Task;
@@ -130,67 +132,97 @@ public abstract class AbstractAzureDevOpsTask extends Task implements AzureIdent
     protected Property<String> pemCertificate;
 
     public TokenCredential credentials(RunContext runContext) throws IllegalVariableEvaluationException {
-        String tenant = runContext.render(this.tenantId).as(String.class).orElse(null);
-        String client = runContext.render(this.clientId).as(String.class).orElse(null);
-        String secret = runContext.render(this.clientSecret).as(String.class).orElse(null);
-        String cert = runContext.render(this.pemCertificate).as(String.class).orElse(null);
+        var rTenantId = runContext.render(this.tenantId).as(String.class).orElse(null);
+        var rClientId = runContext.render(this.clientId).as(String.class).orElse(null);
+        var rClientSecret = runContext.render(this.clientSecret).as(String.class).orElse(null);
+        var rPemCert = runContext.render(this.pemCertificate).as(String.class).orElse(null);
 
-        if (StringUtils.isNotBlank(secret)) {
-            runContext.logger().info("Authentication is using Client Secret Credentials");
+        if (StringUtils.isNotBlank(rClientSecret)) {
+            runContext.logger().debug("Azure DevOps authentication using Client Secret Credentials");
             return new ClientSecretCredentialBuilder()
-                .tenantId(tenant)
-                .clientId(client)
-                .clientSecret(secret)
+                .tenantId(rTenantId)
+                .clientId(rClientId)
+                .clientSecret(rClientSecret)
                 .build();
         }
-        if (StringUtils.isNotBlank(cert)) {
-            runContext.logger().info("Authentication is using Client Certificate Credentials");
+        if (StringUtils.isNotBlank(rPemCert)) {
+            runContext.logger().debug("Azure DevOps authentication using Client Certificate Credentials");
             return new ClientCertificateCredentialBuilder()
-                .tenantId(tenant)
-                .clientId(client)
-                .pemCertificate(new ByteArrayInputStream(cert.getBytes(StandardCharsets.UTF_8)))
+                .tenantId(rTenantId)
+                .clientId(rClientId)
+                .pemCertificate(new ByteArrayInputStream(rPemCert.getBytes(StandardCharsets.UTF_8)))
                 .build();
         }
-        runContext.logger().info("Authentication is using Default Azure Credentials");
-        return new DefaultAzureCredentialBuilder()
-            .tenantId(tenant)
-            .build();
+        runContext.logger().debug("Azure DevOps authentication using Default Azure Credentials");
+        var builder = new DefaultAzureCredentialBuilder();
+        if (rTenantId != null) {
+            builder.tenantId(rTenantId);
+        }
+        return builder.build();
     }
 
     protected String buildProjectApiUrl(RunContext runContext) throws IllegalVariableEvaluationException {
-        String base = runContext.render(this.baseUrl).as(String.class).orElse("https://dev.azure.com");
-        if (base.endsWith("/")) {
-            base = base.substring(0, base.length() - 1);
+        var rBaseUrl = runContext.render(this.baseUrl).as(String.class).orElse("https://dev.azure.com");
+        if (rBaseUrl.endsWith("/")) {
+            rBaseUrl = rBaseUrl.substring(0, rBaseUrl.length() - 1);
         }
 
-        String org = runContext.render(this.organization).as(String.class).orElseThrow();
-        String proj = runContext.render(this.project).as(String.class).orElseThrow();
+        var rOrganization = runContext.render(this.organization)
+            .as(String.class)
+            .orElseThrow(() -> new IllegalArgumentException("organization is required"));
+        var rProject = runContext.render(this.project)
+            .as(String.class)
+            .orElseThrow(() -> new IllegalArgumentException("project is required"));
 
-        return "%s/%s/%s/_apis".formatted(base, org, proj);
+        var encodedOrg = URLEncoder.encode(rOrganization, StandardCharsets.UTF_8).replace("+", "%20");
+        var encodedProj = URLEncoder.encode(rProject, StandardCharsets.UTF_8).replace("+", "%20");
+
+        return "%s/%s/%s/_apis".formatted(rBaseUrl, encodedOrg, encodedProj);
     }
 
     protected String getAuthorizationHeader(RunContext runContext, URI uri) throws Exception {
-        String pat = runContext.render(this.personalAccessToken).as(String.class).orElse(null);
-        if (pat != null && !pat.isBlank()) {
-            String token = ":" + pat;
+        var rPat = runContext.render(this.personalAccessToken).as(String.class).orElse(null);
+        if (rPat != null && !rPat.isBlank()) {
+            var token = ":" + rPat;
             return "Basic " + Base64.getEncoder().encodeToString(token.getBytes(StandardCharsets.UTF_8));
         }
 
-        if (this.tenantId != null && this.clientId != null) {
-            assertEntraTokenTarget(uri);
-            AccessToken token = this.credentials(runContext)
-                .getToken(new TokenRequestContext().addScopes(AZURE_DEVOPS_SCOPE))
-                .block();
+        var rTenantId = runContext.render(this.tenantId).as(String.class).orElse(null);
+        var rClientId = runContext.render(this.clientId).as(String.class).orElse(null);
+        var rClientSecret = runContext.render(this.clientSecret).as(String.class).orElse(null);
+        var rPemCert = runContext.render(this.pemCertificate).as(String.class).orElse(null);
 
-            if (token == null) {
-                throw new IllegalStateException("Failed to acquire Azure Entra ID access token for Azure DevOps");
+        // Microsoft Entra ID authentication (Service Principal or Managed Identity)
+        assertEntraTokenTarget(uri);
+        TokenCredential cred;
+        if (StringUtils.isNotBlank(rClientSecret)) {
+            runContext.logger().debug("Azure DevOps authentication using Client Secret Credentials");
+            cred = new ClientSecretCredentialBuilder()
+                .tenantId(rTenantId)
+                .clientId(rClientId)
+                .clientSecret(rClientSecret)
+                .build();
+        } else if (StringUtils.isNotBlank(rPemCert)) {
+            runContext.logger().debug("Azure DevOps authentication using Client Certificate Credentials");
+            cred = new ClientCertificateCredentialBuilder()
+                .tenantId(rTenantId)
+                .clientId(rClientId)
+                .pemCertificate(new ByteArrayInputStream(rPemCert.getBytes(StandardCharsets.UTF_8)))
+                .build();
+        } else {
+            runContext.logger().debug("Azure DevOps authentication using Default Azure Credentials (Managed Identity)");
+            var builder = new DefaultAzureCredentialBuilder();
+            if (rTenantId != null) {
+                builder.tenantId(rTenantId);
             }
-            return "Bearer " + token.getToken();
+            cred = builder.build();
         }
 
-        throw new IllegalArgumentException(
-            "Either 'personalAccessToken' or Azure service principal credentials ('tenantId', 'clientId', 'clientSecret') must be configured."
-        );
+        AccessToken token = cred.getToken(new TokenRequestContext().addScopes(AZURE_DEVOPS_SCOPE)).block();
+        if (token == null) {
+            throw new IllegalStateException("Failed to acquire Azure Entra ID access token for Azure DevOps");
+        }
+        return "Bearer " + token.getToken();
     }
 
     // Entra ID tokens are only valid for Azure DevOps Services, never send them to another host.
@@ -206,10 +238,8 @@ public abstract class AbstractAzureDevOpsTask extends Task implements AzureIdent
         }
     }
 
-    protected HttpResponse<String> executeRequest(RunContext runContext, String method, URI uri, Object body) throws Exception {
-        String authHeader = getAuthorizationHeader(runContext, uri);
-
-        HttpRequest.HttpRequestBuilder builder = HttpRequest.builder()
+    protected HttpResponse<String> executeRequest(RunContext runContext, String authHeader, String method, URI uri, Object body) throws Exception {
+        var builder = HttpRequest.builder()
             .uri(uri)
             .method(method)
             .addHeader("Authorization", authHeader)
@@ -221,25 +251,38 @@ public abstract class AbstractAzureDevOpsTask extends Task implements AzureIdent
         }
 
         try (HttpClient client = HttpClient.builder().runContext(runContext).build()) {
-            HttpResponse<String> response = client.request(builder.build(), String.class);
-            if (response.getStatus().getCode() >= 400) {
-                throw new IllegalStateException(
-                    "Azure DevOps API request [%s %s] failed with HTTP %d: %s".formatted(
-                        method,
-                        uri,
-                        response.getStatus().getCode(),
-                        response.getBody()
-                    )
-                );
-            }
-            return response;
+            return client.request(builder.build(), String.class);
+        } catch (HttpClientResponseException e) {
+            int statusCode = e.getResponse() != null ? e.getResponse().getStatus().getCode() : -1;
+            String responseBody = e.getResponse() != null && e.getResponse().getBody() != null ? e.getResponse().getBody().toString() : "";
+            String hint = switch (statusCode) {
+                case 401, 403 -> "Please verify that your Personal Access Token (PAT) has the 'Build: Read & execute' scope or check Entra ID service principal role assignments.";
+                case 404 -> "Please verify that the organization, project, and pipeline/run ID exist and are accessible.";
+                default -> "Please verify the request payload and Azure DevOps service status.";
+            };
+            throw new IllegalStateException(
+                "Azure DevOps API request [%s %s] failed with HTTP %d: %s. %s".formatted(method, uri, statusCode, responseBody, hint),
+                e
+            );
         } catch (HttpClientException | IOException e) {
             throw new RuntimeException("Failed to execute Azure DevOps HTTP request to " + uri, e);
         }
     }
 
-    protected PipelineRun parseRunResponse(String json) throws Exception {
+    protected HttpResponse<String> executeRequest(RunContext runContext, String method, URI uri, Object body) throws Exception {
+        var authHeader = getAuthorizationHeader(runContext, uri);
+        return executeRequest(runContext, authHeader, method, uri, body);
+    }
+
+    protected PipelineRun parseRunResponse(String json, URI uri) throws Exception {
+        if (json == null || json.isBlank()) {
+            throw new IllegalStateException("Empty response from Azure DevOps API for " + uri);
+        }
         JsonNode root = JacksonMapper.ofJson().readTree(json);
         return PipelineRun.fromJson(root);
+    }
+
+    protected PipelineRun parseRunResponse(String json) throws Exception {
+        return parseRunResponse(json, null);
     }
 }

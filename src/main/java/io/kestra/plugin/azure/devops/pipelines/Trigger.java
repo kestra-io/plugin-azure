@@ -13,7 +13,6 @@ import io.kestra.core.models.conditions.ConditionContext;
 import io.kestra.core.models.executions.Execution;
 import io.kestra.core.models.property.Property;
 import io.kestra.core.models.triggers.*;
-import io.kestra.core.runners.RunContext;
 import io.kestra.plugin.azure.shared.AzureIdentityConnectionInterface;
 
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -62,12 +61,20 @@ import static io.kestra.core.models.triggers.StatefulTriggerService.*;
     title = "Trigger flows on completed Azure DevOps pipeline runs",
     description = """
         Periodically polls an Azure DevOps pipeline and starts an execution for newly observed completed runs.
-        Maintains an exactly-once watermark in Kestra's namespace KV store.
+        Maintains an exactly-once watermark in Kestra's namespace KV store. On the initial poll, existing historical runs
+        are recorded without firing to prevent re-executing past builds.
         """
 )
 public class Trigger extends AbstractTrigger implements PollingTriggerInterface, TriggerOutput<Trigger.Output>, StatefulTriggerInterface, AzureIdentityConnectionInterface {
+    @Schema(
+        title = "Polling interval",
+        description = """
+            Interval between polling checks. Defaults to `PT1M`.
+            """
+    )
     @Builder.Default
-    private final Duration interval = Duration.ofSeconds(60);
+    @PluginProperty(group = "execution")
+    private final Duration interval = Duration.ofMinutes(1);
 
     @Schema(
         title = "Azure DevOps organization",
@@ -103,6 +110,7 @@ public class Trigger extends AbstractTrigger implements PollingTriggerInterface,
         title = "Base URL",
         description = """
             Base URL of the Azure DevOps instance. Defaults to `https://dev.azure.com`.
+            Configure this property when connecting to an on-premises Azure DevOps Server.
             """
     )
     @Builder.Default
@@ -113,6 +121,7 @@ public class Trigger extends AbstractTrigger implements PollingTriggerInterface,
         title = "Personal Access Token",
         description = """
             Azure DevOps Personal Access Token (PAT) with `Build: Read & execute` scope.
+            If omitted, Microsoft Entra ID service principal credentials must be configured.
             """
     )
     @ToString.Exclude
@@ -132,7 +141,7 @@ public class Trigger extends AbstractTrigger implements PollingTriggerInterface,
     @Schema(
         title = "Azure client ID",
         description = """
-            Client ID of the Azure app registration.
+            Client ID of the Azure service principal.
             """
     )
     @PluginProperty(group = "connection")
@@ -141,7 +150,7 @@ public class Trigger extends AbstractTrigger implements PollingTriggerInterface,
     @Schema(
         title = "Azure client secret",
         description = """
-            Client secret of the Azure app registration.
+            Client secret of the Azure service principal.
             """
     )
     @ToString.Exclude
@@ -163,7 +172,7 @@ public class Trigger extends AbstractTrigger implements PollingTriggerInterface,
     @Schema(
         title = "Results filter",
         description = """
-            Run results that should trigger executions. If not specified, all completed runs trigger executions.
+            Run results that should trigger executions (e.g. `succeeded`, `failed`). If omitted, all completed runs trigger executions.
             """
     )
     @PluginProperty(group = "main")
@@ -182,7 +191,7 @@ public class Trigger extends AbstractTrigger implements PollingTriggerInterface,
     @Schema(
         title = "Maximum runs to inspect",
         description = """
-            Maximum number of recent runs to inspect per polling interval. Defaults to 25.
+            Maximum number of recent runs to inspect per polling interval (between 1 and 1000). Defaults to 25.
             """
     )
     @Builder.Default
@@ -209,14 +218,16 @@ public class Trigger extends AbstractTrigger implements PollingTriggerInterface,
 
     @Override
     public Optional<Execution> evaluate(ConditionContext conditionContext, TriggerContext context) throws Exception {
-        RunContext runContext = conditionContext.getRunContext();
-        Integer pId = runContext.render(this.pipelineId).as(Integer.class).orElseThrow();
-        String defaultWatermarkKey = "watermark_" + context.getNamespace() + "_" + context.getFlowId() + "_" + this.getId() + "_p" + pId;
-        String rState = runContext.render(stateKey).as(String.class).orElse(defaultWatermarkKey);
-        Optional<Duration> rTtl = runContext.render(stateTtl).as(Duration.class);
-        List<String> rResults = runContext.render(results).asList(String.class);
+        var runContext = conditionContext.getRunContext();
+        var rPipelineId = runContext.render(this.pipelineId)
+            .as(Integer.class)
+            .orElseThrow(() -> new IllegalArgumentException("pipelineId is required"));
+        var defaultWatermarkKey = defaultKey(context.getNamespace(), context.getFlowId(), this.getId()) + "_p" + rPipelineId;
+        var rState = runContext.render(stateKey).as(String.class).orElse(defaultWatermarkKey);
+        var rTtl = runContext.render(stateTtl).as(Duration.class);
+        var rResults = runContext.render(results).asList(String.class);
 
-        ListRuns.Output listedRuns = ListRuns.builder()
+        var listedRuns = ListRuns.builder()
             .id(this.id)
             .type(ListRuns.class.getName())
             .organization(this.organization)
@@ -234,18 +245,19 @@ public class Trigger extends AbstractTrigger implements PollingTriggerInterface,
             .run(runContext);
 
         var previousState = readState(runContext, rState, rTtl);
-        On rOn = runContext.render(on).as(On.class).orElse(On.CREATE);
+        var rOn = runContext.render(on).as(On.class).orElse(On.CREATE);
 
-        List<PipelineRun> newRuns = new ArrayList<>();
-        for (PipelineRun run : listedRuns.getRuns()) {
-            if (rResults.isEmpty() || rResults.stream().anyMatch(res -> res.equalsIgnoreCase(run.getResult()))) {
-                Instant modifiedAt = Optional.ofNullable(run.getFinishedDate()).orElseGet(Instant::now);
-                String outcome = run.getResult() != null ? run.getResult() : run.getState();
+        var isFirstPoll = previousState.isEmpty();
+        var newRuns = new ArrayList<PipelineRun>();
+        for (var run : listedRuns.getRuns()) {
+            var modifiedAt = Optional.ofNullable(run.getFinishedDate()).orElseGet(Instant::now);
+            var outcome = run.getResult() != null ? run.getResult() : run.getState();
 
-                var candidate = StatefulTriggerService.Entry.candidate(String.valueOf(run.getId()), outcome, modifiedAt);
-                var stateChange = computeAndUpdateState(previousState, candidate, rOn);
+            var candidate = StatefulTriggerService.Entry.candidate(String.valueOf(run.getId()), outcome, modifiedAt);
+            var stateChange = computeAndUpdateState(previousState, candidate, rOn);
 
-                if (stateChange.fire()) {
+            if (!isFirstPoll && stateChange.fire()) {
+                if (rResults.isEmpty() || rResults.stream().anyMatch(res -> res.equalsIgnoreCase(run.getResult()))) {
                     newRuns.add(run);
                 }
             }
@@ -257,14 +269,13 @@ public class Trigger extends AbstractTrigger implements PollingTriggerInterface,
             return Optional.empty();
         }
 
-        PipelineRun firstRun = newRuns.get(0);
+        var firstRun = newRuns.getFirst();
         return Optional.of(
             TriggerService.generateExecution(
                 this,
                 conditionContext,
                 context,
                 Output.builder()
-                    .run(firstRun)
                     .runs(newRuns)
                     .total(newRuns.size())
                     .id(firstRun.getId())
@@ -280,14 +291,6 @@ public class Trigger extends AbstractTrigger implements PollingTriggerInterface,
     @Builder
     @Getter
     public static class Output implements io.kestra.core.models.tasks.Output {
-        @Schema(
-            title = "First pipeline run",
-            description = """
-                The primary newly completed pipeline run triggering this execution.
-                """
-        )
-        private final PipelineRun run;
-
         @Schema(
             title = "Pipeline runs",
             description = """
@@ -307,7 +310,7 @@ public class Trigger extends AbstractTrigger implements PollingTriggerInterface,
         @Schema(
             title = "Run ID",
             description = """
-                The unique identifier of the triggered pipeline run.
+                The unique identifier of the primary triggered pipeline run.
                 """
         )
         private final Integer id;
@@ -315,7 +318,7 @@ public class Trigger extends AbstractTrigger implements PollingTriggerInterface,
         @Schema(
             title = "Run name",
             description = """
-                The name or build number of the triggered pipeline run.
+                The name or build number of the primary triggered pipeline run.
                 """
         )
         private final String name;
@@ -323,7 +326,7 @@ public class Trigger extends AbstractTrigger implements PollingTriggerInterface,
         @Schema(
             title = "Run state",
             description = """
-                The state of the triggered pipeline run (completed).
+                The state of the primary triggered pipeline run (completed).
                 """
         )
         private final String state;
@@ -331,7 +334,7 @@ public class Trigger extends AbstractTrigger implements PollingTriggerInterface,
         @Schema(
             title = "Run result",
             description = """
-                The outcome of the triggered pipeline run (e.g. succeeded, failed).
+                The outcome of the primary triggered pipeline run (e.g. succeeded, failed).
                 """
         )
         private final String result;
@@ -339,7 +342,7 @@ public class Trigger extends AbstractTrigger implements PollingTriggerInterface,
         @Schema(
             title = "Web URL",
             description = """
-                Azure DevOps browser URL to view the triggered pipeline run.
+                Azure DevOps browser URL to view the primary triggered pipeline run.
                 """
         )
         private final String webUrl;

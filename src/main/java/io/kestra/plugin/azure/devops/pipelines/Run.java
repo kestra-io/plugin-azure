@@ -6,7 +6,6 @@ import java.time.Instant;
 import java.util.HashMap;
 import java.util.Map;
 
-import io.kestra.core.http.HttpResponse;
 import io.kestra.core.models.annotations.Example;
 import io.kestra.core.models.annotations.Plugin;
 import io.kestra.core.models.annotations.PluginProperty;
@@ -33,37 +32,50 @@ import lombok.experimental.SuperBuilder;
 @Plugin(
     examples = {
         @Example(
-            title = "Run an Azure DevOps pipeline and wait for completion",
+            title = "Trigger an Azure DevOps pipeline and wait for completion",
             full = true,
             code = """
-                id: azure_devops_run_pipeline
+                id: run_azure_devops_pipeline
                 namespace: company.team
 
                 tasks:
-                  - id: run_pipeline
+                  - id: trigger_pipeline
                     type: io.kestra.plugin.azure.devops.pipelines.Run
                     organization: my-org
                     project: my-project
                     pipelineId: 42
                     personalAccessToken: "{{ secret('AZURE_DEVOPS_PAT') }}"
-                    branch: refs/heads/main
+                    branch: main
                     templateParameters:
-                      environment: staging
+                      environment: production
                     wait: true
-                    timeout: PT30M
+                    maxDuration: PT45M
+                """
+        ),
+        @Example(
+            title = "Trigger an Azure DevOps pipeline asynchronously (fire-and-forget)",
+            full = true,
+            code = """
+                id: trigger_async_pipeline
+                namespace: company.team
 
-                  - id: log_result
-                    type: io.kestra.plugin.core.log.Log
-                    message: "Run {{ outputs.run_pipeline.id }} ended with {{ outputs.run_pipeline.result }}: {{ outputs.run_pipeline.webUrl }}"
+                tasks:
+                  - id: async_run
+                    type: io.kestra.plugin.azure.devops.pipelines.Run
+                    organization: my-org
+                    project: my-project
+                    pipelineId: 42
+                    personalAccessToken: "{{ secret('AZURE_DEVOPS_PAT') }}"
+                    wait: false
                 """
         )
     }
 )
 @Schema(
-    title = "Run an Azure DevOps pipeline",
+    title = "Trigger and monitor an Azure DevOps pipeline run",
     description = """
-        Triggers a new execution of an Azure DevOps pipeline, optionally waiting for its completion
-        and canceling the remote run if the Kestra execution is killed.
+        Dispatches a pipeline run in Azure DevOps. Optionally blocks and polls until the run reaches a terminal state.
+        Supports cancellation on task kill, dynamic template parameters, variables, and branch selection.
         """
 )
 public class Run extends AbstractAzureDevOpsTask implements RunnableTask<Run.Output> {
@@ -73,7 +85,7 @@ public class Run extends AbstractAzureDevOpsTask implements RunnableTask<Run.Out
     @Schema(
         title = "Pipeline ID",
         description = """
-            The ID of the Azure DevOps pipeline to run.
+            The unique identifier of the Azure DevOps pipeline to run.
             """
     )
     @NotNull
@@ -81,9 +93,9 @@ public class Run extends AbstractAzureDevOpsTask implements RunnableTask<Run.Out
     protected Property<Integer> pipelineId;
 
     @Schema(
-        title = "Branch or reference",
+        title = "Target branch or ref",
         description = """
-            The git branch or reference name to build (e.g. `main` or `refs/heads/main`).
+            Branch name (e.g. `main`, `release/1.0`) or Git reference to build.
             """
     )
     @PluginProperty(group = "main")
@@ -92,7 +104,7 @@ public class Run extends AbstractAzureDevOpsTask implements RunnableTask<Run.Out
     @Schema(
         title = "Template parameters",
         description = """
-            Key-value pairs matching parameters defined in the pipeline YAML definition.
+            Optional template parameters passed to the pipeline run definition.
             """
     )
     @PluginProperty(group = "main")
@@ -128,14 +140,14 @@ public class Run extends AbstractAzureDevOpsTask implements RunnableTask<Run.Out
     protected Property<Duration> pollInterval = Property.ofValue(DEFAULT_POLL_INTERVAL);
 
     @Schema(
-        title = "Timeout",
+        title = "Maximum duration",
         description = """
-            Maximum duration to wait for the pipeline run to reach a terminal state. Defaults to `PT30M`.
+            Maximum duration to wait for the pipeline run to reach a terminal state when `wait` is true. Defaults to `PT30M`.
             """
     )
     @Builder.Default
     @PluginProperty(group = "execution")
-    private Property<Duration> timeout = Property.ofValue(DEFAULT_TIMEOUT);
+    private Property<Duration> maxDuration = Property.ofValue(DEFAULT_TIMEOUT);
 
     @Getter(AccessLevel.NONE)
     @EqualsAndHashCode.Exclude
@@ -150,37 +162,39 @@ public class Run extends AbstractAzureDevOpsTask implements RunnableTask<Run.Out
 
     @Override
     public Output run(RunContext runContext) throws Exception {
-        Integer pId = runContext.render(this.pipelineId).as(Integer.class).orElseThrow();
-        Boolean shouldWait = runContext.render(this.wait).as(Boolean.class).orElse(false);
-        Duration poll = runContext.render(this.pollInterval).as(Duration.class).orElse(DEFAULT_POLL_INTERVAL);
-        Duration maxTimeout = runContext.render(this.timeout).as(Duration.class).orElse(DEFAULT_TIMEOUT);
+        var rPipelineId = runContext.render(this.pipelineId)
+            .as(Integer.class)
+            .orElseThrow(() -> new IllegalArgumentException("pipelineId is required"));
+        var rWait = runContext.render(this.wait).as(Boolean.class).orElse(false);
+        var rPollInterval = runContext.render(this.pollInterval).as(Duration.class).orElse(DEFAULT_POLL_INTERVAL);
+        var rMaxDuration = runContext.render(this.maxDuration).as(Duration.class).orElse(DEFAULT_TIMEOUT);
 
-        String projectApi = buildProjectApiUrl(runContext);
-        URI runUri = URI.create("%s/pipelines/%d/runs?api-version=%s".formatted(projectApi, pId, API_VERSION));
+        var projectApi = buildProjectApiUrl(runContext);
+        var runUri = URI.create("%s/pipelines/%d/runs?api-version=%s".formatted(projectApi, rPipelineId, API_VERSION));
+        var authHeader = getAuthorizationHeader(runContext, runUri);
 
-        Map<String, Object> payload = buildRunPayload(runContext);
+        var payload = buildRunPayload(runContext);
 
-        runContext.logger().info("Triggering Azure DevOps pipeline {}", pId);
-        HttpResponse<String> response = executeRequest(runContext, "POST", runUri, payload);
+        runContext.logger().info("Triggering Azure DevOps pipeline {}", rPipelineId);
+        var response = executeRequest(runContext, authHeader, "POST", runUri, payload);
 
-        PipelineRun pipelineRun = parseRunResponse(response.getBody());
-        Integer runId = pipelineRun.getId();
+        var pipelineRun = parseRunResponse(response.getBody(), runUri);
+        var runId = pipelineRun.getId();
         runContext.logger().info("Successfully created Azure DevOps pipeline run {}", runId);
 
-        // Arm cancellation lifecycle
         this.lifecycle.arm(() ->
         {
             try {
-                URI cancelUri = URI.create("%s/build/builds/%d?api-version=%s".formatted(projectApi, runId, API_VERSION));
-                executeRequest(runContext, "PATCH", cancelUri, Map.of("status", "Cancelling"));
+                var cancelUri = URI.create("%s/build/builds/%d?api-version=%s".formatted(projectApi, runId, API_VERSION));
+                executeRequest(runContext, authHeader, "PATCH", cancelUri, Map.of("status", "Cancelling"));
                 runContext.logger().info("Dispatched cancellation for Azure DevOps pipeline run {}", runId);
             } catch (Exception e) {
                 runContext.logger().warn("Failed to cancel Azure DevOps pipeline run {}", runId, e);
             }
         });
 
-        if (Boolean.TRUE.equals(shouldWait)) {
-            pipelineRun = waitForCompletion(runContext, projectApi, pId, runId, poll, maxTimeout);
+        if (Boolean.TRUE.equals(rWait)) {
+            pipelineRun = waitForCompletion(runContext, authHeader, projectApi, rPipelineId, runId, rPollInterval, rMaxDuration);
 
             if (pipelineRun.getResult() != null && !"succeeded".equalsIgnoreCase(pipelineRun.getResult())) {
                 throw new IllegalStateException(
@@ -193,7 +207,6 @@ public class Run extends AbstractAzureDevOpsTask implements RunnableTask<Run.Out
         }
 
         return Output.builder()
-            .run(pipelineRun)
             .id(pipelineRun.getId())
             .name(pipelineRun.getName())
             .state(pipelineRun.getState())
@@ -205,11 +218,11 @@ public class Run extends AbstractAzureDevOpsTask implements RunnableTask<Run.Out
     }
 
     private Map<String, Object> buildRunPayload(RunContext runContext) throws Exception {
-        Map<String, Object> payload = new HashMap<>();
+        var payload = new HashMap<String, Object>();
 
-        String refBranch = runContext.render(this.branch).as(String.class).orElse(null);
+        var refBranch = runContext.render(this.branch).as(String.class).orElse(null);
         if (refBranch != null && !refBranch.isBlank()) {
-            String fullRef = refBranch.startsWith("refs/") ? refBranch : "refs/heads/" + refBranch;
+            var fullRef = refBranch.startsWith("refs/") ? refBranch : "refs/heads/" + refBranch;
             payload.put(
                 "resources", Map.of(
                     "repositories", Map.of(
@@ -219,15 +232,15 @@ public class Run extends AbstractAzureDevOpsTask implements RunnableTask<Run.Out
             );
         }
 
-        Map<String, Object> rTemplateParams = runContext.render(this.templateParameters).asMap(String.class, Object.class);
+        var rTemplateParams = runContext.render(this.templateParameters).asMap(String.class, Object.class);
         if (!rTemplateParams.isEmpty()) {
             payload.put("templateParameters", rTemplateParams);
         }
 
-        Map<String, Object> rVariables = runContext.render(this.variables).asMap(String.class, Object.class);
+        var rVariables = runContext.render(this.variables).asMap(String.class, Object.class);
         if (!rVariables.isEmpty()) {
-            Map<String, Object> formattedVars = new HashMap<>();
-            for (Map.Entry<String, Object> entry : rVariables.entrySet()) {
+            var formattedVars = new HashMap<String, Object>();
+            for (var entry : rVariables.entrySet()) {
                 if (entry.getValue() instanceof Map) {
                     formattedVars.put(entry.getKey(), entry.getValue());
                 } else {
@@ -242,19 +255,20 @@ public class Run extends AbstractAzureDevOpsTask implements RunnableTask<Run.Out
 
     private PipelineRun waitForCompletion(
         RunContext runContext,
+        String authHeader,
         String projectApi,
         Integer pipelineId,
         Integer runId,
         Duration pollInterval,
-        Duration timeout) throws Exception {
-        URI getUri = URI.create("%s/pipelines/%d/runs/%d?api-version=%s".formatted(projectApi, pipelineId, runId, API_VERSION));
-        long deadline = System.currentTimeMillis() + timeout.toMillis();
+        Duration maxDuration) throws Exception {
+        var getUri = URI.create("%s/pipelines/%d/runs/%d?api-version=%s".formatted(projectApi, pipelineId, runId, API_VERSION));
+        var deadline = System.currentTimeMillis() + maxDuration.toMillis();
 
         while (true) {
-            HttpResponse<String> response = executeRequest(runContext, "GET", getUri, null);
-            PipelineRun run = parseRunResponse(response.getBody());
+            var response = executeRequest(runContext, authHeader, "GET", getUri, null);
+            var run = parseRunResponse(response.getBody(), getUri);
 
-            String state = run.getState();
+            var state = run.getState();
             if (state != null && ("completed".equalsIgnoreCase(state) || "canceled".equalsIgnoreCase(state))) {
                 runContext.logger().info("Azure DevOps pipeline run {} reached terminal state: {}", runId, state);
                 return run;
@@ -265,7 +279,7 @@ public class Run extends AbstractAzureDevOpsTask implements RunnableTask<Run.Out
                 throw new IllegalStateException(
                     "Azure DevOps pipeline run %d did not complete within timeout (%s). Last state: %s".formatted(
                         runId,
-                        timeout,
+                        maxDuration,
                         state
                     )
                 );
@@ -284,14 +298,6 @@ public class Run extends AbstractAzureDevOpsTask implements RunnableTask<Run.Out
     @Builder
     @Getter
     public static class Output implements io.kestra.core.models.tasks.Output {
-        @Schema(
-            title = "Pipeline run",
-            description = """
-                The created or completed pipeline run record.
-                """
-        )
-        private final PipelineRun run;
-
         @Schema(
             title = "Run ID",
             description = """

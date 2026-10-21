@@ -106,4 +106,23 @@ The `ml` package provides tasks and a trigger for Azure Machine Learning, using 
 
 Model and data asset versions are immutable in Azure ML: leave `version` unset on `RegisterModel`/`CreateDataAsset` to auto-increment from the asset's current latest version, or set it explicitly and expect a clear error on a 409 conflict rather than a silent overwrite.
 
+
 Job metrics are logged through MLflow rather than exposed by the Azure Resource Manager control-plane API used for everything else in this package. `GetJob` and `SubmitCommandJob` read the workspace's MLflow tracking URI and call its REST API directly with the same Azure AD credentials; if that call fails (e.g. the service principal lacks the required scope), `metrics` comes back empty and a warning is logged instead of failing the task.
+
+## Azure DevOps Pipelines
+
+The `devops.pipelines` package provides tasks and a trigger for managing and orchestrating Azure DevOps Pipelines:
+
+- `devops.pipelines.Run` - Trigger a pipeline run, optionally wait for completion with polling, and cancel on execution kill or timeout.
+- `devops.pipelines.Cancel` - Cancel an active pipeline run.
+- `devops.pipelines.GetRun` - Fetch the details and status of a specific pipeline run.
+- `devops.pipelines.ListRuns` - List pipeline runs with optional top and status filtering.
+- `devops.pipelines.Create` - Create a new pipeline definition.
+- `devops.pipelines.Get` - Retrieve pipeline definition metadata.
+- `devops.pipelines.List` - List pipeline definitions within a project.
+- `devops.pipelines.Trigger` - Polling trigger that fires when new pipeline runs are detected.
+
+### Authentication for Azure DevOps Pipelines
+Azure DevOps tasks support two authentication modes:
+- **Personal Access Token (PAT)**: Provide `personalAccessToken` with `Build: Read & execute` scope (supported for both Azure DevOps Services and Azure DevOps Server).
+- **Entra ID / Microsoft Identity**: For Azure DevOps Services (`dev.azure.com`), provide Service Principal credentials (`tenantId`, `clientId`, and `clientSecret` or `pemCertificate`), or leverage Managed Identity / `DefaultAzureCredential`. Note: Entra ID bearer tokens are not accepted by on-premises Azure DevOps Server.

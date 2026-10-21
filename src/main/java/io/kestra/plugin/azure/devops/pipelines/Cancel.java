@@ -8,11 +8,11 @@ import io.kestra.core.models.annotations.Plugin;
 import io.kestra.core.models.annotations.PluginProperty;
 import io.kestra.core.models.property.Property;
 import io.kestra.core.models.tasks.RunnableTask;
+import io.kestra.core.models.tasks.VoidOutput;
 import io.kestra.core.runners.RunContext;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotNull;
-import lombok.Builder;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -50,7 +50,7 @@ import lombok.experimental.SuperBuilder;
         Sends a cancellation request for an active, in-progress Azure DevOps pipeline run.
         """
 )
-public class Cancel extends AbstractAzureDevOpsTask implements RunnableTask<Cancel.Output> {
+public class Cancel extends AbstractAzureDevOpsTask implements RunnableTask<VoidOutput> {
     @Schema(
         title = "Run ID",
         description = """
@@ -62,39 +62,17 @@ public class Cancel extends AbstractAzureDevOpsTask implements RunnableTask<Canc
     protected Property<Integer> runId;
 
     @Override
-    public Output run(RunContext runContext) throws Exception {
-        Integer rId = runContext.render(this.runId).as(Integer.class).orElseThrow();
+    public VoidOutput run(RunContext runContext) throws Exception {
+        var rRunId = runContext.render(this.runId)
+            .as(Integer.class)
+            .orElseThrow(() -> new IllegalArgumentException("runId is required"));
 
-        String projectApi = buildProjectApiUrl(runContext);
-        URI uri = URI.create("%s/build/builds/%d?api-version=%s".formatted(projectApi, rId, API_VERSION));
+        var projectApi = buildProjectApiUrl(runContext);
+        var uri = URI.create("%s/build/builds/%d?api-version=%s".formatted(projectApi, rRunId, API_VERSION));
 
-        runContext.logger().info("Cancelling Azure DevOps pipeline run {}", rId);
-        Map<String, Object> body = Map.of("status", "Cancelling");
-        executeRequest(runContext, "PATCH", uri, body);
+        runContext.logger().info("Cancelling Azure DevOps pipeline run {}", rRunId);
+        executeRequest(runContext, "PATCH", uri, Map.of("status", "Cancelling"));
 
-        return Output.builder()
-            .runId(rId)
-            .status("Cancelling")
-            .build();
-    }
-
-    @Builder
-    @Getter
-    public static class Output implements io.kestra.core.models.tasks.Output {
-        @Schema(
-            title = "Run ID",
-            description = """
-                The unique identifier of the cancelled pipeline run.
-                """
-        )
-        private final Integer runId;
-
-        @Schema(
-            title = "Cancellation status",
-            description = """
-                The updated status sent to Azure DevOps (Cancelling).
-                """
-        )
-        private final String status;
+        return null;
     }
 }

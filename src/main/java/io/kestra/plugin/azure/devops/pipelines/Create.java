@@ -4,9 +4,6 @@ import java.net.URI;
 import java.util.HashMap;
 import java.util.Map;
 
-import com.fasterxml.jackson.databind.JsonNode;
-
-import io.kestra.core.http.HttpResponse;
 import io.kestra.core.models.annotations.Example;
 import io.kestra.core.models.annotations.Plugin;
 import io.kestra.core.models.annotations.PluginProperty;
@@ -94,28 +91,32 @@ public class Create extends AbstractAzureDevOpsTask implements RunnableTask<Crea
 
     @Override
     public Output run(RunContext runContext) throws Exception {
-        String rName = runContext.render(this.name).as(String.class).orElseThrow();
-        String rFolder = runContext.render(this.folder).as(String.class).orElse("\\");
-        Map<String, Object> rConfiguration = runContext.render(this.configuration).asMap(String.class, Object.class);
+        var rName = runContext.render(this.name).as(String.class)
+            .orElseThrow(() -> new IllegalArgumentException("`name` is required"));
+        var rFolder = runContext.render(this.folder).as(String.class).orElse("\\");
+        var rConfiguration = runContext.render(this.configuration).asMap(String.class, Object.class);
 
-        Map<String, Object> payload = new HashMap<>();
+        var payload = new HashMap<String, Object>();
         payload.put("name", rName);
         payload.put("folder", rFolder);
         if (rConfiguration != null && !rConfiguration.isEmpty()) {
             payload.put("configuration", rConfiguration);
         }
 
-        String projectApi = buildProjectApiUrl(runContext);
-        URI uri = URI.create("%s/pipelines?api-version=%s".formatted(projectApi, API_VERSION));
+        var projectApi = buildProjectApiUrl(runContext);
+        var uri = URI.create("%s/pipelines?api-version=%s".formatted(projectApi, API_VERSION));
 
         runContext.logger().info("Creating Azure DevOps pipeline definition '{}'", rName);
-        HttpResponse<String> response = executeRequest(runContext, "POST", uri, payload);
+        var response = executeRequest(runContext, "POST", uri, payload);
+        var body = response.getBody();
+        if (body == null || body.isBlank()) {
+            throw new IllegalStateException("Azure DevOps API returned an empty response when creating pipeline: " + rName);
+        }
 
-        JsonNode root = JacksonMapper.ofJson().readTree(response.getBody());
-        Pipeline pipeline = Pipeline.fromJson(root);
+        var root = JacksonMapper.ofJson().readTree(body);
+        var pipeline = Pipeline.fromJson(root);
 
         return Output.builder()
-            .pipeline(pipeline)
             .id(pipeline != null ? pipeline.getId() : null)
             .name(pipeline != null ? pipeline.getName() : null)
             .folder(pipeline != null ? pipeline.getFolder() : null)
@@ -127,14 +128,6 @@ public class Create extends AbstractAzureDevOpsTask implements RunnableTask<Crea
     @Builder
     @Getter
     public static class Output implements io.kestra.core.models.tasks.Output {
-        @Schema(
-            title = "Pipeline definition",
-            description = """
-                The newly created Azure DevOps pipeline definition.
-                """
-        )
-        private final Pipeline pipeline;
-
         @Schema(
             title = "Pipeline ID",
             description = """

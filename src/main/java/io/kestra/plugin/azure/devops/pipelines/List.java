@@ -1,11 +1,11 @@
 package io.kestra.plugin.azure.devops.pipelines;
 
 import java.net.URI;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Collections;
 
-import com.fasterxml.jackson.databind.JsonNode;
-
-import io.kestra.core.http.HttpResponse;
 import io.kestra.core.models.annotations.Example;
 import io.kestra.core.models.annotations.Plugin;
 import io.kestra.core.models.annotations.PluginProperty;
@@ -30,14 +30,14 @@ import lombok.experimental.SuperBuilder;
 @Plugin(
     examples = {
         @Example(
-            title = "List pipeline definitions in an Azure DevOps project",
+            title = "List all pipeline definitions in an Azure DevOps project",
             full = true,
             code = """
-                id: azure_devops_list_pipelines
+                id: list_pipelines
                 namespace: company.team
 
                 tasks:
-                  - id: list_pipelines
+                  - id: list
                     type: io.kestra.plugin.azure.devops.pipelines.List
                     organization: my-org
                     project: my-project
@@ -49,14 +49,14 @@ import lombok.experimental.SuperBuilder;
 @Schema(
     title = "List Azure DevOps pipeline definitions",
     description = """
-        Retrieves a list of pipeline definitions for a given Azure DevOps project.
+        Lists pipeline definitions within an Azure DevOps project.
         """
 )
 public class List extends AbstractAzureDevOpsTask implements RunnableTask<List.Output> {
     @Schema(
         title = "Maximum pipelines to return",
         description = """
-            Maximum number of pipeline definitions to return ($top parameter).
+            The maximum number of pipelines to return (between 1 and 1000).
             """
     )
     @PluginProperty(group = "advanced")
@@ -65,7 +65,7 @@ public class List extends AbstractAzureDevOpsTask implements RunnableTask<List.O
     @Schema(
         title = "Order by expression",
         description = """
-            A sort expression, such as 'name asc'.
+            A sort expression, such as `name asc`.
             """
     )
     @PluginProperty(group = "advanced")
@@ -73,28 +73,33 @@ public class List extends AbstractAzureDevOpsTask implements RunnableTask<List.O
 
     @Override
     public Output run(RunContext runContext) throws Exception {
-        Integer rTop = runContext.render(this.top).as(Integer.class).orElse(null);
-        String rOrderBy = runContext.render(this.orderBy).as(String.class).orElse(null);
+        var rawTop = runContext.render(this.top).as(Integer.class).orElse(null);
+        var rTop = rawTop != null ? Math.max(1, Math.min(1000, rawTop)) : null;
+        var rOrderBy = runContext.render(this.orderBy).as(String.class).orElse(null);
 
-        String projectApi = buildProjectApiUrl(runContext);
-        StringBuilder query = new StringBuilder("?api-version=").append(API_VERSION);
+        var projectApi = buildProjectApiUrl(runContext);
+        var query = new StringBuilder("?api-version=").append(API_VERSION);
         if (rTop != null) {
             query.append("&$top=").append(rTop);
         }
         if (rOrderBy != null && !rOrderBy.isBlank()) {
-            query.append("&orderBy=").append(rOrderBy);
+            var encodedOrderBy = URLEncoder.encode(rOrderBy, StandardCharsets.UTF_8).replace("+", "%20");
+            query.append("&orderBy=").append(encodedOrderBy);
         }
 
-        URI uri = URI.create(projectApi + "/pipelines" + query);
+        var uri = URI.create(projectApi + "/pipelines" + query);
         runContext.logger().info("Listing Azure DevOps pipeline definitions");
-        HttpResponse<String> response = executeRequest(runContext, "GET", uri, null);
+        var response = executeRequest(runContext, "GET", uri, null);
 
-        JsonNode root = JacksonMapper.ofJson().readTree(response.getBody());
+        if (response.getBody() == null || response.getBody().isBlank()) {
+            return Output.builder().pipelines(Collections.emptyList()).total(0).build();
+        }
 
-        java.util.List<Pipeline> pipelines = new ArrayList<>();
+        var root = JacksonMapper.ofJson().readTree(response.getBody());
+        var pipelines = new ArrayList<Pipeline>();
         if (root.hasNonNull("value") && root.get("value").isArray()) {
-            for (JsonNode item : root.get("value")) {
-                Pipeline p = Pipeline.fromJson(item);
+            for (var item : root.get("value")) {
+                var p = Pipeline.fromJson(item);
                 if (p != null) {
                     pipelines.add(p);
                 }
@@ -113,7 +118,7 @@ public class List extends AbstractAzureDevOpsTask implements RunnableTask<List.O
         @Schema(
             title = "Pipelines",
             description = """
-                List of retrieved Azure DevOps pipeline definitions.
+                The list of pipeline definitions retrieved.
                 """
         )
         private final java.util.List<Pipeline> pipelines;
@@ -121,7 +126,7 @@ public class List extends AbstractAzureDevOpsTask implements RunnableTask<List.O
         @Schema(
             title = "Total pipelines",
             description = """
-                Number of pipeline definitions returned.
+                The number of pipelines returned.
                 """
         )
         private final Integer total;

@@ -1,67 +1,57 @@
 package io.kestra.plugin.azure.devops.pipelines;
 
-import java.io.IOException;
-import java.io.OutputStream;
-import java.net.InetSocketAddress;
-import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.Map;
-import java.util.Optional;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
 
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import com.sun.net.httpserver.HttpExchange;
-import com.sun.net.httpserver.HttpServer;
+import com.github.tomakehurst.wiremock.WireMockServer;
+import com.github.tomakehurst.wiremock.stubbing.Scenario;
 
 import io.kestra.core.junit.annotations.KestraTest;
-import io.kestra.core.models.conditions.ConditionContext;
-import io.kestra.core.models.executions.Execution;
 import io.kestra.core.models.property.Property;
-import io.kestra.core.runners.RunContext;
 import io.kestra.core.runners.RunContextFactory;
-import io.kestra.core.scheduler.model.TriggerState;
 import io.kestra.core.utils.IdUtils;
 import io.kestra.core.utils.TestsUtils;
 
 import jakarta.inject.Inject;
 
+import static com.github.tomakehurst.wiremock.client.WireMock.*;
+import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.options;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.*;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 @KestraTest
 class PipelinesTest {
-    private static HttpServer server;
-    private static String baseUrl;
-    private static final AtomicBoolean cancelCalled = new AtomicBoolean(false);
-    private static final AtomicInteger runCreateCount = new AtomicInteger(0);
+    private WireMockServer wireMock;
+    private String baseUrl;
 
     @Inject
     private RunContextFactory runContextFactory;
 
-    @BeforeAll
-    static void startServer() throws IOException {
-        server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
-        int port = server.getAddress().getPort();
-        baseUrl = "http://127.0.0.1:" + port;
+    @BeforeEach
+    void startServer() {
+        wireMock = new WireMockServer(options().dynamicPort());
+        wireMock.start();
+        baseUrl = wireMock.baseUrl();
+    }
 
-        server.createContext("/my-org/my-project/_apis", exchange ->
-        {
-            String path = exchange.getRequestURI().getPath();
-            String method = exchange.getRequestMethod();
-            String auth = exchange.getRequestHeaders().getFirst("Authorization");
+    @AfterEach
+    void stopServer() {
+        if (wireMock != null) {
+            wireMock.stop();
+        }
+    }
 
-            if (auth == null || !auth.startsWith("Basic ")) {
-                sendResponse(exchange, 401, "{\"message\":\"Unauthorized\"}");
-                return;
-            }
-
-            if ("GET".equals(method) && path.endsWith("/pipelines/42/runs/101")) {
-                sendResponse(exchange, 200, """
+    @Test
+    void testGetRun() throws Exception {
+        wireMock.stubFor(
+            get(urlPathEqualTo("/my-org/my-project/_apis/pipelines/42/runs/101"))
+                .withHeader("Authorization", matching("Basic .*"))
+                .willReturn(okJson("""
                     {
                       "id": 101,
                       "name": "20261020.1",
@@ -69,29 +59,51 @@ class PipelinesTest {
                       "result": "succeeded",
                       "createdDate": "2026-10-20T00:00:00Z",
                       "finishedDate": "2026-10-20T00:05:00Z",
-                      "url": "%s/my-org/my-project/_apis/pipelines/42/runs/101",
                       "_links": {
                         "web": {
                           "href": "https://dev.azure.com/my-org/my-project/_build/results?buildId=101"
                         }
                       }
                     }
-                    """.formatted(baseUrl));
-                return;
-            }
+                    """))
+        );
 
-            if ("GET".equals(method) && path.endsWith("/pipelines/42/runs")) {
-                sendResponse(exchange, 200, """
+        var task = GetRun.builder()
+            .organization(Property.ofValue("my-org"))
+            .project(Property.ofValue("my-project"))
+            .baseUrl(Property.ofValue(baseUrl))
+            .personalAccessToken(Property.ofValue("test-pat-token"))
+            .pipelineId(Property.ofValue(42))
+            .runId(Property.ofValue(101))
+            .build();
+
+        var runContext = runContextFactory.of();
+        var output = task.run(runContext);
+
+        assertThat(output.getId(), is(101));
+        assertThat(output.getName(), is("20261020.1"));
+        assertThat(output.getState(), is("completed"));
+        assertThat(output.getResult(), is("succeeded"));
+        assertThat(output.getWebUrl(), containsString("buildId=101"));
+    }
+
+    @Test
+    void testListRuns() throws Exception {
+        wireMock.stubFor(
+            get(urlPathEqualTo("/my-org/my-project/_apis/build/builds"))
+                .withQueryParam("definitions", equalTo("42"))
+                .withQueryParam("$top", equalTo("50"))
+                .willReturn(okJson("""
                     {
                       "count": 2,
                       "value": [
                         {
                           "id": 101,
-                          "name": "20261020.1",
-                          "state": "completed",
+                          "buildNumber": "20261020.1",
+                          "status": "completed",
                           "result": "succeeded",
-                          "createdDate": "2026-10-20T00:00:00Z",
-                          "finishedDate": "2026-10-20T00:05:00Z",
+                          "startTime": "2026-10-20T00:00:00Z",
+                          "finishTime": "2026-10-20T00:05:00Z",
                           "_links": {
                             "web": {
                               "href": "https://dev.azure.com/my-org/my-project/_build/results?buildId=101"
@@ -100,19 +112,37 @@ class PipelinesTest {
                         },
                         {
                           "id": 102,
-                          "name": "20261020.2",
-                          "state": "inProgress",
-                          "createdDate": "2026-10-20T00:10:00Z"
+                          "buildNumber": "20261020.2",
+                          "status": "inProgress",
+                          "startTime": "2026-10-20T00:10:00Z"
                         }
                       ]
                     }
-                    """);
-                return;
-            }
+                    """))
+        );
 
-            if ("POST".equals(method) && path.endsWith("/pipelines/42/runs")) {
-                runCreateCount.incrementAndGet();
-                sendResponse(exchange, 200, """
+        var task = ListRuns.builder()
+            .organization(Property.ofValue("my-org"))
+            .project(Property.ofValue("my-project"))
+            .baseUrl(Property.ofValue(baseUrl))
+            .personalAccessToken(Property.ofValue("test-pat-token"))
+            .pipelineId(Property.ofValue(42))
+            .state(Property.ofValue("completed"))
+            .build();
+
+        var runContext = runContextFactory.of();
+        var output = task.run(runContext);
+
+        assertThat(output.getTotal(), is(1));
+        assertThat(output.getRuns().getFirst().getId(), is(101));
+        assertThat(output.getRuns().getFirst().getState(), is("completed"));
+    }
+
+    @Test
+    void testRunPipelineNoWait() throws Exception {
+        wireMock.stubFor(
+            post(urlPathEqualTo("/my-org/my-project/_apis/pipelines/42/runs"))
+                .willReturn(okJson("""
                     {
                       "id": 103,
                       "name": "20261020.3",
@@ -126,23 +156,424 @@ class PipelinesTest {
                         }
                       }
                     }
-                    """);
+                    """))
+        );
+
+        var task = Run.builder()
+            .organization(Property.ofValue("my-org"))
+            .project(Property.ofValue("my-project"))
+            .baseUrl(Property.ofValue(baseUrl))
+            .personalAccessToken(Property.ofValue("test-pat-token"))
+            .pipelineId(Property.ofValue(42))
+            .branch(Property.ofValue("main"))
+            .templateParameters(Property.ofValue(Map.of("env", "test")))
+            .variables(Property.ofValue(Map.of("DEBUG", "true")))
+            .wait(Property.ofValue(false))
+            .build();
+
+        var runContext = runContextFactory.of();
+        var output = task.run(runContext);
+
+        assertThat(output.getId(), is(103));
+        assertThat(output.getState(), is("completed"));
+        assertThat(output.getResult(), is("succeeded"));
+    }
+
+    @Test
+    void testRunPipelineWaitProgressionSuccess() throws Exception {
+        wireMock.stubFor(
+            post(urlPathEqualTo("/my-org/my-project/_apis/pipelines/42/runs"))
+                .willReturn(okJson("""
+                    {
+                      "id": 105,
+                      "name": "20261020.5",
+                      "state": "inProgress",
+                      "createdDate": "2026-10-20T00:20:00Z"
+                    }
+                    """))
+        );
+
+        wireMock.stubFor(
+            get(urlPathEqualTo("/my-org/my-project/_apis/pipelines/42/runs/105"))
+                .inScenario("PollingRun")
+                .whenScenarioStateIs(Scenario.STARTED)
+                .willSetStateTo("FirstPoll")
+                .willReturn(okJson("""
+                    {
+                      "id": 105,
+                      "name": "20261020.5",
+                      "state": "inProgress"
+                    }
+                    """))
+        );
+
+        wireMock.stubFor(
+            get(urlPathEqualTo("/my-org/my-project/_apis/pipelines/42/runs/105"))
+                .inScenario("PollingRun")
+                .whenScenarioStateIs("FirstPoll")
+                .willReturn(okJson("""
+                    {
+                      "id": 105,
+                      "name": "20261020.5",
+                      "state": "completed",
+                      "result": "succeeded",
+                      "createdDate": "2026-10-20T00:20:00Z",
+                      "finishedDate": "2026-10-20T00:21:00Z"
+                    }
+                    """))
+        );
+
+        var task = Run.builder()
+            .organization(Property.ofValue("my-org"))
+            .project(Property.ofValue("my-project"))
+            .baseUrl(Property.ofValue(baseUrl))
+            .personalAccessToken(Property.ofValue("test-pat-token"))
+            .pipelineId(Property.ofValue(42))
+            .wait(Property.ofValue(true))
+            .pollInterval(Property.ofValue(Duration.ofMillis(20)))
+            .maxDuration(Property.ofValue(Duration.ofSeconds(3)))
+            .build();
+
+        var output = task.run(runContextFactory.of());
+
+        assertThat(output.getId(), is(105));
+        assertThat(output.getState(), is("completed"));
+        assertThat(output.getResult(), is("succeeded"));
+    }
+
+    @Test
+    void testRunPipelineWaitFailedThrows() {
+        wireMock.stubFor(
+            post(urlPathEqualTo("/my-org/my-project/_apis/pipelines/42/runs"))
+                .willReturn(okJson("""
+                    {
+                      "id": 106,
+                      "name": "20261020.6",
+                      "state": "inProgress"
+                    }
+                    """))
+        );
+
+        wireMock.stubFor(
+            get(urlPathEqualTo("/my-org/my-project/_apis/pipelines/42/runs/106"))
+                .willReturn(okJson("""
+                    {
+                      "id": 106,
+                      "name": "20261020.6",
+                      "state": "completed",
+                      "result": "failed"
+                    }
+                    """))
+        );
+
+        var task = Run.builder()
+            .organization(Property.ofValue("my-org"))
+            .project(Property.ofValue("my-project"))
+            .baseUrl(Property.ofValue(baseUrl))
+            .personalAccessToken(Property.ofValue("test-pat-token"))
+            .pipelineId(Property.ofValue(42))
+            .wait(Property.ofValue(true))
+            .pollInterval(Property.ofValue(Duration.ofMillis(20)))
+            .maxDuration(Property.ofValue(Duration.ofSeconds(2)))
+            .build();
+
+        var ex = assertThrows(IllegalStateException.class, () -> task.run(runContextFactory.of()));
+        assertThat(ex.getMessage(), containsString("completed with non-successful result: failed"));
+    }
+
+    @Test
+    void testRunPipelineTimeoutTriggersCancel() throws Exception {
+        wireMock.stubFor(
+            post(urlPathEqualTo("/my-org/my-project/_apis/pipelines/42/runs"))
+                .willReturn(okJson("""
+                    {
+                      "id": 107,
+                      "name": "20261020.7",
+                      "state": "inProgress"
+                    }
+                    """))
+        );
+
+        wireMock.stubFor(
+            get(urlPathEqualTo("/my-org/my-project/_apis/pipelines/42/runs/107"))
+                .willReturn(okJson("""
+                    {
+                      "id": 107,
+                      "name": "20261020.7",
+                      "state": "inProgress"
+                    }
+                    """))
+        );
+
+        wireMock.stubFor(
+            patch(urlPathEqualTo("/my-org/my-project/_apis/build/builds/107"))
+                .willReturn(okJson("""
+                    {
+                      "id": 107,
+                      "status": "cancelling"
+                    }
+                    """))
+        );
+
+        var task = Run.builder()
+            .organization(Property.ofValue("my-org"))
+            .project(Property.ofValue("my-project"))
+            .baseUrl(Property.ofValue(baseUrl))
+            .personalAccessToken(Property.ofValue("test-pat-token"))
+            .pipelineId(Property.ofValue(42))
+            .wait(Property.ofValue(true))
+            .pollInterval(Property.ofValue(Duration.ofMillis(15)))
+            .maxDuration(Property.ofValue(Duration.ofMillis(50)))
+            .build();
+
+        var ex = assertThrows(IllegalStateException.class, () -> task.run(runContextFactory.of()));
+        assertThat(ex.getMessage(), containsString("did not complete within timeout"));
+
+        verifyWithPolling(
+            patchRequestedFor(urlPathEqualTo("/my-org/my-project/_apis/build/builds/107"))
+                .withRequestBody(containing("\"Cancelling\""))
+        );
+    }
+
+    @Test
+    void testKillTriggersCancel() throws Exception {
+        wireMock.stubFor(
+            post(urlPathEqualTo("/my-org/my-project/_apis/pipelines/42/runs"))
+                .willReturn(okJson("""
+                    {
+                      "id": 108,
+                      "name": "20261020.8",
+                      "state": "inProgress"
+                    }
+                    """))
+        );
+
+        wireMock.stubFor(
+            patch(urlPathEqualTo("/my-org/my-project/_apis/build/builds/108"))
+                .willReturn(okJson("""
+                    {
+                      "id": 108,
+                      "status": "cancelling"
+                    }
+                    """))
+        );
+
+        var task = Run.builder()
+            .organization(Property.ofValue("my-org"))
+            .project(Property.ofValue("my-project"))
+            .baseUrl(Property.ofValue(baseUrl))
+            .personalAccessToken(Property.ofValue("test-pat-token"))
+            .pipelineId(Property.ofValue(42))
+            .wait(Property.ofValue(false))
+            .build();
+
+        task.run(runContextFactory.of());
+        task.kill();
+
+        verifyWithPolling(
+            patchRequestedFor(urlPathEqualTo("/my-org/my-project/_apis/build/builds/108"))
+                .withRequestBody(containing("\"Cancelling\""))
+        );
+    }
+
+    private void verifyWithPolling(com.github.tomakehurst.wiremock.matching.RequestPatternBuilder patternBuilder) throws Exception {
+        long end = System.currentTimeMillis() + 3000;
+        while (System.currentTimeMillis() < end) {
+            if (!wireMock.findAll(patternBuilder).isEmpty()) {
                 return;
             }
+            Thread.sleep(25);
+        }
+        wireMock.verify(patternBuilder);
+    }
 
-            if ("PATCH".equals(method) && path.contains("/build/builds/")) {
-                cancelCalled.set(true);
-                sendResponse(exchange, 200, """
+    @Test
+    void testCancel() throws Exception {
+        wireMock.stubFor(
+            patch(urlPathEqualTo("/my-org/my-project/_apis/build/builds/101"))
+                .willReturn(okJson("""
                     {
                       "id": 101,
                       "status": "cancelling"
                     }
-                    """);
-                return;
-            }
+                    """))
+        );
 
-            if ("GET".equals(method) && path.endsWith("/pipelines/42")) {
-                sendResponse(exchange, 200, """
+        var task = Cancel.builder()
+            .organization(Property.ofValue("my-org"))
+            .project(Property.ofValue("my-project"))
+            .baseUrl(Property.ofValue(baseUrl))
+            .personalAccessToken(Property.ofValue("test-pat-token"))
+            .runId(Property.ofValue(101))
+            .build();
+
+        task.run(runContextFactory.of());
+
+        wireMock.verify(
+            patchRequestedFor(urlPathEqualTo("/my-org/my-project/_apis/build/builds/101"))
+                .withRequestBody(containing("\"Cancelling\""))
+        );
+    }
+
+    @Test
+    void testProjectNameWithSpaceIsUrlEncoded() throws Exception {
+        wireMock.stubFor(
+            get(urlPathEqualTo("/my-org/My%20Project/_apis/pipelines/42"))
+                .willReturn(okJson("""
+                    {
+                      "id": 42,
+                      "name": "MyPipeline",
+                      "folder": "\\\\",
+                      "revision": 1
+                    }
+                    """))
+        );
+
+        var task = Get.builder()
+            .organization(Property.ofValue("my-org"))
+            .project(Property.ofValue("My Project"))
+            .baseUrl(Property.ofValue(baseUrl))
+            .personalAccessToken(Property.ofValue("test-pat-token"))
+            .pipelineId(Property.ofValue(42))
+            .build();
+
+        var output = task.run(runContextFactory.of());
+
+        assertThat(output.getId(), is(42));
+        assertThat(output.getName(), is("MyPipeline"));
+        wireMock.verify(getRequestedFor(urlPathEqualTo("/my-org/My%20Project/_apis/pipelines/42")));
+    }
+
+    @Test
+    void testListOrderByUrlEncoded() throws Exception {
+        wireMock.stubFor(
+            get(urlPathEqualTo("/my-org/my-project/_apis/pipelines"))
+                .withQueryParam("orderBy", equalTo("name asc"))
+                .willReturn(okJson("""
+                    {
+                      "count": 1,
+                      "value": [
+                        {
+                          "id": 42,
+                          "name": "MyPipeline"
+                        }
+                      ]
+                    }
+                    """))
+        );
+
+        var task = List.builder()
+            .organization(Property.ofValue("my-org"))
+            .project(Property.ofValue("my-project"))
+            .baseUrl(Property.ofValue(baseUrl))
+            .personalAccessToken(Property.ofValue("test-pat-token"))
+            .orderBy(Property.ofValue("name asc"))
+            .build();
+
+        var output = task.run(runContextFactory.of());
+
+        assertThat(output.getTotal(), is(1));
+        assertThat(output.getPipelines().getFirst().getId(), is(42));
+    }
+
+    @Test
+    void testTriggerEvaluationWithKVWatermark() throws Exception {
+        wireMock.stubFor(
+            get(urlPathEqualTo("/my-org/my-project/_apis/build/builds"))
+                .withQueryParam("definitions", equalTo("42"))
+                .withQueryParam("$top", equalTo("25"))
+                .willReturn(okJson("""
+                    {
+                      "count": 1,
+                      "value": [
+                        {
+                          "id": 101,
+                          "buildNumber": "20261020.1",
+                          "status": "completed",
+                          "result": "succeeded",
+                          "finishTime": "2026-10-20T00:05:00Z"
+                        }
+                      ]
+                    }
+                    """))
+        );
+
+        var trigger = Trigger.builder()
+            .id("trg-" + IdUtils.create())
+            .type(Trigger.class.getName())
+            .organization(Property.ofValue("my-org"))
+            .project(Property.ofValue("my-project"))
+            .baseUrl(Property.ofValue(baseUrl))
+            .personalAccessToken(Property.ofValue("test-pat-token"))
+            .pipelineId(Property.ofValue(42))
+            .interval(Duration.ofSeconds(60))
+            .build();
+
+        var entry = TestsUtils.mockTrigger(runContextFactory, trigger);
+        var conditionContext = entry.getKey();
+        var triggerContext = entry.getValue().context();
+
+        // First poll: observes historical run 101, seeds watermark, does not fire
+        var first = trigger.evaluate(conditionContext, triggerContext);
+        assertThat(first.isEmpty(), is(true));
+
+        // Stub a new run (id 102) with a newer finishTime
+        wireMock.stubFor(
+            get(urlPathEqualTo("/my-org/my-project/_apis/build/builds"))
+                .withQueryParam("definitions", equalTo("42"))
+                .withQueryParam("$top", equalTo("25"))
+                .willReturn(okJson("""
+                    {
+                      "count": 2,
+                      "value": [
+                        {
+                          "id": 102,
+                          "buildNumber": "20261020.2",
+                          "status": "completed",
+                          "result": "succeeded",
+                          "finishTime": "2026-10-20T00:10:00Z"
+                        },
+                        {
+                          "id": 101,
+                          "buildNumber": "20261020.1",
+                          "status": "completed",
+                          "result": "succeeded",
+                          "finishTime": "2026-10-20T00:05:00Z"
+                        }
+                      ]
+                    }
+                    """))
+        );
+
+        // Second poll: observes new run 102 -> fires Execution
+        var second = trigger.evaluate(conditionContext, triggerContext);
+        assertThat(second.isPresent(), is(true));
+        assertThat(second.get().getTrigger().getVariables().get("id"), is(102));
+
+        // Third poll: same state -> does not refire
+        var third = trigger.evaluate(conditionContext, triggerContext);
+        assertThat(third.isEmpty(), is(true));
+    }
+
+    @Test
+    void testMissingCredentialsThrows() {
+        var task = GetRun.builder()
+            .organization(Property.ofValue("my-org"))
+            .project(Property.ofValue("my-project"))
+            .baseUrl(Property.ofValue(baseUrl))
+            .pipelineId(Property.ofValue(42))
+            .runId(Property.ofValue(101))
+            .build();
+
+        var runContext = runContextFactory.of();
+        assertThrows(IllegalArgumentException.class, () -> task.run(runContext));
+    }
+
+    @Test
+    void testGetPipeline() throws Exception {
+        wireMock.stubFor(
+            get(urlPathEqualTo("/my-org/my-project/_apis/pipelines/42"))
+                .willReturn(okJson("""
                     {
                       "id": 42,
                       "name": "MyPipeline",
@@ -155,12 +586,31 @@ class PipelinesTest {
                         }
                       }
                     }
-                    """.formatted(baseUrl));
-                return;
-            }
+                    """.formatted(baseUrl)))
+        );
 
-            if ("GET".equals(method) && path.endsWith("/pipelines")) {
-                sendResponse(exchange, 200, """
+        var task = Get.builder()
+            .organization(Property.ofValue("my-org"))
+            .project(Property.ofValue("my-project"))
+            .baseUrl(Property.ofValue(baseUrl))
+            .personalAccessToken(Property.ofValue("test-pat-token"))
+            .pipelineId(Property.ofValue(42))
+            .build();
+
+        var output = task.run(runContextFactory.of());
+
+        assertThat(output.getId(), is(42));
+        assertThat(output.getName(), is("MyPipeline"));
+        assertThat(output.getFolder(), is("\\"));
+        assertThat(output.getRevision(), is(2));
+        assertThat(output.getWebUrl(), containsString("definitionId=42"));
+    }
+
+    @Test
+    void testListPipelines() throws Exception {
+        wireMock.stubFor(
+            get(urlPathEqualTo("/my-org/my-project/_apis/pipelines"))
+                .willReturn(okJson("""
                     {
                       "count": 1,
                       "value": [
@@ -177,12 +627,28 @@ class PipelinesTest {
                         }
                       ]
                     }
-                    """);
-                return;
-            }
+                    """))
+        );
 
-            if ("POST".equals(method) && path.endsWith("/pipelines")) {
-                sendResponse(exchange, 200, """
+        var task = List.builder()
+            .organization(Property.ofValue("my-org"))
+            .project(Property.ofValue("my-project"))
+            .baseUrl(Property.ofValue(baseUrl))
+            .personalAccessToken(Property.ofValue("test-pat-token"))
+            .build();
+
+        var output = task.run(runContextFactory.of());
+
+        assertThat(output.getTotal(), is(1));
+        assertThat(output.getPipelines().getFirst().getId(), is(42));
+        assertThat(output.getPipelines().getFirst().getName(), is("MyPipeline"));
+    }
+
+    @Test
+    void testCreatePipeline() throws Exception {
+        wireMock.stubFor(
+            post(urlPathEqualTo("/my-org/my-project/_apis/pipelines"))
+                .willReturn(okJson("""
                     {
                       "id": 43,
                       "name": "MyNewPipeline",
@@ -194,198 +660,10 @@ class PipelinesTest {
                         }
                       }
                     }
-                    """);
-                return;
-            }
+                    """))
+        );
 
-            sendResponse(exchange, 404, "{\"message\":\"Not Found\"}");
-        });
-
-        server.start();
-    }
-
-    @AfterAll
-    static void stopServer() {
-        if (server != null) {
-            server.stop(0);
-        }
-    }
-
-    private static void sendResponse(HttpExchange exchange, int status, String body) throws IOException {
-        byte[] bytes = body.getBytes(StandardCharsets.UTF_8);
-        exchange.getResponseHeaders().set("Content-Type", "application/json");
-        exchange.sendResponseHeaders(status, bytes.length);
-        try (OutputStream os = exchange.getResponseBody()) {
-            os.write(bytes);
-        }
-    }
-
-    @Test
-    void testGetRun() throws Exception {
-        GetRun task = GetRun.builder()
-            .organization(Property.ofValue("my-org"))
-            .project(Property.ofValue("my-project"))
-            .baseUrl(Property.ofValue(baseUrl))
-            .personalAccessToken(Property.ofValue("test-pat-token"))
-            .pipelineId(Property.ofValue(42))
-            .runId(Property.ofValue(101))
-            .build();
-
-        RunContext runContext = runContextFactory.of();
-        GetRun.Output output = task.run(runContext);
-
-        assertThat(output.getId(), is(101));
-        assertThat(output.getName(), is("20261020.1"));
-        assertThat(output.getState(), is("completed"));
-        assertThat(output.getResult(), is("succeeded"));
-        assertThat(output.getWebUrl(), containsString("buildId=101"));
-        assertThat(output.getRun(), notNullValue());
-    }
-
-    @Test
-    void testListRuns() throws Exception {
-        ListRuns task = ListRuns.builder()
-            .organization(Property.ofValue("my-org"))
-            .project(Property.ofValue("my-project"))
-            .baseUrl(Property.ofValue(baseUrl))
-            .personalAccessToken(Property.ofValue("test-pat-token"))
-            .pipelineId(Property.ofValue(42))
-            .state(Property.ofValue("completed"))
-            .build();
-
-        RunContext runContext = runContextFactory.of();
-        ListRuns.Output output = task.run(runContext);
-
-        assertThat(output.getTotal(), is(1));
-        assertThat(output.getRuns().get(0).getId(), is(101));
-        assertThat(output.getRuns().get(0).getState(), is("completed"));
-    }
-
-    @Test
-    void testRunPipeline() throws Exception {
-        Run task = Run.builder()
-            .organization(Property.ofValue("my-org"))
-            .project(Property.ofValue("my-project"))
-            .baseUrl(Property.ofValue(baseUrl))
-            .personalAccessToken(Property.ofValue("test-pat-token"))
-            .pipelineId(Property.ofValue(42))
-            .branch(Property.ofValue("main"))
-            .templateParameters(Property.ofValue(Map.of("env", "test")))
-            .variables(Property.ofValue(Map.of("DEBUG", "true")))
-            .wait(Property.ofValue(false))
-            .build();
-
-        RunContext runContext = runContextFactory.of();
-        Run.Output output = task.run(runContext);
-
-        assertThat(output.getId(), is(103));
-        assertThat(output.getState(), is("completed"));
-        assertThat(output.getResult(), is("succeeded"));
-    }
-
-    @Test
-    void testCancel() throws Exception {
-        cancelCalled.set(false);
-
-        Cancel task = Cancel.builder()
-            .organization(Property.ofValue("my-org"))
-            .project(Property.ofValue("my-project"))
-            .baseUrl(Property.ofValue(baseUrl))
-            .personalAccessToken(Property.ofValue("test-pat-token"))
-            .runId(Property.ofValue(101))
-            .build();
-
-        RunContext runContext = runContextFactory.of();
-        Cancel.Output output = task.run(runContext);
-
-        assertThat(output.getRunId(), is(101));
-        assertThat(output.getStatus(), is("Cancelling"));
-        assertThat(cancelCalled.get(), is(true));
-    }
-
-    @Test
-    void testTriggerEvaluationWithKVWatermark() throws Exception {
-        Trigger trigger = Trigger.builder()
-            .id("trg-" + IdUtils.create())
-            .type(Trigger.class.getName())
-            .organization(Property.ofValue("my-org"))
-            .project(Property.ofValue("my-project"))
-            .baseUrl(Property.ofValue(baseUrl))
-            .personalAccessToken(Property.ofValue("test-pat-token"))
-            .pipelineId(Property.ofValue(42))
-            .interval(Duration.ofSeconds(60))
-            .build();
-
-        Map.Entry<ConditionContext, TriggerState> entry = TestsUtils.mockTrigger(runContextFactory, trigger);
-        ConditionContext conditionContext = entry.getKey();
-        io.kestra.core.models.triggers.TriggerContext triggerContext = entry.getValue().context();
-
-        // First poll: observes run 101 in completed status -> generates Execution
-        Optional<Execution> first = trigger.evaluate(conditionContext, triggerContext);
-        assertThat(first.isPresent(), is(true));
-        assertThat(first.get().getTrigger().getVariables().get("id"), is(101));
-        assertThat(first.get().getTrigger().getVariables().get("result"), is("succeeded"));
-
-        // Second poll: same run 101 -> must NOT refire (StatefulTriggerService deduplication)
-        Optional<Execution> second = trigger.evaluate(conditionContext, triggerContext);
-        assertThat(second.isPresent(), is(false));
-    }
-
-    @Test
-    void testMissingCredentialsThrows() {
-        GetRun task = GetRun.builder()
-            .organization(Property.ofValue("my-org"))
-            .project(Property.ofValue("my-project"))
-            .baseUrl(Property.ofValue(baseUrl))
-            .pipelineId(Property.ofValue(42))
-            .runId(Property.ofValue(101))
-            .build();
-
-        RunContext runContext = runContextFactory.of();
-        assertThrows(IllegalArgumentException.class, () -> task.run(runContext));
-    }
-
-    @Test
-    void testGetPipeline() throws Exception {
-        Get task = Get.builder()
-            .organization(Property.ofValue("my-org"))
-            .project(Property.ofValue("my-project"))
-            .baseUrl(Property.ofValue(baseUrl))
-            .personalAccessToken(Property.ofValue("test-pat-token"))
-            .pipelineId(Property.ofValue(42))
-            .build();
-
-        RunContext runContext = runContextFactory.of();
-        Get.Output output = task.run(runContext);
-
-        assertThat(output.getId(), is(42));
-        assertThat(output.getName(), is("MyPipeline"));
-        assertThat(output.getFolder(), is("\\"));
-        assertThat(output.getRevision(), is(2));
-        assertThat(output.getWebUrl(), containsString("definitionId=42"));
-        assertThat(output.getPipeline(), notNullValue());
-    }
-
-    @Test
-    void testListPipelines() throws Exception {
-        List task = List.builder()
-            .organization(Property.ofValue("my-org"))
-            .project(Property.ofValue("my-project"))
-            .baseUrl(Property.ofValue(baseUrl))
-            .personalAccessToken(Property.ofValue("test-pat-token"))
-            .build();
-
-        RunContext runContext = runContextFactory.of();
-        List.Output output = task.run(runContext);
-
-        assertThat(output.getTotal(), is(1));
-        assertThat(output.getPipelines().get(0).getId(), is(42));
-        assertThat(output.getPipelines().get(0).getName(), is("MyPipeline"));
-    }
-
-    @Test
-    void testCreatePipeline() throws Exception {
-        Create task = Create.builder()
+        var task = Create.builder()
             .organization(Property.ofValue("my-org"))
             .project(Property.ofValue("my-project"))
             .baseUrl(Property.ofValue(baseUrl))
@@ -395,20 +673,18 @@ class PipelinesTest {
             .configuration(Property.ofValue(Map.of("type", "yaml", "path", "azure-pipelines.yml")))
             .build();
 
-        RunContext runContext = runContextFactory.of();
-        Create.Output output = task.run(runContext);
+        var output = task.run(runContextFactory.of());
 
         assertThat(output.getId(), is(43));
         assertThat(output.getName(), is("MyNewPipeline"));
         assertThat(output.getFolder(), is("\\"));
         assertThat(output.getRevision(), is(1));
         assertThat(output.getWebUrl(), containsString("definitionId=43"));
-        assertThat(output.getPipeline(), notNullValue());
     }
 
     @Test
     void shouldNotSendEntraTokenToCustomHost() {
-        Get task = Get.builder()
+        var task = Get.builder()
             .organization(Property.ofValue("my-org"))
             .project(Property.ofValue("my-project"))
             .baseUrl(Property.ofValue(baseUrl))

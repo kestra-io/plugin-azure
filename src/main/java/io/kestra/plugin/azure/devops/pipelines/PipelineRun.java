@@ -85,11 +85,15 @@ public class PipelineRun {
         }
 
         Integer id = node.hasNonNull("id") ? node.get("id").asInt() : null;
-        String name = node.hasNonNull("name") ? node.get("name").asText() : null;
-        String state = node.hasNonNull("state") ? node.get("state").asText() : null;
+        String name = node.hasNonNull("name") ? node.get("name").asText() : (node.hasNonNull("buildNumber") ? node.get("buildNumber").asText() : null);
+        String state = node.hasNonNull("state") ? node.get("state").asText() : (node.hasNonNull("status") ? node.get("status").asText() : null);
         String result = node.hasNonNull("result") ? node.get("result").asText() : null;
-        Instant createdDate = node.hasNonNull("createdDate") ? parseInstant(node.get("createdDate").asText()) : null;
-        Instant finishedDate = node.hasNonNull("finishedDate") ? parseInstant(node.get("finishedDate").asText()) : null;
+        Instant createdDate = node.hasNonNull("createdDate")
+            ? parseInstant(node.get("createdDate").asText())
+            : (node.hasNonNull("queueTime") ? parseInstant(node.get("queueTime").asText()) : (node.hasNonNull("startTime") ? parseInstant(node.get("startTime").asText()) : null));
+        Instant finishedDate = node.hasNonNull("finishedDate")
+            ? parseInstant(node.get("finishedDate").asText())
+            : (node.hasNonNull("finishTime") ? parseInstant(node.get("finishTime").asText()) : null);
         String url = node.hasNonNull("url") ? node.get("url").asText() : null;
 
         String webUrl = null;

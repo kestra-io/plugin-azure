@@ -3,7 +3,6 @@ package io.kestra.plugin.azure.devops.pipelines;
 import java.net.URI;
 import java.time.Instant;
 
-import io.kestra.core.http.HttpResponse;
 import io.kestra.core.models.annotations.Example;
 import io.kestra.core.models.annotations.Plugin;
 import io.kestra.core.models.annotations.PluginProperty;
@@ -28,15 +27,11 @@ import lombok.experimental.SuperBuilder;
 @Plugin(
     examples = {
         @Example(
-            title = "Read the state and outcome of an Azure DevOps pipeline run",
+            title = "Get details of an Azure DevOps pipeline run",
             full = true,
             code = """
-                id: azure_devops_get_run
+                id: get_pipeline_run
                 namespace: company.team
-
-                inputs:
-                  - id: run_id
-                    type: INT
 
                 tasks:
                   - id: get_run
@@ -44,12 +39,8 @@ import lombok.experimental.SuperBuilder;
                     organization: my-org
                     project: my-project
                     pipelineId: 42
-                    runId: "{{ inputs.run_id }}"
+                    runId: 101
                     personalAccessToken: "{{ secret('AZURE_DEVOPS_PAT') }}"
-
-                  - id: log_state
-                    type: io.kestra.plugin.core.log.Log
-                    message: "State {{ outputs.get_run.state }}, result {{ outputs.get_run.result }}"
                 """
         )
     }
@@ -57,14 +48,14 @@ import lombok.experimental.SuperBuilder;
 @Schema(
     title = "Get an Azure DevOps pipeline run",
     description = """
-        Retrieves the current state, outcome result, and URLs of a specific pipeline run in Azure DevOps.
+        Retrieves metadata and execution status for a specific pipeline run in Azure DevOps.
         """
 )
 public class GetRun extends AbstractAzureDevOpsTask implements RunnableTask<GetRun.Output> {
     @Schema(
         title = "Pipeline ID",
         description = """
-            The ID of the pipeline that owns the run.
+            The unique identifier of the pipeline.
             """
     )
     @NotNull
@@ -83,19 +74,22 @@ public class GetRun extends AbstractAzureDevOpsTask implements RunnableTask<GetR
 
     @Override
     public Output run(RunContext runContext) throws Exception {
-        Integer pId = runContext.render(this.pipelineId).as(Integer.class).orElseThrow();
-        Integer rId = runContext.render(this.runId).as(Integer.class).orElseThrow();
+        var rPipelineId = runContext.render(this.pipelineId)
+            .as(Integer.class)
+            .orElseThrow(() -> new IllegalArgumentException("pipelineId is required"));
+        var rRunId = runContext.render(this.runId)
+            .as(Integer.class)
+            .orElseThrow(() -> new IllegalArgumentException("runId is required"));
 
-        String projectApi = buildProjectApiUrl(runContext);
-        URI uri = URI.create("%s/pipelines/%d/runs/%d?api-version=%s".formatted(projectApi, pId, rId, API_VERSION));
+        var projectApi = buildProjectApiUrl(runContext);
+        var uri = URI.create("%s/pipelines/%d/runs/%d?api-version=%s".formatted(projectApi, rPipelineId, rRunId, API_VERSION));
 
-        runContext.logger().info("Fetching Azure DevOps pipeline run {} for pipeline {}", rId, pId);
-        HttpResponse<String> response = executeRequest(runContext, "GET", uri, null);
+        runContext.logger().info("Fetching Azure DevOps pipeline run {} for pipeline {}", rRunId, rPipelineId);
+        var response = executeRequest(runContext, "GET", uri, null);
 
-        PipelineRun pipelineRun = parseRunResponse(response.getBody());
+        var pipelineRun = parseRunResponse(response.getBody(), uri);
 
         return Output.builder()
-            .run(pipelineRun)
             .id(pipelineRun.getId())
             .name(pipelineRun.getName())
             .state(pipelineRun.getState())
@@ -109,14 +103,6 @@ public class GetRun extends AbstractAzureDevOpsTask implements RunnableTask<GetR
     @Builder
     @Getter
     public static class Output implements io.kestra.core.models.tasks.Output {
-        @Schema(
-            title = "Pipeline run",
-            description = """
-                The retrieved pipeline run record.
-                """
-        )
-        private final PipelineRun run;
-
         @Schema(
             title = "Run ID",
             description = """

@@ -1,13 +1,12 @@
 package io.kestra.plugin.azure.devops.pipelines;
 
 import java.net.URI;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-import com.fasterxml.jackson.databind.JsonNode;
-
-import io.kestra.core.http.HttpResponse;
 import io.kestra.core.models.annotations.Example;
 import io.kestra.core.models.annotations.Plugin;
 import io.kestra.core.models.annotations.PluginProperty;
@@ -33,10 +32,10 @@ import lombok.experimental.SuperBuilder;
 @Plugin(
     examples = {
         @Example(
-            title = "List completed runs of an Azure DevOps pipeline",
+            title = "List recent completed runs for an Azure DevOps pipeline",
             full = true,
             code = """
-                id: azure_devops_list_runs
+                id: list_pipeline_runs
                 namespace: company.team
 
                 tasks:
@@ -47,7 +46,7 @@ import lombok.experimental.SuperBuilder;
                     pipelineId: 42
                     personalAccessToken: "{{ secret('AZURE_DEVOPS_PAT') }}"
                     state: completed
-                    result: succeeded
+                    maxRuns: 20
                 """
         )
     }
@@ -55,14 +54,15 @@ import lombok.experimental.SuperBuilder;
 @Schema(
     title = "List Azure DevOps pipeline runs",
     description = """
-        Lists runs of an Azure DevOps pipeline, with optional filtering by state and outcome result.
+        Queries recent pipeline runs or builds for an Azure DevOps pipeline.
+        Supports server-side filtering by state, result, and top N limit.
         """
 )
 public class ListRuns extends AbstractAzureDevOpsTask implements RunnableTask<ListRuns.Output> {
     @Schema(
         title = "Pipeline ID",
         description = """
-            The ID of the pipeline to query runs for.
+            The unique identifier of the pipeline whose runs to retrieve.
             """
     )
     @NotNull
@@ -72,7 +72,7 @@ public class ListRuns extends AbstractAzureDevOpsTask implements RunnableTask<Li
     @Schema(
         title = "Run state filter",
         description = """
-            Filter runs by state (e.g. inProgress, completed, canceling, notStarted).
+            Filter runs by state (e.g. `completed`, `inProgress`, `notStarted`, `cancelling`).
             """
     )
     @PluginProperty(group = "main")
@@ -81,7 +81,7 @@ public class ListRuns extends AbstractAzureDevOpsTask implements RunnableTask<Li
     @Schema(
         title = "Run result filter",
         description = """
-            Filter runs by result outcome (e.g. succeeded, failed, canceled).
+            Filter runs by result outcome (e.g. `succeeded`, `failed`, `canceled`).
             """
     )
     @PluginProperty(group = "main")
@@ -90,7 +90,7 @@ public class ListRuns extends AbstractAzureDevOpsTask implements RunnableTask<Li
     @Schema(
         title = "Maximum runs to return",
         description = """
-            Maximum number of runs to return in outputs. Defaults to 50.
+            Maximum number of runs to return in outputs (between 1 and 1000). Defaults to 50.
             """
     )
     @Builder.Default
@@ -99,41 +99,61 @@ public class ListRuns extends AbstractAzureDevOpsTask implements RunnableTask<Li
 
     @Override
     public Output run(RunContext runContext) throws Exception {
-        Integer pId = runContext.render(this.pipelineId).as(Integer.class).orElseThrow();
-        String filterState = runContext.render(this.state).as(String.class).orElse(null);
-        String filterResult = runContext.render(this.result).as(String.class).orElse(null);
-        Integer limit = runContext.render(this.maxRuns).as(Integer.class).orElse(50);
+        var rPipelineId = runContext.render(this.pipelineId)
+            .as(Integer.class)
+            .orElseThrow(() -> new IllegalArgumentException("pipelineId is required"));
+        var rState = runContext.render(this.state).as(String.class).orElse(null);
+        var rResult = runContext.render(this.result).as(String.class).orElse(null);
+        var rawLimit = runContext.render(this.maxRuns).as(Integer.class).orElse(50);
+        var rLimit = Math.max(1, Math.min(1000, rawLimit));
 
-        String projectApi = buildProjectApiUrl(runContext);
-        URI uri = URI.create("%s/pipelines/%d/runs?api-version=%s".formatted(projectApi, pId, API_VERSION));
+        var projectApi = buildProjectApiUrl(runContext);
+        var uriBuilder = new StringBuilder(projectApi)
+            .append("/build/builds?definitions=").append(rPipelineId)
+            .append("&queryOrder=finishTimeDescending")
+            .append("&$top=").append(rLimit)
+            .append("&api-version=").append(API_VERSION);
 
-        runContext.logger().info("Listing Azure DevOps pipeline runs for pipeline {}", pId);
-        HttpResponse<String> response = executeRequest(runContext, "GET", uri, null);
+        if (rState != null && !rState.isBlank()) {
+            uriBuilder.append("&statusFilter=").append(URLEncoder.encode(rState, StandardCharsets.UTF_8).replace("+", "%20"));
+        }
+        if (rResult != null && !rResult.isBlank()) {
+            uriBuilder.append("&resultFilter=").append(URLEncoder.encode(rResult, StandardCharsets.UTF_8).replace("+", "%20"));
+        }
 
-        JsonNode root = JacksonMapper.ofJson().readTree(response.getBody());
-        JsonNode valueNode = root.get("value");
+        var uri = URI.create(uriBuilder.toString());
+
+        runContext.logger().info("Listing Azure DevOps pipeline runs for pipeline {}", rPipelineId);
+        var response = executeRequest(runContext, "GET", uri, null);
+
+        if (response.getBody() == null || response.getBody().isBlank()) {
+            return Output.builder().runs(Collections.emptyList()).total(0).build();
+        }
+
+        var root = JacksonMapper.ofJson().readTree(response.getBody());
+        var valueNode = root.get("value");
 
         if (valueNode == null || !valueNode.isArray()) {
             return Output.builder().runs(Collections.emptyList()).total(0).build();
         }
 
-        List<PipelineRun> runs = new ArrayList<>();
-        for (JsonNode item : valueNode) {
-            PipelineRun runRecord = PipelineRun.fromJson(item);
+        var runs = new ArrayList<PipelineRun>();
+        for (var item : valueNode) {
+            var runRecord = PipelineRun.fromJson(item);
             if (runRecord == null) {
                 continue;
             }
 
-            if (filterState != null && (runRecord.getState() == null || !filterState.equalsIgnoreCase(runRecord.getState()))) {
+            if (rState != null && (runRecord.getState() == null || !rState.equalsIgnoreCase(runRecord.getState()))) {
                 continue;
             }
 
-            if (filterResult != null && (runRecord.getResult() == null || !filterResult.equalsIgnoreCase(runRecord.getResult()))) {
+            if (rResult != null && (runRecord.getResult() == null || !rResult.equalsIgnoreCase(runRecord.getResult()))) {
                 continue;
             }
 
             runs.add(runRecord);
-            if (runs.size() >= limit) {
+            if (runs.size() >= rLimit) {
                 break;
             }
         }
@@ -150,7 +170,7 @@ public class ListRuns extends AbstractAzureDevOpsTask implements RunnableTask<Li
         @Schema(
             title = "Pipeline runs",
             description = """
-                The list of matching Azure DevOps pipeline run records.
+                The retrieved pipeline runs.
                 """
         )
         private final List<PipelineRun> runs;
@@ -158,7 +178,7 @@ public class ListRuns extends AbstractAzureDevOpsTask implements RunnableTask<Li
         @Schema(
             title = "Total runs",
             description = """
-                The number of matching pipeline runs returned.
+                The total number of runs returned.
                 """
         )
         private final Integer total;

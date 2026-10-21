@@ -169,7 +169,7 @@ public abstract class AbstractAzureDevOpsTask extends Task implements AzureIdent
         return "%s/%s/%s/_apis".formatted(base, org, proj);
     }
 
-    protected String getAuthorizationHeader(RunContext runContext) throws Exception {
+    protected String getAuthorizationHeader(RunContext runContext, URI uri) throws Exception {
         String pat = runContext.render(this.personalAccessToken).as(String.class).orElse(null);
         if (pat != null && !pat.isBlank()) {
             String token = ":" + pat;
@@ -177,6 +177,7 @@ public abstract class AbstractAzureDevOpsTask extends Task implements AzureIdent
         }
 
         if (this.tenantId != null && this.clientId != null) {
+            assertEntraTokenTarget(uri);
             AccessToken token = this.credentials(runContext)
                 .getToken(new TokenRequestContext().addScopes(AZURE_DEVOPS_SCOPE))
                 .block();
@@ -192,8 +193,21 @@ public abstract class AbstractAzureDevOpsTask extends Task implements AzureIdent
         );
     }
 
+    // Entra ID tokens are only valid for Azure DevOps Services, never send them to another host.
+    private static void assertEntraTokenTarget(URI uri) {
+        String host = uri.getHost();
+        boolean allowed = "https".equalsIgnoreCase(uri.getScheme())
+            && host != null
+            && (host.equalsIgnoreCase("dev.azure.com") || host.toLowerCase().endsWith(".dev.azure.com"));
+        if (!allowed) {
+            throw new IllegalArgumentException(
+                "Microsoft Entra ID authentication is only supported for https://dev.azure.com, use 'personalAccessToken' for other hosts."
+            );
+        }
+    }
+
     protected HttpResponse<String> executeRequest(RunContext runContext, String method, URI uri, Object body) throws Exception {
-        String authHeader = getAuthorizationHeader(runContext);
+        String authHeader = getAuthorizationHeader(runContext, uri);
 
         HttpRequest.HttpRequestBuilder builder = HttpRequest.builder()
             .uri(uri)

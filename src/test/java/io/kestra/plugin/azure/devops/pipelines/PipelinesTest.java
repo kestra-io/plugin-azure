@@ -405,4 +405,18 @@ class PipelinesTest {
         assertThat(output.getWebUrl(), containsString("definitionId=43"));
         assertThat(output.getPipeline(), notNullValue());
     }
+
+    @Test
+    void shouldNotSendEntraTokenToCustomHost() {
+        Get task = Get.builder()
+            .organization(Property.ofValue("my-org"))
+            .project(Property.ofValue("my-project"))
+            .baseUrl(Property.ofValue(baseUrl))
+            .tenantId(Property.ofValue("tenant"))
+            .clientId(Property.ofValue("client"))
+            .pipelineId(Property.ofValue(42))
+            .build();
+
+        assertThrows(IllegalArgumentException.class, () -> task.run(runContextFactory.of()));
+    }
 }

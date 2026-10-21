@@ -139,9 +139,7 @@ public class DownloadModel extends AbstractMachineLearningTask implements Runnab
             }
         } catch (BlobStorageException e) {
             throw new IllegalStateException(
-                "Failed to download model '%s' version '%s' from blob storage — check the workspace's managed identity/service principal has read access to the backing storage account: %s"
-                    .formatted(rModelName, modelVersion.name(), e.getMessage()),
-                e
+                "Failed to download model '%s' version '%s' from blob storage — check the workspace's managed identity/service principal has read access to the backing storage account: %s".formatted(rModelName, modelVersion.name(), e.getMessage()), e
             );
         }
 
@@ -169,9 +167,7 @@ public class DownloadModel extends AbstractMachineLearningTask implements Runnab
 
         URI uri = URI.create(modelUri);
         if (uri.getHost() == null) {
-            throw new IllegalArgumentException(
-                "Unsupported model URI '%s': expected an `azureml://datastores/.../paths/...` or a blob container URI with a host and a path".formatted(modelUri)
-            );
+            throw new IllegalArgumentException("Unsupported model URI '%s': expected an `azureml://datastores/.../paths/...` or a blob container URI with a host and a path".formatted(modelUri));
         }
         String accountName = uri.getHost().split("\\.", 2)[0];
         String[] pathParts = uri.getPath().replaceFirst("^/", "").split("/", 2);

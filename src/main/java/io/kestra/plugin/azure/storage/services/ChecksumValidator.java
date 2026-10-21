@@ -1,5 +1,13 @@
 package io.kestra.plugin.azure.storage.services;
 
+import io.kestra.core.exceptions.IllegalVariableEvaluationException;
+import io.kestra.core.models.executions.metrics.Counter;
+import io.kestra.core.models.property.Property;
+import io.kestra.core.runners.RunContext;
+import lombok.Builder;
+import lombok.Value;
+import org.slf4j.Logger;
+
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -8,16 +16,6 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Base64;
 import java.util.HexFormat;
-
-import org.slf4j.Logger;
-
-import io.kestra.core.exceptions.IllegalVariableEvaluationException;
-import io.kestra.core.models.executions.metrics.Counter;
-import io.kestra.core.models.property.Property;
-import io.kestra.core.runners.RunContext;
-
-import lombok.Builder;
-import lombok.Value;
 
 public final class ChecksumValidator {
     private ChecksumValidator() {
@@ -56,7 +54,8 @@ public final class ChecksumValidator {
         Property<Boolean> validateChecksum,
         Property<Boolean> failOnMissingChecksum,
         Property<String> expectedChecksum,
-        Property<Algorithm> checksumAlgorithm) throws IllegalVariableEvaluationException {
+        Property<Algorithm> checksumAlgorithm
+    ) throws IllegalVariableEvaluationException {
         boolean rValidate = runContext.render(validateChecksum).as(Boolean.class).orElse(false);
         boolean rFailOnMissing = runContext.render(failOnMissingChecksum).as(Boolean.class).orElse(false);
         String rExpected = runContext.render(expectedChecksum).as(String.class).orElse(null);
@@ -81,7 +80,8 @@ public final class ChecksumValidator {
         File file,
         byte[] serverContentMd5,
         Options options,
-        String resourceName) throws IOException {
+        String resourceName
+    ) throws IOException {
         if (options == null || !options.enabled()) {
             return;
         }

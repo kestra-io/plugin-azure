@@ -42,8 +42,7 @@ public final class CancellableOperation {
         if (current != null && fired.compareAndSet(false, true)) {
             Thread.ofVirtual()
                 .name("azure-cancellation")
-                .start(() ->
-                {
+                .start(() -> {
                     try {
                         current.run();
                     } catch (Throwable e) {

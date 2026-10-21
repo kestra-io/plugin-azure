@@ -6,7 +6,6 @@ import com.azure.messaging.servicebus.models.SubQueue;
 
 import io.kestra.core.models.annotations.Example;
 import io.kestra.core.models.annotations.Plugin;
-import io.kestra.core.models.annotations.PluginProperty;
 import io.kestra.core.models.conditions.ConditionContext;
 import io.kestra.core.models.executions.Execution;
 import io.kestra.core.models.property.Property;
@@ -22,6 +21,7 @@ import reactor.core.publisher.Flux;
 import static io.kestra.plugin.azure.servicebus.AbstractServiceBusTask.*;
 import static io.kestra.plugin.azure.servicebus.Consume.RECEIVE_MODE_DESCRIPTION;
 import static io.kestra.plugin.azure.servicebus.Consume.SUB_QUEUE_DESCRIPTION;
+import io.kestra.core.models.annotations.PluginProperty;
 
 @SuperBuilder
 @ToString

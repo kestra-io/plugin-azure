@@ -117,16 +117,12 @@ public class GetJob extends AbstractAzureIdentityConnection implements RunnableT
         @Schema(title = "Location", description = "Azure region where the job is deployed")
         private final String location;
 
-        @Schema(
-            title = "Provisioning state", description = "Provisioning state of the job. " +
-                "Possible values: Succeeded, Failed, Canceled, Provisioning, Deleting."
-        )
+        @Schema(title = "Provisioning state", description = "Provisioning state of the job. " +
+            "Possible values: Succeeded, Failed, Canceled, Provisioning, Deleting.")
         private final String provisioningState;
 
-        @Schema(
-            title = "Job state", description = "Runtime state of the job. " +
-                "Possible values: Created, Starting, Running, Stopping, Stopped, Deleting, Failed, Degraded, Disabled, Scaling."
-        )
+        @Schema(title = "Job state", description = "Runtime state of the job. " +
+            "Possible values: Created, Starting, Running, Stopping, Stopped, Deleting, Failed, Degraded, Disabled, Scaling.")
         private final String jobState;
     }
 }

@@ -9,11 +9,9 @@ import io.kestra.plugin.azure.CancellableOperation;
  * run (e.g. while the create-job call is still in flight) is not dropped — it is remembered and applied as soon as
  * the cancel action is armed.
  *
- * <p>
- * The cancel action itself (an ARM call that can retry for several seconds — see {@code cancelQuietly}) is
+ * <p>The cancel action itself (an ARM call that can retry for several seconds — see {@code cancelQuietly}) is
  * dispatched off-thread rather than run inline: {@code kill()} is invoked synchronously by the worker's task
- * lifecycle callback, on a thread shared with other jobs' kill signals and dispatch, and must return promptly.
- * </p>
+ * lifecycle callback, on a thread shared with other jobs' kill signals and dispatch, and must return promptly.</p>
  */
 final class CancellableJob {
     private final CancellableOperation operation = new CancellableOperation("Azure Machine Learning job");

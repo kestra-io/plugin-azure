@@ -336,6 +336,54 @@ class PipelinesTest {
     }
 
     @Test
+    void testRunPipelinePollingFailureDispatchesCancel() throws Exception {
+        wireMock.stubFor(
+            post(urlPathEqualTo("/my-org/my-project/_apis/pipelines/42/runs"))
+                .willReturn(okJson("""
+                    {
+                      "id": 109,
+                      "name": "20261020.9",
+                      "state": "inProgress"
+                    }
+                    """))
+        );
+
+        wireMock.stubFor(
+            get(urlPathEqualTo("/my-org/my-project/_apis/pipelines/42/runs/109"))
+                .willReturn(serverError())
+        );
+
+        wireMock.stubFor(
+            patch(urlPathEqualTo("/my-org/my-project/_apis/build/builds/109"))
+                .willReturn(okJson("""
+                    {
+                      "id": 109,
+                      "status": "cancelling"
+                    }
+                    """))
+        );
+
+        var task = Run.builder()
+            .organization(Property.ofValue("my-org"))
+            .project(Property.ofValue("my-project"))
+            .baseUrl(Property.ofValue(baseUrl))
+            .personalAccessToken(Property.ofValue("test-pat-token"))
+            .pipelineId(Property.ofValue(42))
+            .wait(Property.ofValue(true))
+            .pollInterval(Property.ofValue(Duration.ofMillis(10)))
+            .maxDuration(Property.ofValue(Duration.ofSeconds(2)))
+            .build();
+
+        var ex = assertThrows(IllegalStateException.class, () -> task.run(runContextFactory.of()));
+        assertThat(ex.getMessage(), containsString("Dispatched cancellation"));
+
+        verifyWithPolling(
+            patchRequestedFor(urlPathEqualTo("/my-org/my-project/_apis/build/builds/109"))
+                .withRequestBody(containing("\"Cancelling\""))
+        );
+    }
+
+    @Test
     void testKillTriggersCancel() throws Exception {
         wireMock.stubFor(
             post(urlPathEqualTo("/my-org/my-project/_apis/pipelines/42/runs"))
@@ -549,6 +597,71 @@ class PipelinesTest {
         var second = trigger.evaluate(conditionContext, triggerContext);
         assertThat(second.isPresent(), is(true));
         assertThat(second.get().getTrigger().getVariables().get("id"), is(102));
+
+        // Third poll: same state -> does not refire
+        var third = trigger.evaluate(conditionContext, triggerContext);
+        assertThat(third.isEmpty(), is(true));
+    }
+
+    @Test
+    void testTriggerEmptyFirstPollFollowedByCompletedRun() throws Exception {
+        // First poll: brand new pipeline, returns 0 completed runs
+        wireMock.stubFor(
+            get(urlPathEqualTo("/my-org/my-project/_apis/build/builds"))
+                .withQueryParam("definitions", equalTo("42"))
+                .withQueryParam("$top", equalTo("25"))
+                .willReturn(okJson("""
+                    {
+                      "count": 0,
+                      "value": []
+                    }
+                    """))
+        );
+
+        var trigger = Trigger.builder()
+            .id("trg-" + IdUtils.create())
+            .type(Trigger.class.getName())
+            .organization(Property.ofValue("my-org"))
+            .project(Property.ofValue("my-project"))
+            .baseUrl(Property.ofValue(baseUrl))
+            .personalAccessToken(Property.ofValue("test-pat-token"))
+            .pipelineId(Property.ofValue(42))
+            .interval(Duration.ofSeconds(60))
+            .build();
+
+        var entry = TestsUtils.mockTrigger(runContextFactory, trigger);
+        var conditionContext = entry.getKey();
+        var triggerContext = entry.getValue().context();
+
+        // First poll: observes no completed runs, records initialization marker, does not fire
+        var first = trigger.evaluate(conditionContext, triggerContext);
+        assertThat(first.isEmpty(), is(true));
+
+        // Stub a newly completed run (id 201)
+        wireMock.stubFor(
+            get(urlPathEqualTo("/my-org/my-project/_apis/build/builds"))
+                .withQueryParam("definitions", equalTo("42"))
+                .withQueryParam("$top", equalTo("25"))
+                .willReturn(okJson("""
+                    {
+                      "count": 1,
+                      "value": [
+                        {
+                          "id": 201,
+                          "buildNumber": "20261022.1",
+                          "status": "completed",
+                          "result": "succeeded",
+                          "finishTime": "2026-10-22T00:05:00Z"
+                        }
+                      ]
+                    }
+                    """))
+        );
+
+        // Second poll: observes newly completed run 201 -> fires Execution
+        var second = trigger.evaluate(conditionContext, triggerContext);
+        assertThat(second.isPresent(), is(true));
+        assertThat(second.get().getTrigger().getVariables().get("id"), is(201));
 
         // Third poll: same state -> does not refire
         var third = trigger.evaluate(conditionContext, triggerContext);

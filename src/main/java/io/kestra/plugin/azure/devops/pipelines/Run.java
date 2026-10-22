@@ -1,11 +1,13 @@
 package io.kestra.plugin.azure.devops.pipelines;
 
+import java.io.IOException;
 import java.net.URI;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.HashMap;
 import java.util.Map;
 
+import io.kestra.core.http.client.HttpClientResponseException;
 import io.kestra.core.models.annotations.Example;
 import io.kestra.core.models.annotations.Plugin;
 import io.kestra.core.models.annotations.PluginProperty;
@@ -263,24 +265,47 @@ public class Run extends AbstractAzureDevOpsTask implements RunnableTask<Run.Out
         Duration maxDuration) throws Exception {
         var getUri = URI.create("%s/pipelines/%d/runs/%d?api-version=%s".formatted(projectApi, pipelineId, runId, API_VERSION));
         var deadline = System.currentTimeMillis() + maxDuration.toMillis();
+        int consecutiveTransientErrors = 0;
+        final int maxConsecutiveTransientErrors = 3;
 
         while (true) {
-            var response = executeRequest(runContext, authHeader, "GET", getUri, null);
-            var run = parseRunResponse(response.getBody(), getUri);
+            PipelineRun run = null;
+            try {
+                var response = executeRequest(runContext, authHeader, "GET", getUri, null);
+                run = parseRunResponse(response.getBody(), getUri);
+                consecutiveTransientErrors = 0;
+            } catch (Exception e) {
+                if (isTransientError(e) && ++consecutiveTransientErrors <= maxConsecutiveTransientErrors) {
+                    runContext.logger().warn(
+                        "Transient error while polling Azure DevOps pipeline run {} (attempt {}/{}): {}",
+                        runId,
+                        consecutiveTransientErrors,
+                        maxConsecutiveTransientErrors,
+                        e.getMessage()
+                    );
+                } else {
+                    this.lifecycle.kill();
+                    throw new IllegalStateException(
+                        "Failed while polling Azure DevOps pipeline run %d. Dispatched cancellation.".formatted(runId),
+                        e
+                    );
+                }
+            }
 
-            var state = run.getState();
-            if (state != null && ("completed".equalsIgnoreCase(state) || "canceled".equalsIgnoreCase(state))) {
-                runContext.logger().info("Azure DevOps pipeline run {} reached terminal state: {}", runId, state);
-                return run;
+            if (run != null) {
+                var state = run.getState();
+                if (state != null && ("completed".equalsIgnoreCase(state) || "canceled".equalsIgnoreCase(state))) {
+                    runContext.logger().info("Azure DevOps pipeline run {} reached terminal state: {}", runId, state);
+                    return run;
+                }
             }
 
             if (System.currentTimeMillis() > deadline) {
                 this.lifecycle.kill();
                 throw new IllegalStateException(
-                    "Azure DevOps pipeline run %d did not complete within timeout (%s). Last state: %s".formatted(
+                    "Azure DevOps pipeline run %d did not complete within timeout (%s).".formatted(
                         runId,
-                        maxDuration,
-                        state
+                        maxDuration
                     )
                 );
             }
@@ -293,6 +318,21 @@ public class Run extends AbstractAzureDevOpsTask implements RunnableTask<Run.Out
                 throw new IllegalStateException("Interrupted while waiting for Azure DevOps pipeline run " + runId, e);
             }
         }
+    }
+
+    private static boolean isTransientError(Exception e) {
+        Throwable cause = e;
+        while (cause != null) {
+            if (cause instanceof HttpClientResponseException scre) {
+                int code = scre.getResponse() != null && scre.getResponse().getStatus() != null ? scre.getResponse().getStatus().getCode() : -1;
+                return code == 429 || (code >= 500 && code < 600);
+            }
+            if (cause instanceof IOException) {
+                return true;
+            }
+            cause = cause.getCause();
+        }
+        return false;
     }
 
     @Builder

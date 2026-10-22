@@ -216,6 +216,8 @@ public class Trigger extends AbstractTrigger implements PollingTriggerInterface,
     @PluginProperty(group = "advanced")
     private Property<Duration> stateTtl;
 
+    private static final String INIT_MARKER = "__kestra_initialized__";
+
     @Override
     public Optional<Execution> evaluate(ConditionContext conditionContext, TriggerContext context) throws Exception {
         var runContext = conditionContext.getRunContext();
@@ -247,7 +249,11 @@ public class Trigger extends AbstractTrigger implements PollingTriggerInterface,
         var previousState = readState(runContext, rState, rTtl);
         var rOn = runContext.render(on).as(On.class).orElse(On.CREATE);
 
-        var isFirstPoll = previousState.isEmpty();
+        var isFirstPoll = !previousState.containsKey(INIT_MARKER);
+        if (isFirstPoll) {
+            previousState.put(INIT_MARKER, StatefulTriggerService.Entry.candidate(INIT_MARKER, "INIT", Instant.EPOCH));
+        }
+
         var newRuns = new ArrayList<PipelineRun>();
         for (var run : listedRuns.getRuns()) {
             var modifiedAt = Optional.ofNullable(run.getFinishedDate()).orElseGet(Instant::now);

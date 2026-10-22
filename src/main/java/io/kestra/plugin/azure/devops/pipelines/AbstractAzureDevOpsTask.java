@@ -187,36 +187,9 @@ public abstract class AbstractAzureDevOpsTask extends Task implements AzureIdent
             return "Basic " + Base64.getEncoder().encodeToString(token.getBytes(StandardCharsets.UTF_8));
         }
 
-        var rTenantId = runContext.render(this.tenantId).as(String.class).orElse(null);
-        var rClientId = runContext.render(this.clientId).as(String.class).orElse(null);
-        var rClientSecret = runContext.render(this.clientSecret).as(String.class).orElse(null);
-        var rPemCert = runContext.render(this.pemCertificate).as(String.class).orElse(null);
-
         // Microsoft Entra ID authentication (Service Principal or Managed Identity)
         assertEntraTokenTarget(uri);
-        TokenCredential cred;
-        if (StringUtils.isNotBlank(rClientSecret)) {
-            runContext.logger().debug("Azure DevOps authentication using Client Secret Credentials");
-            cred = new ClientSecretCredentialBuilder()
-                .tenantId(rTenantId)
-                .clientId(rClientId)
-                .clientSecret(rClientSecret)
-                .build();
-        } else if (StringUtils.isNotBlank(rPemCert)) {
-            runContext.logger().debug("Azure DevOps authentication using Client Certificate Credentials");
-            cred = new ClientCertificateCredentialBuilder()
-                .tenantId(rTenantId)
-                .clientId(rClientId)
-                .pemCertificate(new ByteArrayInputStream(rPemCert.getBytes(StandardCharsets.UTF_8)))
-                .build();
-        } else {
-            runContext.logger().debug("Azure DevOps authentication using Default Azure Credentials (Managed Identity)");
-            var builder = new DefaultAzureCredentialBuilder();
-            if (rTenantId != null) {
-                builder.tenantId(rTenantId);
-            }
-            cred = builder.build();
-        }
+        TokenCredential cred = this.credentials(runContext);
 
         AccessToken token = cred.getToken(new TokenRequestContext().addScopes(AZURE_DEVOPS_SCOPE)).block();
         if (token == null) {

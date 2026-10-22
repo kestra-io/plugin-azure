@@ -40,6 +40,14 @@ Infrastructure dependencies (Docker Compose services):
 - `io.kestra.plugin.azure.billing.Query`
 - `io.kestra.plugin.azure.cli.AzCLI`
 - `io.kestra.plugin.azure.datafactory.CreateRun`
+- `io.kestra.plugin.azure.devops.pipelines.Cancel`
+- `io.kestra.plugin.azure.devops.pipelines.Create`
+- `io.kestra.plugin.azure.devops.pipelines.Get`
+- `io.kestra.plugin.azure.devops.pipelines.GetRun`
+- `io.kestra.plugin.azure.devops.pipelines.List`
+- `io.kestra.plugin.azure.devops.pipelines.ListRuns`
+- `io.kestra.plugin.azure.devops.pipelines.Run`
+- `io.kestra.plugin.azure.devops.pipelines.Trigger`
 - `io.kestra.plugin.azure.eventhubs.Consume`
 - `io.kestra.plugin.azure.eventhubs.Produce`
 - `io.kestra.plugin.azure.eventhubs.RealtimeTrigger`

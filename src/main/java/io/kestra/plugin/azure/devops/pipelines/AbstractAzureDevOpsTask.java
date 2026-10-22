@@ -227,7 +227,13 @@ public abstract class AbstractAzureDevOpsTask extends Task implements AzureIdent
             return client.request(builder.build(), String.class);
         } catch (HttpClientResponseException e) {
             int statusCode = e.getResponse() != null ? e.getResponse().getStatus().getCode() : -1;
-            String responseBody = e.getResponse() != null && e.getResponse().getBody() != null ? e.getResponse().getBody().toString() : "";
+            Object rawBody = e.getResponse() != null ? e.getResponse().getBody() : null;
+            String responseBody = "";
+            if (rawBody instanceof byte[] bytes) {
+                responseBody = new String(bytes, StandardCharsets.UTF_8);
+            } else if (rawBody != null) {
+                responseBody = rawBody.toString();
+            }
             String hint = switch (statusCode) {
                 case 401, 403 -> "Please verify that your Personal Access Token (PAT) has the 'Build: Read & execute' scope or check Entra ID service principal role assignments.";
                 case 404 -> "Please verify that the organization, project, and pipeline/run ID exist and are accessible.";

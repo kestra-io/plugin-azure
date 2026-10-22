@@ -384,6 +384,58 @@ class PipelinesTest {
     }
 
     @Test
+    void testRunPipelineRetryThenSucceed() throws Exception {
+        wireMock.stubFor(
+            post(urlPathEqualTo("/my-org/my-project/_apis/pipelines/42/runs"))
+                .willReturn(okJson("""
+                    {
+                      "id": 110,
+                      "name": "20261020.10",
+                      "state": "inProgress"
+                    }
+                    """))
+        );
+
+        wireMock.stubFor(
+            get(urlPathEqualTo("/my-org/my-project/_apis/pipelines/42/runs/110"))
+                .inScenario("RetryThenSucceed")
+                .whenScenarioStateIs(Scenario.STARTED)
+                .willReturn(aResponse().withStatus(503).withBody("Service Unavailable"))
+                .willSetStateTo("Succeeded")
+        );
+
+        wireMock.stubFor(
+            get(urlPathEqualTo("/my-org/my-project/_apis/pipelines/42/runs/110"))
+                .inScenario("RetryThenSucceed")
+                .whenScenarioStateIs("Succeeded")
+                .willReturn(okJson("""
+                    {
+                      "id": 110,
+                      "name": "20261020.10",
+                      "state": "completed",
+                      "result": "succeeded"
+                    }
+                    """))
+        );
+
+        var task = Run.builder()
+            .organization(Property.ofValue("my-org"))
+            .project(Property.ofValue("my-project"))
+            .baseUrl(Property.ofValue(baseUrl))
+            .personalAccessToken(Property.ofValue("test-pat-token"))
+            .pipelineId(Property.ofValue(42))
+            .wait(Property.ofValue(true))
+            .pollInterval(Property.ofValue(Duration.ofMillis(10)))
+            .maxDuration(Property.ofValue(Duration.ofSeconds(2)))
+            .build();
+
+        var output = task.run(runContextFactory.of());
+        assertThat(output.getId(), is(110));
+        assertThat(output.getResult(), is("succeeded"));
+        assertThat(output.getState(), is("completed"));
+    }
+
+    @Test
     void testKillTriggersCancel() throws Exception {
         wireMock.stubFor(
             post(urlPathEqualTo("/my-org/my-project/_apis/pipelines/42/runs"))

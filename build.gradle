@@ -96,7 +96,7 @@ dependencies {
 
     // Azure HorizonDB (PostgreSQL wire protocol + Entra ID auth extension)
     implementation "org.postgresql:postgresql:42.7.13"
-    implementation "com.azure:azure-identity-extensions:1.2.9"
+    implementation "com.azure:azure-identity-extensions:1.2.10"
 }
 
 // Kestra's platform BOM (azure-sdk-bom) constrains azure-ai-projects to 2.2.0, and because the

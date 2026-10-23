@@ -9,7 +9,6 @@ import java.net.URISyntaxException;
 import java.util.Map;
 import java.util.Objects;
 
-import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.BeforeEach;
 
 import io.kestra.core.junit.annotations.KestraTest;
@@ -27,7 +26,7 @@ import jakarta.inject.Inject;
 // FIXME Remove once Worker closing has been reworked (Micronaut 4 PR)
 //  We need to rebuild the context for each tests as currently Workers can't be closed properly (they keep listening to queues they shouldn't)
 @KestraTest(rebuildContext = true)
-public abstract class BaseTest {
+public abstract class BaseTest extends AbstractFlociTest {
     @Inject
     protected RunContextFactory runContextFactory;
 
@@ -44,11 +43,12 @@ public abstract class BaseTest {
     protected String connectionString;
 
     @BeforeEach
-    void requireAzureCredentials() {
-        Assumptions.assumeTrue(
-            connectionString != null && !connectionString.isBlank(),
-            "Azure credentials not configured, skipping integration test"
-        );
+    void useFlociStorage() {
+        this.storageEndpoint = blobEndpoint();
+        this.adlsEndpoint = blobEndpoint();
+        this.connectionString = storageConnectionString();
+        this.container = CONTAINER;
+        this.fileSystem = FILE_SYSTEM;
     }
 
     @Value("${kestra.variables.globals.azure.blobs.container}")

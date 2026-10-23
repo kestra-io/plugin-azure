@@ -5,7 +5,7 @@ import java.util.List;
 import java.util.Map;
 
 import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import com.google.common.collect.ImmutableMap;
@@ -15,13 +15,14 @@ import io.kestra.core.models.property.Property;
 import io.kestra.core.runners.RunContext;
 import io.kestra.core.runners.RunContextFactory;
 import io.kestra.core.utils.TestsUtils;
+import io.kestra.plugin.azure.AbstractFlociTest;
 import io.kestra.plugin.azure.eventhubs.serdes.Serdes;
 
 import io.micronaut.context.annotation.Value;
 import jakarta.inject.Inject;
 
 @KestraTest
-class ConsumeTest {
+class ConsumeTest extends AbstractFlociTest {
 
     @Inject
     private RunContextFactory runContextFactory;
@@ -38,7 +39,14 @@ class ConsumeTest {
     @Value("${kestra.variables.globals.azure.eventhubs.eventhub-name}")
     protected String eventHubName;
 
-    @Disabled
+    @BeforeEach
+    void useFlociEventHubs() {
+        this.connectionString = eventHubConnectionString();
+        this.eventHubName = EVENT_HUB;
+        this.checkPointStoreConnectionString = storageConnectionString();
+        this.checkPointStoreContainerName = CHECKPOINT_CONTAINER;
+    }
+
     @Test
     void testConsumeTask() throws Exception {
         // Given
@@ -47,6 +55,7 @@ class ConsumeTest {
         Consume task = Consume.builder()
             .bodyDeserializer(Property.ofValue(Serdes.STRING))
             .eventHubName(Property.ofValue(eventHubName))
+            .namespace(Property.ofValue(EVENT_HUB_NAMESPACE))
             .connectionString(Property.ofValue(connectionString))
             .checkpointStoreProperties(
                 Property.ofValue(
@@ -76,6 +85,7 @@ class ConsumeTest {
             .type(Produce.class.getName())
             .bodySerializer(Property.ofValue(Serdes.STRING))
             .eventHubName(Property.ofValue(eventHubName))
+            .namespace(Property.ofValue(EVENT_HUB_NAMESPACE))
             .connectionString(Property.ofValue(connectionString))
             .from(
                 List.of(

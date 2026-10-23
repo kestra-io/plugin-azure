@@ -11,7 +11,6 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
-import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -27,6 +26,7 @@ import io.kestra.core.serializers.FileSerde;
 import io.kestra.core.storages.StorageInterface;
 import io.kestra.core.tenant.TenantService;
 import io.kestra.core.utils.IdUtils;
+import io.kestra.plugin.azure.AbstractFlociTest;
 
 import io.micronaut.context.annotation.Value;
 import jakarta.inject.Inject;
@@ -36,7 +36,7 @@ import static org.hamcrest.Matchers.is;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 @KestraTest
-class SuiteTest {
+class SuiteTest extends AbstractFlociTest {
     @Inject
     private RunContextFactory runContextFactory;
 
@@ -53,11 +53,10 @@ class SuiteTest {
     protected String table;
 
     @BeforeEach
-    void requireAzureCredentials() {
-        Assumptions.assumeTrue(
-            connectionString != null && !connectionString.isBlank(),
-            "Azure credentials not configured, skipping integration test"
-        );
+    void useFlociStorage() {
+        this.endpoint = tableEndpoint();
+        this.connectionString = storageConnectionString();
+        this.table = TABLE;
     }
 
     @SuppressWarnings("unchecked")
@@ -122,7 +121,12 @@ class SuiteTest {
         assertThat(
             getOutput.getRow().getProperties().get("guid"), is(ByteBuffer.allocate(2 * Long.BYTES).putLong(uuid.getMostSignificantBits()).putLong(uuid.getLeastSignificantBits()).array())
         );
-        assertThat(getOutput.getRow().getProperties().get("datetime"), is(OffsetDateTime.parse("2007-05-08T10:35Z")));
+        // Azure stores this instant as 2007-05-08T10:35Z. Floci keeps the offset from the write
+        // (2007-05-08T12:35+02:00). Both are the same instant.
+        assertThat(
+            ((OffsetDateTime) getOutput.getRow().getProperties().get("datetime")).toInstant(),
+            is(OffsetDateTime.parse("2007-05-08T10:35Z").toInstant())
+        );
         assertThat(getOutput.getRow().getProperties().get("binary"), is(new BigInteger("DEADBEEF", 16).toByteArray()));
 
         // list

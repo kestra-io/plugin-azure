@@ -116,9 +116,11 @@ configurations.all {
  * Test
  **********************************************************************************************************************/
 test {
-    // Needed till https://github.com/Azure/azure-sdk-for-java/issues/27806 is solved
+    // Needed till https://github.com/Azure/azure-sdk-for-java/issues/27806 is solved.
+    // noOpenSsl makes Reactor Netty (Cosmos) use the JDK truststore that holds the Floci certificate.
     jvmArgs = [
-        '--add-opens', 'java.base/java.util=ALL-UNNAMED'
+        '--add-opens', 'java.base/java.util=ALL-UNNAMED',
+        '-Dio.netty.handler.ssl.noOpenSsl=true'
     ]
     maxHeapSize = "2g"
     useJUnitPlatform()
@@ -151,6 +153,9 @@ dependencies {
     testImplementation group: "io.kestra", name: "scheduler"
     testImplementation group: "io.kestra", name: "worker"
     testImplementation group: "io.kestra", name: "indexer", version: kestraVersion
+
+    // Floci Azure emulator (Blob, Table, Cosmos DB, Event Hubs) for integration tests
+    testImplementation "io.floci:testcontainers-floci-az:2.17.0"
 
     // test
     testImplementation "org.junit.jupiter:junit-jupiter-engine"

@@ -75,4 +75,30 @@ class DownloadsTest extends AbstractTest {
         listOutput = list.run(runContext(list));
         assertThat(listOutput.getBlobs().size(), is(2));
     }
+
+    @Test
+    void defaultAction() throws Exception {
+        var prefix = IdUtils.create();
+
+        upload("/tasks/" + prefix + "/abs-default");
+        upload("/tasks/" + prefix + "/abs-default");
+
+        var task = Downloads.builder()
+            .id(IdUtils.create())
+            .type(Downloads.class.getName())
+            .endpoint(Property.ofValue(this.storageEndpoint))
+            .connectionString(Property.ofValue(connectionString))
+            .container(Property.ofValue(this.container))
+            .prefix(Property.ofValue("/tasks/" + prefix + "/abs-default/"))
+            .build();
+
+        var run = task.run(runContext(task));
+
+        assertThat(run.getBlobs().size(), is(2));
+        assertThat(run.getOutputFiles().size(), is(2));
+
+        var list = list().prefix(Property.ofValue("/tasks/" + prefix + "/abs-default/")).build();
+        var listOutput = list.run(runContext(list));
+        assertThat(listOutput.getBlobs().size(), is(2));
+    }
 }

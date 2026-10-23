@@ -81,8 +81,10 @@ public class Downloads extends AbstractBlobStorageWithSas
     @PluginProperty(group = "processing")
     protected Property<String> delimiter;
 
+    @Builder.Default
     @Schema(title = "Post-action", description = "Action to apply after download (NONE, DELETE, MOVE)")
-    private Property<ActionInterface.Action> action;
+    @PluginProperty(group = "processing")
+    private Property<ActionInterface.Action> action = Property.ofValue(ActionInterface.Action.NONE);
 
     @Schema(title = "Move destination", description = "Target path when action=MOVE")
     private Copy.CopyObject moveTo;
@@ -149,9 +151,13 @@ public class Downloads extends AbstractBlobStorageWithSas
             .map(blob -> new AbstractMap.SimpleEntry<>(blob.getName(), blob.getUri()))
             .collect(Collectors.toMap(AbstractMap.SimpleEntry::getKey, AbstractMap.SimpleEntry::getValue));
 
+        var rAction = runContext.render(this.action)
+            .as(ActionInterface.Action.class)
+            .orElse(ActionInterface.Action.NONE);
+
         BlobService.archive(
             run.getBlobs(),
-            runContext.render(this.action).as(ActionInterface.Action.class).orElseThrow(),
+            rAction,
             this.moveTo,
             runContext,
             this,

@@ -11,10 +11,8 @@ import com.azure.storage.file.datalake.DataLakeServiceClient;
 import io.kestra.core.models.property.Property;
 import io.kestra.core.utils.IdUtils;
 import io.kestra.plugin.azure.BaseTest;
-import io.kestra.plugin.azure.RequiresRealAzure;
 import io.kestra.plugin.azure.storage.adls.services.DataLakeService;
 
-@RequiresRealAzure("Floci Azure returns HTTP 501 for Data Lake (ADLS Gen2) operations")
 public class AbstractTest extends BaseTest {
     public java.util.List<String> directoryToClean = new ArrayList<>();
 

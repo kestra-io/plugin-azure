@@ -6,10 +6,10 @@ import java.util.Set;
 
 import org.apache.commons.io.IOUtils;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 
 import io.kestra.core.models.property.Property;
 import io.kestra.core.utils.IdUtils;
-import io.kestra.plugin.azure.RequiresRealAzure;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
@@ -17,7 +17,7 @@ import static org.hamcrest.Matchers.notNullValue;
 
 class SharedAccessTest extends AbstractTest {
     @Test
-    @RequiresRealAzure("Floci Azure returns HTTP 403 for SAS downloads of blob names that start with '/'")
+    @EnabledIfEnvironmentVariable(named = "AZURE_CONNECTION_STRING", matches = ".+", disabledReason = "Floci Azure returns HTTP 403 for SAS downloads of blob names that start with '/'")
     void run() throws Exception {
         String prefix = IdUtils.create();
 

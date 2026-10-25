@@ -9,9 +9,9 @@ import java.net.URISyntaxException;
 import java.util.Map;
 import java.util.Objects;
 
-import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.TestInfo;
+import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 
 import io.kestra.core.junit.annotations.KestraTest;
 import io.kestra.core.models.tasks.Task;
@@ -46,13 +46,10 @@ public abstract class BaseTest extends AbstractFlociTest {
 
     @BeforeEach
     void useFlociStorage(TestInfo testInfo) {
-        var requiresRealAzure = testInfo.getTestMethod().map(method -> method.isAnnotationPresent(RequiresRealAzure.class)).orElse(false)
-            || testInfo.getTestClass().map(type -> type.isAnnotationPresent(RequiresRealAzure.class)).orElse(false);
-        if (requiresRealAzure) {
-            Assumptions.assumeTrue(
-                connectionString != null && !connectionString.isBlank(),
-                "Azure credentials not configured, skipping integration test"
-            );
+        // Tests gated on real Azure credentials cover features Floci lacks, so they keep the configured account.
+        var gate = testInfo.getTestMethod().map(method -> method.getAnnotation(EnabledIfEnvironmentVariable.class))
+            .or(() -> testInfo.getTestClass().map(type -> type.getAnnotation(EnabledIfEnvironmentVariable.class)));
+        if (gate.filter(condition -> "AZURE_CONNECTION_STRING".equals(condition.named())).isPresent()) {
             return;
         }
 

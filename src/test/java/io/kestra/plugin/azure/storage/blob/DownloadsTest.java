@@ -1,10 +1,10 @@
 package io.kestra.plugin.azure.storage.blob;
 
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import io.kestra.core.models.property.Property;
 import io.kestra.core.utils.IdUtils;
+import io.kestra.plugin.azure.RequiresRealAzure;
 import io.kestra.plugin.azure.storage.blob.abstracts.ActionInterface;
 
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -41,7 +41,7 @@ class DownloadsTest extends AbstractTest {
     }
 
     @Test
-    @Disabled("Floci Azure emulator returns HTTP 501 for blob copyFromUrl, which move uses")
+    @RequiresRealAzure("Floci Azure returns HTTP 501 for blob copyFromUrl, which move uses")
     void move() throws Exception {
         String prefix = IdUtils.create();
 

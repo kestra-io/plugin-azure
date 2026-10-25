@@ -43,7 +43,7 @@ class ConsumeTest extends AbstractFlociTest {
     void useFlociEventHubs() {
         this.connectionString = eventHubConnectionString();
         this.eventHubName = EVENT_HUB;
-        this.checkPointStoreConnectionString = storageConnectionString();
+        this.checkPointStoreConnectionString = floci.getStorageConnectionString();
         this.checkPointStoreContainerName = CHECKPOINT_CONTAINER;
     }
 

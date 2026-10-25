@@ -5,11 +5,11 @@ import java.nio.charset.StandardCharsets;
 import java.util.Set;
 
 import org.apache.commons.io.IOUtils;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import io.kestra.core.models.property.Property;
 import io.kestra.core.utils.IdUtils;
+import io.kestra.plugin.azure.RequiresRealAzure;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
@@ -17,7 +17,7 @@ import static org.hamcrest.Matchers.notNullValue;
 
 class SharedAccessTest extends AbstractTest {
     @Test
-    @Disabled("Floci Azure emulator returns HTTP 403 for SAS downloads of blob names that start with '/'")
+    @RequiresRealAzure("Floci Azure returns HTTP 403 for SAS downloads of blob names that start with '/'")
     void run() throws Exception {
         String prefix = IdUtils.create();
 

@@ -17,7 +17,6 @@ import org.junit.jupiter.api.TestInstance;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.azure.cosmos.CosmosClient;
 import com.azure.cosmos.CosmosClientBuilder;
 import com.azure.cosmos.models.PartitionKeyDefinitionVersion;
 import com.azure.cosmos.models.PartitionKind;
@@ -46,7 +45,7 @@ public abstract class CosmosContainerBaseTest<T extends AbstractCosmosContainerT
     void ensureCosmosResources() {
         useFlociCosmos();
         try (
-            CosmosClient client = new CosmosClientBuilder()
+            var client = new CosmosClientBuilder()
                 .endpoint(endpoint)
                 .key(COSMOS_KEY)
                 .gatewayMode()
@@ -60,7 +59,7 @@ public abstract class CosmosContainerBaseTest<T extends AbstractCosmosContainerT
 
     @BeforeEach
     void useFlociCosmos() {
-        this.endpoint = cosmosEndpoint();
+        this.endpoint = floci.getHttpsEndpoint();
         this.connectionString = cosmosConnectionString();
         this.databaseId = COSMOS_DATABASE;
         this.containerId = COSMOS_CONTAINER;

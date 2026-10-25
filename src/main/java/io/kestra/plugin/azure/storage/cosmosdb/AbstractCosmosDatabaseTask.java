@@ -1,7 +1,6 @@
 package io.kestra.plugin.azure.storage.cosmosdb;
 
 import java.net.URI;
-import java.util.Locale;
 import java.util.Optional;
 
 import org.apache.commons.lang3.StringUtils;
@@ -36,7 +35,7 @@ public abstract class AbstractCosmosDatabaseTask<T extends Output> extends Abstr
 
     @Schema(
         title = "Cosmos account endpoint",
-        description = "Base account URL (e.g. https://<account>.documents.azure.com). Required when connectionString is absent."
+        description = "Base account URL (e.g. https://<account>.documents.azure.com). Required when connectionString is absent. A `localhost` or `127.0.0.1` endpoint, such as a Cosmos emulator, is reached in gateway mode."
     )
     @PluginProperty(group = "connection")
     private Property<String> endpoint;
@@ -95,47 +94,34 @@ public abstract class AbstractCosmosDatabaseTask<T extends Output> extends Abstr
             .contentResponseOnWriteEnabled(rContentResponseOnWriteEnabled);
 
         if (rConnectionString.isPresent()) {
-            String endpoint = StringUtils.substringBetween(rConnectionString.get(), "AccountEndpoint=", ";");
+            var rEndpoint = StringUtils.substringBetween(rConnectionString.get(), "AccountEndpoint=", ";");
             cosmosClientBuilder
-                .endpoint(endpoint)
+                .endpoint(rEndpoint)
                 .key(StringUtils.substringBetween(rConnectionString.get(), "AccountKey=", ";"));
-            useGatewayModeForEmulator(cosmosClientBuilder, endpoint);
+            useGatewayModeForLocalEmulator(cosmosClientBuilder, rEndpoint);
         } else {
-            String rEndPoint = runContext.render(this.endpoint).as(String.class)
+            var rEndpoint = runContext.render(this.endpoint).as(String.class)
                 .orElseThrow(() -> new Exception("Endpoint or ConnectionString needed"));
-            cosmosClientBuilder.endpoint(rEndPoint);
+            cosmosClientBuilder.endpoint(rEndpoint);
             cosmosClientBuilder.credential(credentials(runContext));
-            useGatewayModeForEmulator(cosmosClientBuilder, rEndPoint);
+            useGatewayModeForLocalEmulator(cosmosClientBuilder, rEndpoint);
         }
 
         return cosmosClientBuilder.buildAsyncClient();
     }
 
-    /**
-     * The Cosmos Java SDK only speaks HTTPS to emulators, and only in gateway mode. Direct mode
-     * dials the TCP replica ports of a real account, which Floci (and the Microsoft Cosmos emulator)
-     * do not expose. Azure cloud hosts keep the default direct mode.
-     */
-    private static void useGatewayModeForEmulator(CosmosClientBuilder builder, String endpoint) {
-        if (endpoint == null || endpoint.isBlank()) {
+    // Local emulators (Floci, the Cosmos emulator) only serve the gateway, direct mode dials replica ports they do not expose.
+    private static void useGatewayModeForLocalEmulator(CosmosClientBuilder builder, String rEndpoint) {
+        if (rEndpoint == null) {
             return;
         }
-        String host;
         try {
-            host = URI.create(endpoint).getHost();
+            var host = URI.create(rEndpoint).getHost();
+            if ("localhost".equalsIgnoreCase(host) || "127.0.0.1".equals(host)) {
+                builder.gatewayMode().endpointDiscoveryEnabled(false);
+            }
         } catch (IllegalArgumentException e) {
-            return;
-        }
-        if (host == null) {
-            return;
-        }
-        String normalized = host.toLowerCase(Locale.ROOT);
-        boolean azureCloud = normalized.endsWith(".documents.azure.com")
-            || normalized.endsWith(".documents.azure.us")
-            || normalized.endsWith(".documents.azure.cn")
-            || normalized.endsWith(".documents.microsoftazure.de");
-        if (!azureCloud) {
-            builder.gatewayMode().endpointDiscoveryEnabled(false);
+            // the Cosmos client reports a malformed endpoint itself
         }
     }
 }

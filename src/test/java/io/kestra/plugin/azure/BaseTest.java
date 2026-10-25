@@ -9,7 +9,9 @@ import java.net.URISyntaxException;
 import java.util.Map;
 import java.util.Objects;
 
+import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.TestInfo;
 
 import io.kestra.core.junit.annotations.KestraTest;
 import io.kestra.core.models.tasks.Task;
@@ -43,10 +45,20 @@ public abstract class BaseTest extends AbstractFlociTest {
     protected String connectionString;
 
     @BeforeEach
-    void useFlociStorage() {
-        this.storageEndpoint = blobEndpoint();
-        this.adlsEndpoint = blobEndpoint();
-        this.connectionString = storageConnectionString();
+    void useFlociStorage(TestInfo testInfo) {
+        var requiresRealAzure = testInfo.getTestMethod().map(method -> method.isAnnotationPresent(RequiresRealAzure.class)).orElse(false)
+            || testInfo.getTestClass().map(type -> type.isAnnotationPresent(RequiresRealAzure.class)).orElse(false);
+        if (requiresRealAzure) {
+            Assumptions.assumeTrue(
+                connectionString != null && !connectionString.isBlank(),
+                "Azure credentials not configured, skipping integration test"
+            );
+            return;
+        }
+
+        this.storageEndpoint = floci.getBlobEndpoint();
+        this.adlsEndpoint = floci.getBlobEndpoint();
+        this.connectionString = floci.getStorageConnectionString();
         this.container = CONTAINER;
         this.fileSystem = FILE_SYSTEM;
     }

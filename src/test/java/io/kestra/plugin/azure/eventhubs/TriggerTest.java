@@ -1,8 +1,5 @@
 package io.kestra.plugin.azure.eventhubs;
 
-import java.net.URL;
-import java.nio.file.Files;
-import java.time.Duration;
 import java.util.List;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -11,25 +8,21 @@ import org.junit.jupiter.api.Test;
 import com.google.common.collect.ImmutableMap;
 
 import io.kestra.core.junit.annotations.KestraTest;
-import io.kestra.core.models.executions.Execution;
 import io.kestra.core.models.property.Property;
 import io.kestra.core.repositories.ExecutionRepositoryInterface;
 import io.kestra.core.repositories.LocalFlowRepositoryLoader;
 import io.kestra.core.runners.RunContextFactory;
-import io.kestra.core.tenant.TenantService;
 import io.kestra.core.utils.TestsUtils;
-import io.kestra.plugin.azure.AbstractFlociTest;
 import io.kestra.plugin.azure.eventhubs.serdes.Serdes;
 
 import io.micronaut.context.annotation.Value;
-import io.micronaut.data.model.Pageable;
 import jakarta.inject.Inject;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 
 @KestraTest(startRunner = true, startScheduler = true)
-class TriggerTest extends AbstractFlociTest {
+class TriggerTest extends AbstractEventHubsTriggerTest {
 
     @Inject
     private ExecutionRepositoryInterface executionRepository;
@@ -54,31 +47,12 @@ class TriggerTest extends AbstractFlociTest {
 
     @Test
     void testTrigger() throws Exception {
-        repositoryLoader.load(flow("eventhubs-listen", Trigger.class.getName(), "interval: PT10S"));
+        repositoryLoader.load(flow("eventhubs-listen", Trigger.class, "interval: PT10S"));
 
         produceEvents();
 
-        Execution execution = waitForExecution("eventhubs-listen");
-        Object eventsCount = execution.getTrigger().getVariables().get("eventsCount");
-        assertThat(((Number) eventsCount).intValue(), greaterThanOrEqualTo(2));
-    }
-
-    private Execution waitForExecution(String flowId) throws InterruptedException {
-        long deadline = System.nanoTime() + Duration.ofMinutes(1).toNanos();
-        while (System.nanoTime() < deadline) {
-            for (Execution execution : executionRepository.findByFlowId(
-                TenantService.MAIN_TENANT,
-                "io.kestra.tests",
-                flowId,
-                Pageable.from(1, 20)
-            )) {
-                if (execution.getState().isSuccess() && execution.getTrigger() != null) {
-                    return execution;
-                }
-            }
-            Thread.sleep(500);
-        }
-        throw new AssertionError("No successful execution for flow " + flowId);
+        var execution = awaitExecution(executionRepository, "eventhubs-listen", ignored -> true);
+        assertThat(((Number) execution.getTrigger().getVariables().get("eventsCount")).intValue(), greaterThanOrEqualTo(2));
     }
 
     private void produceEvents() throws Exception {
@@ -101,42 +75,5 @@ class TriggerTest extends AbstractFlociTest {
             )
             .build();
         task.run(TestsUtils.mockRunContext(runContextFactory, task, ImmutableMap.of()));
-    }
-
-    private URL flow(String id, String type, String extra) throws java.io.IOException {
-        String yaml = """
-            id: %s
-            namespace: io.kestra.tests
-
-            triggers:
-              - id: watch
-                type: %s
-                %s
-                eventHubName: "%s"
-                namespace: "%s"
-                connectionString: "%s"
-                bodyDeserializer: STRING
-                consumerGroup: "$Default"
-                checkpointStoreProperties:
-                  containerName: "%s"
-                  connectionString: "%s"
-
-            tasks:
-              - id: end
-                type: io.kestra.plugin.core.debug.Return
-                format: "{{task.id}} > {{taskrun.startDate}}"
-            """.formatted(
-            id,
-            type,
-            extra,
-            EVENT_HUB,
-            EVENT_HUB_NAMESPACE,
-            eventHubConnectionString(),
-            CHECKPOINT_CONTAINER,
-            storageConnectionString()
-        );
-        var path = Files.createTempFile(id, ".yaml");
-        path.toFile().deleteOnExit();
-        return Files.writeString(path, yaml).toUri().toURL();
     }
 }

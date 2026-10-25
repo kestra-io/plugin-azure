@@ -54,8 +54,8 @@ class SuiteTest extends AbstractFlociTest {
 
     @BeforeEach
     void useFlociStorage() {
-        this.endpoint = tableEndpoint();
-        this.connectionString = storageConnectionString();
+        this.endpoint = floci.getTableEndpoint();
+        this.connectionString = floci.getStorageConnectionString();
         this.table = TABLE;
     }
 
@@ -121,8 +121,7 @@ class SuiteTest extends AbstractFlociTest {
         assertThat(
             getOutput.getRow().getProperties().get("guid"), is(ByteBuffer.allocate(2 * Long.BYTES).putLong(uuid.getMostSignificantBits()).putLong(uuid.getLeastSignificantBits()).array())
         );
-        // Azure stores this instant as 2007-05-08T10:35Z. Floci keeps the offset from the write
-        // (2007-05-08T12:35+02:00). Both are the same instant.
+        // Azure normalizes the stored value to UTC, Floci keeps the written offset, so compare instants.
         assertThat(
             ((OffsetDateTime) getOutput.getRow().getProperties().get("datetime")).toInstant(),
             is(OffsetDateTime.parse("2007-05-08T10:35Z").toInstant())

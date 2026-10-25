@@ -4,8 +4,6 @@ import java.net.URI;
 import java.util.ArrayList;
 
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.Assumptions;
-import org.junit.jupiter.api.BeforeEach;
 
 import com.azure.storage.file.datalake.DataLakeDirectoryClient;
 import com.azure.storage.file.datalake.DataLakeServiceClient;
@@ -13,22 +11,12 @@ import com.azure.storage.file.datalake.DataLakeServiceClient;
 import io.kestra.core.models.property.Property;
 import io.kestra.core.utils.IdUtils;
 import io.kestra.plugin.azure.BaseTest;
+import io.kestra.plugin.azure.RequiresRealAzure;
 import io.kestra.plugin.azure.storage.adls.services.DataLakeService;
 
-/**
- * Floci Azure advertises a DFS endpoint, but the Data Lake SDK calls these tests make
- * return HTTP 501 NotImplemented on the emulator image. Leave them off the emulator.
- */
+@RequiresRealAzure("Floci Azure returns HTTP 501 for Data Lake (ADLS Gen2) operations")
 public class AbstractTest extends BaseTest {
     public java.util.List<String> directoryToClean = new ArrayList<>();
-
-    @BeforeEach
-    void skipAdlsOnFloci() {
-        Assumptions.assumeTrue(
-            false,
-            "Floci Azure emulator returns HTTP 501 for Data Lake (ADLS Gen2) operations"
-        );
-    }
 
     protected Upload.Output upload(String dir) throws Exception {
         return upload(dir, false);

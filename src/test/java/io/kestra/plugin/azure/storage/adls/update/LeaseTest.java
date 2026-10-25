@@ -1,6 +1,7 @@
 package io.kestra.plugin.azure.storage.adls.update;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 
 import io.kestra.core.models.property.Property;
 import io.kestra.core.utils.IdUtils;
@@ -10,6 +11,7 @@ import io.kestra.plugin.azure.storage.adls.Upload;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.*;
 
+@EnabledIfEnvironmentVariable(named = "AZURE_CONNECTION_STRING", matches = ".+", disabledReason = "Floci Azure returns HTTP 501 for Data Lake (ADLS Gen2) operations")
 class LeaseTest extends AbstractTest {
     @Test
     void run() throws Exception {

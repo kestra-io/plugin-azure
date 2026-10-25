@@ -1,35 +1,31 @@
 package io.kestra.plugin.azure.eventhubs;
 
 import java.util.List;
-import java.util.Objects;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
 
-import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import com.google.common.collect.ImmutableMap;
 
 import io.kestra.core.junit.annotations.KestraTest;
-import io.kestra.core.models.executions.Execution;
 import io.kestra.core.models.property.Property;
-import io.kestra.core.queues.DispatchQueueInterface;
+import io.kestra.core.repositories.ExecutionRepositoryInterface;
 import io.kestra.core.repositories.LocalFlowRepositoryLoader;
 import io.kestra.core.runners.RunContextFactory;
 import io.kestra.core.utils.TestsUtils;
 import io.kestra.plugin.azure.eventhubs.serdes.Serdes;
+
 import io.micronaut.context.annotation.Value;
 import jakarta.inject.Inject;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
-import static org.hamcrest.Matchers.is;
 
 @KestraTest(startRunner = true, startScheduler = true)
-class TriggerTest {
+class TriggerTest extends AbstractEventHubsTriggerTest {
 
     @Inject
-    private DispatchQueueInterface<Execution> executionQueue;
+    private ExecutionRepositoryInterface executionRepository;
 
     @Inject
     private RunContextFactory runContextFactory;
@@ -43,28 +39,20 @@ class TriggerTest {
     @Value("${kestra.variables.globals.azure.eventhubs.eventhub-name}")
     protected String eventHubName;
 
-    @Disabled
+    @BeforeEach
+    void useFlociEventHubs() {
+        this.connectionString = eventHubConnectionString();
+        this.eventHubName = EVENT_HUB;
+    }
+
     @Test
     void testTrigger() throws Exception {
-        CountDownLatch queueCount = new CountDownLatch(1);
-        java.util.concurrent.atomic.AtomicReference<Execution> lastExecution = new java.util.concurrent.atomic.AtomicReference<>();
-        executionQueue.addListener(execution ->
-        {
-            lastExecution.set(execution);
-            queueCount.countDown();
-            assertThat(execution.getFlowId(), is("trigger"));
-        });
-
-        repositoryLoader.load(Objects.requireNonNull(TriggerTest.class.getClassLoader().getResource("flows/eventshubs-trigger.yaml")));
+        repositoryLoader.load(flow("eventhubs-listen", Trigger.class, "interval: PT10S"));
 
         produceEvents();
 
-        boolean await = queueCount.await(1, TimeUnit.MINUTES);
-        assertThat(await, is(true));
-
-        Integer trigger = (Integer) lastExecution.get().getTrigger().getVariables().get("eventsCount");
-
-        assertThat(trigger, greaterThanOrEqualTo(2));
+        var execution = awaitExecution(executionRepository, "eventhubs-listen", ignored -> true);
+        assertThat(((Number) execution.getTrigger().getVariables().get("eventsCount")).intValue(), greaterThanOrEqualTo(2));
     }
 
     private void produceEvents() throws Exception {
@@ -73,6 +61,7 @@ class TriggerTest {
             .type(Produce.class.getName())
             .bodySerializer(Property.ofValue(Serdes.STRING))
             .eventHubName(Property.ofValue(eventHubName))
+            .namespace(Property.ofValue(EVENT_HUB_NAMESPACE))
             .connectionString(Property.ofValue(connectionString))
             .from(
                 List.of(

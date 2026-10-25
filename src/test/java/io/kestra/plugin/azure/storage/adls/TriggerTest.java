@@ -10,6 +10,7 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 
 import io.kestra.core.junit.annotations.KestraTest;
 import io.kestra.core.models.conditions.ConditionContext;
@@ -27,6 +28,7 @@ import jakarta.inject.Inject;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 
+@EnabledIfEnvironmentVariable(named = "AZURE_CONNECTION_STRING", matches = ".+", disabledReason = "Floci Azure returns HTTP 501 for Data Lake (ADLS Gen2) operations")
 @KestraTest(startRunner = true, startScheduler = true)
 @Disabled("Unit tests works correctly locally but fail on the CI - temporary disable them")
 class TriggerTest extends AbstractTest {

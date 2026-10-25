@@ -1,14 +1,16 @@
 package io.kestra.plugin.azure.storage.adls;
 
-import io.kestra.core.models.property.Property;
-import io.kestra.core.utils.IdUtils;
-import io.kestra.plugin.azure.BaseTest;
-import org.junit.jupiter.api.Test;
-
 import java.io.IOException;
 import java.nio.file.Files;
 import java.security.MessageDigest;
 import java.util.HexFormat;
+
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
+
+import io.kestra.core.models.property.Property;
+import io.kestra.core.utils.IdUtils;
+import io.kestra.plugin.azure.BaseTest;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
@@ -17,6 +19,7 @@ import static org.hamcrest.Matchers.notNullValue;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
+@EnabledIfEnvironmentVariable(named = "AZURE_CONNECTION_STRING", matches = ".+", disabledReason = "Floci Azure returns HTTP 501 for Data Lake (ADLS Gen2) operations")
 class ChecksumTest extends AbstractTest {
     private String md5OfApplicationYml() throws Exception {
         byte[] content = Files.readAllBytes(BaseTest.file("application.yml").toPath());
@@ -58,8 +61,10 @@ class ChecksumTest extends AbstractTest {
             .expectedChecksum(Property.ofValue("00000000000000000000000000000000"))
             .build();
 
-        IOException e = assertThrows(IOException.class,
-            () -> read.run(runContext(read)));
+        var e = assertThrows(
+            IOException.class,
+            () -> read.run(runContext(read))
+        );
         assertThat(e.getMessage(), containsString("Checksum mismatch"));
     }
 

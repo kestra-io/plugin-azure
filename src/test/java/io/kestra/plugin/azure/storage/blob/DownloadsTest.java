@@ -1,6 +1,7 @@
 package io.kestra.plugin.azure.storage.blob;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 
 import io.kestra.core.models.property.Property;
 import io.kestra.core.utils.IdUtils;
@@ -40,6 +41,7 @@ class DownloadsTest extends AbstractTest {
     }
 
     @Test
+    @EnabledIfEnvironmentVariable(named = "AZURE_CONNECTION_STRING", matches = ".+", disabledReason = "Floci Azure returns HTTP 501 for blob copyFromUrl, which move uses")
     void move() throws Exception {
         String prefix = IdUtils.create();
 

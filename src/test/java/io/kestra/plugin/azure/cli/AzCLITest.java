@@ -3,9 +3,8 @@ package io.kestra.plugin.azure.cli;
 import java.util.List;
 import java.util.Map;
 
-import org.junit.jupiter.api.Assumptions;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 
 import io.kestra.core.junit.annotations.KestraTest;
 import io.kestra.core.models.property.Property;
@@ -23,6 +22,7 @@ import static org.hamcrest.Matchers.*;
 import static org.hamcrest.core.AllOf.allOf;
 
 @KestraTest(environments = "sp")
+@EnabledIfEnvironmentVariable(named = "AZURE_CLIENT_ID", matches = ".+", disabledReason = "Needs Azure service principal credentials")
 public class AzCLITest {
     @Value("${kestra.variables.globals.azure.sp.username}")
     protected String username;
@@ -30,14 +30,6 @@ public class AzCLITest {
     protected String secret;
     @Value("${kestra.variables.globals.azure.sp.tenant}")
     String tenant;
-
-    @BeforeEach
-    void requireAzureCredentials() {
-        Assumptions.assumeTrue(
-            username != null && !username.isBlank(),
-            "Azure credentials not configured, skipping integration test"
-        );
-    }
 
     @Inject
     private RunContextFactory runContextFactory;

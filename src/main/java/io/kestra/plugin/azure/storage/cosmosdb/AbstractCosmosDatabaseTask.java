@@ -1,5 +1,6 @@
 package io.kestra.plugin.azure.storage.cosmosdb;
 
+import java.net.URI;
 import java.util.Optional;
 
 import org.apache.commons.lang3.StringUtils;
@@ -7,6 +8,7 @@ import org.apache.commons.lang3.StringUtils;
 import com.azure.cosmos.*;
 
 import io.kestra.core.exceptions.IllegalVariableEvaluationException;
+import io.kestra.core.models.annotations.PluginProperty;
 import io.kestra.core.models.property.Property;
 import io.kestra.core.models.tasks.Output;
 import io.kestra.core.runners.RunContext;
@@ -16,7 +18,6 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotNull;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
-import io.kestra.core.models.annotations.PluginProperty;
 
 @SuperBuilder
 @ToString
@@ -34,7 +35,7 @@ public abstract class AbstractCosmosDatabaseTask<T extends Output> extends Abstr
 
     @Schema(
         title = "Cosmos account endpoint",
-        description = "Base account URL (e.g. https://<account>.documents.azure.com). Required when connectionString is absent."
+        description = "Base account URL (e.g. https://<account>.documents.azure.com). Required when connectionString is absent. A `localhost` or `127.0.0.1` endpoint, such as a Cosmos emulator, is reached in gateway mode."
     )
     @PluginProperty(group = "connection")
     private Property<String> endpoint;
@@ -93,16 +94,34 @@ public abstract class AbstractCosmosDatabaseTask<T extends Output> extends Abstr
             .contentResponseOnWriteEnabled(rContentResponseOnWriteEnabled);
 
         if (rConnectionString.isPresent()) {
+            var rEndpoint = StringUtils.substringBetween(rConnectionString.get(), "AccountEndpoint=", ";");
             cosmosClientBuilder
-                .endpoint(StringUtils.substringBetween(rConnectionString.get(), "AccountEndpoint=", ";"))
+                .endpoint(rEndpoint)
                 .key(StringUtils.substringBetween(rConnectionString.get(), "AccountKey=", ";"));
+            useGatewayModeForLocalEmulator(cosmosClientBuilder, rEndpoint);
         } else {
-            String rEndPoint = runContext.render(this.endpoint).as(String.class)
+            var rEndpoint = runContext.render(this.endpoint).as(String.class)
                 .orElseThrow(() -> new Exception("Endpoint or ConnectionString needed"));
-            cosmosClientBuilder.endpoint(rEndPoint);
+            cosmosClientBuilder.endpoint(rEndpoint);
             cosmosClientBuilder.credential(credentials(runContext));
+            useGatewayModeForLocalEmulator(cosmosClientBuilder, rEndpoint);
         }
 
         return cosmosClientBuilder.buildAsyncClient();
+    }
+
+    // Local emulators (Floci, the Cosmos emulator) only serve the gateway, direct mode dials replica ports they do not expose.
+    private static void useGatewayModeForLocalEmulator(CosmosClientBuilder builder, String rEndpoint) {
+        if (rEndpoint == null) {
+            return;
+        }
+        try {
+            var host = URI.create(rEndpoint).getHost();
+            if ("localhost".equalsIgnoreCase(host) || "127.0.0.1".equals(host)) {
+                builder.gatewayMode().endpointDiscoveryEnabled(false);
+            }
+        } catch (IllegalArgumentException e) {
+            // the Cosmos client reports a malformed endpoint itself
+        }
     }
 }

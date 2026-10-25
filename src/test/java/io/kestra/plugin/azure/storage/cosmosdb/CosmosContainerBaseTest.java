@@ -29,16 +29,14 @@ import io.kestra.core.runners.RunContextFactory;
 import io.kestra.core.utils.IdUtils;
 import io.kestra.plugin.azure.AbstractFlociTest;
 
-import io.micronaut.context.annotation.Value;
 import jakarta.inject.Inject;
 import lombok.SneakyThrows;
 
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
-@KestraTest(startRunner = true, environments = "sp")
+@KestraTest(startRunner = true)
 public abstract class CosmosContainerBaseTest<T extends AbstractCosmosContainerTask.AbstractCosmosContainerTaskBuilder<?, ?, ?>> extends AbstractFlociTest {
-    @Value("${kestra.variables.globals.azure.cosmos.connection-string}")
     protected String connectionString;
 
     @BeforeAll
@@ -65,13 +63,10 @@ public abstract class CosmosContainerBaseTest<T extends AbstractCosmosContainerT
         this.containerId = COSMOS_CONTAINER;
     }
 
-    @Value("${kestra.variables.globals.azure.cosmos.endpoint}")
     protected String endpoint;
 
-    @Value("${kestra.variables.globals.azure.cosmos.container-id}")
     protected String containerId;
 
-    @Value("${kestra.variables.globals.azure.cosmos.database-id}")
     protected String databaseId;
 
     @Inject

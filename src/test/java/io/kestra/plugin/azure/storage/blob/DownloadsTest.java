@@ -11,6 +11,7 @@ import io.kestra.plugin.azure.storage.blob.abstracts.ActionInterface;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.endsWith;
 import static org.hamcrest.Matchers.is;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class DownloadsTest extends AbstractTest {
     @Test
@@ -106,13 +107,12 @@ class DownloadsTest extends AbstractTest {
     }
 
     @Test
-    void filterWithVirtualDirectories() throws Exception {
+    void filesFilterWithDelimiter() throws Exception {
         var prefix = IdUtils.create();
 
         upload("/tasks/" + prefix + "/filter-test");
         update("/tasks/" + prefix + "/filter-test/virtual-dir/");
 
-        // Test with Filter.FILES: only the file should be listed and downloaded
         var filesTask = Downloads.builder()
             .id(IdUtils.create())
             .type(Downloads.class.getName())
@@ -126,24 +126,61 @@ class DownloadsTest extends AbstractTest {
 
         var filesRun = filesTask.run(runContext(filesTask));
         assertThat(filesRun.getBlobs().size(), is(1));
-        assertThat(filesRun.getBlobs().get(0).getName().endsWith(".yml"), is(true));
+        assertThat(filesRun.getBlobs().getFirst().getName().endsWith(".yml"), is(true));
+        assertThat(filesRun.getOutputFiles().size(), is(1));
+    }
+
+    @Test
+    void customFilterWithoutDelimiter() throws Exception {
+        var prefix = IdUtils.create();
+
+        update("/tasks/" + prefix + "/filter-custom/file.yml");
+        update("/tasks/" + prefix + "/filter-custom/dir/");
+
+        var filesTask = Downloads.builder()
+            .id(IdUtils.create())
+            .type(Downloads.class.getName())
+            .endpoint(Property.ofValue(this.storageEndpoint))
+            .connectionString(Property.ofValue(connectionString))
+            .container(Property.ofValue(this.container))
+            .prefix(Property.ofValue("/tasks/" + prefix + "/filter-custom/"))
+            .filter(Property.ofValue(ListInterface.Filter.FILES))
+            .build();
+
+        var filesRun = filesTask.run(runContext(filesTask));
+        assertThat(filesRun.getBlobs().size(), is(1));
+        assertThat(filesRun.getBlobs().getFirst().getName().endsWith(".yml"), is(true));
         assertThat(filesRun.getOutputFiles().size(), is(1));
 
-        // Test with Filter.DIRECTORY: only the directory marker should be listed and downloaded
         var dirTask = Downloads.builder()
             .id(IdUtils.create())
             .type(Downloads.class.getName())
             .endpoint(Property.ofValue(this.storageEndpoint))
             .connectionString(Property.ofValue(connectionString))
             .container(Property.ofValue(this.container))
-            .prefix(Property.ofValue("/tasks/" + prefix + "/filter-test/"))
-            .delimiter(Property.ofValue("/"))
+            .prefix(Property.ofValue("/tasks/" + prefix + "/filter-custom/"))
             .filter(Property.ofValue(ListInterface.Filter.DIRECTORY))
             .build();
 
         var dirRun = dirTask.run(runContext(dirTask));
         assertThat(dirRun.getBlobs().size(), is(1));
-        assertThat(dirRun.getBlobs().get(0).getName().endsWith("/"), is(true));
-        assertThat(dirRun.getOutputFiles().size(), is(0));
+        assertThat(dirRun.getBlobs().getFirst().getName().endsWith("/"), is(true));
+        assertThat(dirRun.getOutputFiles().isEmpty(), is(true));
+    }
+
+    @Test
+    void directoryFilterWithDelimiter() {
+        var task = Downloads.builder()
+            .id(IdUtils.create())
+            .type(Downloads.class.getName())
+            .endpoint(Property.ofValue(this.storageEndpoint))
+            .connectionString(Property.ofValue(connectionString))
+            .container(Property.ofValue(this.container))
+            .prefix(Property.ofValue("/tasks/test/"))
+            .delimiter(Property.ofValue("/"))
+            .filter(Property.ofValue(ListInterface.Filter.DIRECTORY))
+            .build();
+
+        assertThrows(IllegalArgumentException.class, () -> task.run(runContext(task)));
     }
 }

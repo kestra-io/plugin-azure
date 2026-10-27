@@ -108,6 +108,12 @@ public class Downloads extends AbstractBlobStorageWithSas
 
     @Override
     public Output run(RunContext runContext) throws Exception {
+        var rFilter = runContext.render(this.filter).as(Filter.class).orElse(Filter.FILES);
+        var rDelimiter = runContext.render(this.delimiter).as(String.class).orElse(null);
+        if (rDelimiter != null && (rFilter == Filter.DIRECTORY || rFilter == Filter.BOTH)) {
+            throw new IllegalArgumentException("Downloads does not support '" + rFilter + "' filter with a delimiter because virtual directory prefixes cannot be downloaded.");
+        }
+
         List task = List.builder()
             .id(this.id)
             .type(List.class.getName())

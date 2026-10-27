@@ -120,7 +120,7 @@ public class Downloads extends AbstractBlobStorageWithSas
             .prefix(this.prefix)
             .delimiter(this.delimiter)
             .regexp(this.regexp)
-            .delimiter(this.delimiter)
+            .filter(this.filter)
             .maxFiles(this.maxFiles)
             .build();
         List.Output run = task.run(runContext);

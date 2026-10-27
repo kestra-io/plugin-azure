@@ -3,6 +3,7 @@ package io.kestra.plugin.azure.storage.blob;
 import io.kestra.core.junit.annotations.KestraTest;
 import io.kestra.core.models.property.Property;
 import io.kestra.core.runners.RunContextFactory;
+import io.kestra.plugin.azure.shared.storage.blob.abstracts.ListInterface;
 import io.kestra.plugin.azure.storage.blob.abstracts.ActionInterface;
 import jakarta.inject.Inject;
 import org.junit.jupiter.api.Test;
@@ -40,5 +41,28 @@ class DownloadsUnitTest {
             .orElse(ActionInterface.Action.NONE);
 
         assertThat(rAction, is(ActionInterface.Action.NONE));
+    }
+
+    @Test
+    void shouldDefaultFilterToFiles() throws Exception {
+        var task = Downloads.builder()
+            .container(Property.ofValue("my-container"))
+            .build();
+
+        var runContext = runContextFactory.of();
+        assertThat(task.getFilter(), notNullValue());
+        assertThat(runContext.render(task.getFilter()).as(ListInterface.Filter.class).orElseThrow(), is(ListInterface.Filter.FILES));
+    }
+
+    @Test
+    void shouldAllowCustomFilter() throws Exception {
+        var task = Downloads.builder()
+            .container(Property.ofValue("my-container"))
+            .filter(Property.ofValue(ListInterface.Filter.DIRECTORY))
+            .build();
+
+        var runContext = runContextFactory.of();
+        assertThat(task.getFilter(), notNullValue());
+        assertThat(runContext.render(task.getFilter()).as(ListInterface.Filter.class).orElseThrow(), is(ListInterface.Filter.DIRECTORY));
     }
 }

@@ -141,7 +141,6 @@ public class Downloads extends AbstractBlobStorageWithSas
         java.util.List<Blob> list = run
             .getBlobs()
             .stream()
-            .filter(object -> !BlobService.isDirectoryMarker(object))
             .map(throwFunction(object ->
             {
                 BlobClient blobClient = containerClient.getBlobClient(object.getName());

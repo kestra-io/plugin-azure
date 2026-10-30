@@ -75,7 +75,8 @@ public class BlobService {
             return List.of();
         }
 
-        var rMoveToName = runContext.render(moveTo.getName()).as(String.class).orElseThrow();
+        var rMoveToName = runContext.render(moveTo.getName()).as(String.class)
+            .orElseThrow(() -> new IllegalArgumentException("moveTo.name is required when action is MOVE"));
         var rPrefix = prefix != null ? runContext.render(prefix).as(String.class).orElse(null) : null;
 
         var destinationMap = new HashMap<String, Blob>();
@@ -114,6 +115,9 @@ public class BlobService {
                     if (!folderBase.isEmpty() && normName.startsWith(folderBase + "/")) {
                         subpath = normName.substring(folderBase.length() + 1);
                     }
+                } else if (normName.startsWith(normPrefix)) {
+                    // Top-level prefix stopping mid-name: the folder base is the container root.
+                    subpath = normName;
                 }
             }
         }
@@ -132,20 +136,10 @@ public class BlobService {
         List<Blob> blobsObjects,
         ActionInterface.Action action,
         Copy.CopyObject moveTo,
+        List<Pair<Blob, String>> moveTargets,
         RunContext runContext,
         AbstractConnectionInterface connectionInterface,
         AzureClientWithSasInterface blobStorageInterface) throws Exception {
-        archive(blobsObjects, action, moveTo, runContext, connectionInterface, blobStorageInterface, null);
-    }
-
-    public static void archive(
-        List<Blob> blobsObjects,
-        ActionInterface.Action action,
-        Copy.CopyObject moveTo,
-        RunContext runContext,
-        AbstractConnectionInterface connectionInterface,
-        AzureClientWithSasInterface blobStorageInterface,
-        Property<String> prefix) throws Exception {
         if (action == ActionInterface.Action.DELETE) {
             for (Blob object : blobsObjects) {
                 if (isDirectoryMarker(object)) {
@@ -165,9 +159,7 @@ public class BlobService {
                 delete.run(runContext);
             }
         } else if (action == ActionInterface.Action.MOVE) {
-            var targets = moveTargets(blobsObjects, action, moveTo, runContext, prefix);
-
-            for (var target : targets) {
+            for (var target : moveTargets) {
                 var object = target.getLeft();
                 var targetName = target.getRight();
                 var targetContainer = moveTo.getContainer() != null ? moveTo.getContainer() : Property.ofValue(object.getContainer());

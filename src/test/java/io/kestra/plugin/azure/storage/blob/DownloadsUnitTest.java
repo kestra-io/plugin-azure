@@ -1,5 +1,6 @@
 package io.kestra.plugin.azure.storage.blob;
 
+import com.github.tomakehurst.wiremock.WireMockServer;
 import io.kestra.core.junit.annotations.KestraTest;
 import io.kestra.core.models.property.Property;
 import io.kestra.core.runners.RunContextFactory;
@@ -9,8 +10,11 @@ import io.kestra.plugin.azure.storage.blob.services.BlobService;
 import jakarta.inject.Inject;
 import org.junit.jupiter.api.Test;
 
+import java.util.Base64;
 import java.util.List;
 
+import static com.github.tomakehurst.wiremock.client.WireMock.*;
+import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.options;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.is;
@@ -146,27 +150,60 @@ class DownloadsUnitTest {
     }
 
     @Test
-    void shouldPreserveCustomMoveToContainer() throws Exception {
+    void shouldMoveNestedBlobsToCustomMoveToContainer() throws Exception {
+        var wireMock = new WireMockServer(options().dynamicPort());
+        wireMock.start();
+        try {
+            wireMock.stubFor(put(urlPathMatching("/devstoreaccount1/custom-archive/.*")).willReturn(aResponse().withStatus(202).withHeader("x-ms-copy-status", "success").withHeader("x-ms-copy-id", "1")));
+            wireMock.stubFor(head(urlPathMatching("/devstoreaccount1/(raw|custom-archive)/.*")).willReturn(aResponse().withStatus(200).withHeader("Content-Length", "1").withHeader("x-ms-blob-type", "BlockBlob")));
+            wireMock.stubFor(delete(urlPathMatching("/devstoreaccount1/raw/.*")).willReturn(aResponse().withStatus(202)));
+
+            var runContext = runContextFactory.of();
+            var blobs = List.of(
+                Blob.builder().container("raw").name("inbound/a/x.csv").build(),
+                Blob.builder().container("raw").name("inbound/b/x.csv").build()
+            );
+            var moveTo = Copy.CopyObject.builder()
+                .container(Property.ofValue("custom-archive"))
+                .name(Property.ofValue("archive"))
+                .build();
+            var connection = Downloads.builder()
+                .endpoint(Property.ofValue(wireMock.baseUrl() + "/devstoreaccount1"))
+                .sharedKeyAccountName(Property.ofValue("devstoreaccount1"))
+                .sharedKeyAccountAccessKey(Property.ofValue(Base64.getEncoder().encodeToString("secret".getBytes())))
+                .build();
+
+            var targets = BlobService.moveTargets(blobs, ActionInterface.Action.MOVE, moveTo, runContext, Property.ofValue("inbound"));
+            BlobService.archive(blobs, ActionInterface.Action.MOVE, moveTo, targets, runContext, connection, connection);
+
+            wireMock.verify(1, putRequestedFor(urlPathEqualTo("/devstoreaccount1/custom-archive/archive%2Fa%2Fx.csv")));
+            wireMock.verify(1, putRequestedFor(urlPathEqualTo("/devstoreaccount1/custom-archive/archive%2Fb%2Fx.csv")));
+            wireMock.verify(1, deleteRequestedFor(urlPathEqualTo("/devstoreaccount1/raw/inbound%2Fa%2Fx.csv")));
+            wireMock.verify(1, deleteRequestedFor(urlPathEqualTo("/devstoreaccount1/raw/inbound%2Fb%2Fx.csv")));
+        } finally {
+            wireMock.stop();
+        }
+    }
+
+    @Test
+    void shouldPreserveSubdirectoriesWhenTopLevelPrefixStopsMidName() {
+        var dest1 = BlobService.destinationName("archive", "2026-01/report.csv", "2026");
+        var dest2 = BlobService.destinationName("archive", "2026-02/report.csv", "2026");
+
+        assertThat(dest1, is("archive/2026-01/report.csv"));
+        assertThat(dest2, is("archive/2026-02/report.csv"));
+    }
+
+    @Test
+    void shouldFailWithClearMessageWhenMoveToNameIsEmpty() {
         var runContext = runContextFactory.of();
-        var blobs = List.of(
-            Blob.builder().container("raw-container").name("folderA/report.csv").build()
+        var moveTo = Copy.CopyObject.builder().name(Property.<String>ofValue(null)).build();
+        var blobs = List.of(Blob.builder().container("raw").name("a.csv").build());
+
+        var ex = assertThrows(
+            IllegalArgumentException.class,
+            () -> BlobService.moveTargets(blobs, ActionInterface.Action.MOVE, moveTo, runContext, null)
         );
-
-        var moveTo = Copy.CopyObject.builder()
-            .container(Property.ofValue("custom-archive-container"))
-            .name(Property.ofValue("archive/"))
-            .build();
-
-        var targets = BlobService.moveTargets(
-            blobs,
-            ActionInterface.Action.MOVE,
-            moveTo,
-            runContext,
-            Property.ofValue("folderA/")
-        );
-
-        assertThat(targets.size(), is(1));
-        assertThat(targets.getFirst().getRight(), is("archive/report.csv"));
-        assertThat(runContext.render(moveTo.getContainer()).as(String.class).orElseThrow(), is("custom-archive-container"));
+        assertThat(ex.getMessage(), containsString("moveTo.name is required"));
     }
 }

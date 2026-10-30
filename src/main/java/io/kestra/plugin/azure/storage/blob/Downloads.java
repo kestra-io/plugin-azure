@@ -129,7 +129,7 @@ public class Downloads extends AbstractBlobStorageWithSas
             .as(ActionInterface.Action.class)
             .orElse(ActionInterface.Action.NONE);
 
-        BlobService.moveTargets(run.getBlobs(), rAction, this.moveTo, runContext, this.prefix);
+        var moveTargets = BlobService.moveTargets(run.getBlobs(), rAction, this.moveTo, runContext, this.prefix);
 
         BlobServiceClient client = this.client(runContext);
         BlobContainerClient containerClient = client.getBlobContainerClient(runContext.render(this.container).as(String.class).orElse(null));
@@ -162,10 +162,10 @@ public class Downloads extends AbstractBlobStorageWithSas
             run.getBlobs(),
             rAction,
             this.moveTo,
+            moveTargets,
             runContext,
             this,
-            this,
-            this.prefix
+            this
         );
 
         return Output

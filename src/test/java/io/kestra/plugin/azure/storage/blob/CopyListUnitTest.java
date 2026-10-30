@@ -21,6 +21,8 @@ class CopyListUnitTest {
     @Test
     void shouldRejectConcurrentAboveMax() {
         var task = CopyList.builder()
+            .id(IdUtils.create())
+            .type(CopyList.class.getName())
             .endpoint(Property.ofValue("http://localhost:10000/devstoreaccount1"))
             .connectionString(Property.ofValue("UseDevelopmentStorage=true"))
             .container(Property.ofValue("src"))
@@ -65,6 +67,51 @@ class CopyListUnitTest {
     }
 
     @Test
+    void shouldRejectSameContainerWithEmptyDestinationPrefix() {
+        var task = base(CopyListDestination.builder()
+            .container(Property.ofValue("src"))
+            .prefix(Property.ofValue(""))
+            .build()
+        ).prefix(null).delete(Property.ofValue(true)).build();
+
+        var e = assertThrows(IllegalArgumentException.class, () -> task.run(runContextFactory.of()));
+        assertThat(e.getMessage(), containsString("same blobs"));
+    }
+
+    @Test
+    void shouldRejectDestinationNestedInSourcePrefix() {
+        var task = base(CopyListDestination.builder()
+            .container(Property.ofValue("src"))
+            .prefix(Property.ofValue("a/processed/"))
+            .build()
+        ).delete(Property.ofValue(true)).build();
+
+        var e = assertThrows(IllegalArgumentException.class, () -> task.run(runContextFactory.of()));
+        assertThat(e.getMessage(), containsString("inside the listed source range"));
+    }
+
+    @Test
+    void shouldRejectConnectionStringWithoutAccountKey() {
+        var task = base(CopyListDestination.builder().container(Property.ofValue("dst")).build())
+            .connectionString(Property.ofValue("BlobEndpoint=http://localhost:10000/devstoreaccount1;SharedAccessSignature=sv=2022-11-02&sig=abc"))
+            .build();
+
+        var e = assertThrows(IllegalArgumentException.class, () -> task.run(runContextFactory.of()));
+        assertThat(e.getMessage(), containsString("AccountKey"));
+    }
+
+    @Test
+    void shouldRejectSharedKeyWithoutAccountName() {
+        var task = base(CopyListDestination.builder().container(Property.ofValue("dst")).build())
+            .connectionString(null)
+            .sharedKeyAccountAccessKey(Property.ofValue("a2V5"))
+            .build();
+
+        var e = assertThrows(IllegalArgumentException.class, () -> task.run(runContextFactory.of()));
+        assertThat(e.getMessage(), containsString("sharedKeyAccountName"));
+    }
+
+    @Test
     void shouldRejectSasTokenAuth() {
         var task = CopyList.builder()
             .id(IdUtils.create())
@@ -93,5 +140,6 @@ class CopyListUnitTest {
         assertThat(CopyList.destinationName("a/b/c.yml", null, "z/"), is("z/a/b/c.yml"));
         assertThat(CopyList.destinationName("a/b/c.yml", "x/", "z/"), is("z/a/b/c.yml"));
         assertThat(CopyList.destinationName("a/b/c.yml", "a/", null), is("a/b/c.yml"));
+        assertThat(CopyList.destinationName("a/b/c.yml", null, null), is("a/b/c.yml"));
     }
 }

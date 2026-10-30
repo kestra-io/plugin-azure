@@ -2,6 +2,7 @@ package io.kestra.plugin.azure.storage.blob;
 
 import io.kestra.core.junit.annotations.KestraTest;
 import io.kestra.core.models.property.Property;
+import io.kestra.core.models.validations.ModelValidator;
 import io.kestra.core.runners.RunContextFactory;
 import io.kestra.core.utils.IdUtils;
 import io.kestra.plugin.azure.storage.blob.models.CopyListDestination;
@@ -17,6 +18,35 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 class CopyListUnitTest {
     @Inject
     private RunContextFactory runContextFactory;
+
+    @Inject
+    private ModelValidator modelValidator;
+
+    @Test
+    void shouldPassBeanValidationWithoutConcurrent() {
+        var task = base(CopyListDestination.builder().container(Property.ofValue("dst")).build()).build();
+
+        assertThat(modelValidator.isValid(task).isPresent(), is(false));
+    }
+
+    @Test
+    void shouldPassBeanValidationWithValidConcurrent() {
+        var task = base(CopyListDestination.builder().container(Property.ofValue("dst")).build())
+            .concurrent(Property.ofValue(8))
+            .build();
+
+        assertThat(modelValidator.isValid(task).isPresent(), is(false));
+    }
+
+    @Test
+    void shouldRejectOutOfRangeConcurrentInBeanValidation() {
+        var to = CopyListDestination.builder().container(Property.ofValue("dst")).build();
+        var low = base(to).concurrent(Property.ofValue(1)).build();
+        var high = base(to).concurrent(Property.ofValue(100)).build();
+
+        assertThat(modelValidator.isValid(low).isPresent(), is(true));
+        assertThat(modelValidator.isValid(high).isPresent(), is(true));
+    }
 
     @Test
     void shouldRejectConcurrentAboveMax() {

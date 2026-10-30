@@ -105,14 +105,12 @@ public class CopyList extends AbstractBlobStorageWithSas implements RunnableTask
     @PluginProperty(group = "advanced")
     private Property<Boolean> delete = Property.ofValue(false);
 
-    @Min(2)
-    @Max(64)
     @Schema(
         title = "Parallel copies",
         description = "Maximum number of concurrent copy operations, between 2 and 64. Blobs are copied sequentially when not set."
     )
     @PluginProperty(group = "execution")
-    private Property<Integer> concurrent;
+    private Property<@Min(2) @Max(64) Integer> concurrent;
 
     @Override
     public Output run(RunContext runContext) throws Exception {

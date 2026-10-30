@@ -1,9 +1,9 @@
 plugins {
-    id 'io.kestra.gradle.repository-conventions' version '1.2.11'
-    id "io.kestra.gradle.plugin-doc-lint" version '1.2.11'
-    id 'io.kestra.gradle.spotless-conventions' version '1.2.11'
+    id 'io.kestra.gradle.repository-conventions' version '1.2.12'
+    id "io.kestra.gradle.plugin-doc-lint" version '1.2.12'
+    id 'io.kestra.gradle.spotless-conventions' version '1.2.12'
     id "com.vanniktech.maven.publish" version "0.37.0"
-    id "io.kestra.gradle.inject-bom-versions" version '1.2.11'
+    id "io.kestra.gradle.inject-bom-versions" version '1.2.12'
     id 'java-library'
     id "idea"
     id 'jacoco'
@@ -92,7 +92,7 @@ dependencies {
     implementation("com.azure:azure-ai-agents-persistent:1.0.0-beta.2", kestraProvidedJackson)
 
     // Shared kernel library
-    implementation 'io.kestra.plugin:plugin-azure-lib:1.1.11'
+    implementation 'io.kestra.plugin:plugin-azure-lib:1.2.1'
 
     // Azure HorizonDB (PostgreSQL wire protocol + Entra ID auth extension)
     implementation "org.postgresql:postgresql:42.7.13"

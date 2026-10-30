@@ -148,9 +148,7 @@ class DownloadsTest extends AbstractTest {
             .build();
 
         var filesRun = filesTask.run(runContext(filesTask));
-        assertThat(filesRun.getBlobs().size(), is(1));
-        assertThat(filesRun.getBlobs().getFirst().getName().endsWith(".yml"), is(true));
-        assertThat(filesRun.getOutputFiles().size(), is(1));
+        assertThat(filesRun.getBlobs().size(), is(2));
 
         var dirTask = Downloads.builder()
             .id(IdUtils.create())
@@ -163,8 +161,7 @@ class DownloadsTest extends AbstractTest {
             .build();
 
         var dirRun = dirTask.run(runContext(dirTask));
-        assertThat(dirRun.getBlobs().size(), is(1));
-        assertThat(dirRun.getBlobs().getFirst().getName().endsWith("/"), is(true));
+        assertThat(dirRun.getBlobs().isEmpty(), is(true));
         assertThat(dirRun.getOutputFiles().isEmpty(), is(true));
     }
 

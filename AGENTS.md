@@ -100,6 +100,7 @@ Infrastructure dependencies (Docker Compose services):
 - `io.kestra.plugin.azure.storage.adls.update.Lease`
 - `io.kestra.plugin.azure.storage.adls.update.SetAccessControl`
 - `io.kestra.plugin.azure.storage.blob.Copy`
+- `io.kestra.plugin.azure.storage.blob.CopyList`
 - `io.kestra.plugin.azure.storage.blob.Delete`
 - `io.kestra.plugin.azure.storage.blob.DeleteList`
 - `io.kestra.plugin.azure.storage.blob.Download`

@@ -24,6 +24,7 @@ import io.kestra.plugin.azure.shared.storage.blob.services.BlobService;
 import io.kestra.plugin.azure.storage.blob.models.CopyListDestination;
 
 import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
@@ -88,6 +89,7 @@ public class CopyList extends AbstractBlobStorageWithSas implements RunnableTask
     private Property<Filter> filter = Property.ofValue(Filter.FILES);
 
     @NotNull
+    @Valid
     @Schema(title = "Destination configuration (container, prefix)")
     @PluginProperty(group = "destination")
     private CopyListDestination to;
@@ -111,11 +113,10 @@ public class CopyList extends AbstractBlobStorageWithSas implements RunnableTask
 
     @Override
     public Output run(RunContext runContext) throws Exception {
-        var client = this.client(runContext);
-
         var rFromContainer = runContext.render(this.container).as(String.class).orElseThrow();
         var rFromPrefix = runContext.render(this.prefix).as(String.class).orElse(null);
-        var rToContainer = runContext.render(this.to.getContainer()).as(String.class).orElseThrow();
+        var rToContainer = runContext.render(this.to.getContainer()).as(String.class)
+            .orElseThrow(() -> new IllegalArgumentException("`to.container` is required: set the destination container"));
         var rToPrefix = runContext.render(this.to.getPrefix()).as(String.class).orElse(null);
         var rDelete = runContext.render(this.delete).as(Boolean.class).orElse(false);
         var rConcurrent = runContext.render(this.concurrent).as(Integer.class).orElse(null);
@@ -124,6 +125,22 @@ public class CopyList extends AbstractBlobStorageWithSas implements RunnableTask
             throw new IllegalArgumentException("`concurrent` must be between 2 and 64, got " + rConcurrent);
         }
 
+        if (rToContainer.equals(rFromContainer) && (rToPrefix == null || rToPrefix.equals(rFromPrefix))) {
+            throw new IllegalArgumentException(
+                "Source and destination resolve to the same blobs; set a different `to.container` or `to.prefix`"
+            );
+        }
+
+        // Copy needs a read SAS for the source, which can only be signed with a shared key
+        var hasSharedKey = runContext.render(this.getConnectionString()).as(String.class).isPresent()
+            || runContext.render(this.getSharedKeyAccountAccessKey()).as(String.class).isPresent();
+        if (!hasSharedKey) {
+            throw new IllegalArgumentException(
+                "CopyList requires `connectionString` or `sharedKeyAccountName` with `sharedKeyAccountAccessKey` to sign a source read SAS; `sasToken` and default credentials are not supported"
+            );
+        }
+
+        var client = this.client(runContext);
         var sourceContainerClient = client.getBlobContainerClient(rFromContainer);
         var destContainerClient = client.getBlobContainerClient(rToContainer);
 
@@ -155,6 +172,15 @@ public class CopyList extends AbstractBlobStorageWithSas implements RunnableTask
             .build();
     }
 
+    static String destinationName(String name, String fromPrefix, String toPrefix) {
+        if (toPrefix == null) {
+            return name;
+        }
+        return fromPrefix != null && name.startsWith(fromPrefix)
+            ? toPrefix + name.substring(fromPrefix.length())
+            : toPrefix + name;
+    }
+
     private static long copy(
         Blob blob,
         BlobContainerClient source,
@@ -163,12 +189,7 @@ public class CopyList extends AbstractBlobStorageWithSas implements RunnableTask
         String toPrefix,
         boolean deleteSource
     ) {
-        var destName = blob.getName();
-        if (toPrefix != null) {
-            destName = fromPrefix != null && destName.startsWith(fromPrefix)
-                ? toPrefix + destName.substring(fromPrefix.length())
-                : toPrefix + destName;
-        }
+        var destName = destinationName(blob.getName(), fromPrefix, toPrefix);
 
         var sourceBlob = source.getBlobClient(blob.getName());
         var destBlob = dest.getBlobClient(destName);

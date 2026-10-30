@@ -15,7 +15,7 @@ import static org.hamcrest.Matchers.is;
 class CopyListTest extends AbstractTest {
     private CopyList.CopyListBuilder<?, ?> task(String prefix, String destPrefix, boolean delete) {
         return CopyList.builder()
-            .id(CopyListTest.class.getSimpleName())
+            .id(IdUtils.create())
             .type(CopyList.class.getName())
             .endpoint(Property.ofValue(this.storageEndpoint))
             .connectionString(Property.ofValue(connectionString))

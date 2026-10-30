@@ -1,9 +1,13 @@
 package io.kestra.plugin.azure.storage.blob;
 
-import com.azure.storage.blob.BlobClient;
+import java.time.OffsetDateTime;
+
+import com.azure.core.util.polling.LongRunningOperationStatus;
 import com.azure.storage.blob.BlobContainerClient;
-import com.azure.storage.blob.BlobServiceClient;
-import com.azure.storage.blob.models.BlobItem;
+import com.azure.storage.blob.models.BlobStorageException;
+import com.azure.storage.blob.sas.BlobSasPermission;
+import com.azure.storage.blob.sas.BlobServiceSasSignatureValues;
+
 import io.kestra.core.models.annotations.Example;
 import io.kestra.core.models.annotations.Metric;
 import io.kestra.core.models.annotations.Plugin;
@@ -12,20 +16,22 @@ import io.kestra.core.models.executions.metrics.Counter;
 import io.kestra.core.models.property.Property;
 import io.kestra.core.models.tasks.RunnableTask;
 import io.kestra.core.runners.RunContext;
-import io.kestra.plugin.azure.storage.blob.models.Blob;
+import io.kestra.plugin.azure.shared.storage.blob.abstracts.AbstractBlobStorageContainerInterface;
+import io.kestra.plugin.azure.shared.storage.blob.abstracts.AbstractBlobStorageWithSas;
+import io.kestra.plugin.azure.shared.storage.blob.abstracts.ListInterface;
+import io.kestra.plugin.azure.shared.storage.blob.models.Blob;
+import io.kestra.plugin.azure.shared.storage.blob.services.BlobService;
 import io.kestra.plugin.azure.storage.blob.models.CopyListDestination;
-import io.kestra.plugin.azure.storage.blob.models.CopyListSource;
+
 import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
+import org.apache.commons.lang3.tuple.Pair;
 import reactor.core.publisher.Flux;
 import reactor.core.scheduler.Schedulers;
-
-import java.util.List;
-import java.util.regex.Pattern;
-import java.util.stream.Collectors;
 
 @SuperBuilder
 @ToString
@@ -40,14 +46,14 @@ import java.util.stream.Collectors;
             code = """
                 id: azure_storage_blob_copy_list
                 namespace: company.team
+
                 tasks:
                   - id: copy_blobs
                     type: io.kestra.plugin.azure.storage.blob.CopyList
                     endpoint: "https://yourblob.blob.core.windows.net"
-                    connectionString: "DefaultEndpointsProtocol=...=="
-                    from:
-                      container: "staging"
-                      prefix: "daily-export/"
+                    connectionString: "{{ secret('AZURE_STORAGE_CONNECTION_STRING') }}"
+                    container: "staging"
+                    prefix: "daily-export/"
                     to:
                       container: "production"
                       prefix: "daily-export/"
@@ -62,14 +68,24 @@ import java.util.stream.Collectors;
 )
 @Schema(
     title = "Copy multiple Azure Blobs",
-    description = "Lists blobs matching prefix/regex filters and copies them server-side to a destination container/prefix."
+    description = "Lists blobs matching the prefix, regexp and filter, and copies them server-side to a destination container and prefix."
 )
-public class CopyList extends AbstractBlobStorageWithSas implements RunnableTask<CopyList.Output> {
+public class CopyList extends AbstractBlobStorageWithSas implements RunnableTask<CopyList.Output>, ListInterface, AbstractBlobStorageContainerInterface {
+    @PluginProperty(group = "main")
+    private Property<String> container;
 
-    @NotNull
-    @Schema(title = "Source configuration (container, prefix, regex filter)")
     @PluginProperty(group = "source")
-    private CopyListSource from;
+    private Property<String> prefix;
+
+    @PluginProperty(group = "processing")
+    protected Property<String> regexp;
+
+    @PluginProperty(group = "processing")
+    protected Property<String> delimiter;
+
+    @Builder.Default
+    @PluginProperty(group = "processing")
+    private Property<Filter> filter = Property.ofValue(Filter.FILES);
 
     @NotNull
     @Schema(title = "Destination configuration (container, prefix)")
@@ -85,78 +101,109 @@ public class CopyList extends AbstractBlobStorageWithSas implements RunnableTask
     private Property<Boolean> delete = Property.ofValue(false);
 
     @Min(2)
-    @Schema(title = "Parallel copies", description = "Max concurrent copy operations.")
+    @Max(64)
+    @Schema(
+        title = "Parallel copies",
+        description = "Maximum number of concurrent copy operations, between 2 and 64. Blobs are copied sequentially when not set."
+    )
     @PluginProperty(group = "execution")
-    private Integer concurrent;
+    private Property<Integer> concurrent;
 
     @Override
     public Output run(RunContext runContext) throws Exception {
-        BlobServiceClient client = this.client(runContext);
-        
-        String fromContainer = runContext.render(this.from.getContainer());
-        String fromPrefix = runContext.render(this.from.getPrefix());
-        String fromRegexp = runContext.render(this.from.getRegexp());
-        
-        String toContainer = runContext.render(this.to.getContainer());
-        String toPrefix = runContext.render(this.to.getPrefix());
-        boolean deleteSource = runContext.render(this.delete).as(Boolean.class).orElse(false);
-        int concurrency = this.concurrent != null ? this.concurrent : 1;
+        var client = this.client(runContext);
 
-        BlobContainerClient sourceContainerClient = client.getBlobContainerClient(fromContainer);
-        BlobContainerClient destContainerClient = client.getBlobContainerClient(toContainer);
+        var rFromContainer = runContext.render(this.container).as(String.class).orElseThrow();
+        var rFromPrefix = runContext.render(this.prefix).as(String.class).orElse(null);
+        var rToContainer = runContext.render(this.to.getContainer()).as(String.class).orElseThrow();
+        var rToPrefix = runContext.render(this.to.getPrefix()).as(String.class).orElse(null);
+        var rDelete = runContext.render(this.delete).as(Boolean.class).orElse(false);
+        var rConcurrent = runContext.render(this.concurrent).as(Integer.class).orElse(null);
 
-        Pattern pattern = fromRegexp != null ? Pattern.compile(fromRegexp) : null;
+        if (rConcurrent != null && (rConcurrent < 2 || rConcurrent > 64)) {
+            throw new IllegalArgumentException("`concurrent` must be between 2 and 64, got " + rConcurrent);
+        }
 
-        List<Blob> copiedBlobs = Flux.fromIterable(sourceContainerClient.listBlobsByHierarchy(null, null, fromPrefix))
-            .filter(BlobItem::isPrefix) // Exclude directories if any
-            .map(BlobItem::getName)
-            .filter(name -> pattern == null || pattern.matcher(name).matches())
-            .parallel(concurrency)
-            .runOn(Schedulers.boundedElastic())
-            .map(blobName -> {
-                try {
-                    BlobClient sourceBlob = sourceContainerClient.getBlobClient(blobName);
-                    
-                    // Determine new blob name
-                    String destBlobName = blobName;
-                    if (fromPrefix != null && toPrefix != null && blobName.startsWith(fromPrefix)) {
-                        destBlobName = toPrefix + blobName.substring(fromPrefix.length());
-                    } else if (toPrefix != null) {
-                        destBlobName = toPrefix + blobName;
-                    }
+        var sourceContainerClient = client.getBlobContainerClient(rFromContainer);
+        var destContainerClient = client.getBlobContainerClient(rToContainer);
 
-                    BlobClient destBlob = destContainerClient.getBlobClient(destBlobName);
+        var blobs = Flux.fromIterable(BlobService.list(runContext, sourceContainerClient, this));
 
-                    // Initiate server-side copy
-                    destBlob.beginCopy(sourceBlob.getBlobUrl(), null).waitForCompletion();
+        Flux<Long> copied;
+        if (rConcurrent != null) {
+            copied = blobs
+                .parallel(rConcurrent)
+                .runOn(Schedulers.boundedElastic())
+                .map(blob -> copy(blob, sourceContainerClient, destContainerClient, rFromPrefix, rToPrefix, rDelete))
+                .sequential();
+        } else {
+            copied = blobs.map(blob -> copy(blob, sourceContainerClient, destContainerClient, rFromPrefix, rToPrefix, rDelete));
+        }
 
-                    long size = sourceBlob.getProperties().getBlobSize();
-
-                    // Delete if requested
-                    if (deleteSource) {
-                        sourceBlob.delete();
-                    }
-
-                    return Blob.of(destBlob, destBlob.getProperties(), destContainerClient.getBlobContainerName());
-                } catch (Exception e) {
-                    throw new RuntimeException("Failed to copy blob: " + blobName, e);
-                }
-            })
-            .sequential()
-            .collectList()
+        var result = copied
+            .reduce(Pair.of(0L, 0L), (pair, size) -> Pair.of(pair.getLeft() + 1, pair.getRight() + size))
             .block();
 
-        long count = copiedBlobs != null ? copiedBlobs.size() : 0;
-        long size = copiedBlobs != null ? copiedBlobs.stream().mapToLong(Blob::getSize).sum() : 0;
+        runContext.metric(Counter.of("azure.blob.copied.count", result.getLeft()));
+        runContext.metric(Counter.of("azure.blob.copied.size", result.getRight()));
 
-        runContext.metric(Counter.of("azure.blob.copied.count", count));
-        runContext.metric(Counter.of("azure.blob.copied.size", size));
+        runContext.logger().info("Copied {} blobs for {} bytes", result.getLeft(), result.getRight());
 
         return Output.builder()
-            .count(count)
-            .size(size)
-            .blobs(copiedBlobs)
+            .count(result.getLeft())
+            .size(result.getRight())
             .build();
+    }
+
+    private static long copy(
+        Blob blob,
+        BlobContainerClient source,
+        BlobContainerClient dest,
+        String fromPrefix,
+        String toPrefix,
+        boolean deleteSource
+    ) {
+        var destName = blob.getName();
+        if (toPrefix != null) {
+            destName = fromPrefix != null && destName.startsWith(fromPrefix)
+                ? toPrefix + destName.substring(fromPrefix.length())
+                : toPrefix + destName;
+        }
+
+        var sourceBlob = source.getBlobClient(blob.getName());
+        var destBlob = dest.getBlobClient(destName);
+
+        // Short-lived read SAS so the destination request is allowed to read a private source
+        var values = new BlobServiceSasSignatureValues(
+            OffsetDateTime.now().plusMinutes(15),
+            new BlobSasPermission().setReadPermission(true)
+        ).setStartTime(OffsetDateTime.now());
+        var sourceUrl = sourceBlob.getBlobUrl() + "?" + sourceBlob.generateSas(values);
+
+        try {
+            var response = destBlob.beginCopy(sourceUrl, null).waitForCompletion();
+
+            if (response.getStatus() != LongRunningOperationStatus.SUCCESSFULLY_COMPLETED) {
+                throw new IllegalStateException(
+                    "Copy of blob '" + blob.getName() + "' from container '" + source.getBlobContainerName() +
+                        "' to '" + dest.getBlobContainerName() + "/" + destName + "' ended with status " + response.getStatus() +
+                        ", the source was not deleted"
+                );
+            }
+        } catch (BlobStorageException e) {
+            throw new IllegalStateException(
+                "Failed to copy blob '" + blob.getName() + "' from container '" + source.getBlobContainerName() +
+                    "' to '" + dest.getBlobContainerName() + "/" + destName + "' (Azure error code: " + e.getErrorCode() +
+                    "). Check that the credentials can read the source and write the destination.",
+                e
+            );
+        }
+
+        if (deleteSource) {
+            sourceBlob.delete();
+        }
+
+        return blob.getSize() == null ? 0L : blob.getSize();
     }
 
     @Builder
@@ -167,8 +214,5 @@ public class CopyList extends AbstractBlobStorageWithSas implements RunnableTask
 
         @Schema(title = "Total size in bytes of copied blobs")
         private final long size;
-
-        @Schema(title = "List of copied blobs output info")
-        private final List<Blob> blobs;
     }
 }

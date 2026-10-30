@@ -1,68 +1,79 @@
 package io.kestra.plugin.azure.storage.blob;
 
-import com.azure.storage.blob.BlobContainerClient;
-import io.kestra.core.models.property.Property;
-import io.kestra.core.runners.RunContext;
-import io.kestra.core.runners.RunContextFactory;
-import io.kestra.core.utils.IdUtils;
-import io.kestra.plugin.azure.AzureTest;
-import io.kestra.plugin.azure.storage.blob.models.CopyListDestination;
-import io.kestra.plugin.azure.storage.blob.models.CopyListSource;
-import jakarta.inject.Inject;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 
-import java.io.ByteArrayInputStream;
-import java.nio.charset.StandardCharsets;
+import io.kestra.core.models.property.Property;
+import io.kestra.core.utils.IdUtils;
+import io.kestra.plugin.azure.storage.blob.models.CopyListDestination;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
-class CopyListTest extends AzureTest {
-    @Inject
-    private RunContextFactory runContextFactory;
+// Floci Azure returns HTTP 501 for blob copy, same gate as CopyTest
+@EnabledIfEnvironmentVariable(named = "AZURE_CONNECTION_STRING", matches = ".+", disabledReason = "Floci Azure returns HTTP 501 for blob copy")
+class CopyListTest extends AbstractTest {
+    private CopyList.CopyListBuilder<?, ?> task(String prefix, String destPrefix, boolean delete) {
+        return CopyList.builder()
+            .id(CopyListTest.class.getSimpleName())
+            .type(CopyList.class.getName())
+            .endpoint(Property.ofValue(this.storageEndpoint))
+            .connectionString(Property.ofValue(connectionString))
+            .container(Property.ofValue(this.container))
+            .prefix(Property.ofValue(prefix))
+            .to(CopyListDestination.builder()
+                .container(Property.ofValue(this.container))
+                .prefix(Property.ofValue(destPrefix))
+                .build())
+            .delete(Property.ofValue(delete));
+    }
+
+    private int count(String prefix) throws Exception {
+        var list = list().prefix(Property.ofValue(prefix)).build();
+        return list.run(runContext(list)).getBlobs().size();
+    }
 
     @Test
-    void testCopyList() throws Exception {
-        RunContext runContext = runContextFactory.of();
-        
-        String sourceContainer = IdUtils.create().toLowerCase();
-        String destContainer = IdUtils.create().toLowerCase();
+    void copy() throws Exception {
+        var id = IdUtils.create();
+        upload("tasks/" + id + "/src");
+        upload("tasks/" + id + "/src");
 
-        // Create containers
-        BlobContainerClient sourceClient = storageClient.createBlobContainer(sourceContainer);
-        BlobContainerClient destClient = storageClient.createBlobContainer(destContainer);
+        var task = task("tasks/" + id + "/src/", "tasks/" + id + "/dst/", false).build();
+        var output = task.run(runContext(task));
 
-        // Upload test files
-        byte[] content = "Hello Kestra".getBytes(StandardCharsets.UTF_8);
-        sourceClient.getBlobClient("inbound/file1.txt").upload(new ByteArrayInputStream(content), content.length);
-        sourceClient.getBlobClient("inbound/file2.txt").upload(new ByteArrayInputStream(content), content.length);
-
-        // Configure task
-        CopyList task = CopyList.builder()
-            .endpoint(this.endpoint)
-            .connectionString(this.connectionString)
-            .from(CopyListSource.builder()
-                .container(sourceContainer)
-                .prefix("inbound/")
-                .build())
-            .to(CopyListDestination.builder()
-                .container(destContainer)
-                .prefix("archive/")
-                .build())
-            .delete(Property.ofValue(true)) // Test MOVE operation
-            .build();
-
-        CopyList.Output output = task.run(runContext);
-
-        // Assertions
         assertThat(output.getCount(), is(2L));
-        
-        // Assert files exist in destination
-        assertTrue(destClient.getBlobClient("archive/file1.txt").exists());
-        assertTrue(destClient.getBlobClient("archive/file2.txt").exists());
+        assertThat(count("tasks/" + id + "/dst/"), is(2));
+        assertThat(count("tasks/" + id + "/src/"), is(2));
+    }
 
-        // Assert files were deleted from source (since delete = true)
-        assertTrue(!sourceClient.getBlobClient("inbound/file1.txt").exists());
+    @Test
+    void move() throws Exception {
+        var id = IdUtils.create();
+        upload("tasks/" + id + "/src");
+        upload("tasks/" + id + "/src");
+
+        var task = task("tasks/" + id + "/src/", "tasks/" + id + "/dst/", true).concurrent(Property.ofValue(2)).build();
+        var output = task.run(runContext(task));
+
+        assertThat(output.getCount(), is(2L));
+        assertThat(count("tasks/" + id + "/dst/"), is(2));
+        assertThat(count("tasks/" + id + "/src/"), is(0));
+    }
+
+    @Test
+    void regexpAndNestedPrefix() throws Exception {
+        var id = IdUtils.create();
+        upload("tasks/" + id + "/src/a/b");
+        upload("tasks/" + id + "/src/c");
+
+        var task = task("tasks/" + id + "/src/", "tasks/" + id + "/dst/", false)
+            .regexp(Property.ofValue(".*/a/b/.*\\.yml"))
+            .build();
+        var output = task.run(runContext(task));
+
+        assertThat(output.getCount(), is(1L));
+        assertThat(count("tasks/" + id + "/dst/a/b/"), is(1));
+        assertThat(count("tasks/" + id + "/dst/c/"), is(0));
     }
 }

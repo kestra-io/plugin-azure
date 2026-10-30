@@ -3,6 +3,8 @@ package io.kestra.plugin.azure.storage.blob.services;
 import java.io.File;
 import java.io.IOException;
 import java.net.URI;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 
 import org.apache.commons.io.FilenameUtils;
@@ -54,15 +56,95 @@ public class BlobService {
         return Pair.of(blobProperties, runContext.storage().putFile(tempFile));
     }
 
+    public static boolean isDirectoryMarker(Blob blob) {
+        return blob != null && isDirectoryMarker(blob.getName());
+    }
+
+    public static boolean isDirectoryMarker(String name) {
+        return name != null && name.endsWith("/");
+    }
+
+    public static List<Pair<Blob, String>> moveTargets(
+        List<Blob> blobsObjects,
+        ActionInterface.Action action,
+        Copy.CopyObject moveTo,
+        RunContext runContext,
+        Property<String> prefix
+    ) throws IllegalVariableEvaluationException {
+        if (action != ActionInterface.Action.MOVE || moveTo == null) {
+            return List.of();
+        }
+
+        var rMoveToName = runContext.render(moveTo.getName()).as(String.class)
+            .orElseThrow(() -> new IllegalArgumentException("moveTo.name is required when action is MOVE"));
+        var rPrefix = prefix != null ? runContext.render(prefix).as(String.class).orElse(null) : null;
+
+        var destinationMap = new HashMap<String, Blob>();
+        var targets = new ArrayList<Pair<Blob, String>>();
+
+        for (var object : blobsObjects) {
+            if (isDirectoryMarker(object)) {
+                continue;
+            }
+            var targetName = destinationName(rMoveToName, object.getName(), rPrefix);
+            var existing = destinationMap.put(targetName, object);
+            if (existing != null) {
+                throw new IllegalStateException(
+                    "Cannot move blobs to '%s': multiple source blobs would overwrite the same destination name: '%s' and '%s'. Set a `prefix` that covers both folders, or narrow the listing with `prefix` or `regexp`, so each blob maps to its own name under `moveTo.name`."
+                        .formatted(targetName, existing.getName(), object.getName())
+                );
+            }
+            targets.add(Pair.of(object, targetName));
+        }
+
+        return targets;
+    }
+
+    public static String destinationName(String moveToName, String objectName, String prefix) {
+        var destPrefix = StringUtils.stripEnd(moveToName, "/");
+        var subpath = "";
+
+        if (prefix != null) {
+            var normPrefix = StringUtils.strip(prefix, "/");
+            var normName = StringUtils.stripStart(objectName, "/");
+            if (!normPrefix.isEmpty()) {
+                if (normName.startsWith(normPrefix + "/")) {
+                    subpath = normName.substring(normPrefix.length() + 1);
+                } else if (normPrefix.contains("/")) {
+                    var folderBase = normPrefix.substring(0, normPrefix.lastIndexOf('/'));
+                    if (!folderBase.isEmpty() && normName.startsWith(folderBase + "/")) {
+                        subpath = normName.substring(folderBase.length() + 1);
+                    }
+                } else if (normName.startsWith(normPrefix)) {
+                    // Top-level prefix stopping mid-name: the folder base is the container root.
+                    subpath = normName;
+                }
+            }
+        }
+
+        if (subpath.isEmpty()) {
+            subpath = FilenameUtils.getName(objectName);
+        }
+
+        if (subpath.isEmpty()) {
+            return destPrefix;
+        }
+        return destPrefix.isEmpty() ? subpath : destPrefix + "/" + subpath;
+    }
+
     public static void archive(
         List<Blob> blobsObjects,
         ActionInterface.Action action,
         Copy.CopyObject moveTo,
+        List<Pair<Blob, String>> moveTargets,
         RunContext runContext,
         AbstractConnectionInterface connectionInterface,
         AzureClientWithSasInterface blobStorageInterface) throws Exception {
         if (action == ActionInterface.Action.DELETE) {
             for (Blob object : blobsObjects) {
+                if (isDirectoryMarker(object)) {
+                    continue;
+                }
                 Delete delete = Delete.builder()
                     .id("archive")
                     .type(Delete.class.getName())
@@ -77,7 +159,11 @@ public class BlobService {
                 delete.run(runContext);
             }
         } else if (action == ActionInterface.Action.MOVE) {
-            for (Blob object : blobsObjects) {
+            for (var target : moveTargets) {
+                var object = target.getLeft();
+                var targetName = target.getRight();
+                var targetContainer = moveTo.getContainer() != null ? moveTo.getContainer() : Property.ofValue(object.getContainer());
+
                 Copy copy = Copy.builder()
                     .id("archive")
                     .type(Copy.class.getName())
@@ -94,13 +180,8 @@ public class BlobService {
                     )
                     .to(
                         moveTo.toBuilder()
-                            .container(Property.ofValue(object.getContainer()))
-                            .name(
-                                Property.ofValue(
-                                    StringUtils.stripEnd(runContext.render(moveTo.getName()).as(String.class).orElseThrow() + "/", "/")
-                                        + "/" + FilenameUtils.getName(object.getName())
-                                )
-                            )
+                            .container(targetContainer)
+                            .name(Property.ofValue(targetName))
                             .build()
                     )
                     .delete(Property.ofValue(true))

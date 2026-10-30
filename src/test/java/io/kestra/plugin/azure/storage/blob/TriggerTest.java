@@ -18,6 +18,7 @@ import io.kestra.plugin.azure.storage.blob.abstracts.ActionInterface;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 @KestraTest
 class TriggerTest extends AbstractTest {
@@ -57,6 +58,43 @@ class TriggerTest extends AbstractTest {
             .getBlobs()
             .size();
         assertThat(remainingFilesOnBucket, is(0));
+    }
+
+    @Test
+    void moveCollisionFailsBeforeBlobsAreMarkedSeen() throws Exception {
+        var id = IdUtils.create();
+
+        for (var folder : new String[] { "a", "b" }) {
+            var uploadTask = Upload.builder()
+                .id(IdUtils.create())
+                .type(Upload.class.getName())
+                .endpoint(Property.ofValue(storageEndpoint))
+                .connectionString(Property.ofValue(connectionString))
+                .container(Property.ofValue(container))
+                .from(Property.ofValue(upload().toString()))
+                .name(Property.ofValue("trigger/collision-" + id + "/" + folder + "/report.yml"))
+                .build();
+            uploadTask.run(runContext(uploadTask));
+        }
+
+        Trigger trigger = Trigger.builder()
+            .id("blob-" + IdUtils.create())
+            .type(Trigger.class.getName())
+            .endpoint(Property.ofValue(storageEndpoint))
+            .connectionString(Property.ofValue(connectionString))
+            .container(Property.ofValue(container))
+            .regexp(Property.ofValue(".*collision-" + id + ".*"))
+            .action(Property.ofValue(ActionInterface.Action.MOVE))
+            .moveTo(Copy.CopyObject.builder().name(Property.ofValue("archive-" + id)).build())
+            .on(Property.ofValue(StatefulTriggerInterface.On.CREATE))
+            .interval(Duration.ofSeconds(10))
+            .build();
+
+        Map.Entry<ConditionContext, io.kestra.core.scheduler.model.TriggerState> context = TestsUtils.mockTrigger(runContextFactory, trigger);
+
+        // Second poll must fail again: a first failed poll must not have marked the blobs as seen.
+        assertThrows(IllegalStateException.class, () -> trigger.evaluate(context.getKey(), context.getValue().context()));
+        assertThrows(IllegalStateException.class, () -> trigger.evaluate(context.getKey(), context.getValue().context()));
     }
 
     @Test

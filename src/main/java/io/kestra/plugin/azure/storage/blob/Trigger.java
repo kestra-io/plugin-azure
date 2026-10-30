@@ -4,6 +4,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
+import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -320,13 +321,10 @@ public class Trigger extends AbstractTrigger implements PollingTriggerInterface,
         }
 
         var previousState = readState(runContext, rStateKey, rStateTtl);
-        var actionBlobs = new ArrayList<Blob>();
-        var toFire = new ArrayList<TriggeredBlob>();
+        var rAction = runContext.render(this.action).as(ActionInterface.Action.class).orElse(null);
+        var firing = new ArrayList<Map.Entry<Blob, ChangeType>>();
 
         for (var blob : list) {
-            if (killed.get())
-                return Optional.empty();
-
             var uri = String.format("az://%s/%s", runContext.render(container).as(String.class).orElse(""), blob.getName());
             var modifiedAt = Optional.ofNullable(blob.getLastModified()).map(OffsetDateTime::toInstant).orElse(Instant.now());
             var version = Optional.ofNullable(blob.getETag()).orElse(String.valueOf(modifiedAt.toEpochMilli()));
@@ -335,52 +333,65 @@ public class Trigger extends AbstractTrigger implements PollingTriggerInterface,
             var stateChange = computeAndUpdateState(previousState, candidate, rOn);
 
             if (stateChange.fire()) {
-                var changeType = stateChange.isNew() ? ChangeType.CREATE : ChangeType.UPDATE;
-
-                var tempFile = runContext.workingDir().createTempFile(FileUtils.getExtension(blob.getName())).toFile();
-                var dlLatch = new CountDownLatch(1);
-                error.set(null);
-                var propsRef = new AtomicReference<BlobProperties>();
-
-                var blobAsyncClient = containerAsyncClient.getBlobAsyncClient(blob.getName());
-                var dlDisposable = blobAsyncClient.downloadToFile(tempFile.getAbsolutePath(), true)
-                    .subscribe(
-                        props ->
-                        {
-                            propsRef.set(props);
-                            dlLatch.countDown();
-                        },
-                        err ->
-                        {
-                            error.set(err);
-                            dlLatch.countDown();
-                        },
-                        dlLatch::countDown
-                    );
-                this.await(dlLatch, dlDisposable, null);
-
-                if (killed.get())
-                    return Optional.empty();
-                if (error.get() != null) {
-                    if (error.get() instanceof Exception e)
-                        throw e;
-                    throw new Exception(error.get());
-                }
-
-                var blobProperties = propsRef.get();
-                runContext.metric(Counter.of("file.size", blobProperties.getBlobSize()));
-
-                var readFileUri = runContext.storage().putFile(tempFile);
-                var downloadedBlob = blob.withUri(readFileUri);
-                actionBlobs.add(blob);
-
-                toFire.add(
-                    TriggeredBlob.builder()
-                        .blob(downloadedBlob)
-                        .changeType(changeType)
-                        .build()
-                );
+                firing.add(Map.entry(blob, stateChange.isNew() ? ChangeType.CREATE : ChangeType.UPDATE));
             }
+        }
+
+        // Fail before any download or state write so a collision does not mark the blobs as seen.
+        var moveTargets = BlobService.moveTargets(firing.stream().map(Map.Entry::getKey).toList(), rAction, this.moveTo, runContext, this.prefix);
+
+        var actionBlobs = new ArrayList<Blob>();
+        var toFire = new ArrayList<TriggeredBlob>();
+
+        for (var entry : firing) {
+            if (killed.get())
+                return Optional.empty();
+
+            var blob = entry.getKey();
+            var changeType = entry.getValue();
+            var tempFile = runContext.workingDir().createTempFile(FileUtils.getExtension(blob.getName())).toFile();
+            var dlLatch = new CountDownLatch(1);
+            error.set(null);
+            var propsRef = new AtomicReference<BlobProperties>();
+
+            var blobAsyncClient = containerAsyncClient.getBlobAsyncClient(blob.getName());
+            var dlDisposable = blobAsyncClient.downloadToFile(tempFile.getAbsolutePath(), true)
+                .subscribe(
+                    props ->
+                    {
+                        propsRef.set(props);
+                        dlLatch.countDown();
+                    },
+                    err ->
+                    {
+                        error.set(err);
+                        dlLatch.countDown();
+                    },
+                    dlLatch::countDown
+                );
+            this.await(dlLatch, dlDisposable, null);
+
+            if (killed.get())
+                return Optional.empty();
+            if (error.get() != null) {
+                if (error.get() instanceof Exception e)
+                    throw e;
+                throw new Exception(error.get());
+            }
+
+            var blobProperties = propsRef.get();
+            runContext.metric(Counter.of("file.size", blobProperties.getBlobSize()));
+
+            var readFileUri = runContext.storage().putFile(tempFile);
+            var downloadedBlob = blob.withUri(readFileUri);
+            actionBlobs.add(blob);
+
+            toFire.add(
+                TriggeredBlob.builder()
+                    .blob(downloadedBlob)
+                    .changeType(changeType)
+                    .build()
+            );
         }
 
         if (toFire.isEmpty()) {
@@ -397,7 +408,7 @@ public class Trigger extends AbstractTrigger implements PollingTriggerInterface,
         }
 
         writeState(runContext, rStateKey, previousState, rStateTtl);
-        BlobService.archive(actionBlobs, runContext.render(this.action).as(ActionInterface.Action.class).orElse(null), this.moveTo, runContext, this, this);
+        BlobService.archive(actionBlobs, rAction, this.moveTo, moveTargets, runContext, this, this);
         var output = Output.builder().blobs(toFire).build();
         return Optional.of(TriggerService.generateExecution(this, conditionContext, context, output));
     }

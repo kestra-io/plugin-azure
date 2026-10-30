@@ -16,7 +16,13 @@ public interface ActionInterface {
     Property<Action> getAction();
 
     @Schema(
-        title = "The destination container and blob name"
+        title = "The destination container and blob name",
+        description = """
+            When moving blobs, any relative directory structure under the configured `prefix` is preserved under `moveTo.name`.
+            If the `prefix` does not end on a folder boundary (e.g. `data/2026`), the common parent folder (`data/`) is used to preserve subdirectories.
+            If no `prefix` is configured, only the blob name is appended.
+            If multiple blobs resolve to the same destination name, execution fails before any copy or delete occurs to prevent data loss.
+            """
     )
     @PluginProperty(dynamic = true, group = "destination")
     Copy.CopyObject getMoveTo();

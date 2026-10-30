@@ -26,6 +26,8 @@ The incidents API supports `$filter`, `$orderby`, `$top` (at most 1000), and `ne
 
 Only emitted incidents advance the watermark. An inclusive modification-time boundary and identity/time/ETag deduplication preserve equal-timestamp incidents across pages and restarts. Unchanged boundary records do not consume the fresh-incident limit; failures must not commit new state. These are plugin policies built on the API's filtering and ordering capabilities.
 
+Watermark and boundary version timestamps are normalized to microseconds before comparison and persistence, matching Kestra 2.0 JSON serialization. Azure timestamps with seven or more fractional digits therefore remain stable across KV round trips and restarts. Identity and ETag still distinguish incidents and updates within the same microsecond. Existing six-digit KV state remains compatible; original timestamps in emitted incident payloads and the exact initial-lookback cutoff are preserved.
+
 The incident cap bounds each execution's inline payload. It does not bound worst-case page scanning when many unchanged incidents share the watermark timestamp. Polling observes returned incident states and cannot guarantee exactly-once delivery or capture every intermediate edit.
 
 Sources: [Sentinel pagination and ordering contract](https://learn.microsoft.com/en-us/rest/api/securityinsights/incidents/list?view=rest-securityinsights-2024-09-01), [Maintainer review](https://github.com/kestra-io/plugin-azure/pull/358).

@@ -4,6 +4,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 import org.junit.jupiter.api.Test;
@@ -83,6 +84,73 @@ class TriggerTest {
         incidents(restarted, rows);
         assertTrue(restarted.evaluate(context.getKey(), triggerContext).isEmpty());
         verify(restarted).pollIncidents(any(), eq("(properties/status eq false) and (properties/lastModifiedTimeUtc ge " + TIME + ")"), any());
+    }
+
+    @Test
+    void fractionalVersionsSurvivePollsRestartsAndEtagChanges() throws Exception {
+        String time = "2026-01-01T00:00:00.9876543Z";
+        Trigger first = trigger(UUID.randomUUID().toString());
+        var context = TestsUtils.mockTrigger(runContextFactory, first);
+        var triggerContext = context.getValue().context();
+        var rows = List.of(incident("first", time, "1"));
+        incidents(first, rows);
+        assertEquals(rows, first.evaluate(context.getKey(), triggerContext).orElseThrow().getTrigger().getVariables().get("incidents"));
+        assertTrue(first.evaluate(context.getKey(), triggerContext).isEmpty());
+
+        Trigger restarted = trigger(first.getId());
+        incidents(restarted, rows);
+        assertTrue(restarted.evaluate(context.getKey(), triggerContext).isEmpty());
+        incidents(restarted, List.of(incident("first", "2026-01-01T00:00:00.9876549Z", "2")));
+        assertTrue(restarted.evaluate(context.getKey(), triggerContext).isPresent());
+        assertTrue(restarted.evaluate(context.getKey(), triggerContext).isEmpty());
+        verify(restarted, atLeastOnce()).pollIncidents(any(), eq("(properties/status eq false) and (properties/lastModifiedTimeUtc ge 2026-01-01T00:00:00.987654Z)"), any());
+    }
+
+    @Test
+    void fractionalBacklogDrainsAcrossPersistedPolls() throws Exception {
+        String time = "2026-01-01T00:00:00.9876543Z";
+        Trigger first = trigger(UUID.randomUUID().toString());
+        first.maxIncidents = Property.ofValue(2);
+        var context = TestsUtils.mockTrigger(runContextFactory, first);
+        var triggerContext = context.getValue().context();
+        var rows = List.of(incident("a", time, "1"), incident("b", time, "1"), incident("c", time, "1"));
+        incidents(first, rows);
+        assertEquals(rows.subList(0, 2), first.evaluate(context.getKey(), triggerContext).orElseThrow().getTrigger().getVariables().get("incidents"));
+        Trigger restarted = trigger(first.getId());
+        restarted.maxIncidents = Property.ofValue(2);
+        incidents(restarted, rows);
+        assertEquals(rows.subList(2, 3), restarted.evaluate(context.getKey(), triggerContext).orElseThrow().getTrigger().getVariables().get("incidents"));
+        assertTrue(restarted.evaluate(context.getKey(), triggerContext).isEmpty());
+    }
+
+    @Test
+    void readsExistingMicrosecondWatermarkWithoutReplayingItsBoundary() throws Exception {
+        Trigger trigger = trigger(UUID.randomUUID().toString());
+        var context = TestsUtils.mockTrigger(runContextFactory, trigger);
+        var triggerContext = context.getValue().context();
+        Instant storedTime = Instant.parse("2026-01-01T00:00:00.987654Z");
+        var watermark = new Trigger.Watermark(storedTime, Set.of(new Trigger.Version("existing", storedTime, "1")));
+        context.getKey().getRunContext().namespaceKv(triggerContext.getNamespace()).put(
+            Trigger.stateKey(triggerContext.getFlowId(), trigger.getId()),
+            new KVValueAndMetadata(new KVMetadata("existing watermark", (Duration) null), JacksonMapper.ofJson().writeValueAsBytes(watermark))
+        );
+        var unseen = incident("unseen", "2026-01-01T00:00:00.9876543Z", "1");
+        incidents(trigger, List.of(incident("existing", "2026-01-01T00:00:00.9876543Z", "1"), unseen));
+        assertEquals(List.of(unseen), trigger.evaluate(context.getKey(), triggerContext).orElseThrow().getTrigger().getVariables().get("incidents"));
+        assertTrue(trigger.evaluate(context.getKey(), triggerContext).isEmpty());
+    }
+
+    @Test
+    void fractionalInitialLookbackRetainsExactCutoff() throws Exception {
+        Trigger trigger = trigger(UUID.randomUUID().toString());
+        trigger.initialLookback = Property.ofValue(Duration.ofHours(1));
+        doReturn(Instant.parse("2026-01-01T01:00:00.9876545Z")).when(trigger).now();
+        var context = TestsUtils.mockTrigger(runContextFactory, trigger);
+        var boundary = incident("boundary", "2026-01-01T00:00:00.9876545Z", "1");
+        var after = incident("after", "2026-01-01T00:00:00.9876546Z", "1");
+        incidents(trigger, List.of(incident("before", "2026-01-01T00:00:00.9876544Z", "1"), boundary, after));
+        assertEquals(List.of(boundary, after), trigger.evaluate(context.getKey(), context.getValue().context()).orElseThrow().getTrigger().getVariables().get("incidents"));
+        verify(trigger).pollIncidents(any(), eq("(properties/status eq false) and (properties/lastModifiedTimeUtc ge 2026-01-01T00:00:00.987654500Z)"), any());
     }
 
     @Test

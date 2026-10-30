@@ -2,6 +2,7 @@ package io.kestra.plugin.azure.sentinel;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -144,7 +145,12 @@ public class Trigger extends AbstractTrigger implements PollingTriggerInterface,
         {
             for (Map<String, Object> incident : page) {
                 Version version = version(incident);
-                if (version.modified().isBefore(lowerBound) || previous.boundary().contains(version) || !seen.add(version)) {
+                // Apply the exact API/lookback cutoff before normalizing the persisted identity.
+                if (version.modified().isBefore(lowerBound)) {
+                    continue;
+                }
+                version = version.atMicrosecondPrecision();
+                if (previous.boundary().contains(version) || !seen.add(version)) {
                     continue;
                 }
                 fresh.add(incident);
@@ -160,7 +166,7 @@ public class Trigger extends AbstractTrigger implements PollingTriggerInterface,
         Instant maximum = previous.timestamp();
         Set<Version> boundary = new HashSet<>(previous.boundary());
         for (Map<String, Object> incident : fresh) {
-            Version version = version(incident);
+            Version version = version(incident).atMicrosecondPrecision();
             if (maximum == null || version.modified().isAfter(maximum)) {
                 maximum = version.modified();
                 boundary.clear();
@@ -206,6 +212,10 @@ public class Trigger extends AbstractTrigger implements PollingTriggerInterface,
     }
 
     record Version(String id, Instant modified, String etag) {
+        Version atMicrosecondPrecision() {
+            // Kestra 2.0 serializes Instant values with six fractional digits in namespace KV.
+            return new Version(id, modified.truncatedTo(ChronoUnit.MICROS), etag);
+        }
     }
 
     record Watermark(Instant timestamp, Set<Version> boundary) {

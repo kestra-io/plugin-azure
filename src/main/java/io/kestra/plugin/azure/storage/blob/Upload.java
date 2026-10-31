@@ -171,6 +171,21 @@ public class Upload extends AbstractBlobStorageWithSasObject implements Runnable
             rFrom = runContext.render(stringFrom);
         }
 
+        if (rFrom instanceof String str) {
+            String trimmed = str.trim();
+            if (trimmed.startsWith("{")) {
+                try {
+                    rFrom = io.kestra.core.serializers.JacksonMapper.ofJson().readValue(trimmed, Map.class);
+                } catch (Exception ignored) {
+                }
+            } else if (trimmed.startsWith("[")) {
+                try {
+                    rFrom = io.kestra.core.serializers.JacksonMapper.ofJson().readValue(trimmed, List.class);
+                } catch (Exception ignored) {
+                }
+            }
+        }
+
         Flux<Map<String, Object>> data;
         if (rFrom instanceof String || rFrom instanceof URI) {
             data = Flux.just(Map.of("uri", rFrom));

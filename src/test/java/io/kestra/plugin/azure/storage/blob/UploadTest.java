@@ -70,4 +70,19 @@ class UploadTest {
         var exception = assertThrows(IllegalArgumentException.class, () -> task.run(runContextFactory.of()));
         assertThat(exception.getMessage(), containsString("multiple source URIs resolve to the same destination blob name 'uploads/report.csv'"));
     }
+
+    @Test
+    void shouldThrowWhenDuplicateDestinationBlobNamesForRenderedJsonList() {
+        var task = Upload.builder()
+            .id("upload-json-list-collision-test")
+            .type(Upload.class.getName())
+            .endpoint(Property.ofValue("https://example.blob.core.windows.net"))
+            .container(Property.ofValue("container"))
+            .name(Property.ofValue("uploads/"))
+            .from("[\"kestra:///taskA/report.csv\", \"kestra:///taskB/report.csv\"]")
+            .build();
+
+        var exception = assertThrows(IllegalArgumentException.class, () -> task.run(runContextFactory.of()));
+        assertThat(exception.getMessage(), containsString("multiple source URIs resolve to the same destination blob name 'uploads/report.csv'"));
+    }
 }

@@ -3,8 +3,11 @@ package io.kestra.plugin.azure.storage.blob;
 import java.net.URI;
 import java.util.AbstractMap;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 import com.azure.core.util.Context;
@@ -168,123 +171,175 @@ public class Upload extends AbstractBlobStorageWithSasObject implements Runnable
             rFrom = runContext.render(stringFrom);
         }
 
-        var data = (rFrom instanceof String || rFrom instanceof URI)
-            ? Flux.just(Map.of("uri", rFrom))
-            : Data.from(rFrom).read(runContext);
-
-        data
-            .map(throwFunction(row ->
-            {
-                // row is Map<String, Object> - extract the URI
-                URI fileUri;
-                if (row.containsKey("uri")) {
-                    Object uriValue = row.get("uri");
-                    fileUri = uriValue instanceof URI ? (URI) uriValue : new URI(uriValue.toString());
-                } else if (row.size() == 1) {
-                    // Single value in map - use it
-                    Object value = row.values().iterator().next();
-                    fileUri = value instanceof URI ? (URI) value : new URI(value.toString());
-                } else {
-                    // Try to convert the whole map or take first value
-                    Object firstValue = row.values().iterator().next();
-                    fileUri = firstValue instanceof URI ? (URI) firstValue : new URI(firstValue.toString());
-                }
-
-                // Determine which blob client to use
-                BlobClient blobClient;
-                if (uploadedBlobs.isEmpty()) {
-                    // First file uses the base client
-                    blobClient = baseClient;
-                } else {
-                    // Additional files go to container with generated names
-                    var containerClient = baseClient.getContainerClient();
-                    String baseBlobName = baseClient.getBlobName();
-                    if (baseBlobName == null) {
-                        baseBlobName = "";
-                    }
-                    String fileName = java.nio.file.Paths.get(fileUri.getPath()).getFileName().toString();
-                    String targetBlobName;
-                    if (baseBlobName.isEmpty()) {
-                        targetBlobName = fileName;
-                    } else if (baseBlobName.endsWith("/")) {
-                        targetBlobName = baseBlobName + fileName;
+        Flux<Map<String, Object>> data;
+        if (rFrom instanceof String || rFrom instanceof URI) {
+            data = Flux.just(Map.of("uri", rFrom));
+        } else if (rFrom instanceof List<?> list) {
+            data = Flux.fromIterable(list)
+                .map(item -> {
+                    if (item instanceof Map<?, ?> map) {
+                        @SuppressWarnings("unchecked")
+                        Map<String, Object> castMap = (Map<String, Object>) map;
+                        return castMap;
+                    } else if (item instanceof URI || item instanceof String) {
+                        return Map.of("uri", item);
                     } else {
-                        targetBlobName = baseBlobName + "/" + fileName;
+                        return Map.of("uri", item.toString());
                     }
-                    blobClient = containerClient.getBlobClient(targetBlobName);
+                });
+        } else if (rFrom instanceof Map<?, ?> map) {
+            data = Flux.fromIterable(map.entrySet())
+                .map(entry -> Map.of("name", entry.getKey(), "uri", entry.getValue()));
+        } else {
+            data = Data.from(rFrom).read(runContext);
+        }
+
+        List<Map<String, Object>> rows = data.collectList().block();
+        if (rows == null || rows.isEmpty()) {
+            return Output.builder()
+                .blob(null)
+                .blobs(Collections.emptyList())
+                .build();
+        }
+
+        boolean isMultiFile = rows.size() > 1;
+        String baseBlobName = baseClient.getBlobName();
+        if (baseBlobName == null) {
+            baseBlobName = "";
+        }
+
+        var containerClient = baseClient.getContainerClient();
+        Map<String, URI> filesToUpload = new java.util.LinkedHashMap<>();
+
+        for (Map<String, Object> row : rows) {
+            URI fileUri;
+            String customName = null;
+            if (row.containsKey("uri")) {
+                Object uriValue = row.get("uri");
+                fileUri = uriValue instanceof URI ? (URI) uriValue : new URI(uriValue.toString());
+                if (row.containsKey("name")) {
+                    customName = row.get("name").toString();
                 }
-
-                runContext.logger().debug("Upload from '{}' to '{}'", fileUri, blobClient.getBlobName());
-
-                try (var is = runContext.storage().getFile(fileUri)) {
-                    blobClient.uploadWithResponse(
-                        new BlobParallelUploadOptions(is).setComputeMd5(rValidateChecksum),
-                        null,
-                        Context.NONE
-                    );
+            } else if (row.size() == 1) {
+                Map.Entry<String, Object> entry = row.entrySet().iterator().next();
+                Object value = entry.getValue();
+                fileUri = value instanceof URI ? (URI) value : new URI(value.toString());
+                if (!"uri".equals(entry.getKey())) {
+                    customName = entry.getKey();
                 }
+            } else {
+                Object firstValue = row.values().iterator().next();
+                fileUri = firstValue instanceof URI ? (URI) firstValue : new URI(firstValue.toString());
+            }
 
-                if (this.metadata != null) {
-                    blobClient.setMetadata(
-                        runContext.render(this.metadata).asMap(String.class, String.class)
-                            .entrySet()
-                            .stream()
-                            .map(
-                                throwFunction(
-                                    flow -> new AbstractMap.SimpleEntry<>(
-                                        runContext.render(flow.getKey()),
-                                        runContext.render(flow.getValue())
-                                    )
+            String fileName = customName != null ? customName : java.nio.file.Paths.get(fileUri.getPath()).getFileName().toString();
+            String targetBlobName = resolveTargetBlobName(baseBlobName, fileName, isMultiFile);
+
+            if (filesToUpload.containsKey(targetBlobName)) {
+                throw new IllegalArgumentException(
+                    "Cannot upload files: multiple source URIs resolve to the same destination blob name '%s'. Ensure source file names are distinct or specify unique destination names."
+                        .formatted(targetBlobName)
+                );
+            }
+            filesToUpload.put(targetBlobName, fileUri);
+        }
+
+        for (Map.Entry<String, URI> entry : filesToUpload.entrySet()) {
+            String targetBlobName = entry.getKey();
+            URI fileUri = entry.getValue();
+
+            BlobClient blobClient = containerClient.getBlobClient(targetBlobName);
+
+            runContext.logger().debug("Upload from '{}' to '{}'", fileUri, blobClient.getBlobName());
+
+            try (var is = runContext.storage().getFile(fileUri)) {
+                blobClient.uploadWithResponse(
+                    new BlobParallelUploadOptions(is).setComputeMd5(rValidateChecksum),
+                    null,
+                    Context.NONE
+                );
+            }
+
+            if (this.metadata != null) {
+                blobClient.setMetadata(
+                    runContext.render(this.metadata).asMap(String.class, String.class)
+                        .entrySet()
+                        .stream()
+                        .map(
+                            throwFunction(
+                                flow -> new AbstractMap.SimpleEntry<>(
+                                    runContext.render(flow.getKey()),
+                                    runContext.render(flow.getValue())
                                 )
                             )
-                            .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue))
-                    );
-                }
+                        )
+                        .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue))
+                );
+            }
 
-                if (this.tags != null) {
-                    blobClient.setTags(
-                        runContext.render(this.tags).asMap(String.class, String.class)
-                            .entrySet()
-                            .stream()
-                            .map(
-                                throwFunction(
-                                    flow -> new AbstractMap.SimpleEntry<>(
-                                        runContext.render(flow.getKey()),
-                                        runContext.render(flow.getValue())
-                                    )
+            if (this.tags != null) {
+                blobClient.setTags(
+                    runContext.render(this.tags).asMap(String.class, String.class)
+                        .entrySet()
+                        .stream()
+                        .map(
+                            throwFunction(
+                                flow -> new AbstractMap.SimpleEntry<>(
+                                    runContext.render(flow.getKey()),
+                                    runContext.render(flow.getValue())
                                 )
                             )
-                            .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue))
-                    );
-                }
+                        )
+                        .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue))
+                );
+            }
 
-                if (this.accessTier != null) {
-                    blobClient.setAccessTier(com.azure.storage.blob.models.AccessTier.fromString(runContext.render(this.accessTier).as(AccessTier.class).orElseThrow().name()));
-                }
+            if (this.accessTier != null) {
+                blobClient.setAccessTier(com.azure.storage.blob.models.AccessTier.fromString(runContext.render(this.accessTier).as(AccessTier.class).orElseThrow().name()));
+            }
 
-                if (this.legalHold != null) {
-                    blobClient.setLegalHold(runContext.render(this.legalHold).as(Boolean.class).orElseThrow());
-                }
+            if (this.legalHold != null) {
+                blobClient.setLegalHold(runContext.render(this.legalHold).as(Boolean.class).orElseThrow());
+            }
 
-                if (this.immutabilityPolicy != null) {
-                    blobClient.setImmutabilityPolicy(this.immutabilityPolicy.to(runContext));
-                }
+            if (this.immutabilityPolicy != null) {
+                blobClient.setImmutabilityPolicy(this.immutabilityPolicy.to(runContext));
+            }
 
-                runContext.metric(Counter.of("file.size", blobClient.getProperties().getBlobSize()));
+            runContext.metric(Counter.of("file.size", blobClient.getProperties().getBlobSize()));
 
-                Blob blob = Blob.of(blobClient, blobClient.getProperties());
-                uploadedBlobs.add(blob);
-
-                return 1;
-            }))
-            .reduce(Integer::sum)
-            .blockOptional().orElse(0);
+            Blob blob = Blob.of(blobClient, blobClient.getProperties());
+            uploadedBlobs.add(blob);
+        }
 
         return Output
             .builder()
             .blob(uploadedBlobs.size() == 1 ? uploadedBlobs.get(0) : null)
             .blobs(uploadedBlobs)
             .build();
+    }
+
+    static String resolveTargetBlobName(String baseBlobName, String fileName, boolean isMultiFile) {
+        if (baseBlobName == null) {
+            baseBlobName = "";
+        }
+        if (isMultiFile) {
+            if (baseBlobName.isEmpty()) {
+                return fileName;
+            } else if (baseBlobName.endsWith("/")) {
+                return baseBlobName + fileName;
+            } else {
+                return baseBlobName + "/" + fileName;
+            }
+        } else {
+            if (baseBlobName.isEmpty()) {
+                return fileName;
+            } else if (baseBlobName.endsWith("/")) {
+                return baseBlobName + fileName;
+            } else {
+                return baseBlobName;
+            }
+        }
     }
 
     @SuperBuilder

@@ -269,4 +269,43 @@ class UploadTest extends AbstractTest {
             .run(runContextFactory.of(ctx));
         assertThat(fromMap.getBlob().getName(), is(single));
     }
+
+    private com.azure.storage.blob.specialized.BlobClientBase blobClient(String blobName) {
+        return new com.azure.storage.blob.BlobServiceClientBuilder()
+            .connectionString(connectionString)
+            .buildClient()
+            .getBlobContainerClient(this.container)
+            .getBlobClient(blobName);
+    }
+
+    @Test
+    void metadataAndTagsAreRenderedOnce() throws Exception {
+        var file = storedFile(IdUtils.create(), "file1.csv", "one");
+        var blobName = "meta-" + IdUtils.create() + ".csv";
+
+        var task = uploadTask(blobName)
+            .from(Property.ofValue(file.toString()))
+            .metadata(Property.ofExpression("{\"computed\": \"{{ 1+1 }}\", \"nested\": \"{{ nested }}\"}"))
+            .tags(Property.ofExpression("{\"computed\": \"{{ 1+1 }}\"}"))
+            .build();
+        task.run(runContextFactory.of(Map.of("nested", "{{ 1+1 }}")));
+
+        var blobClient = blobClient(blobName);
+        assertThat(blobClient.getProperties().getMetadata(), is(Map.of("computed", "2", "nested", "{{ 1+1 }}")));
+        assertThat(blobClient.getTags(), is(Map.of("computed", "2")));
+    }
+
+    @Test
+    void metadataFromExpressionResultStaysLiteral() throws Exception {
+        var file = storedFile(IdUtils.create(), "file1.csv", "one");
+        var blobName = "meta-" + IdUtils.create() + ".csv";
+
+        var task = uploadTask(blobName)
+            .from(Property.ofValue(file.toString()))
+            .metadata(Property.ofExpression("{{ fromUpstream }}"))
+            .build();
+        task.run(runContextFactory.of(Map.of("fromUpstream", Map.of("literal", "{{ 1+1 }}"))));
+
+        assertThat(blobClient(blobName).getProperties().getMetadata(), is(Map.of("literal", "{{ 1+1 }}")));
+    }
 }

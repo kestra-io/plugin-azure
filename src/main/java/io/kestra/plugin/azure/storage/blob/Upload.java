@@ -1,14 +1,12 @@
 package io.kestra.plugin.azure.storage.blob;
 
 import java.net.URI;
-import java.util.AbstractMap;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.stream.Collectors;
 
 import com.azure.core.util.Context;
 import com.azure.storage.blob.options.BlobParallelUploadOptions;
@@ -36,7 +34,6 @@ import lombok.NoArgsConstructor;
 import lombok.ToString;
 import lombok.experimental.SuperBuilder;
 
-import static io.kestra.core.utils.Rethrow.throwFunction;
 
 @SuperBuilder
 @ToString
@@ -208,37 +205,11 @@ public class Upload extends AbstractBlobStorageWithSasObject implements Runnable
             }
 
             if (this.metadata != null) {
-                blobClient.setMetadata(
-                    runContext.render(this.metadata).asMap(String.class, String.class)
-                        .entrySet()
-                        .stream()
-                        .map(
-                            throwFunction(
-                                flow -> new AbstractMap.SimpleEntry<>(
-                                    runContext.render(flow.getKey()),
-                                    runContext.render(flow.getValue())
-                                )
-                            )
-                        )
-                        .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue))
-                );
+                blobClient.setMetadata(runContext.render(this.metadata).asMap(String.class, String.class));
             }
 
             if (this.tags != null) {
-                blobClient.setTags(
-                    runContext.render(this.tags).asMap(String.class, String.class)
-                        .entrySet()
-                        .stream()
-                        .map(
-                            throwFunction(
-                                flow -> new AbstractMap.SimpleEntry<>(
-                                    runContext.render(flow.getKey()),
-                                    runContext.render(flow.getValue())
-                                )
-                            )
-                        )
-                        .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue))
-                );
+                blobClient.setTags(runContext.render(this.tags).asMap(String.class, String.class));
             }
 
             if (this.accessTier != null) {

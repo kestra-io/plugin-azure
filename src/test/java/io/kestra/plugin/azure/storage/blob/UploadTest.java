@@ -44,7 +44,7 @@ class UploadTest extends AbstractTest {
     @Test
     void shouldHandleFromAsProperty() throws Exception {
         var task = Upload.builder()
-            .id("upload-test")
+            .id(IdUtils.create())
             .type(Upload.class.getName())
             .endpoint(Property.ofValue("https://example.blob.core.windows.net"))
             .container(Property.ofValue("container"))
@@ -78,7 +78,7 @@ class UploadTest extends AbstractTest {
     @Test
     void shouldThrowWhenDuplicateDestinationBlobNames() {
         var task = Upload.builder()
-            .id("upload-collision-test")
+            .id(IdUtils.create())
             .type(Upload.class.getName())
             .endpoint(Property.ofValue("https://example.blob.core.windows.net"))
             .container(Property.ofValue("container"))
@@ -96,7 +96,7 @@ class UploadTest extends AbstractTest {
     @Test
     void shouldThrowWhenDuplicateDestinationBlobNamesForRenderedJsonList() {
         var task = Upload.builder()
-            .id("upload-json-list-collision-test")
+            .id(IdUtils.create())
             .type(Upload.class.getName())
             .endpoint(Property.ofValue("https://example.blob.core.windows.net"))
             .container(Property.ofValue("container"))
@@ -210,5 +210,62 @@ class UploadTest extends AbstractTest {
 
         var exception = assertThrows(IllegalArgumentException.class, () -> task.run(runContext(task)));
         assertThat(exception.getMessage(), containsString("looks like JSON but could not be parsed"));
+    }
+
+    @Test
+    void jsonDerivedValuesAreNotRenderedAgain() {
+        var task = uploadTask("uploads/")
+            .from("{{ json }}")
+            .build();
+
+        var exception = assertThrows(
+            IllegalArgumentException.class,
+            () -> task.run(runContextFactory.of(Map.of("json", "[\"kestra:///a/{{ 1+1 }}.csv\"]")))
+        );
+        assertThat(exception.getMessage(), containsString("{{ 1+1 }}"));
+        assertThat(exception.getMessage(), not(containsString("/2.csv")));
+    }
+
+    @Test
+    void jsonDerivedMapKeyAndUriStayLiteral() throws Exception {
+        var prefix = "uploads-" + IdUtils.create() + "/";
+        var file = storedFile(IdUtils.create(), "f1", "one");
+        var json = "{\"k-{{ 1+1 }}.txt\": \"" + file + "\"}";
+
+        var output = uploadTask(prefix).from("{{ json }}").build()
+            .run(runContextFactory.of(Map.of("json", json)));
+
+        assertThat(blobNames(output), contains(prefix + "k-{{ 1+1 }}.txt"));
+    }
+
+    @Test
+    void jsonDerivedUriInMapIsNotRenderedAgain() {
+        var task = uploadTask("uploads/")
+            .from("{{ json }}")
+            .build();
+
+        var exception = assertThrows(
+            Exception.class,
+            () -> task.run(runContextFactory.of(Map.of("json", "[{\"uri\": \"kestra:///a/{{ 1+1 }}.csv\"}]")))
+        );
+        assertThat(String.valueOf(exception.getMessage()), not(containsString("2.csv")));
+    }
+
+    @Test
+    void yamlProvidedValuesAreRenderedOnce() throws Exception {
+        var prefix = "uploads-" + IdUtils.create() + "/";
+        var dir = IdUtils.create();
+        var first = storedFile(dir, "file1.csv", "one");
+        var second = storedFile(dir, "file2.csv", "two");
+        var ctx = Map.<String, Object>of("first", first.toString(), "second", second.toString());
+
+        var fromList = uploadTask(prefix).from(List.of("{{ first }}", Map.of("uri", "{{ second }}"))).build()
+            .run(runContextFactory.of(ctx));
+        assertThat(blobNames(fromList), containsInAnyOrder(prefix + "file1.csv", prefix + "file2.csv"));
+
+        var single = IdUtils.create() + ".csv";
+        var fromMap = uploadTask(single).from(Map.of("uri", "{{ first }}")).build()
+            .run(runContextFactory.of(ctx));
+        assertThat(fromMap.getBlob().getName(), is(single));
     }
 }

@@ -35,7 +35,6 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.ToString;
 import lombok.experimental.SuperBuilder;
-import reactor.core.publisher.Flux;
 
 import static io.kestra.core.utils.Rethrow.throwFunction;
 
@@ -269,12 +268,16 @@ public class Upload extends AbstractBlobStorageWithSasObject implements Runnable
 
     private List<Source> resolveSources(RunContext runContext, Object rawFrom) throws Exception {
         var rFrom = rawFrom;
+        // Values that are already rendered, or parsed out of a rendered string, must never be rendered a second time.
+        var needsRendering = false;
         if (rFrom instanceof Property<?> propertyFrom) {
             @SuppressWarnings("unchecked")
             var fromProperty = (Property<Object>) propertyFrom;
             rFrom = runContext.render(fromProperty).as(Object.class).orElseThrow(() -> new IllegalArgumentException("'from' rendered to an empty value"));
         } else if (rFrom instanceof String stringFrom) {
             rFrom = parseJsonIfNeeded(runContext.render(stringFrom));
+        } else {
+            needsRendering = true;
         }
 
         var sources = new ArrayList<Source>();
@@ -284,19 +287,19 @@ public class Upload extends AbstractBlobStorageWithSasObject implements Runnable
             case List<?> list -> {
                 for (var item : list) {
                     switch (item) {
-                        case String str -> sources.add(Source.of(runContext.render(str)));
+                        case String str -> sources.add(Source.of(needsRendering ? runContext.render(str) : str));
                         case URI uri -> sources.add(Source.of(uri.toString()));
-                        case Map<?, ?> map -> sources.add(Source.ofRow(renderMap(runContext, map)));
+                        case Map<?, ?> map -> sources.add(Source.ofRow(resolveMap(runContext, map, needsRendering)));
                         default -> throw new IllegalArgumentException("Unsupported item in 'from' list: " + item);
                     }
                 }
             }
             case Map<?, ?> map -> {
-                var rendered = renderMap(runContext, map);
-                if (isFileNameToUriMap(rendered)) {
-                    rendered.forEach((fileName, uri) -> sources.add(new Source(toUri(uri), fileName)));
+                var rMap = resolveMap(runContext, map, needsRendering);
+                if (isFileNameToUriMap(rMap)) {
+                    rMap.forEach((fileName, uri) -> sources.add(new Source(toUri(uri), fileName)));
                 } else {
-                    sources.add(Source.ofRow(rendered));
+                    sources.add(Source.ofRow(rMap));
                 }
             }
             default -> {
@@ -322,8 +325,13 @@ public class Upload extends AbstractBlobStorageWithSasObject implements Runnable
     }
 
     @SuppressWarnings("unchecked")
-    private static Map<String, Object> renderMap(RunContext runContext, Map<?, ?> map) throws Exception {
-        return runContext.render((Map<String, Object>) map);
+    private static Map<String, Object> resolveMap(RunContext runContext, Map<?, ?> map, boolean needsRendering) throws Exception {
+        if (needsRendering) {
+            return runContext.render((Map<String, Object>) map);
+        }
+        var copy = new LinkedHashMap<String, Object>();
+        map.forEach((key, value) -> copy.put(String.valueOf(key), value));
+        return copy;
     }
 
     // The `outputFiles` shape: no `uri` key and every value is an internal storage URI.

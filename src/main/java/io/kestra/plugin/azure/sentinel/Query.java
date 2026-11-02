@@ -85,8 +85,9 @@ public class Query extends AbstractAzureIdentityConnection implements RunnableTa
         description = """
             Base URL of the Log Analytics query API. Defaults to `https://api.loganalytics.io` (public cloud).
             Override it for sovereign clouds, for example `https://api.loganalytics.us` (Azure Government) or
-            `https://api.loganalytics.azure.cn` (Azure China). Microsoft Entra sign-in still uses the public authority,
-            which this plugin does not configure."""
+            `https://api.loganalytics.azure.cn` (Azure China). The access token scope is derived
+            from this endpoint. Microsoft Entra sign-in uses the public authority unless the worker sets the
+            `AZURE_AUTHORITY_HOST` environment variable, for example `https://login.microsoftonline.us`."""
     )
     @PluginProperty(group = "connection")
     private Property<String> logAnalyticsEndpoint = Property.ofValue(DEFAULT_LOG_ANALYTICS_ENDPOINT);

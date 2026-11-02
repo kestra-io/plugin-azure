@@ -126,7 +126,8 @@ public class Trigger extends AbstractTrigger implements PollingTriggerInterface,
             Base URL of the Azure Resource Manager API. Defaults to `https://management.azure.com` (public cloud).
             Override it for sovereign clouds, for example `https://management.usgovcloudapi.net` (Azure Government) or
             `https://management.chinacloudapi.cn` (Azure China). The access token scope is derived from this endpoint
-            (`<endpoint>/.default`). Microsoft Entra sign-in still uses the public authority, which this plugin does not configure."""
+            (`<endpoint>/.default`). Microsoft Entra sign-in uses the public authority
+            unless the worker sets the `AZURE_AUTHORITY_HOST` environment variable, for example `https://login.microsoftonline.us`."""
     )
     @PluginProperty(group = "connection")
     protected Property<String> armEndpoint = Property.ofValue(AbstractSentinel.DEFAULT_ARM_ENDPOINT);

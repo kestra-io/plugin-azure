@@ -312,10 +312,10 @@ public class Upload extends AbstractBlobStorageWithSasObject implements Runnable
         return sources;
     }
 
-    private static Object parseJsonIfNeeded(String rendered) {
-        var trimmed = rendered.trim();
+    private static Object parseJsonIfNeeded(String rFrom) {
+        var trimmed = rFrom.trim();
         if (!trimmed.startsWith("{") && !trimmed.startsWith("[")) {
-            return rendered;
+            return rFrom;
         }
         try {
             return JacksonMapper.ofJson().readValue(trimmed, Object.class);

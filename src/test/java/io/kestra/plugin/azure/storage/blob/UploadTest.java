@@ -245,9 +245,10 @@ class UploadTest extends AbstractTest {
             .build();
 
         var exception = assertThrows(
-            Exception.class,
+            IllegalArgumentException.class,
             () -> task.run(runContextFactory.of(Map.of("json", "[{\"uri\": \"kestra:///a/{{ 1+1 }}.csv\"}]")))
         );
+        assertThat(exception.getMessage(), containsString("{{ 1+1 }}"));
         assertThat(String.valueOf(exception.getMessage()), not(containsString("2.csv")));
     }
 

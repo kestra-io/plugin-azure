@@ -1,7 +1,11 @@
 package io.kestra.plugin.azure.sentinel;
 
+import java.net.URISyntaxException;
+import java.nio.file.Path;
 import java.time.Duration;
+import java.time.OffsetDateTime;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -9,8 +13,8 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import com.azure.core.http.HttpClient;
-import com.azure.monitor.query.logs.LogsQueryClientBuilder;
+import com.azure.core.credential.AccessToken;
+import com.azure.core.credential.TokenCredential;
 import com.github.tomakehurst.wiremock.WireMockServer;
 
 import io.kestra.core.junit.annotations.KestraTest;
@@ -19,8 +23,10 @@ import io.kestra.core.models.tasks.common.FetchType;
 import io.kestra.core.runners.RunContext;
 import io.kestra.core.runners.RunContextFactory;
 import io.kestra.core.serializers.FileSerde;
+import io.kestra.core.utils.IdUtils;
 
 import jakarta.inject.Inject;
+import reactor.core.publisher.Mono;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.*;
 import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig;
@@ -32,43 +38,68 @@ class QueryTest {
     @Inject
     RunContextFactory runContextFactory;
 
-    private WireMockServer server;
-    private LogsQueryClientBuilder clientBuilder;
+    private static final String[] TRUST_PROPERTIES = { "javax.net.ssl.trustStore", "javax.net.ssl.trustStorePassword", "javax.net.ssl.trustStoreType" };
 
+    private WireMockServer server;
+    private final List<String> scopes = new ArrayList<>();
+    private final Map<String, String> previousTrust = new HashMap<>();
+
+    // The Azure SDK refuses bearer tokens over plain HTTP, so WireMock serves a self-signed localhost certificate that the JVM trusts for the test.
     @BeforeEach
-    void startServer() {
-        server = new WireMockServer(wireMockConfig().dynamicPort());
+    void startServer() throws URISyntaxException {
+        var keystore = Path.of(QueryTest.class.getResource("/sentinel/localhost.p12").toURI()).toString();
+        server = new WireMockServer(
+            wireMockConfig().dynamicPort().dynamicHttpsPort()
+                .keystorePath(keystore).keystorePassword("changeit").keyManagerPassword("changeit").keystoreType("PKCS12")
+        );
         server.start();
-        // Exercise the production SDK factory and policies; redirect only the transport to WireMock.
-        HttpClient transport = HttpClient.createDefault();
-        clientBuilder = new LogsQueryClientBuilder()
-            .credential(
-                request -> reactor.core.publisher.Mono.just(
-                    new com.azure.core.credential.AccessToken(
-                        "test-token", java.time.OffsetDateTime.now().plusHours(1)
-                    )
-                )
-            )
-            .httpClient(request -> transport.send(request.copy().setUrl(server.baseUrl() + request.getUrl().getFile())));
+        for (var property : TRUST_PROPERTIES) {
+            previousTrust.put(property, System.getProperty(property));
+        }
+        System.setProperty("javax.net.ssl.trustStore", keystore);
+        System.setProperty("javax.net.ssl.trustStorePassword", "changeit");
+        System.setProperty("javax.net.ssl.trustStoreType", "PKCS12");
     }
 
     @AfterEach
     void stopServer() {
         server.stop();
+        previousTrust.forEach((property, value) ->
+        {
+            if (value == null) {
+                System.clearProperty(property);
+            } else {
+                System.setProperty(property, value);
+            }
+        });
+    }
+
+    private String endpoint() {
+        return "https://localhost:" + server.httpsPort();
+    }
+
+    private Query connect(Query task) throws Exception {
+        var spied = spy(task);
+        TokenCredential credential = request ->
+        {
+            scopes.addAll(request.getScopes());
+            return Mono.just(new AccessToken("test-token", OffsetDateTime.now().plusHours(1)));
+        };
+        doReturn(credential).when(spied).credentials(any());
+        return spied;
     }
 
     private Query task(FetchType mode) throws Exception {
-        Query task = spy(
+        return connect(
             Query.builder()
-                .id("query")
+                .id(IdUtils.create())
                 .type(Query.class.getName())
+                .logAnalyticsEndpoint(Property.ofValue(endpoint()))
                 .workspaceId(Property.ofExpression("{{ inputs.workspace }}"))
                 .query(Property.ofExpression("{{ inputs.kql }}"))
                 .fetchType(Property.ofValue(mode))
                 .build()
         );
-        doReturn(clientBuilder).when(task).clientBuilder(any());
-        return task;
     }
 
     private RunContext context() {
@@ -105,23 +136,10 @@ class QueryTest {
     }
 
     @Test
-    void sdkUsesLogAnalyticsScope() throws Exception {
+    void sendsBearerTokenToConfiguredEndpoint() throws Exception {
         response(table("[]"));
-        List<String> scopes = new ArrayList<>();
-        HttpClient transport = HttpClient.createDefault();
-        clientBuilder = new LogsQueryClientBuilder()
-            .credential(request ->
-            {
-                scopes.addAll(request.getScopes());
-                return reactor.core.publisher.Mono.just(
-                    new com.azure.core.credential.AccessToken(
-                        "test-token", java.time.OffsetDateTime.now().plusHours(1)
-                    )
-                );
-            })
-            .httpClient(request -> transport.send(request.copy().setUrl(server.baseUrl() + request.getUrl().getFile())));
         assertEquals(0L, task(FetchType.FETCH).run(context()).getCount());
-        assertEquals(List.of("https://api.loganalytics.io/.default"), scopes);
+        assertEquals(1, scopes.size());
         server.verify(
             postRequestedFor(urlEqualTo("/v1/workspaces/workspace-guid/query"))
                 .withHeader("Authorization", equalTo("Bearer test-token"))
@@ -131,11 +149,11 @@ class QueryTest {
     @Test
     void fetchRendersPropertiesAndNormalizesSdkTypes() throws Exception {
         response(table(rows()));
-        Query.Output output = task(FetchType.FETCH).run(context());
+        var output = task(FetchType.FETCH).run(context());
         assertEquals(2L, output.getCount());
         assertEquals("long", output.getColumns().get(1).getType());
         assertEquals("count", output.getColumns().get(1).getName());
-        Map<String, Object> row = output.getRows().getFirst();
+        var row = output.getRows().getFirst();
         assertEquals(9223372036854775806L, row.get("count"));
         assertEquals(true, row.get("enabled"));
         assertEquals(Map.of("key", List.of(1, 2)), row.get("details"));
@@ -155,14 +173,14 @@ class QueryTest {
     @Test
     void fetchOneAndEmptyResults() throws Exception {
         response(table(rows()));
-        Query.Output first = task(FetchType.FETCH_ONE).run(context());
+        var first = task(FetchType.FETCH_ONE).run(context());
         assertEquals(1L, first.getCount());
         assertEquals("alert", first.getRow().get("title"));
         assertNull(first.getRows());
         response(table("[]"));
         assertEquals(0L, task(FetchType.FETCH_ONE).run(context()).getCount());
         assertNull(task(FetchType.FETCH_ONE).run(context()).getRow());
-        Query.Output empty = task(FetchType.FETCH).run(context());
+        var empty = task(FetchType.FETCH).run(context());
         assertEquals(List.of(), empty.getRows());
         assertEquals(8, empty.getColumns().size());
         assertEquals("long", empty.getColumns().get(1).getType());
@@ -171,8 +189,8 @@ class QueryTest {
     @Test
     void storeRoundTripsThroughInternalStorage() throws Exception {
         response(table(rows()));
-        RunContext context = context();
-        Query.Output output = task(FetchType.STORE).run(context);
+        var context = context();
+        var output = task(FetchType.STORE).run(context);
         List<Object> stored = new ArrayList<>();
         try (var input = context.storage().getFile(output.getUri())) {
             FileSerde.read(input, stored::add);
@@ -183,7 +201,7 @@ class QueryTest {
         assertEquals(Map.of("key", List.of(1, 2)), ((Map<?, ?>) stored.getFirst()).get("details"));
         assertNull(output.getRows());
         response(table("[]"));
-        Query.Output empty = task(FetchType.STORE).run(context);
+        var empty = task(FetchType.STORE).run(context);
         assertEquals(0L, empty.getCount());
         try (var input = context.storage().getFile(empty.getUri())) {
             assertEquals(-1, input.read());
@@ -209,7 +227,7 @@ class QueryTest {
             {"tables":[{"name":"PrimaryResult","columns":[],"rows":[]}],
              "error":{"code":"PartialError","message":"Query limit exceeded"}}
             """);
-        IllegalStateException error = assertThrows(IllegalStateException.class, () -> task(FetchType.STORE).run(context()));
+        var error = assertThrows(IllegalStateException.class, () -> task(FetchType.STORE).run(context()));
         assertTrue(error.getMessage().contains("PartialError"));
         server.stubFor(
             post(anyUrl()).willReturn(
@@ -224,19 +242,19 @@ class QueryTest {
     @Test
     void serverTimeoutIsIndependentOfTaskTimeout() throws Exception {
         response(table("[]"));
-        Query defaults = Query.builder().build();
+        var defaults = Query.builder().build();
         assertNull(defaults.getTimeout());
         assertEquals(Duration.ofMinutes(3), context().render(defaults.getServerTimeout()).as(Duration.class).orElseThrow());
-        Query task = spy(
+        var task = connect(
             Query.builder()
-                .id("query").type(Query.class.getName())
+                .id(IdUtils.create()).type(Query.class.getName())
+                .logAnalyticsEndpoint(Property.ofValue(endpoint()))
                 .workspaceId(Property.ofValue("workspace-guid")).query(Property.ofValue("print value = 1"))
                 .timeout(Property.ofValue(Duration.ofMinutes(15)))
                 .serverTimeout(Property.ofExpression("{{ inputs.serverTimeout }}"))
                 .build()
         );
-        doReturn(clientBuilder).when(task).clientBuilder(any());
-        RunContext context = runContextFactory.of(Map.of("inputs", Map.of("serverTimeout", "PT1M")));
+        var context = runContextFactory.of(Map.of("inputs", Map.of("serverTimeout", "PT1M")));
         assertEquals(0L, task.run(context).getCount());
         assertEquals(Duration.ofMinutes(15), context.render(task.getTimeout()).as(Duration.class).orElseThrow());
         server.verify(
@@ -248,23 +266,28 @@ class QueryTest {
     @Test
     void validatesBeforeSendingRequest() throws Exception {
         assertEquals(FetchType.STORE, context().render(Query.builder().build().getFetchType()).as(FetchType.class).orElseThrow());
-        for (Duration span : List.of(Duration.ZERO, Duration.ofSeconds(-1))) {
-            Query task = spy(
+        for (var span : List.of(Duration.ZERO, Duration.ofSeconds(-1))) {
+            var task = connect(
                 Query.builder().workspaceId(Property.ofValue("workspace"))
                     .query(Property.ofValue("query")).timespan(Property.ofValue(span)).build()
             );
             assertThrows(IllegalArgumentException.class, () -> task.run(context()));
-            verify(task, never()).queryClient(any());
         }
-        for (Duration timeout : List.of(Duration.ZERO, Duration.ofSeconds(-1), Duration.ofMinutes(11))) {
-            Query task = spy(
+        for (var timeout : List.of(Duration.ZERO, Duration.ofSeconds(-1), Duration.ofMinutes(11))) {
+            var task = connect(
                 Query.builder().workspaceId(Property.ofValue("workspace"))
                     .query(Property.ofValue("query")).serverTimeout(Property.ofValue(timeout)).build()
             );
             assertThrows(IllegalArgumentException.class, () -> task.run(context()));
-            verify(task, never()).queryClient(any());
         }
         assertThrows(IllegalArgumentException.class, () -> task(FetchType.NONE).run(context()));
         assertEquals(0, server.getAllServeEvents().size());
+    }
+
+    @Test
+    void defaultsToPublicLogAnalyticsEndpoint() throws Exception {
+        var defaults = Query.builder().build();
+        assertEquals(Query.DEFAULT_LOG_ANALYTICS_ENDPOINT, context().render(defaults.getLogAnalyticsEndpoint()).as(String.class).orElseThrow());
+        assertEquals("https://api.loganalytics.io", Query.DEFAULT_LOG_ANALYTICS_ENDPOINT);
     }
 }

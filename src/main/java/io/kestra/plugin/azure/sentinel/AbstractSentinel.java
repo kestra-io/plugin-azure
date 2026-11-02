@@ -1,11 +1,14 @@
 package io.kestra.plugin.azure.sentinel;
 
+import java.io.IOException;
 import java.net.URI;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
-import java.util.*;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 
-import com.azure.core.credential.AccessToken;
 import com.azure.core.credential.TokenRequestContext;
 
 import io.kestra.core.http.HttpRequest;
@@ -21,7 +24,11 @@ import io.kestra.plugin.azure.shared.AbstractAzureIdentityConnection;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotNull;
-import lombok.*;
+import lombok.Builder;
+import lombok.EqualsAndHashCode;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.ToString;
 import lombok.experimental.SuperBuilder;
 
 @SuperBuilder
@@ -31,27 +38,46 @@ import lombok.experimental.SuperBuilder;
 @NoArgsConstructor
 public abstract class AbstractSentinel extends AbstractAzureIdentityConnection {
     static final String API_VERSION = "2024-09-01";
-    static final String ARM_SCOPE = "https://management.azure.com/.default";
+    static final String DEFAULT_ARM_ENDPOINT = "https://management.azure.com";
 
     @NotNull
-    @Schema(title = "Azure subscription ID")
+    @Schema(
+        title = "Azure subscription ID",
+        description = """
+            ID of the Azure subscription that contains the Sentinel workspace."""
+    )
     @PluginProperty(group = "connection")
     protected Property<String> subscriptionId;
 
     @NotNull
-    @Schema(title = "Azure resource group")
+    @Schema(
+        title = "Azure resource group",
+        description = """
+            Name of the resource group that contains the Sentinel workspace."""
+    )
     @PluginProperty(group = "connection")
     protected Property<String> resourceGroup;
 
     @NotNull
-    @Schema(title = "Sentinel workspace name", description = "ARM resource name of the Log Analytics workspace, not its customer GUID (workspaceId used by Query).")
+    @Schema(
+        title = "Sentinel workspace name",
+        description = """
+            ARM resource name of the Log Analytics workspace, not its customer GUID (the `workspaceId` used by `Query`)."""
+    )
     @PluginProperty(group = "connection")
     protected Property<String> workspaceName;
 
-    /** Test seam; production requests always target Azure Resource Manager. */
-    protected URI armEndpoint() {
-        return URI.create("https://management.azure.com");
-    }
+    @Builder.Default
+    @Schema(
+        title = "Azure Resource Manager endpoint",
+        description = """
+            Base URL of the Azure Resource Manager API. Defaults to `https://management.azure.com` (public cloud).
+            Override it for sovereign clouds, for example `https://management.usgovcloudapi.net` (Azure Government) or
+            `https://management.chinacloudapi.cn` (Azure China). The access token scope is derived from this endpoint
+            (`<endpoint>/.default`). Microsoft Entra sign-in still uses the public authority, which this plugin does not configure."""
+    )
+    @PluginProperty(group = "connection")
+    protected Property<String> armEndpoint = Property.ofValue(DEFAULT_ARM_ENDPOINT);
 
     static String encode(String value) {
         return URLEncoder.encode(value, StandardCharsets.UTF_8).replace("+", "%20");
@@ -62,19 +88,25 @@ public abstract class AbstractSentinel extends AbstractAzureIdentityConnection {
             .orElseThrow(() -> new IllegalArgumentException(name + " is required"));
     }
 
+    static String endpoint(RunContext context, Property<String> property, String defaultEndpoint) throws Exception {
+        var rEndpoint = context.render(property).as(String.class).filter(s -> !s.isBlank()).orElse(defaultEndpoint);
+        return rEndpoint.endsWith("/") ? rEndpoint.substring(0, rEndpoint.length() - 1) : rEndpoint;
+    }
+
     protected URI incidentsUri(RunContext context, String suffix, Map<String, String> query) throws Exception {
-        String path = "/subscriptions/" + encode(required(context, subscriptionId, "subscriptionId"))
+        var path = "/subscriptions/" + encode(required(context, subscriptionId, "subscriptionId"))
             + "/resourceGroups/" + encode(required(context, resourceGroup, "resourceGroup"))
             + "/providers/Microsoft.OperationalInsights/workspaces/" + encode(required(context, workspaceName, "workspaceName"))
             + "/providers/Microsoft.SecurityInsights/incidents" + suffix;
-        StringBuilder uri = new StringBuilder(armEndpoint().toString()).append(path).append("?api-version=").append(API_VERSION);
+        var uri = new StringBuilder(endpoint(context, armEndpoint, DEFAULT_ARM_ENDPOINT)).append(path).append("?api-version=").append(API_VERSION);
         query.forEach((key, value) -> uri.append('&').append(encode(key)).append('=').append(encode(value)));
         return URI.create(uri.toString());
     }
 
     protected Map<String, Object> armRequest(RunContext context, String method, URI uri, Map<String, Object> body) throws Exception {
-        validateLink(uri);
-        AccessToken token = credentials(context).getToken(new TokenRequestContext().addScopes(ARM_SCOPE)).block();
+        var rEndpoint = URI.create(endpoint(context, armEndpoint, DEFAULT_ARM_ENDPOINT));
+        validateLink(rEndpoint, uri);
+        var token = credentials(context).getToken(new TokenRequestContext().addScopes(rEndpoint + "/.default")).block();
         if (token == null) {
             throw new IllegalStateException("Failed to acquire an Azure Resource Manager access token");
         }
@@ -84,29 +116,28 @@ public abstract class AbstractSentinel extends AbstractAzureIdentityConnection {
         if (body != null) {
             request.body(HttpRequest.JsonRequestBody.builder().content(body).build());
         }
-        try (HttpClient client = HttpClient.builder().runContext(context).configuration(HttpConfiguration.builder().followRedirects(Property.ofValue(false)).build()).build()) {
+        try (var client = HttpClient.builder().runContext(context).configuration(HttpConfiguration.builder().followRedirects(Property.ofValue(false)).build()).build()) {
             HttpResponse<Map<String, Object>> response = client.request(request.build());
             if (response.getBody() == null) {
                 throw new IllegalStateException("Azure Sentinel returned an empty response");
             }
             return response.getBody();
         } catch (HttpClientResponseException e) {
-            String detail = "";
+            var detail = "";
             if (e.getResponse() != null && e.getResponse().getBody() instanceof byte[] bytes) {
                 try {
                     var error = JacksonMapper.ofJson().readTree(bytes).path("error");
                     detail = ": " + error.path("code").asText("") + " " + error.path("message").asText("");
-                } catch (java.io.IOException ignored) {
+                } catch (IOException ignored) {
                     // Non-JSON error responses still report the HTTP status below.
                 }
             }
-            String status = e.getResponse() == null ? "unknown" : Integer.toString(e.getResponse().getStatus().getCode());
+            var status = e.getResponse() == null ? "unknown" : Integer.toString(e.getResponse().getStatus().getCode());
             throw new IllegalStateException("Azure Sentinel HTTP " + status + detail.replace(token.getToken(), "[redacted]"));
         }
     }
 
-    private void validateLink(URI uri) {
-        URI endpoint = armEndpoint();
+    private static void validateLink(URI endpoint, URI uri) {
         if (
             !Objects.equals(endpoint.getScheme(), uri.getScheme()) || !Objects.equals(endpoint.getHost(), uri.getHost())
                 || endpoint.getPort() != uri.getPort() || uri.getUserInfo() != null || uri.getFragment() != null
@@ -121,17 +152,18 @@ public abstract class AbstractSentinel extends AbstractAzureIdentityConnection {
     }
 
     protected void pages(RunContext context, URI uri, PageConsumer consumer) throws Exception {
-        Set<URI> visited = new HashSet<>();
+        var rEndpoint = URI.create(endpoint(context, armEndpoint, DEFAULT_ARM_ENDPOINT));
+        var visited = new HashSet<URI>();
         while (uri != null) {
-            validateLink(uri);
+            validateLink(rEndpoint, uri);
             if (!visited.add(uri)) {
                 throw new IllegalStateException("Azure Sentinel returned a repeated pagination link");
             }
-            Map<String, Object> response = armRequest(context, "GET", uri, null);
+            var response = armRequest(context, "GET", uri, null);
             if (!consumer.accept(values(response))) {
                 return;
             }
-            Object next = response.get("nextLink");
+            var next = response.get("nextLink");
             if (next != null && !(next instanceof String)) {
                 throw new IllegalStateException("Azure Sentinel returned an invalid nextLink");
             }

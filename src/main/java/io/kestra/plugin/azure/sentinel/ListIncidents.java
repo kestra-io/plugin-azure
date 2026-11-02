@@ -1,10 +1,17 @@
 package io.kestra.plugin.azure.sentinel;
 
-import java.io.*;
+import java.io.BufferedOutputStream;
+import java.io.FileOutputStream;
 import java.net.URI;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
-import io.kestra.core.models.annotations.*;
+import io.kestra.core.models.annotations.Example;
+import io.kestra.core.models.annotations.Plugin;
+import io.kestra.core.models.annotations.PluginProperty;
 import io.kestra.core.models.property.Property;
 import io.kestra.core.models.tasks.RunnableTask;
 import io.kestra.core.models.tasks.common.FetchType;
@@ -12,7 +19,13 @@ import io.kestra.core.runners.RunContext;
 import io.kestra.core.serializers.FileSerde;
 
 import io.swagger.v3.oas.annotations.media.Schema;
-import lombok.*;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
+import lombok.Builder;
+import lombok.EqualsAndHashCode;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.ToString;
 import lombok.experimental.SuperBuilder;
 
 @SuperBuilder
@@ -20,7 +33,11 @@ import lombok.experimental.SuperBuilder;
 @EqualsAndHashCode
 @Getter
 @NoArgsConstructor
-@Schema(title = "List Sentinel incidents", description = "Lists and filters Sentinel incidents, following pagination and returning inline results or an ION file.")
+@Schema(
+    title = "List Sentinel incidents",
+    description = """
+        Lists and filters Sentinel incidents, following pagination and returning inline results or an ION file."""
+)
 @Plugin(examples = @Example(title = "List Sentinel incidents", full = true, code = """
     id: sentinel_listincidents
     namespace: company.security
@@ -38,43 +55,64 @@ import lombok.experimental.SuperBuilder;
         fetchType: STORE
     """))
 public class ListIncidents extends AbstractSentinel implements RunnableTask<ListIncidents.Output> {
-    @Schema(title = "OData filter", description = "Raw OData predicate, combined with severity and status filters using AND.")
+    @Schema(
+        title = "OData filter",
+        description = """
+            Raw OData predicate, combined with severity and status filters using AND."""
+    )
     @PluginProperty(group = "main")
     protected Property<String> filter;
 
-    @Schema(title = "Incident severities", description = "High, Medium, Low or Informational; values within this list are combined using OR.")
+    @Schema(
+        title = "Incident severities",
+        description = """
+            Severities to keep: `High`, `Medium`, `Low` or `Informational`. Values within this list are combined using OR."""
+    )
     @PluginProperty(group = "main")
-    protected Property<List<String>> severities;
+    protected Property<List<IncidentSeverity>> severities;
 
-    @Schema(title = "Incident statuses", description = "New, Active or Closed; values within this list are combined using OR.")
+    @Schema(
+        title = "Incident statuses",
+        description = """
+            Statuses to keep: `New`, `Active` or `Closed`. Values within this list are combined using OR."""
+    )
     @PluginProperty(group = "main")
-    protected Property<List<String>> statuses;
+    protected Property<List<IncidentStatus>> statuses;
 
     @Builder.Default
-    @Schema(title = "Page size", description = "Between 1 and 1000, defaults to 100. All pages are fetched unless FETCH_ONE is selected.")
+    @Schema(
+        title = "Page size",
+        description = """
+            Number of incidents requested per page, between 1 and 1000. Defaults to 100.
+            All pages are fetched unless `FETCH_ONE` is selected."""
+    )
     @PluginProperty(group = "advanced")
-    protected Property<Integer> top = Property.ofValue(100);
+    protected Property<@Min(1) @Max(1000) Integer> top = Property.ofValue(100);
 
     @Builder.Default
-    @Schema(title = "Fetch type", description = "STORE (default) writes ION to internal storage; FETCH returns incidents; FETCH_ONE returns the first incident.")
+    @Schema(
+        title = "Fetch type",
+        description = """
+            `STORE` (default) writes ION to internal storage; `FETCH` returns incidents; `FETCH_ONE` returns the first incident."""
+    )
     @PluginProperty(group = "processing")
     protected Property<FetchType> fetchType = Property.ofValue(FetchType.STORE);
 
     @Override
     public Output run(RunContext context) throws Exception {
-        FetchType mode = context.render(fetchType).as(FetchType.class).orElse(FetchType.STORE);
-        if (mode != FetchType.FETCH && mode != FetchType.FETCH_ONE && mode != FetchType.STORE) {
+        var rFetchType = context.render(fetchType).as(FetchType.class).orElse(FetchType.STORE);
+        if (rFetchType != FetchType.FETCH && rFetchType != FetchType.FETCH_ONE && rFetchType != FetchType.STORE) {
             throw new IllegalArgumentException("fetchType must be FETCH, FETCH_ONE or STORE");
         }
-        String rawFilter = context.render(filter).as(String.class).orElse(null);
-        List<Map<String, Object>> incidents = new ArrayList<>();
-        long[] count = { 0 };
-        if (mode == FetchType.STORE) {
-            File file = context.workingDir().createTempFile(".ion").toFile();
+        var rFilter = context.render(filter).as(String.class).orElse(null);
+        var incidents = new ArrayList<Map<String, Object>>();
+        var count = new long[] { 0 };
+        if (rFetchType == FetchType.STORE) {
+            var file = context.workingDir().createTempFile(".ion").toFile();
             try (var stream = new BufferedOutputStream(new FileOutputStream(file))) {
-                incidentPages(context, rawFilter, "properties/lastModifiedTimeUtc desc", page ->
+                incidentPages(context, rFilter, "properties/lastModifiedTimeUtc desc", page ->
                 {
-                    for (Map<String, Object> incident : page) {
+                    for (var incident : page) {
                         FileSerde.write(stream, incident);
                         count[0]++;
                     }
@@ -83,9 +121,9 @@ public class ListIncidents extends AbstractSentinel implements RunnableTask<List
             }
             return Output.builder().uri(context.storage().putFile(file)).count(count[0]).build();
         }
-        incidentPages(context, rawFilter, "properties/lastModifiedTimeUtc desc", page ->
+        incidentPages(context, rFilter, "properties/lastModifiedTimeUtc desc", page ->
         {
-            if (mode == FetchType.FETCH_ONE) {
+            if (rFetchType == FetchType.FETCH_ONE) {
                 if (!page.isEmpty()) {
                     incidents.add(page.getFirst());
                     return false;
@@ -95,57 +133,66 @@ public class ListIncidents extends AbstractSentinel implements RunnableTask<List
             }
             return true;
         });
-        return mode == FetchType.FETCH_ONE
+        return rFetchType == FetchType.FETCH_ONE
             ? Output.builder().incident(incidents.isEmpty() ? null : incidents.getFirst()).count((long) incidents.size()).build()
             : Output.builder().incidents(incidents).count((long) incidents.size()).build();
     }
 
-    void incidentPages(RunContext context, String rawFilter, String order, PageConsumer consumer) throws Exception {
-        int pageSize = context.render(top).as(Integer.class).orElse(100);
-        if (pageSize < 1 || pageSize > 1000) {
+    void incidentPages(RunContext context, String rFilter, String order, PageConsumer consumer) throws Exception {
+        var rTop = context.render(top).as(Integer.class).orElse(100);
+        if (rTop < 1 || rTop > 1000) {
             throw new IllegalArgumentException("top must be between 1 and 1000");
         }
-        String predicate = filters(rawFilter, context.render(severities).asList(String.class), context.render(statuses).asList(String.class));
-        Map<String, String> query = new LinkedHashMap<>();
+        var predicate = filters(rFilter, context.render(severities).asList(IncidentSeverity.class), context.render(statuses).asList(IncidentStatus.class));
+        var query = new LinkedHashMap<String, String>();
         query.put("$orderby", order);
-        query.put("$top", Integer.toString(pageSize));
+        query.put("$top", Integer.toString(rTop));
         if (!predicate.isBlank()) {
             query.put("$filter", predicate);
         }
         pages(context, incidentsUri(context, "", query), consumer);
     }
 
-    static String filters(String raw, List<String> severities, List<String> statuses) {
-        List<String> clauses = new ArrayList<>();
+    static String filters(String raw, List<IncidentSeverity> severities, List<IncidentStatus> statuses) {
+        var clauses = new ArrayList<String>();
         if (raw != null && !raw.isBlank()) {
             clauses.add("(" + raw + ")");
         }
-        addFilter(clauses, "severity", severities, Set.of("High", "Medium", "Low", "Informational"));
-        addFilter(clauses, "status", statuses, Set.of("New", "Active", "Closed"));
+        addFilter(clauses, "severity", severities);
+        addFilter(clauses, "status", statuses);
         return String.join(" and ", clauses);
     }
 
-    private static void addFilter(List<String> clauses, String field, List<String> values, Set<String> allowed) {
+    private static void addFilter(List<String> clauses, String field, List<? extends Enum<?>> values) {
         if (values == null || values.isEmpty()) {
             return;
         }
-        if (values.stream().anyMatch(value -> value == null || !allowed.contains(value))) {
-            throw new IllegalArgumentException("Invalid Sentinel " + field + "; expected one of " + allowed);
-        }
         clauses.add(
-            "(" + values.stream().distinct().map(value -> "properties/" + field + " eq '" + value + "'")
-                .collect(java.util.stream.Collectors.joining(" or ")) + ")"
+            "(" + values.stream().distinct().map(value -> "properties/" + field + " eq '" + value.name() + "'")
+                .collect(Collectors.joining(" or ")) + ")"
         );
     }
 
     @Builder
     @Getter
     public static class Output implements io.kestra.core.models.tasks.Output {
-        @Schema(title = "Fetched incidents", description = "Populated for FETCH.")
+        @Schema(
+            title = "Fetched incidents",
+            description = """
+                Populated for FETCH."""
+        )
         private final List<Map<String, Object>> incidents;
-        @Schema(title = "First incident", description = "Populated for FETCH_ONE, null when no incident matches.")
+        @Schema(
+            title = "First incident",
+            description = """
+                Populated for FETCH_ONE, null when no incident matches."""
+        )
         private final Map<String, Object> incident;
-        @Schema(title = "Stored incidents URI", description = "ION file in Kestra internal storage, populated for STORE.")
+        @Schema(
+            title = "Stored incidents URI",
+            description = """
+                ION file in Kestra internal storage, populated for STORE."""
+        )
         private final URI uri;
         @Schema(title = "Number of incidents fetched or stored")
         private final Long count;

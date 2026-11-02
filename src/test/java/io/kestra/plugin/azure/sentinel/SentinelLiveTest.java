@@ -7,6 +7,7 @@ import io.kestra.core.junit.annotations.KestraTest;
 import io.kestra.core.models.property.Property;
 import io.kestra.core.models.tasks.common.FetchType;
 import io.kestra.core.runners.RunContextFactory;
+import io.kestra.core.utils.IdUtils;
 
 import jakarta.inject.Inject;
 
@@ -22,7 +23,7 @@ class SentinelLiveTest {
     @Test
     void listIncidents() throws Exception {
         var task = ListIncidents.builder()
-            .id("sentinel_live_list")
+            .id(IdUtils.create())
             .type(ListIncidents.class.getName())
             .tenantId(required("AZURE_TENANT_ID"))
             .clientId(required("AZURE_CLIENT_ID"))
@@ -41,7 +42,7 @@ class SentinelLiveTest {
     @Test
     void readIncidentAndComments() throws Exception {
         var task = GetIncident.builder()
-            .id("sentinel_live_get")
+            .id(IdUtils.create())
             .type(GetIncident.class.getName())
             .tenantId(required("AZURE_TENANT_ID"))
             .clientId(required("AZURE_CLIENT_ID"))
@@ -58,7 +59,7 @@ class SentinelLiveTest {
         assertNotNull(output.alerts());
 
         var comments = ListComments.builder()
-            .id("sentinel_live_comments")
+            .id(IdUtils.create())
             .type(ListComments.class.getName())
             .tenantId(required("AZURE_TENANT_ID"))
             .clientId(required("AZURE_CLIENT_ID"))
@@ -76,7 +77,7 @@ class SentinelLiveTest {
     @Test
     void queryWorkspace() throws Exception {
         var output = Query.builder()
-            .id("sentinel_live_query")
+            .id(IdUtils.create())
             .type(Query.class.getName())
             .tenantId(required("AZURE_TENANT_ID"))
             .clientId(required("AZURE_CLIENT_ID"))

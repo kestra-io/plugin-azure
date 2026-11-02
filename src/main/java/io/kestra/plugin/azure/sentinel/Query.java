@@ -1,7 +1,6 @@
 package io.kestra.plugin.azure.sentinel;
 
 import java.io.BufferedOutputStream;
-import java.io.File;
 import java.io.FileOutputStream;
 import java.math.BigDecimal;
 import java.net.URI;
@@ -14,9 +13,11 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import com.azure.core.http.policy.HttpPipelinePolicy;
 import com.azure.core.util.Context;
-import com.azure.monitor.query.logs.LogsQueryClient;
 import com.azure.monitor.query.logs.LogsQueryClientBuilder;
-import com.azure.monitor.query.logs.models.*;
+import com.azure.monitor.query.logs.models.LogsQueryOptions;
+import com.azure.monitor.query.logs.models.LogsQueryResultStatus;
+import com.azure.monitor.query.logs.models.LogsQueryTimeInterval;
+import com.azure.monitor.query.logs.models.LogsTableRow;
 
 import io.kestra.core.models.annotations.Example;
 import io.kestra.core.models.annotations.Plugin;
@@ -31,8 +32,14 @@ import io.kestra.plugin.azure.shared.AbstractAzureIdentityConnection;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotNull;
-import lombok.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.EqualsAndHashCode;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.ToString;
 import lombok.experimental.SuperBuilder;
+import reactor.core.publisher.Mono;
 
 @SuperBuilder
 @ToString
@@ -41,7 +48,9 @@ import lombok.experimental.SuperBuilder;
 @NoArgsConstructor
 @Schema(
     title = "Query Microsoft Sentinel logs with KQL",
-    description = "Queries the Log Analytics workspace backing Sentinel. Returns the primary result table with column metadata. Partial query errors fail the task. The Azure SDK may materialize the response before results are stored."
+    description = """
+        Queries the Log Analytics workspace backing Sentinel. Returns the primary result table with column metadata.
+        Partial query errors fail the task. The Azure SDK may materialize the response before results are stored."""
 )
 @Plugin(examples = @Example(title = "Store recent security alerts", full = true, code = """
     id: sentinel_query
@@ -59,56 +68,81 @@ import lombok.experimental.SuperBuilder;
         fetchType: STORE
     """))
 public class Query extends AbstractAzureIdentityConnection implements RunnableTask<Query.Output> {
+    static final String DEFAULT_LOG_ANALYTICS_ENDPOINT = "https://api.loganalytics.io";
+
     @NotNull
-    @Schema(title = "Log Analytics workspace ID", description = "The workspace customer ID (GUID), not its ARM resource ID or workspace name.")
+    @Schema(
+        title = "Log Analytics workspace ID",
+        description = """
+            The workspace customer ID (GUID), not its ARM resource ID or workspace name."""
+    )
     @PluginProperty(group = "connection")
     private Property<String> workspaceId;
 
+    @Builder.Default
+    @Schema(
+        title = "Log Analytics endpoint",
+        description = """
+            Base URL of the Log Analytics query API. Defaults to `https://api.loganalytics.io` (public cloud).
+            Override it for sovereign clouds, for example `https://api.loganalytics.us` (Azure Government) or
+            `https://api.loganalytics.azure.cn` (Azure China). Microsoft Entra sign-in still uses the public authority,
+            which this plugin does not configure."""
+    )
+    @PluginProperty(group = "connection")
+    private Property<String> logAnalyticsEndpoint = Property.ofValue(DEFAULT_LOG_ANALYTICS_ENDPOINT);
+
     @NotNull
-    @Schema(title = "KQL query", description = "Kusto Query Language expression executed against the workspace.")
+    @Schema(
+        title = "KQL query",
+        description = """
+            Kusto Query Language expression executed against the workspace."""
+    )
     @PluginProperty(group = "main")
     private Property<String> query;
 
     @Builder.Default
-    @Schema(title = "Query timespan", description = "Positive ISO-8601 look-back duration. Defaults to P1D.")
+    @Schema(
+        title = "Query timespan",
+        description = """
+            Positive ISO-8601 look-back duration. Defaults to P1D."""
+    )
     @PluginProperty(group = "main")
     private Property<Duration> timespan = Property.ofValue(Duration.ofDays(1));
 
     @Builder.Default
-    @Schema(title = "Server timeout", description = "Positive ISO-8601 duration, at most PT10M. Defaults to PT3M.")
+    @Schema(
+        title = "Server timeout",
+        description = """
+            Positive ISO-8601 duration, at most PT10M. Defaults to PT3M."""
+    )
     @PluginProperty(group = "advanced")
     private Property<Duration> serverTimeout = Property.ofValue(Duration.ofMinutes(3));
 
     @Builder.Default
     @NotNull
-    @Schema(title = "Result fetching mode", description = "STORE writes ION to internal storage, FETCH returns all rows, and FETCH_ONE returns the first row. Other modes are unsupported.")
+    @Schema(
+        title = "Result fetching mode",
+        description = """
+            STORE writes ION to internal storage, FETCH returns all rows, and FETCH_ONE returns the first row. Other modes are unsupported."""
+    )
     @PluginProperty(group = "processing")
     private Property<FetchType> fetchType = Property.ofValue(FetchType.STORE);
 
-    protected LogsQueryClient queryClient(RunContext runContext) throws Exception {
-        return clientBuilder(runContext).addPolicy(columnMetadataPolicy()).buildClient();
-    }
-
-    protected LogsQueryClientBuilder clientBuilder(RunContext runContext) throws Exception {
-        return new LogsQueryClientBuilder().credential(credentials(runContext));
-    }
-
     private static final String COLUMN_METADATA = Query.class.getName() + ".columns";
 
-    // SDK 1.0.6 discards the REST column definitions when mapping LogsTable, including for empty results.
-    // Capture the primary table schema in the per-request context before the SDK maps the buffered response.
+    // SDK 1.0.6 drops REST column definitions (even for empty results), so capture them before mapping.
     private static HttpPipelinePolicy columnMetadataPolicy() {
         return (context, next) -> next.process().flatMap(response ->
         {
             var target = context.getContext().getData(COLUMN_METADATA);
             if (response.getStatusCode() != 200 || target.isEmpty()) {
-                return reactor.core.publisher.Mono.just(response);
+                return Mono.just(response);
             }
             var buffered = response.buffer();
-            return buffered.getBodyAsString().flatMap(body -> reactor.core.publisher.Mono.fromCallable(() ->
+            return buffered.getBodyAsString().flatMap(body -> Mono.fromCallable(() ->
             {
                 var tables = JacksonMapper.ofJson().readTree(body).path("tables");
-                List<Column> columns = new ArrayList<>();
+                var columns = new ArrayList<Column>();
                 if (tables.isArray() && !tables.isEmpty()) {
                     for (var column : tables.get(0).path("columns")) {
                         columns.add(new Column(column.path("name").asText(), column.path("type").asText()));
@@ -124,27 +158,30 @@ public class Query extends AbstractAzureIdentityConnection implements RunnableTa
 
     @Override
     public Output run(RunContext runContext) throws Exception {
-        String workspace = runContext.render(workspaceId).as(String.class).filter(s -> !s.isBlank())
+        var rWorkspaceId = runContext.render(workspaceId).as(String.class).filter(s -> !s.isBlank())
             .orElseThrow(() -> new IllegalArgumentException("workspaceId is required"));
-        String kql = runContext.render(query).as(String.class).filter(s -> !s.isBlank())
+        var rQuery = runContext.render(query).as(String.class).filter(s -> !s.isBlank())
             .orElseThrow(() -> new IllegalArgumentException("query is required"));
-        Duration span = runContext.render(timespan).as(Duration.class).orElse(Duration.ofDays(1));
-        Duration renderedServerTimeout = runContext.render(serverTimeout).as(Duration.class).orElse(Duration.ofMinutes(3));
-        FetchType mode = runContext.render(fetchType).as(FetchType.class).orElse(FetchType.STORE);
-        if (span.isZero() || span.isNegative()) {
+        var rTimespan = runContext.render(timespan).as(Duration.class).orElse(Duration.ofDays(1));
+        var rServerTimeout = runContext.render(serverTimeout).as(Duration.class).orElse(Duration.ofMinutes(3));
+        var rFetchType = runContext.render(fetchType).as(FetchType.class).orElse(FetchType.STORE);
+        var rEndpoint = AbstractSentinel.endpoint(runContext, logAnalyticsEndpoint, DEFAULT_LOG_ANALYTICS_ENDPOINT);
+        if (rTimespan.isZero() || rTimespan.isNegative()) {
             throw new IllegalArgumentException("timespan must be positive");
         }
-        if (renderedServerTimeout.isZero() || renderedServerTimeout.isNegative() || renderedServerTimeout.compareTo(Duration.ofMinutes(10)) > 0) {
+        if (rServerTimeout.isZero() || rServerTimeout.isNegative() || rServerTimeout.compareTo(Duration.ofMinutes(10)) > 0) {
             throw new IllegalArgumentException("serverTimeout must be positive and at most PT10M");
         }
-        if (mode != FetchType.FETCH && mode != FetchType.FETCH_ONE && mode != FetchType.STORE) {
+        if (rFetchType != FetchType.FETCH && rFetchType != FetchType.FETCH_ONE && rFetchType != FetchType.STORE) {
             throw new IllegalArgumentException("fetchType must be FETCH, FETCH_ONE or STORE");
         }
 
-        AtomicReference<List<Column>> metadata = new AtomicReference<>();
-        LogsQueryResult result = queryClient(runContext).queryWorkspaceWithResponse(
-            workspace, kql, new LogsQueryTimeInterval(span),
-            new LogsQueryOptions().setServerTimeout(renderedServerTimeout), new Context(COLUMN_METADATA, metadata)
+        var metadata = new AtomicReference<List<Column>>();
+        var client = new LogsQueryClientBuilder().credential(credentials(runContext)).endpoint(rEndpoint)
+            .addPolicy(columnMetadataPolicy()).buildClient();
+        var result = client.queryWorkspaceWithResponse(
+            rWorkspaceId, rQuery, new LogsQueryTimeInterval(rTimespan),
+            new LogsQueryOptions().setServerTimeout(rServerTimeout), new Context(COLUMN_METADATA, metadata)
         ).getValue();
         if (result.getError() != null || result.getQueryResultStatus() != LogsQueryResultStatus.SUCCESS) {
             throw new IllegalStateException(
@@ -153,27 +190,27 @@ public class Query extends AbstractAzureIdentityConnection implements RunnableTa
                     : result.getError().getCode() + ": " + result.getError().getMessage())
             );
         }
-        LogsTable table = result.getAllTables() == null || result.getAllTables().isEmpty() ? null : result.getAllTables().getFirst();
-        List<Column> columns = metadata.get();
+        var table = result.getAllTables() == null || result.getAllTables().isEmpty() ? null : result.getAllTables().getFirst();
+        var columns = metadata.get();
         if (columns == null) {
             throw new IllegalStateException("Azure Logs response did not include column metadata");
         }
-        List<LogsTableRow> records = table == null ? List.of() : table.getRows();
+        var records = table == null ? List.<LogsTableRow> of() : table.getRows();
         var output = Output.builder().columns(columns);
-        if (mode == FetchType.FETCH_ONE) {
+        if (rFetchType == FetchType.FETCH_ONE) {
             return output.row(records.isEmpty() ? null : normalize(records.getFirst()))
                 .count(records.isEmpty() ? 0L : 1L).build();
         }
-        if (mode == FetchType.FETCH) {
-            List<Map<String, Object>> rows = new ArrayList<>();
-            for (LogsTableRow record : records) {
+        if (rFetchType == FetchType.FETCH) {
+            var rows = new ArrayList<Map<String, Object>>();
+            for (var record : records) {
                 rows.add(normalize(record));
             }
             return output.rows(rows).count((long) rows.size()).build();
         }
-        File file = runContext.workingDir().createTempFile(".ion").toFile();
+        var file = runContext.workingDir().createTempFile(".ion").toFile();
         try (var stream = new BufferedOutputStream(new FileOutputStream(file))) {
-            for (LogsTableRow record : records) {
+            for (var record : records) {
                 FileSerde.write(stream, normalize(record));
             }
         }
@@ -181,9 +218,9 @@ public class Query extends AbstractAzureIdentityConnection implements RunnableTa
     }
 
     private static Map<String, Object> normalize(LogsTableRow row) throws Exception {
-        Map<String, Object> result = new LinkedHashMap<>();
-        for (LogsTableCell cell : row.getRow()) {
-            String text = cell.getValueAsString();
+        var result = new LinkedHashMap<String, Object>();
+        for (var cell : row.getRow()) {
+            var text = cell.getValueAsString();
             Object value = text == null ? null : switch (cell.getColumnType().toString()) {
                 case "bool" -> cell.getValueAsBoolean();
                 case "int" -> cell.getValueAsInteger();
@@ -213,11 +250,23 @@ public class Query extends AbstractAzureIdentityConnection implements RunnableTa
     public static class Output implements io.kestra.core.models.tasks.Output {
         @Schema(title = "Primary result table columns")
         private final List<Column> columns;
-        @Schema(title = "All rows", description = "Present for FETCH.")
+        @Schema(
+            title = "All rows",
+            description = """
+                Present for FETCH."""
+        )
         private final List<Map<String, Object>> rows;
-        @Schema(title = "First row", description = "Present for nonempty FETCH_ONE results.")
+        @Schema(
+            title = "First row",
+            description = """
+                Present for nonempty FETCH_ONE results."""
+        )
         private final Map<String, Object> row;
-        @Schema(title = "Stored ION URI", description = "Present for STORE.")
+        @Schema(
+            title = "Stored ION URI",
+            description = """
+                Present for STORE."""
+        )
         private final URI uri;
         @Schema(title = "Number of returned or stored rows")
         private final Long count;

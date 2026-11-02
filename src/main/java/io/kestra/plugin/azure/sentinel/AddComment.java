@@ -1,15 +1,21 @@
 package io.kestra.plugin.azure.sentinel;
 
-import java.util.*;
+import java.util.Map;
+import java.util.UUID;
 
-import io.kestra.core.models.annotations.*;
+import io.kestra.core.models.annotations.Example;
+import io.kestra.core.models.annotations.Plugin;
+import io.kestra.core.models.annotations.PluginProperty;
 import io.kestra.core.models.property.Property;
 import io.kestra.core.models.tasks.RunnableTask;
 import io.kestra.core.runners.RunContext;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotNull;
-import lombok.*;
+import lombok.EqualsAndHashCode;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.ToString;
 import lombok.experimental.SuperBuilder;
 
 @SuperBuilder
@@ -17,7 +23,11 @@ import lombok.experimental.SuperBuilder;
 @EqualsAndHashCode
 @Getter
 @NoArgsConstructor
-@Schema(title = "Add a Sentinel incident comment", description = "Creates a comment with a generated UUID. Task retries can create additional comments.")
+@Schema(
+    title = "Add a Sentinel incident comment",
+    description = """
+        Creates a comment with a generated UUID. Task retries can create additional comments."""
+)
 @Plugin(examples = @Example(title = "Add a Sentinel incident comment", full = true, code = """
     id: sentinel_addcomment
     namespace: company.security
@@ -51,13 +61,13 @@ public class AddComment extends AbstractSentinel implements RunnableTask<AddComm
 
     @Override
     public Output run(RunContext context) throws Exception {
-        String id = required(context, incidentId, "incidentId");
-        String text = required(context, message, "message");
-        String commentId = UUID.randomUUID().toString();
-        Map<String, Object> response = armRequest(
+        var rIncidentId = required(context, incidentId, "incidentId");
+        var rMessage = required(context, message, "message");
+        var commentId = UUID.randomUUID().toString();
+        var response = armRequest(
             context, "PUT",
-            incidentsUri(context, "/" + encode(id) + "/comments/" + commentId, Map.of()),
-            Map.of("properties", Map.of("message", text))
+            incidentsUri(context, "/" + encode(rIncidentId) + "/comments/" + commentId, Map.of()),
+            Map.of("properties", Map.of("message", rMessage))
         );
         if (!(response.get("properties") instanceof Map<?, ?> properties) || !(properties.get("createdTimeUtc") instanceof String created)) {
             throw new IllegalStateException("Azure Sentinel comment response is missing createdTimeUtc");
@@ -67,6 +77,10 @@ public class AddComment extends AbstractSentinel implements RunnableTask<AddComm
 
     public record Output(
         @Schema(title = "Created comment ID") String commentId,
-        @Schema(title = "Comment creation time", description = "UTC timestamp returned by Azure.") String createdTimeUtc) implements io.kestra.core.models.tasks.Output {
+        @Schema(
+            title = "Comment creation time",
+            description = """
+                UTC timestamp returned by Azure."""
+        ) String createdTimeUtc) implements io.kestra.core.models.tasks.Output {
     }
 }

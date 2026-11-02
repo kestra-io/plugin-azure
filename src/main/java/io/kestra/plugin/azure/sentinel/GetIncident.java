@@ -1,15 +1,22 @@
 package io.kestra.plugin.azure.sentinel;
 
-import java.util.*;
+import java.util.List;
+import java.util.Map;
 
-import io.kestra.core.models.annotations.*;
+import io.kestra.core.models.annotations.Example;
+import io.kestra.core.models.annotations.Plugin;
+import io.kestra.core.models.annotations.PluginProperty;
 import io.kestra.core.models.property.Property;
 import io.kestra.core.models.tasks.RunnableTask;
 import io.kestra.core.runners.RunContext;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotNull;
-import lombok.*;
+import lombok.Builder;
+import lombok.EqualsAndHashCode;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.ToString;
 import lombok.experimental.SuperBuilder;
 
 @SuperBuilder
@@ -17,7 +24,11 @@ import lombok.experimental.SuperBuilder;
 @EqualsAndHashCode
 @Getter
 @NoArgsConstructor
-@Schema(title = "Get a Sentinel incident", description = "Retrieves one incident, optionally including its associated alerts.")
+@Schema(
+    title = "Get a Sentinel incident",
+    description = """
+        Retrieves one incident, optionally including its associated alerts."""
+)
 @Plugin(examples = @Example(title = "Get a Sentinel incident", full = true, code = """
     id: sentinel_getincident
     namespace: company.security
@@ -44,14 +55,19 @@ public class GetIncident extends AbstractSentinel implements RunnableTask<GetInc
     protected Property<String> incidentId;
 
     @Builder.Default
-    @Schema(title = "Include incident alerts", description = "Fetch the associated alerts with an additional request. Defaults to false.")
+    @Schema(
+        title = "Include incident alerts",
+        description = """
+            Fetch the associated alerts with an additional request. Defaults to false."""
+    )
     @PluginProperty(group = "processing")
     protected Property<Boolean> includeAlerts = Property.ofValue(false);
 
     @Override
     public Output run(RunContext context) throws Exception {
-        String suffix = "/" + encode(required(context, incidentId, "incidentId"));
-        Map<String, Object> incident = armRequest(context, "GET", incidentsUri(context, suffix, Map.of()), null);
+        var rIncidentId = required(context, incidentId, "incidentId");
+        var suffix = "/" + encode(rIncidentId);
+        var incident = armRequest(context, "GET", incidentsUri(context, suffix, Map.of()), null);
         List<Map<String, Object>> alerts = null;
         if (context.render(includeAlerts).as(Boolean.class).orElse(false)) {
             alerts = values(armRequest(context, "POST", incidentsUri(context, suffix + "/alerts", Map.of()), null));
@@ -61,6 +77,10 @@ public class GetIncident extends AbstractSentinel implements RunnableTask<GetInc
 
     public record Output(
         @Schema(title = "Incident resource") Map<String, Object> incident,
-        @Schema(title = "Associated alerts", description = "Only populated when includeAlerts is true.") List<Map<String, Object>> alerts) implements io.kestra.core.models.tasks.Output {
+        @Schema(
+            title = "Associated alerts",
+            description = """
+                Only populated when includeAlerts is true."""
+        ) List<Map<String, Object>> alerts) implements io.kestra.core.models.tasks.Output {
     }
 }

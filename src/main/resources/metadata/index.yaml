@@ -2,7 +2,7 @@ group: io.kestra.plugin.azure
 name: "azure"
 title: "Azure"
 description: "Leverage Microsoft Azure services within Kestra data workflows."
-body: ""
+body: "Includes tasks and triggers for Azure storage, compute, messaging, monitoring, AI, and security services such as Microsoft Sentinel."
 videos: []
 createdBy: "Kestra Core Team"
 managedBy: "Kestra Core Team"

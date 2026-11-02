@@ -1,0 +1,8 @@
+group: io.kestra.plugin.azure.sentinel
+name: "sentinel"
+title: "Azure Sentinel"
+description: "Manage Microsoft Sentinel incidents and comments, query logs with KQL, and trigger workflows on incident changes."
+body: "Use ListIncidents, GetIncident, UpdateIncident, ListComments, AddComment, and Trigger with subscriptionId, resourceGroup, and workspaceName. Query uses the Log Analytics workspaceId instead. Authenticate with the Azure identity properties. ListIncidents and Query default to storing ION records in Kestra internal storage; FETCH and FETCH_ONE expose inline results. Trigger emits existing matching incidents on its first poll and persists a modification-time watermark in namespace KV."
+videos: []
+createdBy: "Kestra Core Team"
+managedBy: "Kestra Core Team"

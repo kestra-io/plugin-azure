@@ -8,7 +8,7 @@ Run `./gradlew test --tests '*sentinel.SentinelLiveTest'` in that configured env
 
 ## Mocked tests
 
-Incident tasks point `armEndpoint` at WireMock. `Query` points `logAnalyticsEndpoint` at a WireMock HTTPS port, because the Azure SDK refuses bearer tokens over plain HTTP; `QueryTest` makes the JVM trust the self-signed `localhost` certificate in `src/test/resources/sentinel/localhost.p12` for the duration of each test. Trigger watermark logic is tested through the package-private `Trigger.poll`, `advance`, `load` and `save` functions with fixed timestamps.
+Incident tasks point `armEndpoint` at WireMock. `Query` points `logAnalyticsEndpoint` at a WireMock HTTPS port, because the Azure SDK refuses bearer tokens over plain HTTP; `QueryTest` passes the package-private `Query.run(RunContext, HttpClient)` an Azure `HttpClient` that trusts only the self-signed `localhost` certificate in `src/test/resources/sentinel/localhost.p12`. It sets no JVM-wide `javax.net.ssl.*` properties, which would leak into other tests through Reactor Netty's cached default SSL context. Trigger watermark logic is tested through the package-private `Trigger.poll`, `advance`, `load` and `save` functions with fixed timestamps.
 
 ## API contracts and review decisions
 

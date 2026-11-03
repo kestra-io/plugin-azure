@@ -11,6 +11,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
 
+import com.azure.core.http.HttpClient;
 import com.azure.core.http.policy.HttpPipelinePolicy;
 import com.azure.core.util.Context;
 import com.azure.monitor.query.logs.LogsQueryClientBuilder;
@@ -114,7 +115,7 @@ public class Query extends AbstractAzureIdentityConnection implements RunnableTa
     @Schema(
         title = "Server timeout",
         description = """
-            Positive ISO-8601 duration, at most PT10M. Defaults to PT3M."""
+            ISO-8601 duration between PT1S and PT10M. Defaults to PT3M. Azure takes whole seconds."""
     )
     @PluginProperty(group = "advanced")
     private Property<Duration> serverTimeout = Property.ofValue(Duration.ofMinutes(3));
@@ -159,6 +160,11 @@ public class Query extends AbstractAzureIdentityConnection implements RunnableTa
 
     @Override
     public Output run(RunContext runContext) throws Exception {
+        return run(runContext, null);
+    }
+
+    // Test seam: lets tests supply an HttpClient that trusts a self-signed certificate.
+    Output run(RunContext runContext, HttpClient httpClient) throws Exception {
         var rWorkspaceId = runContext.render(workspaceId).as(String.class).filter(s -> !s.isBlank())
             .orElseThrow(() -> new IllegalArgumentException("workspaceId is required"));
         var rQuery = runContext.render(query).as(String.class).filter(s -> !s.isBlank())
@@ -170,16 +176,20 @@ public class Query extends AbstractAzureIdentityConnection implements RunnableTa
         if (rTimespan.isZero() || rTimespan.isNegative()) {
             throw new IllegalArgumentException("timespan must be positive");
         }
-        if (rServerTimeout.isZero() || rServerTimeout.isNegative() || rServerTimeout.compareTo(Duration.ofMinutes(10)) > 0) {
-            throw new IllegalArgumentException("serverTimeout must be positive and at most PT10M");
+        if (rServerTimeout.compareTo(Duration.ofSeconds(1)) < 0 || rServerTimeout.compareTo(Duration.ofMinutes(10)) > 0) {
+            throw new IllegalArgumentException("serverTimeout must be between PT1S and PT10M");
         }
         if (rFetchType != FetchType.FETCH && rFetchType != FetchType.FETCH_ONE && rFetchType != FetchType.STORE) {
             throw new IllegalArgumentException("fetchType must be FETCH, FETCH_ONE or STORE");
         }
 
         var metadata = new AtomicReference<List<Column>>();
-        var client = new LogsQueryClientBuilder().credential(credentials(runContext)).endpoint(rEndpoint)
-            .addPolicy(columnMetadataPolicy()).buildClient();
+        var builder = new LogsQueryClientBuilder().credential(credentials(runContext)).endpoint(rEndpoint)
+            .addPolicy(columnMetadataPolicy());
+        if (httpClient != null) {
+            builder.httpClient(httpClient);
+        }
+        var client = builder.buildClient();
         var result = client.queryWorkspaceWithResponse(
             rWorkspaceId, rQuery, new LogsQueryTimeInterval(rTimespan),
             new LogsQueryOptions().setServerTimeout(rServerTimeout), new Context(COLUMN_METADATA, metadata)

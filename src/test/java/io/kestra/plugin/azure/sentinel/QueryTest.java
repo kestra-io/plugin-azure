@@ -1,13 +1,15 @@
 package io.kestra.plugin.azure.sentinel;
 
-import java.net.URISyntaxException;
+import java.nio.file.Files;
 import java.nio.file.Path;
+import java.security.KeyStore;
 import java.time.Duration;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import javax.net.ssl.TrustManagerFactory;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -15,6 +17,8 @@ import org.junit.jupiter.api.Test;
 
 import com.azure.core.credential.AccessToken;
 import com.azure.core.credential.TokenCredential;
+import com.azure.core.http.HttpClient;
+import com.azure.core.http.netty.NettyAsyncHttpClientBuilder;
 import com.github.tomakehurst.wiremock.WireMockServer;
 
 import io.kestra.core.junit.annotations.KestraTest;
@@ -25,6 +29,7 @@ import io.kestra.core.runners.RunContextFactory;
 import io.kestra.core.serializers.FileSerde;
 import io.kestra.core.utils.IdUtils;
 
+import io.netty.handler.ssl.SslContextBuilder;
 import jakarta.inject.Inject;
 import reactor.core.publisher.Mono;
 
@@ -38,44 +43,43 @@ class QueryTest {
     @Inject
     RunContextFactory runContextFactory;
 
-    private static final String[] TRUST_PROPERTIES = { "javax.net.ssl.trustStore", "javax.net.ssl.trustStorePassword", "javax.net.ssl.trustStoreType" };
+    private static final String KEYSTORE_PASSWORD = "changeit";
 
     private WireMockServer server;
+    private HttpClient httpClient;
     private final List<String> scopes = new ArrayList<>();
-    private final Map<String, String> previousTrust = new HashMap<>();
 
-    // The Azure SDK refuses bearer tokens over plain HTTP, so WireMock serves a self-signed localhost certificate that the JVM trusts for the test.
+    // The Azure SDK refuses bearer tokens over plain HTTP, so WireMock serves a self-signed localhost certificate trusted only by this test's HttpClient.
     @BeforeEach
-    void startServer() throws URISyntaxException {
+    void startServer() throws Exception {
         var keystore = Path.of(QueryTest.class.getResource("/sentinel/localhost.p12").toURI()).toString();
         server = new WireMockServer(
             wireMockConfig().dynamicPort().dynamicHttpsPort()
-                .keystorePath(keystore).keystorePassword("changeit").keyManagerPassword("changeit").keystoreType("PKCS12")
+                .keystorePath(keystore).keystorePassword(KEYSTORE_PASSWORD).keyManagerPassword(KEYSTORE_PASSWORD).keystoreType("PKCS12")
         );
         server.start();
-        for (var property : TRUST_PROPERTIES) {
-            previousTrust.put(property, System.getProperty(property));
-        }
-        System.setProperty("javax.net.ssl.trustStore", keystore);
-        System.setProperty("javax.net.ssl.trustStorePassword", "changeit");
-        System.setProperty("javax.net.ssl.trustStoreType", "PKCS12");
+        httpClient = trustingHttpClient(keystore);
     }
 
     @AfterEach
     void stopServer() {
         server.stop();
-        previousTrust.forEach((property, value) ->
-        {
-            if (value == null) {
-                System.clearProperty(property);
-            } else {
-                System.setProperty(property, value);
-            }
-        });
+    }
+
+    private static HttpClient trustingHttpClient(String keystorePath) throws Exception {
+        var trustStore = KeyStore.getInstance("PKCS12");
+        try (var input = Files.newInputStream(Path.of(keystorePath))) {
+            trustStore.load(input, KEYSTORE_PASSWORD.toCharArray());
+        }
+        var trustManagers = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
+        trustManagers.init(trustStore);
+        var sslContext = SslContextBuilder.forClient().trustManager(trustManagers).build();
+        var reactorClient = reactor.netty.http.client.HttpClient.create().secure(spec -> spec.sslContext(sslContext));
+        return new NettyAsyncHttpClientBuilder(reactorClient).build();
     }
 
     private String endpoint() {
-        return "https://localhost:" + server.httpsPort();
+        return "https://localhost:%d".formatted(server.httpsPort());
     }
 
     private Query connect(Query task) throws Exception {
@@ -138,7 +142,7 @@ class QueryTest {
     @Test
     void sendsBearerTokenToConfiguredEndpoint() throws Exception {
         response(table("[]"));
-        assertEquals(0L, task(FetchType.FETCH).run(context()).getCount());
+        assertEquals(0L, task(FetchType.FETCH).run(context(), httpClient).getCount());
         assertEquals(1, scopes.size());
         server.verify(
             postRequestedFor(urlEqualTo("/v1/workspaces/workspace-guid/query"))
@@ -149,7 +153,7 @@ class QueryTest {
     @Test
     void fetchRendersPropertiesAndNormalizesSdkTypes() throws Exception {
         response(table(rows()));
-        var output = task(FetchType.FETCH).run(context());
+        var output = task(FetchType.FETCH).run(context(), httpClient);
         assertEquals(2L, output.getCount());
         assertEquals("long", output.getColumns().get(1).getType());
         assertEquals("count", output.getColumns().get(1).getName());
@@ -173,14 +177,14 @@ class QueryTest {
     @Test
     void fetchOneAndEmptyResults() throws Exception {
         response(table(rows()));
-        var first = task(FetchType.FETCH_ONE).run(context());
+        var first = task(FetchType.FETCH_ONE).run(context(), httpClient);
         assertEquals(1L, first.getCount());
         assertEquals("alert", first.getRow().get("title"));
         assertNull(first.getRows());
         response(table("[]"));
-        assertEquals(0L, task(FetchType.FETCH_ONE).run(context()).getCount());
-        assertNull(task(FetchType.FETCH_ONE).run(context()).getRow());
-        var empty = task(FetchType.FETCH).run(context());
+        assertEquals(0L, task(FetchType.FETCH_ONE).run(context(), httpClient).getCount());
+        assertNull(task(FetchType.FETCH_ONE).run(context(), httpClient).getRow());
+        var empty = task(FetchType.FETCH).run(context(), httpClient);
         assertEquals(List.of(), empty.getRows());
         assertEquals(8, empty.getColumns().size());
         assertEquals("long", empty.getColumns().get(1).getType());
@@ -190,7 +194,7 @@ class QueryTest {
     void storeRoundTripsThroughInternalStorage() throws Exception {
         response(table(rows()));
         var context = context();
-        var output = task(FetchType.STORE).run(context);
+        var output = task(FetchType.STORE).run(context, httpClient);
         List<Object> stored = new ArrayList<>();
         try (var input = context.storage().getFile(output.getUri())) {
             FileSerde.read(input, stored::add);
@@ -201,7 +205,7 @@ class QueryTest {
         assertEquals(Map.of("key", List.of(1, 2)), ((Map<?, ?>) stored.getFirst()).get("details"));
         assertNull(output.getRows());
         response(table("[]"));
-        var empty = task(FetchType.STORE).run(context);
+        var empty = task(FetchType.STORE).run(context, httpClient);
         assertEquals(0L, empty.getCount());
         try (var input = context.storage().getFile(empty.getUri())) {
             assertEquals(-1, input.read());
@@ -216,9 +220,9 @@ class QueryTest {
               {"name":"Other","columns":[{"name":"value","type":"string"}],"rows":[["other"]]}
             ]}
             """);
-        assertEquals("primary", task(FetchType.FETCH_ONE).run(context()).getRow().get("value"));
+        assertEquals("primary", task(FetchType.FETCH_ONE).run(context(), httpClient).getRow().get("value"));
         response("{\"tables\":[]}");
-        assertEquals(0L, task(FetchType.FETCH).run(context()).getCount());
+        assertEquals(0L, task(FetchType.FETCH).run(context(), httpClient).getCount());
     }
 
     @Test
@@ -227,7 +231,7 @@ class QueryTest {
             {"tables":[{"name":"PrimaryResult","columns":[],"rows":[]}],
              "error":{"code":"PartialError","message":"Query limit exceeded"}}
             """);
-        var error = assertThrows(IllegalStateException.class, () -> task(FetchType.STORE).run(context()));
+        var error = assertThrows(IllegalStateException.class, () -> task(FetchType.STORE).run(context(), httpClient));
         assertTrue(error.getMessage().contains("PartialError"));
         server.stubFor(
             post(anyUrl()).willReturn(
@@ -236,7 +240,7 @@ class QueryTest {
                     .withBody("{\"error\":{\"code\":\"Forbidden\",\"message\":\"Access denied\"}}")
             )
         );
-        assertThrows(Exception.class, () -> task(FetchType.FETCH).run(context()));
+        assertThrows(Exception.class, () -> task(FetchType.FETCH).run(context(), httpClient));
     }
 
     @Test
@@ -255,7 +259,7 @@ class QueryTest {
                 .build()
         );
         var context = runContextFactory.of(Map.of("inputs", Map.of("serverTimeout", "PT1M")));
-        assertEquals(0L, task.run(context).getCount());
+        assertEquals(0L, task.run(context, httpClient).getCount());
         assertEquals(Duration.ofMinutes(15), context.render(task.getTimeout()).as(Duration.class).orElseThrow());
         server.verify(
             postRequestedFor(urlEqualTo("/v1/workspaces/workspace-guid/query"))
@@ -271,16 +275,16 @@ class QueryTest {
                 Query.builder().workspaceId(Property.ofValue("workspace"))
                     .query(Property.ofValue("query")).timespan(Property.ofValue(span)).build()
             );
-            assertThrows(IllegalArgumentException.class, () -> task.run(context()));
+            assertThrows(IllegalArgumentException.class, () -> task.run(context(), httpClient));
         }
-        for (var timeout : List.of(Duration.ZERO, Duration.ofSeconds(-1), Duration.ofMinutes(11))) {
+        for (var timeout : List.of(Duration.ZERO, Duration.ofSeconds(-1), Duration.ofMillis(500), Duration.ofMinutes(11))) {
             var task = connect(
                 Query.builder().workspaceId(Property.ofValue("workspace"))
                     .query(Property.ofValue("query")).serverTimeout(Property.ofValue(timeout)).build()
             );
-            assertThrows(IllegalArgumentException.class, () -> task.run(context()));
+            assertThrows(IllegalArgumentException.class, () -> task.run(context(), httpClient));
         }
-        assertThrows(IllegalArgumentException.class, () -> task(FetchType.NONE).run(context()));
+        assertThrows(IllegalArgumentException.class, () -> task(FetchType.NONE).run(context(), httpClient));
         assertEquals(0, server.getAllServeEvents().size());
     }
 

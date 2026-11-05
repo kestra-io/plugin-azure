@@ -126,6 +126,8 @@ dependencies {
 configurations.all {
     resolutionStrategy {
         force "com.azure:azure-ai-projects:1.0.0-beta.2"
+        // SEC-0369: platform BOM pins guava 33.7.1-jre, remove once it ships >= 33.7.2.
+        force "com.google.guava:guava:33.7.2-jre"
     }
 }
 

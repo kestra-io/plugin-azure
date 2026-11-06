@@ -99,6 +99,13 @@ dependencies {
     implementation "com.azure:azure-identity-extensions:1.2.0"
 }
 
+configurations.all {
+    resolutionStrategy {
+        // SEC-0549: azure-core-amqp (via azure-sdk-bom) pulls proton-j 0.34.1, remove once it ships >= 0.35.0.
+        force "org.apache.qpid:proton-j:0.35.0"
+    }
+}
+
 
 /**********************************************************************************************************************\
  * Test

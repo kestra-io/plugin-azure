@@ -92,7 +92,7 @@ dependencies {
     api(group: 'com.azure', name: 'azure-monitor-query-logs', kestraProvidedJackson)
     api(group: 'com.azure', name: 'azure-monitor-ingestion', kestraProvidedJackson)
 
-    implementation("com.azure:azure-cosmos:4.82.0", kestraProvidedJackson)
+    implementation("com.azure:azure-cosmos:4.83.0", kestraProvidedJackson)
     implementation ("com.azure:azure-messaging-servicebus:7.18.1", kestraProvidedJackson)
 
     // Azure resource manager
@@ -110,11 +110,11 @@ dependencies {
     implementation("com.azure:azure-ai-agents-persistent:1.0.0-beta.2", kestraProvidedJackson)
 
     // Shared kernel library
-    implementation 'io.kestra.plugin:plugin-azure-lib:1.2.1'
+    implementation 'io.kestra.plugin:plugin-azure-lib:1.2.3'
 
     // Azure HorizonDB (PostgreSQL wire protocol + Entra ID auth extension)
     implementation "org.postgresql:postgresql:42.7.14"
-    implementation "com.azure:azure-identity-extensions:1.2.9"
+    implementation "com.azure:azure-identity-extensions:1.2.10"
 }
 
 // Kestra's platform BOM (azure-sdk-bom) constrains azure-ai-projects to 2.2.0, and because the

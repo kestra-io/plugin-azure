@@ -81,9 +81,9 @@ import static io.kestra.core.models.triggers.StatefulTriggerService.*;
                     concurrencyLimit: 1
                     values: "{{ trigger.blobs | jq('.[].uri') }}"
                     tasks:
-                      - id: return
-                        type: io.kestra.plugin.core.debug.Return
-                        format: "{{ item.value }}"
+                      - id: log_file
+                        type: io.kestra.plugin.core.log.Log
+                        message: "{{ item.value }}"
 
                 triggers:
                   - id: watch
@@ -113,9 +113,9 @@ import static io.kestra.core.models.triggers.StatefulTriggerService.*;
                     type: io.kestra.plugin.core.flow.Loop
                     values: "{{ trigger.blobs | jq('.[].name') }}"
                     tasks:
-                      - id: return
-                        type: io.kestra.plugin.core.debug.Return
-                        format: "{{ item.value }}"
+                      - id: log_file
+                        type: io.kestra.plugin.core.log.Log
+                        message: "{{ item.value }}"
 
                       - id: delete
                         type: io.kestra.plugin.azure.storage.blob.Delete

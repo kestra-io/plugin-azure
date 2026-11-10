@@ -93,7 +93,7 @@ dependencies {
     api(group: 'com.azure', name: 'azure-monitor-ingestion', kestraProvidedJackson)
 
     implementation("com.azure:azure-cosmos:4.83.0", kestraProvidedJackson)
-    implementation ("com.azure:azure-messaging-servicebus:7.18.1", kestraProvidedJackson)
+    implementation ("com.azure:azure-messaging-servicebus:7.19.1", kestraProvidedJackson)
 
     // Azure resource manager
     implementation 'com.azure.resourcemanager:azure-resourcemanager-datafactory:1.2.0'
@@ -110,11 +110,11 @@ dependencies {
     implementation("com.azure:azure-ai-agents-persistent:1.0.0-beta.2", kestraProvidedJackson)
 
     // Shared kernel library
-    implementation 'io.kestra.plugin:plugin-azure-lib:1.2.3'
+    implementation 'io.kestra.plugin:plugin-azure-lib:1.2.4'
 
     // Azure HorizonDB (PostgreSQL wire protocol + Entra ID auth extension)
     implementation "org.postgresql:postgresql:42.7.14"
-    implementation "com.azure:azure-identity-extensions:1.2.10"
+    implementation "com.azure:azure-identity-extensions:1.3.1"
 }
 
 // Kestra's platform BOM (azure-sdk-bom) constrains azure-ai-projects to 2.2.0, and because the
@@ -127,7 +127,7 @@ configurations.all {
     resolutionStrategy {
         force "com.azure:azure-ai-projects:1.0.0-beta.2"
         // SEC-0369: platform BOM pins guava 33.7.1-jre, remove once it ships >= 33.7.2.
-        force "com.google.guava:guava:33.7.2-jre"
+        force "com.google.guava:guava:33.8.0-jre"
         // SEC-0549: azure-core-amqp 2.12.2 (via azure-sdk-bom) pulls proton-j 0.34.1, remove once it ships >= 0.35.0.
         force "org.apache.qpid:proton-j:0.35.0"
     }

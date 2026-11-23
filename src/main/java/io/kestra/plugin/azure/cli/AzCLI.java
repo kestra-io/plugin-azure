@@ -104,7 +104,10 @@ import lombok.experimental.SuperBuilder;
 public class AzCLI extends AbstractExecScript implements RunnableTask<ScriptOutput> {
     private static final String DEFAULT_IMAGE = "mcr.microsoft.com/azure-cli";
 
-    @Schema(title = "Commands", description = "List of az commands executed with /bin/sh -c inside the runner")
+    @Schema(
+        title = "Commands",
+        description = "List of az commands executed with the configured interpreter, `/bin/sh -c` by default, inside the runner. Commands stop at the first failing command unless `failFast` is set to `false`."
+    )
     @NotNull
     @PluginProperty(group = "main")
     private Property<List<String>> commands;

@@ -157,7 +157,7 @@ public class AzCLI extends AbstractExecScript implements RunnableTask<ScriptOutp
 
         return this.commands(runContext)
             .withDockerOptions(injectDefaults(getDocker()))
-            .withWarningOnStdErr(true)
+            .withWarningOnStdErr(runContext.render(this.getWarningOnStdErr()).as(Boolean.class).orElse(true))
             .withInterpreter(this.getInterpreter())
             .withBeforeCommands(Property.ofValue(beforeCommands))
             .withBeforeCommandsWithOptions(true)

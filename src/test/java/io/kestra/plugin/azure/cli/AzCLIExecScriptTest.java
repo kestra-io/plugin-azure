@@ -21,6 +21,7 @@ import jakarta.inject.Inject;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.*;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 @KestraTest
 class AzCLIExecScriptTest {
@@ -78,6 +79,51 @@ class AzCLIExecScriptTest {
 
         assertThat(output.getExitCode(), is(0));
         assertThat(output.getVars().get("order"), is("login,before,"));
+    }
+
+    @Test
+    void failingLoginStopsCommandsByDefault() throws Exception {
+        var trace = setupFailingAz();
+
+        var task = failingAzTask(trace, null);
+        var runContext = TestsUtils.mockRunContext(runContextFactory, task, Map.of());
+
+        assertThrows(Exception.class, () -> task.run(runContext));
+        assertThat(Files.exists(trace.resolveSibling("ran.txt")), is(false));
+    }
+
+    @Test
+    void failingLoginContinuesWhenFailFastDisabled() throws Exception {
+        var trace = setupFailingAz();
+
+        var task = failingAzTask(trace, Property.ofValue(false));
+        var runContext = TestsUtils.mockRunContext(runContextFactory, task, Map.of());
+        task.run(runContext);
+
+        assertThat(Files.exists(trace.resolveSibling("ran.txt")), is(true));
+    }
+
+    private Path setupFailingAz() throws Exception {
+        var dir = Files.createTempDirectory(Files.createDirectories(Path.of("build", "azcli-test").toAbsolutePath()), "run");
+        var fakeAz = dir.resolve("az");
+        Files.writeString(fakeAz, "#!/bin/sh\nexit 1\n");
+        Files.setPosixFilePermissions(fakeAz, PosixFilePermissions.fromString("rwxr-xr-x"));
+        return dir.resolve("trace.txt");
+    }
+
+    private AzCLI failingAzTask(Path trace, Property<Boolean> failFast) {
+        var dir = trace.getParent();
+        var builder = AzCLI.builder()
+            .id(IdUtils.create())
+            .type(AzCLI.class.getName())
+            .taskRunner(Process.instance())
+            .env(Property.ofValue(Map.of("PATH", dir + ":" + System.getenv("PATH"))))
+            .username(Property.ofValue("user"))
+            .commands(Property.ofValue(List.of("echo ran > " + dir.resolve("ran.txt"))));
+        if (failFast != null) {
+            builder.failFast(failFast);
+        }
+        return builder.build();
     }
 
     @Test

@@ -2,19 +2,18 @@ package io.kestra.plugin.azure.cli;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 
 import io.kestra.core.exceptions.IllegalVariableEvaluationException;
 import io.kestra.core.models.annotations.Example;
 import io.kestra.core.models.annotations.Plugin;
 import io.kestra.core.models.annotations.PluginProperty;
 import io.kestra.core.models.property.Property;
-import io.kestra.core.models.tasks.*;
+import io.kestra.core.models.tasks.RunnableTask;
 import io.kestra.core.models.tasks.runners.TaskRunner;
 import io.kestra.core.runners.RunContext;
+import io.kestra.plugin.scripts.exec.AbstractExecScript;
 import io.kestra.plugin.scripts.exec.scripts.models.DockerOptions;
 import io.kestra.plugin.scripts.exec.scripts.models.ScriptOutput;
-import io.kestra.plugin.scripts.exec.scripts.runners.CommandsWrapper;
 import io.kestra.plugin.scripts.runner.docker.Docker;
 
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -102,7 +101,7 @@ import lombok.experimental.SuperBuilder;
         )
     }
 )
-public class AzCLI extends Task implements RunnableTask<ScriptOutput>, NamespaceFilesInterface, InputFilesInterface, OutputFilesInterface {
+public class AzCLI extends AbstractExecScript implements RunnableTask<ScriptOutput> {
     private static final String DEFAULT_IMAGE = "mcr.microsoft.com/azure-cli";
 
     @Schema(title = "Commands", description = "List of az commands executed with /bin/sh -c inside the runner")
@@ -126,10 +125,6 @@ public class AzCLI extends Task implements RunnableTask<ScriptOutput>, Namespace
     @PluginProperty(group = "advanced")
     private Property<Boolean> servicePrincipal;
 
-    @Schema(title = "Environment variables", description = "Additional environment variables injected into the commands")
-    @PluginProperty(group = "execution")
-    protected Property<Map<String, String>> env;
-
     @Schema(
         title = "Deprecated Docker options",
         description = "Deprecated; use taskRunner instead"
@@ -152,40 +147,23 @@ public class AzCLI extends Task implements RunnableTask<ScriptOutput>, Namespace
     @PluginProperty(group = "execution")
     protected Property<String> containerImage = Property.ofValue(DEFAULT_IMAGE);
 
-    @PluginProperty(group = "source")
-    private NamespaceFiles namespaceFiles;
-
-    @PluginProperty(group = "source")
-    private Object inputFiles;
-
-    @Schema(title = "Output files", description = "Paths from the container working directory to persist to outputs")
-    @PluginProperty(group = "destination")
-    private Property<List<String>> outputFiles;
-
     @Override
     public ScriptOutput run(RunContext runContext) throws Exception {
-        List<String> loginCommands = this.getLoginCommands(runContext);
+        var beforeCommands = new ArrayList<>(this.getLoginCommands(runContext));
+        beforeCommands.addAll(runContext.render(this.getBeforeCommands()).asList(String.class));
 
-        var renderedEnv = runContext.render(this.env).asMap(String.class, String.class);
-        var renderedOutputFiles = runContext.render(this.outputFiles).asList(String.class);
-
-        CommandsWrapper commands = new CommandsWrapper(runContext)
-            .withWarningOnStdErr(true)
+        return this.commands(runContext)
             .withDockerOptions(injectDefaults(getDocker()))
-            .withTaskRunner(this.taskRunner)
-            .withContainerImage(runContext.render(this.containerImage).as(String.class).orElseThrow())
-            .withBeforeCommands(Property.ofValue(loginCommands))
-            .withInterpreter(Property.ofValue(List.of("/bin/sh", "-c")))
+            .withWarningOnStdErr(true)
+            .withInterpreter(this.getInterpreter())
+            .withBeforeCommands(Property.ofValue(beforeCommands))
+            .withBeforeCommandsWithOptions(true)
             .withCommands(this.commands)
-            .withEnv(renderedEnv.isEmpty() ? null : renderedEnv)
-            .withNamespaceFiles(namespaceFiles)
-            .withInputFiles(inputFiles)
-            .withOutputFiles(renderedOutputFiles.isEmpty() ? null : renderedOutputFiles);
-
-        return commands.run();
+            .run();
     }
 
-    private DockerOptions injectDefaults(DockerOptions original) {
+    @Override
+    protected DockerOptions injectDefaults(DockerOptions original) {
         if (original == null) {
             return null;
         }

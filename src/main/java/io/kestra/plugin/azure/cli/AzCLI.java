@@ -106,7 +106,9 @@ public class AzCLI extends AbstractExecScript implements RunnableTask<ScriptOutp
 
     @Schema(
         title = "Commands",
-        description = "List of az commands executed with the configured interpreter, `/bin/sh -c` by default, inside the runner. Commands stop at the first failing command unless `failFast` is set to `false`."
+        description = """
+            List of az commands executed with the configured interpreter, `/bin/sh -c` by default, inside the runner. \
+            Commands stop at the first failing command unless `failFast` is set to `false`."""
     )
     @NotNull
     @PluginProperty(group = "main")

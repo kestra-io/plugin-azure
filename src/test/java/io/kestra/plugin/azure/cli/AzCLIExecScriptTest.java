@@ -10,11 +10,13 @@ import org.junit.jupiter.api.Test;
 
 import io.kestra.core.junit.annotations.KestraTest;
 import io.kestra.core.models.property.Property;
+import io.kestra.core.models.tasks.RunnableTaskException;
 import io.kestra.core.runners.RunContextFactory;
 import io.kestra.core.utils.IdUtils;
 import io.kestra.core.utils.TestsUtils;
 import io.kestra.plugin.core.runner.Process;
 import io.kestra.plugin.scripts.exec.AbstractExecScript;
+import io.kestra.plugin.scripts.exec.scripts.models.ScriptOutput;
 import io.kestra.plugin.scripts.runner.docker.Docker;
 
 import jakarta.inject.Inject;
@@ -83,36 +85,39 @@ class AzCLIExecScriptTest {
 
     @Test
     void failingLoginStopsCommandsByDefault() throws Exception {
-        var trace = setupFailingAz();
+        var dir = setupFailingAz();
 
-        var task = failingAzTask(trace, null);
+        var task = failingAzTask(dir, null);
         var runContext = TestsUtils.mockRunContext(runContextFactory, task, Map.of());
 
-        assertThrows(Exception.class, () -> task.run(runContext));
-        assertThat(Files.exists(trace.resolveSibling("ran.txt")), is(false));
+        var exception = assertThrows(RunnableTaskException.class, () -> task.run(runContext));
+        assertThat(exception.getOutput(), instanceOf(ScriptOutput.class));
+        assertThat(((ScriptOutput) exception.getOutput()).getExitCode(), is(1));
+        assertThat(Files.readString(dir.resolve("trace.txt")), is("login\n"));
+        assertThat(Files.exists(dir.resolve("ran.txt")), is(false));
     }
 
     @Test
     void failingLoginContinuesWhenFailFastDisabled() throws Exception {
-        var trace = setupFailingAz();
+        var dir = setupFailingAz();
 
-        var task = failingAzTask(trace, Property.ofValue(false));
+        var task = failingAzTask(dir, Property.ofValue(false));
         var runContext = TestsUtils.mockRunContext(runContextFactory, task, Map.of());
         task.run(runContext);
 
-        assertThat(Files.exists(trace.resolveSibling("ran.txt")), is(true));
+        assertThat(Files.readString(dir.resolve("trace.txt")), is("login\n"));
+        assertThat(Files.exists(dir.resolve("ran.txt")), is(true));
     }
 
     private Path setupFailingAz() throws Exception {
         var dir = Files.createTempDirectory(Files.createDirectories(Path.of("build", "azcli-test").toAbsolutePath()), "run");
         var fakeAz = dir.resolve("az");
-        Files.writeString(fakeAz, "#!/bin/sh\nexit 1\n");
+        Files.writeString(fakeAz, "#!/bin/sh\necho login >> \"$(dirname \"$0\")/trace.txt\"\nexit 1\n");
         Files.setPosixFilePermissions(fakeAz, PosixFilePermissions.fromString("rwxr-xr-x"));
-        return dir.resolve("trace.txt");
+        return dir;
     }
 
-    private AzCLI failingAzTask(Path trace, Property<Boolean> failFast) {
-        var dir = trace.getParent();
+    private AzCLI failingAzTask(Path dir, Property<Boolean> failFast) {
         var builder = AzCLI.builder()
             .id(IdUtils.create())
             .type(AzCLI.class.getName())

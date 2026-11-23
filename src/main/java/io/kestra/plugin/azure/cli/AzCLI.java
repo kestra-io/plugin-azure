@@ -108,7 +108,7 @@ public class AzCLI extends AbstractExecScript implements RunnableTask<ScriptOutp
         title = "Commands",
         description = """
             List of az commands executed with the configured interpreter, `/bin/sh -c` by default, inside the runner. \
-            Commands stop at the first failing command unless `failFast` is set to `false`."""
+            Commands stop at the first failing command only when `failFast` is `true`."""
     )
     @NotNull
     @PluginProperty(group = "main")
@@ -152,12 +152,23 @@ public class AzCLI extends AbstractExecScript implements RunnableTask<ScriptOutp
     @PluginProperty(group = "execution")
     protected Property<String> containerImage = Property.ofValue(DEFAULT_IMAGE);
 
+    @Schema(
+        title = "Fail fast",
+        description = "When `true`, the script runs with `set -e` and stops at the first failing command. Defaults to `false` to keep the historical AzCLI behavior. `set -e` is not valid for non-shell interpreters."
+    )
+    @PluginProperty(group = "execution")
+    @Builder.Default
+    protected Property<Boolean> failFast = Property.ofValue(false);
+
     @Override
     public ScriptOutput run(RunContext runContext) throws Exception {
-        var beforeCommands = new ArrayList<>(this.getLoginCommands(runContext));
-        beforeCommands.addAll(runContext.render(this.getBeforeCommands()).asList(String.class));
+        var wrapper = this.commands(runContext);
 
-        return this.commands(runContext)
+        // Render user beforeCommands through the wrapper so task runner variables (workingDir, outputDir...) are available.
+        var beforeCommands = new ArrayList<>(this.getLoginCommands(runContext));
+        beforeCommands.addAll(wrapper.renderCommands(runContext, this.getBeforeCommands()));
+
+        return wrapper
             .withDockerOptions(injectDefaults(getDocker()))
             .withWarningOnStdErr(runContext.render(this.getWarningOnStdErr()).as(Boolean.class).orElse(true))
             .withInterpreter(this.getInterpreter())

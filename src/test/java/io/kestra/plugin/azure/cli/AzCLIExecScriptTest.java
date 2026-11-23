@@ -84,10 +84,10 @@ class AzCLIExecScriptTest {
     }
 
     @Test
-    void failingLoginStopsCommandsByDefault() throws Exception {
+    void failingLoginStopsCommandsWhenFailFastEnabled() throws Exception {
         var dir = setupFailingAz();
 
-        var task = failingAzTask(dir, null);
+        var task = failingAzTask(dir, Property.ofValue(true));
         var runContext = TestsUtils.mockRunContext(runContextFactory, task, Map.of());
 
         var exception = assertThrows(RunnableTaskException.class, () -> task.run(runContext));
@@ -95,6 +95,35 @@ class AzCLIExecScriptTest {
         assertThat(((ScriptOutput) exception.getOutput()).getExitCode(), is(1));
         assertThat(Files.readString(dir.resolve("trace.txt")), is("login\n"));
         assertThat(Files.exists(dir.resolve("ran.txt")), is(false));
+    }
+
+    @Test
+    void failingLoginContinuesByDefault() throws Exception {
+        var dir = setupFailingAz();
+
+        var task = failingAzTask(dir, null);
+        var runContext = TestsUtils.mockRunContext(runContextFactory, task, Map.of());
+        task.run(runContext);
+
+        assertThat(Files.exists(dir.resolve("ran.txt")), is(true));
+    }
+
+    @Test
+    void beforeCommandsCanUseRunnerVariables() throws Exception {
+        var dir = Files.createTempDirectory(Files.createDirectories(Path.of("build", "azcli-test").toAbsolutePath()), "run");
+        var task = AzCLI.builder()
+            .id(IdUtils.create())
+            .type(AzCLI.class.getName())
+            .taskRunner(Process.instance())
+            .beforeCommands(Property.ofValue(List.of("cd {{ workingDir }}")))
+            .commands(Property.ofValue(List.of("echo ran > " + dir.resolve("ran.txt"))))
+            .build();
+
+        var runContext = TestsUtils.mockRunContext(runContextFactory, task, Map.of());
+        var output = task.run(runContext);
+
+        assertThat(output.getExitCode(), is(0));
+        assertThat(Files.exists(dir.resolve("ran.txt")), is(true));
     }
 
     @Test

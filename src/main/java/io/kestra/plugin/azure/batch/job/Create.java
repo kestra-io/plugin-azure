@@ -29,7 +29,6 @@ import io.kestra.core.models.tasks.RunnableTask;
 import io.kestra.core.models.tasks.runners.AbstractLogConsumer;
 import io.kestra.core.models.tasks.runners.DefaultLogConsumer;
 import io.kestra.core.models.tasks.runners.RemoteRunnerInterface;
-import io.kestra.core.models.tasks.runners.ScriptService;
 import io.kestra.core.runners.RunContext;
 import io.kestra.plugin.azure.shared.batch.AbstractBatch;
 import io.kestra.plugin.azure.shared.batch.BatchService;
@@ -225,12 +224,12 @@ public class Create extends AbstractBatch implements RunnableTask<Create.Output>
         Logger logger = runContext.logger();
         BatchClient client = BatchService.client(this.endpoint, this.account, this.accessKey, runContext);
 
+        var rResume = runContext.render(resume).as(Boolean.class).orElse(true);
+
         Map<String, Integer> tasksMapping = new HashMap<>();
         String jobId = null;
-        if (Boolean.TRUE.equals(runContext.render(resume).as(Boolean.class).orElseThrow())) {
-            String baseJobName = ScriptService.jobName(runContext);
-            baseJobName = baseJobName.substring(0, baseJobName.lastIndexOf('-') + 1);
-            var cloudJob = BatchService.getExistingJob(runContext, client, baseJobName);
+        if (rResume) {
+            var cloudJob = BatchService.findResumableJob(runContext, client, runContext.render(this.job.getId()));
             if (cloudJob.isPresent()) {
                 jobId = cloudJob.get().id();
                 logger.info("Job is resumed from an already running job {} ", jobId);
@@ -253,6 +252,10 @@ public class Create extends AbstractBatch implements RunnableTask<Create.Output>
 
                 final JobAddParameter job = this.job.to(runContext, poolInfo);
                 jobId = job.id();
+                if (rResume) {
+                    // a job of an earlier attempt that cannot be resumed still owns this id
+                    BatchService.discardPreviousJob(runContext, client, jobId);
+                }
                 client.jobOperations().createJob(job);
 
                 logger.info("Job '{}' created on pool '{}'", jobId, poolInfo.poolId());

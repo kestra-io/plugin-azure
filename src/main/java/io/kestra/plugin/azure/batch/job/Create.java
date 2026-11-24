@@ -224,7 +224,7 @@ public class Create extends AbstractBatch implements RunnableTask<Create.Output>
         Logger logger = runContext.logger();
         BatchClient client = BatchService.client(this.endpoint, this.account, this.accessKey, runContext);
 
-        boolean rResume = runContext.render(resume).as(Boolean.class).orElse(true);
+        var rResume = runContext.render(resume).as(Boolean.class).orElse(true);
 
         Map<String, Integer> tasksMapping = new HashMap<>();
         String jobId = null;

@@ -9,6 +9,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import com.github.tomakehurst.wiremock.WireMockServer;
+import com.github.tomakehurst.wiremock.client.ResponseDefinitionBuilder;
 import com.microsoft.azure.batch.protocol.models.PoolInformation;
 
 import io.kestra.core.junit.annotations.KestraTest;
@@ -26,11 +27,11 @@ import jakarta.inject.Inject;
 import static com.github.tomakehurst.wiremock.client.WireMock.*;
 import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.options;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 
 @KestraTest
 class CreateResumeTest {
     private static final String RESUMED_OUTPUT = "::{\"outputs\":{\"resumed\":true}}::\n";
+    private static final String NEW_JOB_OUTPUT = "::{\"outputs\":{\"newJob\":true}}::\n";
 
     @Inject
     private RunContextFactory runContextFactory;
@@ -65,7 +66,7 @@ class CreateResumeTest {
         var output = create.run(runContext(executionId, 2));
 
         assertEquals(true, output.getVars().get("resumed"));
-        server.verify(0, postRequestedFor(urlPathEqualTo("/jobs")));
+        assertNoNewJob();
     }
 
     @Test
@@ -78,7 +79,7 @@ class CreateResumeTest {
         var output = create.run(runContext(executionId, 2));
 
         assertEquals(true, output.getVars().get("resumed"));
-        server.verify(0, postRequestedFor(urlPathEqualTo("/jobs")));
+        assertNoNewJob();
     }
 
     @Test
@@ -93,7 +94,7 @@ class CreateResumeTest {
         var output = create.run(runContext);
 
         assertEquals(true, output.getVars().get("resumed"));
-        server.verify(0, postRequestedFor(urlPathEqualTo("/jobs")));
+        assertNoNewJob();
     }
 
     @Test
@@ -110,53 +111,98 @@ class CreateResumeTest {
         var output = create.run(runContext(executionId, 2));
 
         assertEquals(true, output.getVars().get("resumed"));
-        server.verify(0, postRequestedFor(urlPathEqualTo("/jobs")));
+        assertNoNewJob();
     }
 
     @Test
-    void doesNotResumeAJobOfAnotherExecution() throws Exception {
+    void runsANewJobWhenTheJobBelongsToAnotherExecution() throws Exception {
         var create = create("myjob");
         stubJobs("myjob", job("myjob", "active", create, runContext(IdUtils.create(), 1)));
         stubTask("myjob", "completed", false, RESUMED_OUTPUT);
 
-        assertCreatesANewJob(create);
+        // the job carries the labels of another execution, so it is neither resumed nor deleted
+        assertRunsANewJob(create, 0);
     }
 
     @Test
-    void doesNotResumeACompletedJob() throws Exception {
+    void deletesACompletedJobAndRunsANewOne() throws Exception {
         var create = create("myjob");
         stubJobs("myjob", job("myjob", "completed", create, runContext(executionId, 1)));
         stubTask("myjob", "completed", false, RESUMED_OUTPUT);
 
-        assertCreatesANewJob(create);
+        assertRunsANewJob(create, 1);
     }
 
     @Test
-    void doesNotResumeAJobBeingDeleted() throws Exception {
+    void waitsForAJobBeingDeletedAndRunsANewOne() throws Exception {
         var create = create("myjob");
         stubJobs("myjob", job("myjob", "deleting", create, runContext(executionId, 1)));
         stubTask("myjob", "completed", false, RESUMED_OUTPUT);
 
-        assertCreatesANewJob(create);
+        // already being deleted: the deletion is awaited, not requested again
+        assertRunsANewJob(create, 0);
+        server.verify(getRequestedFor(urlPathEqualTo("/jobs/myjob")));
     }
 
     @Test
-    void doesNotResumeAnActiveJobWhoseTasksFailed() throws Exception {
+    void deletesAnActiveJobWhoseTasksFailedAndRunsANewOne() throws Exception {
         var create = create("myjob");
         stubJobs("myjob", job("myjob", "active", create, runContext(executionId, 1)));
         stubTask("myjob", "completed", true, "");
 
-        assertCreatesANewJob(create);
+        assertRunsANewJob(create, 1);
     }
 
-    private void assertCreatesANewJob(Create create) {
-        // job creation is not stubbed, so creating a new job fails
-        assertThrows(Exception.class, () -> create.run(runContext(executionId, 2)));
+    @Test
+    void doesNotLookUpOrDeleteJobsWhenResumeIsDisabled() throws Exception {
+        var create = create("myjob", false);
+        stubJobs("myjob", job("myjob", "completed", create, runContext(executionId, 1)));
+        stubTask("myjob", "completed", false, RESUMED_OUTPUT);
 
+        assertRunsANewJob(create, 0);
+        server.verify(0, getRequestedFor(urlPathEqualTo("/jobs")));
+        server.verify(0, getRequestedFor(urlPathEqualTo("/jobs/myjob")));
+    }
+
+    private void assertNoNewJob() {
+        server.verify(0, deleteRequestedFor(urlPathMatching("/jobs/.*")));
+        server.verify(0, postRequestedFor(urlPathEqualTo("/jobs")));
+    }
+
+    /**
+     * Runs a second attempt that does not resume the job of the first one: the old job owning the id is deleted
+     * ({@code expectedDeletes} times), then a new job is created under the same id and its task completes successfully.
+     */
+    private void assertRunsANewJob(Create create, int expectedDeletes) throws Exception {
+        server.stubFor(delete(urlPathEqualTo("/jobs/myjob")).willReturn(aResponse().withStatus(202)));
+        server.stubFor(get(urlPathEqualTo("/jobs/myjob")).willReturn(jobNotFound()));
+        server.stubFor(post(urlPathEqualTo("/jobs")).inScenario("job")
+            .willReturn(aResponse().withStatus(201)).willSetStateTo("created"));
+        server.stubFor(post(urlPathEqualTo("/jobs/myjob/addtaskcollection"))
+            .willReturn(okJson("{\"value\": [{\"status\": \"success\", \"taskId\": \"echo\"}]}")));
+        // once the new job is created, its task completes successfully
+        server.stubFor(get(urlPathEqualTo("/jobs/myjob/tasks")).inScenario("job").whenScenarioStateIs("created")
+            .willReturn(okJson(tasks("completed", false))));
+        stubFiles("myjob", NEW_JOB_OUTPUT);
+
+        var output = create.run(runContext(executionId, 2));
+
+        assertEquals(true, output.getVars().get("newJob"));
+        server.verify(expectedDeletes, deleteRequestedFor(urlPathEqualTo("/jobs/myjob")));
         server.verify(1, postRequestedFor(urlPathEqualTo("/jobs")));
+        server.verify(1, postRequestedFor(urlPathEqualTo("/jobs/myjob/addtaskcollection")));
+    }
+
+    private static ResponseDefinitionBuilder jobNotFound() {
+        return aResponse().withStatus(404).withHeader("Content-Type", "application/json")
+            .withBody("{\"code\": \"JobNotFound\", \"message\": {\"lang\": \"en-US\", \"value\": \"The specified job does not exist.\"}}");
     }
 
     private Create create(String jobId) {
+        return create(jobId, true);
+    }
+
+    private Create create(String jobId, boolean resume) {
         return Create.builder()
             .id(taskId)
             .type(Create.class.getName())
@@ -168,6 +214,7 @@ class CreateResumeTest {
             .tasks(List.of(Task.builder().id("echo").commands(Property.ofValue(List.of("echo hello"))).build()))
             .completionCheckInterval(Property.ofValue(Duration.ofMillis(10)))
             .delete(Property.ofValue(false))
+            .resume(Property.ofValue(resume))
             .pushOutputFilesToInternalStorage(false)
             .build();
     }
@@ -204,8 +251,8 @@ class CreateResumeTest {
         return """
             {"value": [{"id": "echo", "state": "%s",
               "executionInfo": {"startTime": "2026-01-01T00:00:00Z", "endTime": "2026-01-01T00:00:02Z",
-                                "exitCode": %d, "retryCount": 0, "requeueCount": 0%s}}]}
-            """.formatted(state, failed ? 1 : 0, failureInfo);
+                                "exitCode": %d, "result": "%s", "retryCount": 0, "requeueCount": 0%s}}]}
+            """.formatted(state, failed ? 1 : 0, failed ? "failure" : "success", failureInfo);
     }
 
     private static Map<String, Object> job(String id, String state, Create create, RunContext firstAttempt) throws Exception {

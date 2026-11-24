@@ -224,19 +224,19 @@ public class Create extends AbstractBatch implements RunnableTask<Create.Output>
         Logger logger = runContext.logger();
         BatchClient client = BatchService.client(this.endpoint, this.account, this.accessKey, runContext);
 
+        boolean rResume = runContext.render(resume).as(Boolean.class).orElse(true);
+
         Map<String, Integer> tasksMapping = new HashMap<>();
         String jobId = null;
-        if (Boolean.TRUE.equals(runContext.render(resume).as(Boolean.class).orElseThrow())) {
+        if (rResume) {
             var cloudJob = BatchService.findResumableJob(runContext, client, runContext.render(this.job.getId()));
-            var existingTasks = cloudJob.isPresent() ? resumableTasks(client, cloudJob.get()) : null;
-            if (existingTasks == null) {
-                cloudJob.ifPresent(job -> logger.info("Job {} of an earlier attempt is no longer running, a new job is created", job.id()));
-            } else {
+            if (cloudJob.isPresent()) {
                 jobId = cloudJob.get().id();
                 logger.info("Job is resumed from an already running job {} ", jobId);
 
                 // re-create the task mapping
                 int index = 0;
+                var existingTasks = client.taskOperations().listTasks(jobId).stream().toList();
                 for (CloudTask current : existingTasks) {
                     tasksMapping.put(current.id(), index);
                     index++;
@@ -252,6 +252,10 @@ public class Create extends AbstractBatch implements RunnableTask<Create.Output>
 
                 final JobAddParameter job = this.job.to(runContext, poolInfo);
                 jobId = job.id();
+                if (rResume) {
+                    // a job of an earlier attempt that cannot be resumed still owns this id
+                    BatchService.discardPreviousJob(runContext, client, jobId);
+                }
                 client.jobOperations().createJob(job);
 
                 logger.info("Job '{}' created on pool '{}'", jobId, poolInfo.poolId());
@@ -403,22 +407,6 @@ public class Create extends AbstractBatch implements RunnableTask<Create.Output>
         } finally {
             kill();
         }
-    }
-
-    /**
-     * Returns the tasks of the job of an earlier attempt when it can be resumed, or {@code null} when a new job must be created:
-     * the job is no longer active (completed, terminating, deleting...) or all its tasks completed and at least one of them failed.
-     */
-    private static List<CloudTask> resumableTasks(BatchClient client, CloudJob cloudJob) throws IOException {
-        if (cloudJob.state() != JobState.ACTIVE) {
-            return null;
-        }
-
-        var tasks = client.taskOperations().listTasks(cloudJob.id());
-        var failed = !tasks.isEmpty() && tasks.stream().allMatch(task -> task.state() == TaskState.COMPLETED) &&
-            tasks.stream().anyMatch(task -> task.executionInfo() != null && task.executionInfo().failureInfo() != null);
-
-        return failed ? null : tasks;
     }
 
     private void safelyKillJobTask(final RunContext runContext,

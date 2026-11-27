@@ -176,7 +176,7 @@ public class Trigger extends AbstractTrigger implements PollingTriggerInterface,
 
     @Schema(
         title = "The maximum number of files to retrieve at once",
-        description = "Limits the number of blobs retrieved per polling interval. If not specified, all matching blobs will be retrieved."
+        description = "Limits the number of new or updated blobs processed per polling interval; the remaining ones are picked up by later polls."
     )
     @Builder.Default
     @PluginProperty(group = "execution")
@@ -276,7 +276,11 @@ public class Trigger extends AbstractTrigger implements PollingTriggerInterface,
 
         var listLatch = new CountDownLatch(1);
         var error = new AtomicReference<Throwable>();
-        var list = new ArrayList<Blob>();
+        var firing = new ArrayList<Map.Entry<Blob, ChangeType>>();
+
+        var previousState = readState(runContext, rStateKey, rStateTtl);
+        var rContainer = runContext.render(this.container).as(String.class).orElse("");
+        var rAction = runContext.render(this.action).as(ActionInterface.Action.class).orElse(null);
 
         var listDisposable = flux
             .filter(item ->
@@ -291,9 +295,24 @@ public class Trigger extends AbstractTrigger implements PollingTriggerInterface,
                 return true;
             })
             .map(item -> Blob.of(containerAsyncClient.getBlobContainerName(), item))
+            // Compare with the state before applying maxFiles, so already seen blobs don't use up the limit.
+            // Blobs past the limit are not recorded in the state and fire on a later poll.
+            .<Map.Entry<Blob, ChangeType>> handle((blob, sink) ->
+            {
+                var uri = String.format("az://%s/%s", rContainer, blob.getName());
+                var modifiedAt = Optional.ofNullable(blob.getLastModified()).map(OffsetDateTime::toInstant).orElse(Instant.now());
+                var version = Optional.ofNullable(blob.getETag()).orElse(String.valueOf(modifiedAt.toEpochMilli()));
+
+                var candidate = StatefulTriggerService.Entry.candidate(uri, version, modifiedAt);
+                var stateChange = computeAndUpdateState(previousState, candidate, rOn);
+
+                if (stateChange.fire()) {
+                    sink.next(Map.entry(blob, stateChange.isNew() ? ChangeType.CREATE : ChangeType.UPDATE));
+                }
+            })
             .take(rMaxFiles)
             .subscribe(
-                list::add,
+                firing::add,
                 err ->
                 {
                     error.set(err);
@@ -312,29 +331,8 @@ public class Trigger extends AbstractTrigger implements PollingTriggerInterface,
             throw new Exception(error.get());
         }
 
-        if (list.isEmpty()) {
-            return Optional.empty();
-        }
-
-        if (list.size() == rMaxFiles) {
-            runContext.logger().warn("Listing returned {} blobs but maxFiles limit is {}. More blobs may remain.", list.size(), rMaxFiles);
-        }
-
-        var previousState = readState(runContext, rStateKey, rStateTtl);
-        var rAction = runContext.render(this.action).as(ActionInterface.Action.class).orElse(null);
-        var firing = new ArrayList<Map.Entry<Blob, ChangeType>>();
-
-        for (var blob : list) {
-            var uri = String.format("az://%s/%s", runContext.render(container).as(String.class).orElse(""), blob.getName());
-            var modifiedAt = Optional.ofNullable(blob.getLastModified()).map(OffsetDateTime::toInstant).orElse(Instant.now());
-            var version = Optional.ofNullable(blob.getETag()).orElse(String.valueOf(modifiedAt.toEpochMilli()));
-
-            var candidate = StatefulTriggerService.Entry.candidate(uri, version, modifiedAt);
-            var stateChange = computeAndUpdateState(previousState, candidate, rOn);
-
-            if (stateChange.fire()) {
-                firing.add(Map.entry(blob, stateChange.isNew() ? ChangeType.CREATE : ChangeType.UPDATE));
-            }
+        if (firing.size() == rMaxFiles) {
+            runContext.logger().warn("maxFiles limit of {} blobs reached. Remaining new or updated blobs will be processed by later polls.", rMaxFiles);
         }
 
         // Fail before any download or state write so a collision does not mark the blobs as seen.
